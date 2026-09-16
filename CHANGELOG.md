@@ -8,6 +8,45 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/distributions/`: las distribuciones de Fase 2 §8, con los errores
+  matemáticos del heredado (Fase 1 §4.3) corregidos y con tests de bondad de
+  ajuste (Fase 2 §11.2).
+  - `mathfn.ts`: funciones especiales compartidas —`erf`/`erfinv`, cuantil de
+    la normal estándar, `lgamma`, gamma incompleta regularizada (serie +
+    fracción continua) y beta incompleta regularizada (fracción continua),
+    cada una con su inversa. Antes había `erf` duplicado en dos sitios del
+    heredado; ahora hay una sola implementación, usada por todas las
+    distribuciones que la necesitan.
+  - Cada distribución expone `quantile` (para muestrear por transformada
+    inversa, la vía que comparten Monte Carlo y LHS), `cdf` (para el
+    truncamiento y para KS), y `mean`/`variance` teóricos (para las pruebas
+    de momentos).
+  - **PERT real** (`pert.ts`): Beta(α,β) reescalada, α = 1+λ(moda−min)/(max−min),
+    β = 1+λ(max−moda)/(max−min), λ=4 configurable. Sustituye al
+    `(triangular+media+moda)/3` heredado, que reducía la varianza a ~1/9 de la
+    triangular; hay un test dedicado que compara la varianza de PERT contra
+    la de la triangular equivalente y habría detectado el error original.
+  - **Lognormal** (`lognormal.ts`) con parametrización explícita
+    (`'variable'` o `'logaritmo'`): corrige la ambigüedad heredada donde
+    "media=1000" se interpretaba como el logaritmo y daba `exp(1000)` =
+    Infinity.
+  - **Poisson y Binomial** (`poisson.ts`, `binomial.ts`): inversión por
+    recurrencia en log para parámetros moderados, aproximación normal con
+    corrección de continuidad para los grandes — O(1) en ambos casos, sin el
+    `exp(-λ)` que desbordaba a 0 para λ > ~745 (bucle potencialmente
+    infinito) ni los n ensayos de Bernoulli del binomial heredado.
+  - **Triangular** (`triangular.ts`) con validación `min <= moda <= max` y
+    `min !== max` al construir la distribución, no en cada muestra.
+  - Añadidas: Beta (`beta.ts`, incluida la forma reescalada que usa PERT),
+    Gamma y Exponencial (`gamma.ts`), Weibull (`weibull.ts`), Uniforme
+    (`uniform.ts`), Normal (`normal.ts`), Bernoulli (`bernoulli.ts`),
+    Discreta (`discrete.ts`) y Empírica continua por puntos de control de la
+    CDF (`empirical.ts`, mismo formato que `RiskCumul` de @RISK).
+  - **Truncamiento genérico** (`truncate.ts`): envoltura aplicable a
+    cualquier distribución sin necesitar una fórmula por caso, con media y
+    varianza por cuadratura sobre el cuantil.
+  - 34 tests: KS contra la CDF teórica y comprobación de momentos por cada
+    distribución, con semilla fija.
 - `engine/compiler/evaluate.ts`: **evaluador de referencia**, la pieza que une
   parser + grafo + registro de funciones en un cálculo completo. Dado un
   conjunto de celdas de entrada (ya muestreadas) y unas salidas, calcula todo
