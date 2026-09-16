@@ -5,6 +5,28 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### E2 — Motor Nivel 0 (en curso)
+
+**Añadido**
+- `engine/parser/`: tokenizador y parser de fórmulas de Excel a AST, por
+  escalada de precedencia. Trabaja sobre la forma en-US de la fórmula, que es
+  la que guardan tanto el `.xlsx` como `range.formulas` de Office.js, de modo
+  que el motor no depende de la configuración regional.
+- Reproduce las rarezas de Excel que otros lenguajes no comparten: `^` asocia
+  por la izquierda (`2^3^2` = 64) y el menos unario se aplica antes que la
+  potencia (`-2^2` = 4).
+- Cubre referencias absolutas, hojas con y sin comillas, rangos, columnas y
+  filas enteras, nombres definidos, argumentos omitidos, constantes
+  matriciales, errores literales y porcentajes.
+- Lo que está fuera de alcance (referencias a otros libros, referencias
+  estructuradas, uniones de rangos, derrames de matriz dinámica) produce un
+  nodo `no-soportado` **con su motivo**, no un error de sintaxis: el informe
+  debe poder decir qué construcción concreta lo impide.
+- El parser no lanza excepciones hacia fuera: devuelve el error con mensaje y
+  posición, porque procesar miles de celdas no puede detenerse en la primera
+  fórmula rara.
+- 35 tests de parser.
+
 ### E1 — Escáner de compatibilidad (v0.1)
 
 **Añadido**
