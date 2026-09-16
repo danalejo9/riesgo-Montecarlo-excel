@@ -8,6 +8,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/graph/`: grafo de dependencias entre celdas, construido a partir del
+  AST del parser. Cada celda referenciada es un nodo, tenga o no fórmula
+  propia (una entrada con valor puro también lo es).
+- Orden topológico con recorrido iterativo (no recursivo, por la misma razón
+  que el escáner: una cadena de decenas de miles de fórmulas encadenadas por
+  fila es normal en un presupuesto) y **detección de referencias circulares**,
+  con las celdas implicadas identificadas en vez de colgarse o dar un
+  resultado arbitrario.
+- Dos recortes de grafo con propósitos distintos, documentados para no
+  confundirlos: la **clausura de dependencias** de las salidas (todo lo que
+  hace falta calcular, incluidas ramas constantes) para el compilador, y el
+  **subgrafo entrada→salida** (solo lo que conecta una entrada incierta con
+  una salida) para el informe de compatibilidad. Una celda que no depende de
+  ninguna entrada —una tabla de tarifas fija— pertenece a la primera pero no a
+  la segunda: es la base del *constant folding* previsto en Fase 2 §4.2.
+- 20 tests de grafo.
 - `engine/parser/`: tokenizador y parser de fórmulas de Excel a AST, por
   escalada de precedencia. Trabaja sobre la forma en-US de la fórmula, que es
   la que guardan tanto el `.xlsx` como `range.formulas` de Office.js, de modo
