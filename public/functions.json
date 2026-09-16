@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/office-js/custom-functions.schema.json",
+  "functions": [
+    {
+      "id": "NORMAL",
+      "name": "NORMAL",
+      "description": "Generates a random number from a normal distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "mean", "description": "The mean of the normal distribution.", "type": "number", "dimensionality": "scalar" },
+        { "name": "stdDev", "description": "The standard deviation.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "LOGNORMAL",
+      "name": "LOGNORMAL",
+      "description": "Generates a random number from a lognormal distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "mean", "description": "The mean of the lognormal distribution.", "type": "number", "dimensionality": "scalar" },
+        { "name": "stdDev", "description": "The standard deviation.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "UNIFORME",
+      "name": "UNIFORME",
+      "description": "Generates a random number from a uniform distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "min", "description": "The minimum value.", "type": "number", "dimensionality": "scalar" },
+        { "name": "max", "description": "The maximum value.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "TRIANGULAR",
+      "name": "TRIANGULAR",
+      "description": "Generates a random number from a triangular distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "min", "description": "The minimum value.", "type": "number", "dimensionality": "scalar" },
+        { "name": "mostLikely", "description": "The most likely value.", "type": "number", "dimensionality": "scalar" },
+        { "name": "max", "description": "The maximum value.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "PERT",
+      "name": "PERT",
+      "description": "Generates a random number from a PERT distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "min", "description": "The minimum value.", "type": "number", "dimensionality": "scalar" },
+        { "name": "mostLikely", "description": "The most likely value.", "type": "number", "dimensionality": "scalar" },
+        { "name": "max", "description": "The maximum value.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "BERNOULLI",
+      "name": "BERNOULLI",
+      "description": "Generates a random number from a Bernoulli distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "probability", "description": "The probability of success (0 to 1).", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "POISSON",
+      "name": "POISSON",
+      "description": "Generates a random number from a Poisson distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "lambda", "description": "The average rate of success.", "type": "number", "dimensionality": "scalar" }
+      ]
+    },
+    {
+      "id": "BINOMIAL",
+      "name": "BINOMIAL",
+      "description": "Generates a random number from a Binomial distribution.",
+      "helpUrl": "https://localhost:9090/functions.html",
+      "result": { "type": "number", "dimensionality": "scalar" },
+      "parameters": [
+        { "name": "trials", "description": "Number of trials.", "type": "number", "dimensionality": "scalar" },
+        { "name": "probability", "description": "The probability of success (0 to 1).", "type": "number", "dimensionality": "scalar" }
+      ]
+    }
+  ]
+}
