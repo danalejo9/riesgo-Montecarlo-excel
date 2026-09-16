@@ -8,6 +8,35 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/sampling/`: muestreo de las variables de entrada (Fase 2 §8, D10).
+  - **Monte Carlo** (`montecarlo.ts`): un uniforme por iteración vía
+    `fillUniform`, transformado por `quantile()` de la distribución.
+  - **Latin Hypercube** (`lhs.ts`): estratifica `[0,1)` en `n` tramos y saca
+    una muestra de cada uno, con el orden de tramos barajado (Fisher–Yates)
+    y el punto dentro del tramo ("jitter") en un flujo del PRNG
+    **independiente** de la baraja — si compartieran flujo, la posición
+    dentro del tramo quedaría correlacionada con qué tramo tocó. Test
+    dedicado: con la misma `n`, el error de la media muestral es menor que
+    con Monte Carlo.
+  - Cada variable usa dos flujos del PRNG derivados de su propio `id`
+    (`streamOf`), igual que ya hacía el generador de uniformes: añadir o
+    quitar una variable del modelo no cambia los números que reciben las
+    demás.
+  - `generarEntrada(dist, id, seed, n, metodo)`: punto de entrada único que
+    despacha a Monte Carlo o LHS según `settings.sampling` del modelo — ni el
+    adaptador de Excel ni los tests necesitan saber cuál es cuál para pedir
+    una muestra.
+  - **Correlación Iman–Conover** (`correlate.ts`): reordena los valores ya
+    muestreados de un grupo de variables para inducir una correlación de
+    rangos objetivo, sin tocar sus marginales (cada buffer conserva
+    exactamente el mismo multiconjunto de valores). Incluye descomposición
+    de Cholesky propia y detección explícita de matrices de correlación no
+    válidas (no simétrica, diagonal ≠ 1, no definida positiva) en vez de un
+    `NaN` silencioso. Ajuste de D11 ya incorporado en el diseño: se aplica
+    por grupo declarado, nunca a la matriz completa de variables del modelo.
+  - 12 tests: determinismo, independencia entre variables, estratificación
+    exacta de LHS, correlación inducida verificada con Spearman, y rechazo
+    de matrices de correlación inválidas.
 - `engine/distributions/`: las distribuciones de Fase 2 §8, con los errores
   matemáticos del heredado (Fase 1 §4.3) corregidos y con tests de bondad de
   ajuste (Fase 2 §11.2).
