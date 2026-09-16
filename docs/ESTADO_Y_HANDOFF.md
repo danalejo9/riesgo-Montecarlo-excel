@@ -165,7 +165,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 5. [x] **Fase 2 aprobada** (los 5 puntos de su §16), con revisión posterior por D9–D11.
 6. [x] Repositorio en GitHub creado y remoto conectado.
 7. [x] **Fase 3 — Roadmap** → [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Escáner (E1) como primer entregable.
-8. [ ] **Aprobar la Fase 3**, y decidir si se invierte la decisión 2.2 (llevar el modo compatible al MVP).
-9. [ ] **Fase 4 — Implementación**, empezando por **E0 (Fundaciones)**: estructura de carpetas, Vitest, CI, limpieza del árbol heredado.
+8. [x] **Fase 3 aprobada** (2026-09-15). La decisión 2.2 se mantiene: el modo compatible va a la V1, no al MVP.
+9. [x] **E0 — Fundaciones COMPLETADA**. Criterio de hecho cumplido: `npm run build && npm run lint && npm test` en verde, 16 tests. Ver `CHANGELOG.md`.
+10. [ ] **E1 — Escáner de compatibilidad**. Es el siguiente entregable (v0.1) y **necesita que el usuario lo pase por sus libros reales** para cerrarse.
+11. [ ] E2 en adelante, según [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md).
 
-**Siguiente acción al retomar:** si la Fase 3 está aprobada, empezar E0. Si no, resolver el punto 8.
+**Siguiente acción al retomar:** empezar E1 (escáner de compatibilidad).
+
+### Estado del árbol tras E0
+
+- `engine/` — motor nuevo. Ya contiene el PRNG Philox basado en contador.
+- `tests/unit/` — Vitest. 16 tests en verde.
+- `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
+- `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
+- CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.
