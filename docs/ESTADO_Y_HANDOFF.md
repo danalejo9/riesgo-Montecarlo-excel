@@ -1,7 +1,7 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-16
-**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 empezada** (parser, grafo, registro de funciones numéricas, evaluador de referencia, distribuciones y muestreo listos; falta compilador optimizado, ejecutor por bloques y estadísticas de salida).
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 empezada** (parser, grafo, registro de funciones numéricas, evaluador de referencia, distribuciones, muestreo y estadísticas de salida listos; falta el compilador optimizado y el ejecutor por bloques).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
@@ -178,36 +178,39 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     ```
 11. [~] **E2 — Motor Nivel 0**, según [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Hecho hasta ahora:
     parser, grafo de dependencias, registro de funciones vectorizadas (subconjunto
-    numérico), evaluador de referencia interpretado, **distribuciones** y
-    **muestreo** (`engine/distributions/`, `engine/sampling/`, ver
+    numérico), evaluador de referencia interpretado, **distribuciones**,
+    **muestreo** y **estadísticas de salida**
+    (`engine/distributions/`, `engine/sampling/`, `engine/stats/`, ver
     `CHANGELOG.md`). `npm run build && npm run lint && npm test` en verde,
-    194 tests.
+    208 tests.
 
-    Falta para cerrar E2:
+    Falta para cerrar E2, y es todo lo que queda de la etapa:
     - **Compilador optimizado**: AST → plan vectorizado, vida de buffers,
       *constant folding* del subgrafo invariante (el evaluador actual es la
       versión interpretada de referencia, no la optimizada).
     - **Ejecutor**: bloques de tamaño adaptativo, pool de Web Workers,
-      cancelación entre bloques. El muestreo de hoy genera el buffer completo
-      de una vez (como ya hacía `evaluate.ts` con las entradas); el ejecutor
-      por bloques que pide Fase 2 §3.1 sigue sin existir, y es la pieza que
-      falta para que LHS también pueda calcularse a trozos si algún día hace
-      falta (hoy la baraja de Fisher–Yates de `lhs.ts` es de una sola pasada,
-      documentado en su propio archivo).
-    - **Estadísticas de salida** (`engine/stats/`, no existe todavía): Welford,
-      histograma, percentiles exactos y t-digest.
+      cancelación entre bloques. El muestreo genera el buffer completo de una
+      vez (como ya hacía `evaluate.ts` con las entradas) y `engine/stats/`
+      soporta combinar estados parciales (`combinar` de Welford,
+      `combinarTDigest`) pensando en este ejecutor, pero el ejecutor en sí
+      —el que trocea, paraleliza y cancela— no existe todavía. Es la pieza
+      que falta para que LHS también pueda calcularse a trozos si algún día
+      hace falta (hoy la baraja de Fisher–Yates de `lhs.ts` es de una sola
+      pasada, documentado en su propio archivo).
     - Los tres criterios de hecho de E2 (Fase 3): fidelidad vs Excel para
       Nivel 0 (falta el libro de referencia `tests/fixtures/fidelidad.xlsx` de
       Fase 2 §11.3, todavía no existe), tests estadísticos ya cumplidos para
-      distribuciones y muestreo, y el benchmark formal de 1M/20 entradas/5
-      salidas/200 celdas < 5 s (todavía no medido formalmente, solo la prueba
-      informal de 8,7 s sin optimizar del evaluador de referencia).
+      distribuciones, muestreo y estadísticas de salida, y el benchmark
+      formal de 1M/20 entradas/5 salidas/200 celdas < 5 s (todavía no medido
+      formalmente, solo la prueba informal de 8,7 s sin optimizar del
+      evaluador de referencia).
 
-**Siguiente acción al retomar:** seguir con E2 — estadísticas de salida
-(`engine/stats/`) es lo siguiente más independiente y fácil de probar; el
-compilador optimizado y el ejecutor por bloques quedan para el final por ser
-la pieza de mayor riesgo/tamaño (y porque el ejecutor por bloques puede
-obligar a revisar cómo `lhs.ts` genera su permutación, ver nota arriba).
+**Siguiente acción al retomar:** con distribuciones, muestreo y estadísticas
+de salida ya listos, lo único que falta de E2 es la pieza central y de mayor
+riesgo/tamaño: **compilador optimizado + ejecutor por bloques**. Conviene
+abordarlos juntos (el ejecutor es quien usa el plan del compilador) y dejar
+para el final, dentro de esa misma pieza, el libro de fidelidad contra Excel
+y el benchmark formal — son el criterio de hecho que cierra la etapa.
 
 ### Estado del árbol tras E0–E2 (parcial)
 
@@ -215,8 +218,9 @@ obligar a revisar cómo `lhs.ts` genera su permutación, ver nota arriba).
   (`random/`), el parser de fórmulas (`parser/`), el grafo de dependencias
   (`graph/`), el registro de funciones vectorizadas (`functions/`), el
   evaluador de referencia (`compiler/`), las distribuciones
-  (`distributions/`) y el muestreo (`sampling/`).
-- `tests/unit/` — Vitest. 194 tests en verde.
+  (`distributions/`), el muestreo (`sampling/`) y las estadísticas de salida
+  (`stats/`).
+- `tests/unit/` — Vitest. 208 tests en verde.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.

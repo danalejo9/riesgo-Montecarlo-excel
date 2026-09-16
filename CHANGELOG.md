@@ -8,6 +8,30 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/stats/`: estadísticas de salida (Fase 3, criterio de hecho de E2).
+  - **Welford** (`welford.ts`): media y varianza en una pasada, con
+    combinación de estados parciales (algoritmo paralelo de Chan, Golub y
+    LeVeque) — lo que permite que el ejecutor por bloques (todavía pendiente)
+    o varios Web Workers acumulen cada uno su trozo y se junten al final sin
+    releer ni un valor. Se guarda `m2` (suma de desviaciones al cuadrado), no
+    la varianza ya dividida, porque es lo único que se recombina sin arrastrar
+    error de redondeo.
+  - **Percentiles exactos** (`percentiles.ts`): interpolación lineal sobre el
+    array ordenado, igual que `PERCENTILE.INC` de Excel.
+  - **Histograma** (`histogram.ts`): bins de ancho igual sobre un rango dado
+    o calculado del propio buffer.
+  - **t-digest** (`tdigest.ts`): percentiles aproximados con memoria acotada
+    para cuando D11 (millones de iteraciones, cientos de salidas) hace
+    inviable ordenar el buffer completo solo para un percentil. Construcción
+    por lotes con la función de escala `k1` (Dunning, 2019); la combinación
+    de varios digests parciales reutiliza el mismo algoritmo de construcción
+    sobre los centroides como si fueran puntos con peso, sin necesitar una
+    fusión aparte. La UI deberá indicar cuándo un percentil viene de aquí
+    (aproximado) y cuándo de `percentiles.ts` (exacto) — Fase 2 §3.3.
+  - 14 tests: caso de libro de texto para Welford, combinación de bloques
+    idéntica a acumular todo junto, asociatividad, `PERCENTILE.INC` de
+    referencia, y precisión del t-digest contra el percentil exacto (incluida
+    la propiedad de que es más preciso en las colas que en el centro).
 - `engine/sampling/`: muestreo de las variables de entrada (Fase 2 §8, D10).
   - **Monte Carlo** (`montecarlo.ts`): un uniforme por iteración vía
     `fillUniform`, transformado por `quantile()` de la distribución.
