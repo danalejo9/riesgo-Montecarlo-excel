@@ -13,10 +13,31 @@ import { fillUniform, streamOf } from '../random/index.ts';
  * números que reciben las demás.
  */
 export function muestrearMonteCarlo(dist: Distribution, id: string, seed: number, n: number): Buffer {
-  const u = nuevoBuffer(n);
-  fillUniform(u, seed, streamOf(id), 0);
+  return muestrearMonteCarloBloque(dist, id, seed, 0, n);
+}
 
-  const out = nuevoBuffer(n);
-  for (let i = 0; i < n; i++) out[i] = dist.quantile(u[i] as number);
+/**
+ * Como `muestrearMonteCarlo`, pero solo para el tramo `[inicio, inicio+largo)`.
+ *
+ * Es lo que hace posible el ejecutor por bloques (`engine/executor/`):
+ * gracias a que el PRNG es de contador (`fillUniform` acepta cualquier
+ * `startIndex`), generar el tramo `[a,b)` de una variable Monte Carlo da
+ * exactamente los mismos números que generarla completa y quedarse con ese
+ * tramo — así que nunca hace falta materializar el buffer entero de `n`
+ * muestras para calcular un bloque. LHS no tiene aún esta variante: su
+ * estratificación necesita conocer `n` de antemano (ver `lhs.ts`).
+ */
+export function muestrearMonteCarloBloque(
+  dist: Distribution,
+  id: string,
+  seed: number,
+  inicio: number,
+  largo: number,
+): Buffer {
+  const u = nuevoBuffer(largo);
+  fillUniform(u, seed, streamOf(id), inicio);
+
+  const out = nuevoBuffer(largo);
+  for (let i = 0; i < largo; i++) out[i] = dist.quantile(u[i] as number);
   return out;
 }

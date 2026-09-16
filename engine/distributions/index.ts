@@ -1,6 +1,7 @@
 export { bernoulli } from './bernoulli.ts';
 export { beta, betaEscalada } from './beta.ts';
 export { binomial } from './binomial.ts';
+export { construirDesdeDescriptor, type DescriptorDistribucion } from './descriptor.ts';
 export { discrete } from './discrete.ts';
 export { empirical } from './empirical.ts';
 export { exponential, gamma } from './gamma.ts';

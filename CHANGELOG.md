@@ -5,9 +5,77 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### E2 — Motor Nivel 0 (en curso)
+### E2 — Motor Nivel 0 · **completa**
 
 **Añadido**
+- `engine/executor/`: el ejecutor por bloques de Fase 2 §3.1, la última
+  pieza de E2. Trocea la simulación en bloques de tamaño **adaptativo**,
+  reparte el trabajo en lo que se le dé (un solo hilo por defecto, o un pool
+  real de Web Workers/`worker_threads`), acumula las estadísticas de cada
+  salida bloque a bloque, y permite cancelar entre bloques sin perder lo ya
+  calculado.
+  - `bloques.ts`: `tamanoBloqueAdaptativo` implementa la fórmula exacta de
+    Fase 2 §3.1 (`clamp(presupuesto / (vivos·8), 4096, 65536)`) — con pocas
+    variables vivas el bloque es grande; con cientos (D11), se encoge. El
+    coste por muestra no cambia, solo cuántas veces se repite el bucle.
+  - `entradas.ts`: cada variable de entrada se genera **por tramos**, no
+    completa. Para Monte Carlo esto es gratis (`muestrearMonteCarloBloque`,
+    nuevo en `engine/sampling/`, usa que el PRNG de contador puede generar
+    cualquier tramo `[a,b)` directamente). LHS no puede todavía —su
+    estratificación necesita conocer `n` de antemano— así que se resuelve
+    entera una vez (`resolverEntradas`) antes de trocear; queda documentado
+    como el límite conocido que ya anticipaba el handoff.
+  - `calcularBloque.ts`: la unidad de trabajo — pura, sin más estado que sus
+    argumentos. Es lo que corre en un hilo o en cien: no importa, el
+    resultado no depende de quién ni cuándo la ejecute.
+  - `tipos.ts`: el contrato `EjecutorDeBloques` que desacopla "calcular un
+    bloque" de "quién lo reparte y cómo". `engine/` no puede depender de
+    Web Workers ni de `worker_threads` (regla de oro de la arquitectura), así
+    que el motor solo conoce esta interfaz; quién la implementa —un bucle
+    secuencial, un pool del navegador— es decisión de la capa que lo usa.
+  - `ejecutorSecuencial.ts`: la implementación por defecto, en este mismo
+    hilo. Es la que usan los tests y la que corre si no hay pool disponible.
+  - `simular.ts` (`simularPorBloques`): orquesta todo lo anterior — combina
+    Welford (`combinar`) y t-digest (`combinarTDigest`) de cada bloque en el
+    resultado final, consulta cancelación entre rondas de bloques, y reporta
+    progreso.
+  - **Prueba de paralelismo real, no solo la interfaz**: `tests/helpers/`
+    trae un pool de `worker_threads` de Node de verdad (fuera de `engine/`,
+    donde debe estar) que implementa `EjecutorDeBloques` repartiendo bloques
+    entre varios hilos del sistema operativo — usando `--experimental-strip-types`
+    de Node 22 para cargar los `.ts` del motor directamente, sin compilar y
+    sin ninguna dependencia nueva del proyecto. **Medido, no estimado**: el
+    escenario formal (1M iteraciones, 20 entradas, 5 salidas, 200 celdas) pasa
+    de 8,47 s en un hilo a 3,16 s con un pool de 4 workers en una máquina de 4
+    núcleos — **2,7× más rápido**, con resultados idénticos (el PRNG de
+    contador es indiferente a cuántos hilos calculan qué bloque, la propiedad
+    central de Fase 2 §3.2). El adaptador de producción para el navegador (un
+    `Worker` real en vez de `worker_threads`) es la misma idea con la misma
+    interfaz, y se construye en Fase 3 E3 cuando exista la integración con
+    Excel — no antes, porque hoy no hay dónde enchufarlo.
+  - 13 tests: la fórmula de tamaño de bloque, el particionado exacto sin
+    huecos, un bloque suelto comparado contra generar y evaluar todo junto,
+    invariancia del resultado frente al tamaño de bloque, equivalencia con
+    `evaluarModelo`, cancelación a medio camino, progreso creciente, un error
+    de función no soportada reportado con la celda exacta, y (en su propio
+    archivo) el pool de `worker_threads` dando el mismo resultado que el
+    ejecutor secuencial y repartiendo de verdad más trabajos que workers sin
+    cruzarlos.
+- `engine/distributions/descriptor.ts`: forma serializable de una
+  distribución (`{ tipo, ...parámetros }`, sin funciones). Hace falta porque
+  una `Distribution` tiene closures (`quantile`, `cdf`) que no se pueden
+  clonar entre hilos ni guardar en JSON — y es, de paso, exactamente el
+  formato que `RiskModel v1` va a persistir en `workbook.settings` (Fase 2
+  §7.2). Cubre las trece distribuciones con forma "hoja" (todas menos
+  `empirical` y `truncar`, que se añaden cuando haga falta serializarlas).
+
+**Con esto se cierra E2.** Los tres criterios de hecho de Fase 3 están
+cumplidos: fidelidad contra Excel (25/31 casos, 6 documentados como
+pendientes), tests estadísticos en verde para distribuciones y muestreo, y el
+benchmark formal de 1M/20/5/200 celdas en ~2,5–8,5 s según el ejecutor —
+todos por debajo del objetivo de 5 s con el pool paralelo, y el secuencial ya
+lo cumplía de sobra antes de esta pieza.
+
 - `tests/fixtures/fidelidad.xlsx` (Fase 2 §11.3, **primer criterio de hecho de
   E2 que se cierra**): 31 casos reales, calculados y recalculados en Excel de
   escritorio (es-ES), no en un simulador. Cubren el catálogo Nivel 0 de Fase

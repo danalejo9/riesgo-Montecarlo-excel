@@ -6,7 +6,7 @@ import type { MetodoMuestreo } from './types.ts';
 
 export { correlacionarImanConover } from './correlate.ts';
 export { muestrearLHS } from './lhs.ts';
-export { muestrearMonteCarlo } from './montecarlo.ts';
+export { muestrearMonteCarlo, muestrearMonteCarloBloque } from './montecarlo.ts';
 export type { MetodoMuestreo } from './types.ts';
 
 /**
