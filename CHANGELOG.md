@@ -8,6 +8,23 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/functions/`: registro de funciones vectorizadas — **subconjunto
+  numérico** por ahora (SUM, PRODUCT, MIN, MAX, COUNT, AVERAGE, MEDIAN,
+  STDEV.S/P, VAR.S/P, ABS, SIGN, SQRT, INT, EXP, LN, LOG, LOG10, POWER, MOD,
+  ROUND, ROUNDUP, ROUNDDOWN, TRUNC, IF, AND, OR, NOT, XOR). Cada celda es un
+  `Float64Array` de N valores (una por iteración de la simulación) y cada
+  función opera sobre esos buffers completos de una vez — es la vectorización
+  de Fase 2 §3 hecha código.
+- Tres funciones donde Excel diverge de su equivalente ingenuo en JavaScript,
+  corregidas con test dedicado: `ROUND` redondea alejándose de cero
+  (`ROUND(-2.5,0)=-3`, no -2 como `Math.round`), `MOD` toma el signo del
+  divisor (`MOD(-7,3)=2`, no -1 como `%`), y `TRUNC`/`INT` divergen en
+  negativos (`TRUNC(-2.5)=-2` pero `INT(-2.5)=-3`).
+- Documentado como límite explícito, no como descuido: este registro todavía
+  no modela texto, booleano-distinto-de-número, error ni celda vacía. Ninguna
+  de estas funciones se declara "soportada" a efectos de la batería de
+  fidelidad de Fase 2 §11.3 hasta que ese canal exista.
+- 29 tests de funciones.
 - `engine/graph/`: grafo de dependencias entre celdas, construido a partir del
   AST del parser. Cada celda referenciada es un nodo, tenga o no fórmula
   propia (una entrada con valor puro también lo es).
