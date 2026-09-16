@@ -1,8 +1,12 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-15
-**Fase actual:** Fase 1 (Auditoría) COMPLETADA. Fase 2 (Arquitectura) BLOQUEADA a la espera de un dato.
-**Documento hermano:** [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 empezada** (parser listo).
+**Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
+**Documentos hermanos:**
+- [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
+- [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md) — arquitectura objetivo, alternativas descartadas, estrategia de pruebas.
+- [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md) — etapas E0–E9, criterios de hecho, riesgos del plan.
 
 Este archivo existe para que cualquier sesión nueva (o cualquier otra IA) pueda retomar el trabajo sin releer toda la conversación anterior. Léelo entero antes de tocar nada.
 
@@ -53,10 +57,21 @@ Los cinco hechos que hay que tener presentes:
 | # | Pregunta | Respuesta | Consecuencia técnica |
 |---|---|---|---|
 | 1 | Plataformas | Principalmente Excel de escritorio Windows (M365, es-ES, 16.0.20326 x64), **pero también debe funcionar en Mac**; deseable otras versiones | **Descarta XLL / Excel-DNA** (solo Windows). Obliga a mantener el formato Office Add-in web |
-| 2 | Distribución | Equipo **personal** | Sin catálogo de organización ni hosting corporativo. Sideload en Windows, carpeta compartida en Mac |
-| 3 | Qué funciones de Excel usan sus modelos | **No lo sabe** | Pendiente de medir. Ver §5 |
-| 4 | ¿Motor rápido con cobertura parcial + fallback? | Pidió recomendación → **se recomendó el híbrido** (pendiente de confirmación explícita) | Ver §4 |
-| 5 | Git / GitHub | Pidió recomendación; **no tiene ningún repositorio** en GitHub | Ver §6 |
+| 2 | ~~Distribución~~ | ~~Equipo **personal**~~ — **SUPERADA por la decisión 14** | Ya no aplica. Ver §10 |
+| 3 | Qué funciones de Excel usan sus modelos | **No lo sabe, y decide NO medirlo ahora** | Se asume un catálogo típico de presupuestos (§4.2 de Fase 2). El escáner de compatibilidad pasa a ser el primer entregable de la Fase 4. Ver §5 |
+| 4 | ¿Motor rápido con cobertura parcial + fallback? | **SÍ — híbrido confirmado** | Es la arquitectura de la Fase 2. Ver §4 |
+| 5 | Git / GitHub | **Autorizado**: git local + repositorio privado en GitHub | Ejecutado el local. Ver §6 |
+| 6 | Nombres de las funciones personalizadas | **En inglés, espacio de nombres `RISK.`** | `RISK.NORMAL`, `RISK.TRIANGULAR`, … Se abandona `RIESGO.` |
+| 7 | Compatibilidad con libros ya configurados | **No hace falta migrar** | Formato nuevo `RiskModel v1`, sin soporte de `MonteCarloConfig` |
+| 8 | Aprobación de la Fase 2 | **Concedida**, incluidas las eliminaciones (Google Fonts, jspdf/html2canvas, recharts, modo muerto, tope de 50k) | Fase 2 cerrada |
+| 9 | ¿F9 debe mover el modelo? | **Sí**, como **modo exploración** conmutable | `RISK.*` volátiles con doble comportamiento según modo. Ver §6.1 de Fase 2 |
+| 10 | Método de muestreo | **Ambos**, Monte Carlo y LHS, seleccionables | LHS preseleccionado; el método se indica siempre en los resultados |
+| 11 | **Escala real** | **Cientos de entradas y salidas; iteraciones que pueden llegar a millones** | Restricción dominante del proyecto. Obligó a rediseñar memoria: bloque adaptativo, t-digest, reservorio para sensibilidad |
+| 12 | Orden de construcción | **Delegado en mí** → escáner primero, motor después | Ver Fase 3, §1 |
+| 13 | Carpeta duplicada `1 complemento sensibilidad` | **Puede borrarse** ahora que hay Git | Ojo: el sideload de Excel apunta a ella; hay que re-registrar antes de borrarla |
+| 14 | **Destino del proyecto** | **Producto comercial**, para vender o publicar (AppSource). **100+ usuarios, público abierto** | **Invalida la D2 original ("equipo personal").** Ver §10 |
+| 15 | Modo compatible (Excel en el bucle) | **Entra en el MVP**, invirtiendo la decisión 2.2 | Con usuarios desconocidos, "no puedo simular tu modelo" es motivo de desinstalar |
+| 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
 
 ### Consecuencia arquitectónica principal
 
@@ -66,7 +81,9 @@ Nota de diseño derivada: las funciones `=RIESGO.X()` en celdas deben servir par
 
 ---
 
-## 4. Arquitectura híbrida recomendada (pendiente de confirmar)
+## 4. Arquitectura híbrida — CONFIRMADA
+
+> Desarrollada en detalle en [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md). Lo que sigue es el resumen que motivó la decisión.
 
 Tres posturas posibles para la cobertura de funciones de Excel:
 
@@ -90,33 +107,33 @@ tests/      unitarios, estadísticos, de fidelidad vs Excel, benchmarks
 
 ---
 
-## 5. BLOQUEANTE ACTUAL: medir los modelos reales
+## 5. Medición de los modelos reales — APLAZADA (supuesto vivo)
 
-La Fase 2 no debe cerrarse por intuición. Falta saber qué funciones de Excel usan los modelos reales del usuario, porque determina la viabilidad y el alcance del motor rápido.
+El usuario decidió **no medir** sus libros por ahora. Consecuencia: el alcance del motor rápido se ha definido sobre un **catálogo supuesto** de funciones típicas de presupuestos (§4.2 de la Fase 2), no sobre datos.
 
-Dos caminos ofrecidos al usuario (elige él):
+Esto es un supuesto explícito, no un olvido. Hay que vigilarlo:
 
-- **(A)** El usuario da la ruta de 1–3 libros representativos → se analizan y se devuelve el inventario exacto: funciones usadas, número de fórmulas, tablas, matrices dinámicas, VBA, Power Query, y qué porcentaje cubriría el motor rápido.
-- **(B)** Si prefiere no compartir libros con datos sensibles, el **primer entregable de la Fase 4** es un escáner de compatibilidad que corre en su máquina y no envía nada.
-
-**Siguiente acción al retomar:** preguntar por cuál de los dos opta, y ejecutarlo.
+- Si los modelos reales usan funciones fuera del Nivel 1, **no se rompe nada**: caen al modo compatible. Pero la promesa de velocidad no se cumpliría para esos modelos.
+- Por eso el **escáner de compatibilidad es el primer entregable de la Fase 4**: corre en la máquina del usuario, no envía nada, y convierte el supuesto en dato antes de que corregirlo sea caro.
+- En cuanto haya resultados del escáner, revisar el §4.2 de la Fase 2 y ajustar el alcance.
 
 ---
 
-## 6. Control de versiones: recomendación pendiente de autorización
+## 6. Control de versiones — AUTORIZADO Y EJECUTADO (local)
 
-Situación: **no hay Git** en ninguna de las dos carpetas. La única copia de seguridad es una carpeta duplicada. Antes de la Fase 4 esto es un riesgo serio.
+Hecho el 2026-09-15 en `Riesgos_cuantificables`:
 
-Plan recomendado:
+1. `git init` con rama `main`. Identidad configurada **solo en este repositorio** (`danalejo9 / danalejo9@gmail.com`), sin tocar la configuración global.
+2. Commit inicial `b7abbb2` **"Estado heredado"** con el código tal como lo dejó la IA anterior, antes de modificar nada.
+3. Etiqueta **`v0.0.0-heredado`** sobre ese commit: es la evidencia congelada de la auditoría.
+4. Rama **`develop`** creada y activa. `main` queda reservada para versiones etiquetadas (SemVer).
+5. `.claude/` añadido a `.gitignore` (ya excluía `node_modules` y `dist`). No hay secretos en el código.
 
-1. `git init` en `Riesgos_cuantificables` + commit inicial **del estado heredado tal cual** (congela la evidencia de la auditoría antes de modificar nada).
-2. Repositorio **privado nuevo** en GitHub — el usuario no tiene ninguno. Nombre sugerido: **`riesgo-montecarlo-excel`**.
-3. `main` solo para versiones etiquetadas (SemVer), `develop` para el trabajo diario, `CHANGELOG.md`, Issues como roadmap.
-4. `.gitignore` actual ya excluye `node_modules` y `dist` (correcto). No hay secretos en el código.
+6. **Remoto conectado y subido**: `https://github.com/danalejo9/riesgo-Montecarlo-excel.git`. El repositorio ya tenía un commit inicial con un README automático de GitHub (`f68242e`); se **rebasó** la historia local encima en lugar de sobrescribirla, conservando el README heredado como contenido. `main`, `develop` y la etiqueta `v0.0.0-heredado` están en el remoto.
 
-Detalle práctico: **`gh` (GitHub CLI) no está instalado** en este equipo (`git` sí, 2.55.0). Opciones: instalarlo con `winget`, o que el usuario cree el repo vacío desde la web y se conecte el remoto (más rápido, no instala nada).
+Nota: `gh` (GitHub CLI) **no está instalado** en este equipo. Todas las operaciones de GitHub se hacen por `git` + web.
 
-**No ejecutado aún: requiere autorización explícita del usuario.**
+La carpeta `1 complemento sensibilidad` queda como copia congelada; ya no es el mecanismo de respaldo.
 
 ---
 
@@ -145,9 +162,76 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 
 ## 9. Próximos pasos concretos
 
-1. [ ] Resolver el bloqueante de §5 (ruta de libros reales, o escáner como primer entregable).
-2. [ ] Confirmar la arquitectura híbrida de §4.
-3. [ ] Autorizar Git/GitHub de §6 y ejecutarlo.
-4. [ ] **Fase 2 — Propuesta de arquitectura**: arquitectura objetivo, tecnologías, motor, comunicación con Excel, sistema de gráficos, distribuciones, funciones, estrategia de rendimiento, de pruebas y de versionado, con las alternativas descartadas y por qué.
-5. [ ] **Fase 3 — Roadmap** por etapas (MVP → V1 → …).
-6. [ ] **Fase 4 — Implementación** en cambios pequeños y verificables, con pruebas y benchmarks tras cada bloque importante.
+1. [x] Resolver el bloqueante de §5 → aplazado por decisión del usuario; escáner como primer entregable de Fase 4.
+2. [x] Confirmar la arquitectura híbrida de §4.
+3. [x] Autorizar Git y ejecutar el repositorio local (§6). Falta solo el remoto en GitHub.
+4. [x] **Fase 2 — Propuesta de arquitectura** → [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md).
+5. [x] **Fase 2 aprobada** (los 5 puntos de su §16), con revisión posterior por D9–D11.
+6. [x] Repositorio en GitHub creado y remoto conectado.
+7. [x] **Fase 3 — Roadmap** → [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Escáner (E1) como primer entregable.
+8. [x] **Fase 3 aprobada** (2026-09-15). La decisión 2.2 se mantiene: el modo compatible va a la V1, no al MVP.
+9. [x] **E0 — Fundaciones COMPLETADA**. Criterio de hecho cumplido: `npm run build && npm run lint && npm test` en verde, 16 tests. Ver `CHANGELOG.md`.
+10. [~] **E1 — Escáner de compatibilidad**: implementado y probado (50 tests en verde). **Falta lo único que no puedo hacer yo: que el usuario lo pase por sus libros reales** y revisar juntos el catálogo del §4.2. Hasta entonces la etapa no se cierra.
+
+    ```
+    npm run scan -- "C:\ruta\Presupuesto.xlsx"
+    ```
+11. [ ] E2 en adelante, según [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md).
+
+**Siguiente acción al retomar:** empezar E1 (escáner de compatibilidad).
+
+### Estado del árbol tras E0
+
+- `engine/` — motor nuevo. Ya contiene el PRNG Philox basado en contador.
+- `tests/unit/` — Vitest. 16 tests en verde.
+- `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
+- `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
+- CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.
+
+---
+
+## 10. Cambio de destino: de herramienta personal a producto (2026-09-15)
+
+La decisión D2 original decía "equipo personal". **Ya no es cierta.** El usuario va a
+distribuir el complemento a más de 100 personas y quiere venderlo o publicarlo.
+
+Este apartado existe porque el cambio invalida supuestos anteriores y cualquiera que
+retome el proyecto debe leerlo antes que el resto.
+
+### 10.1 Qué invalida
+
+| Supuesto anterior | Estado |
+|---|---|
+| Sideload personal, sin hosting | **Muerto.** Hace falta hosting HTTPS permanente; `localhost:9090` solo sirve para desarrollo |
+| "El alcance del motor se define por los libros del usuario" | **Muerto.** Los usuarios traerán funciones que nadie ha previsto. Los libros propios son el suelo, no el techo |
+| Modo compatible aplazado a la V1 | **Invertido.** Entra en el MVP |
+| Mac "deseable" | **Obligatorio y bloqueante** si se declara en el manifiesto. Microsoft valida lo que declaras |
+| Formato `RiskModel` libre de cambiar | Libre **hasta la primera versión pública**. Después, cada cambio necesita migración |
+
+### 10.2 Qué NO cambia
+
+- **El cálculo sigue siendo 100 % local.** Los datos del libro no salen del equipo del
+  usuario. Alojar el complemento en una URL solo significa que se descarga el programa,
+  como una página web.
+- La arquitectura del motor (vectorizado, fuera del ciclo de recálculo) es exactamente
+  la misma. Si acaso, con usuarios variados importa aún más.
+
+### 10.3 Tensión que hay que resolver antes de publicar
+
+Un producto de pago suele necesitar comprobar la licencia contra un servidor, al menos
+una vez. Eso choca con la promesa "no se conecta a Internet". Se puede resolver con
+activación única o licencia firmada offline, pero **hay que decidir qué se promete
+exactamente**, porque acaba escrito en la ficha del producto y en la política de
+privacidad. Pendiente de decisión del usuario.
+
+### 10.4 Trabajo nuevo que antes no existía
+
+Técnico: hosting y despliegue, internacionalización (mínimo es/en), versionado estricto
+del formato guardado, compatibilidad hacia atrás, mensajes de error pensados para alguien
+que no conoce el producto, telemetría opcional y explícita (nunca datos del libro).
+
+No técnico, y responsabilidad del usuario: cuenta de Partner Center, política de
+privacidad y condiciones de uso publicadas, canal de soporte, modelo de precios, y
+revisión de marca. **Aviso:** "@RISK" es marca registrada de Lumivero; el prefijo de
+funciones `RISK.` no debería ser problema, pero el nombre comercial y el material de
+marketing sí deben revisarse.

@@ -1,23 +1,24 @@
 {
-  "name": "1-complemento-sensibilidad",
+  "name": "riesgo-montecarlo-excel",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-dev",
   "type": "module",
   "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run build && npm run lint && npm test",
     "dev-server": "vite",
     "start": "office-addin-debugging start manifest.xml desktop",
     "stop": "office-addin-debugging stop manifest.xml",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "validate-manifest": "office-addin-manifest validate manifest.xml",
+    "scan": "node scanner/cli.ts"
   },
   "dependencies": {
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "recharts": "^3.8.1"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,12 +30,15 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "fflate": "^0.8.3",
     "globals": "^17.6.0",
     "office-addin-debugging": "^6.1.1",
     "office-addin-manifest": "^2.1.5",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "vite-plugin-mkcert": "^2.0.0"
-  }
+    "vite-plugin-mkcert": "^2.0.0",
+    "vitest": "^5.0.1"
+  },
+  "description": "Complemento de Excel para analisis de sensibilidad y riesgo por simulacion Monte Carlo."
 }

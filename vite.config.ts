@@ -4,34 +4,25 @@ import { resolve } from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
-// Configurar los certificados oficiales de Microsoft Office Addins
+// Certificados de office-addin-dev-certs para servir el panel por HTTPS.
 const certPath = resolve(os.homedir(), '.office-addin-dev-certs/localhost.crt');
 const keyPath = resolve(os.homedir(), '.office-addin-dev-certs/localhost.key');
 
-const httpsOptions = fs.existsSync(certPath) && fs.existsSync(keyPath)
-  ? {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    }
-  : {};
+const httpsOptions =
+  fs.existsSync(certPath) && fs.existsSync(keyPath)
+    ? { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) }
+    : {};
 
+// Nota (E0): los puntos de entrada HTML del complemento se reconstruyen en la
+// etapa E3. Hasta entonces no hay `vite build`: `npm run build` solo comprueba
+// tipos. El codigo heredado vive en `legacy/` y esta fuera del build.
 export default defineConfig({
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      input: {
-        taskpane: resolve(__dirname, 'index.html'),
-        functions: resolve(__dirname, 'functions.html'),
-        commands: resolve(__dirname, 'commands.html'),
-        dialog: resolve(__dirname, 'dialog.html')
-      }
-    }
-  },
   server: {
     port: 9090,
     https: httpsOptions,
     headers: {
-      "Access-Control-Allow-Origin": "*",
-    }
-  }
+      'Access-Control-Allow-Origin': '*',
+    },
+  },
 });
