@@ -8,6 +8,51 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/compiler/plan.ts` y `engine/compiler/executor.ts`: el compilador
+  optimizado de Fase 2 §3, en un solo hilo (sin Web Workers todavía — eso
+  queda para el ejecutor por bloques).
+  - **Compilación**: `compilarPlan` analiza el grafo una vez (orden
+    topológico + detección de ciclos, reutilizando `engine/graph/`) y
+    reutiliza `subgrafoRelevante` para decidir, de una vez y con código ya
+    probado, qué celdas de la clausura de las salidas dependen de alguna
+    entrada y cuáles no.
+  - ***Constant folding***: una celda que hace falta calcular pero que no
+    depende de ninguna entrada (la tabla de tarifas fija del ejemplo de Fase
+    2 §4.2) se evalúa **una vez** (`n=1`), no las `n` iteraciones completas.
+    Solo se "difunde" (`fill`) a un buffer de `n` en el momento en que de
+    verdad hace falta —porque alguna celda no constante la consume, o porque
+    es ella misma una salida pedida—; una cadena de celdas constantes que
+    solo se alimentan entre sí nunca paga el coste de `n`.
+  - **Vida de buffers**: cada celda se borra del mapa de valores en cuanto se
+    calculan sus últimos consumidores, para que el recolector de basura la
+    libere en vez de mantener vivas todas las celdas intermedias hasta el
+    final. Documentado como límite explícito: esto reduce el pico de memoria,
+    pero no es todavía el *pool* de buffers reutilizables que exige un
+    ejecutor por bloques de verdad — eso necesita que `evaluarNodo` acepte un
+    buffer de destino en vez de reservar uno nuevo cada vez, un cambio más
+    profundo que se deja para cuando exista ese ejecutor.
+  - Reutiliza `evaluarNodo` de `evaluate.ts` (ahora exportado) célula a
+    célula: la semántica de cada operador y función vive en un solo sitio: el
+    compilador decide *cuándo* llamarla, no reimplementa qué hace `+`.
+  - Contrato deliberadamente distinto del evaluador de referencia: solo
+    devuelve las celdas de `salidas`, no todas las celdas intermedias —es lo
+    que permite que el *constant folding* ahorre trabajo de verdad.
+  - **Benchmark ejecutado** (Fase 2 §10, regla de "nunca estimar"): con el
+    escenario formal (1.000.000 de iteraciones, 20 entradas, 5 salidas, 200
+    celdas aritméticas encadenadas), el evaluador de referencia tarda ~2,9 s
+    y el plan compilado ~2,5 s — **ambos ya por debajo del objetivo de 5 s**.
+    Con el mismo modelo más una tabla de tarifas constante de 50 celdas
+    (cada una una `SUM` sobre hasta 10 tarifas anteriores), la tabla añade
+    ~1,8 s al evaluador de referencia (que la recalcula en las 1.000.000 de
+    iteraciones) frente a ~0,5 s al plan compilado (que la calcula una vez y
+    difunde) — el ahorro esperado del *constant folding*, medido, no
+    estimado.
+  - 12 tests: paridad exacta con `evaluarModelo` en varios modelos (cadenas,
+    funciones sobre rangos, varias salidas a la vez, división por cero, un
+    modelo íntegramente constante), clasificación correcta de qué es
+    constante y qué no, los mismos errores que el evaluador de referencia
+    (ciclos, función no soportada, longitud de entrada incorrecta), y el
+    contrato de que solo se devuelven las salidas pedidas.
 - `engine/stats/`: estadísticas de salida (Fase 3, criterio de hecho de E2).
   - **Welford** (`welford.ts`): media y varianza en una pasada, con
     combinación de estados parciales (algoritmo paralelo de Chan, Golub y

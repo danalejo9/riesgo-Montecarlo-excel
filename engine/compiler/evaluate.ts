@@ -90,10 +90,21 @@ export function evaluarModelo(
   return { ok: true, valores };
 }
 
-type ResultadoNodo = { ok: true; buffer: Buffer } | { ok: false; motivo: string };
+export type ResultadoNodo = { ok: true; buffer: Buffer } | { ok: false; motivo: string };
 type ResultadoArg = { ok: true; arg: Arg } | { ok: false; motivo: string };
 
-function evaluarNodo(nodo: Nodo, hojaActual: string, valores: Map<string, Buffer>, n: number): ResultadoNodo {
+/**
+ * Evalúa un único nodo del AST de una fórmula, dado el mapa de valores ya
+ * calculados de sus dependencias.
+ *
+ * Exportado para que `engine/compiler/executor.ts` (el plan optimizado) lo
+ * reutilice célula a célula: la semántica de cada tipo de nodo —qué hace
+ * `+`, cómo se propaga un error, qué función existe— vive en un solo sitio.
+ * El optimizador no reimplementa esta lógica; decide **cuándo** llamarla
+ * (con `n=1` para una celda constante, con `n` completo si no) y qué hacer
+ * con el resultado (transmitirlo o difundirlo). Ver `engine/compiler/plan.ts`.
+ */
+export function evaluarNodo(nodo: Nodo, hojaActual: string, valores: Map<string, Buffer>, n: number): ResultadoNodo {
   switch (nodo.tipo) {
     case 'numero':
       return { ok: true, buffer: constante(nodo.valor, n) };
