@@ -28,7 +28,35 @@ Decisión: **escáner primero, y motor inmediatamente después**. Razones concre
 - Con D11 sobre la mesa (cientos de variables, millones de iteraciones) el escáner deja de ser solo un inventario de funciones: también mide **tamaño del subgrafo, número de entradas y salidas y profundidad de dependencias**, que son precisamente los parámetros que dimensionan el motor. Construir el motor sin esos números es dimensionar a ciegas.
 - Es un entregable **útil por sí mismo** aunque el motor tardara: te dice hoy qué tienen tus libros.
 
-**2.2 — ¿El modo compatible entra en el MVP?**
+### 1.1 Revisión del 2026-09-15: el proyecto pasa a ser un producto
+
+El usuario comunica que va a **vender o publicar** el complemento, con **más de 100
+usuarios** de público abierto. Eso invalida la decisión D2 original ("equipo personal")
+y cambia tres cosas de este roadmap:
+
+1. **El modo compatible sube al MVP** (decisión 15, invierte la 2.2 de más abajo). Con
+   usuarios desconocidos, un modelo que no se puede simular es motivo de desinstalar el
+   complemento. La justificación original —que con corridas de millones de iteraciones
+   el modo lento no sirve— solo valía para *este* usuario; mucha gente hará 10.000
+   iteraciones, y ahí funciona perfectamente.
+2. **El catálogo de funciones deja de tener techo conocido.** Los libros del usuario
+   pasan a ser el suelo mínimo. Se diseña el registro de funciones para que añadir una
+   sea barato (un archivo pequeño + su fila en el libro de fidelidad), porque la
+   cobertura va a crecer durante toda la vida del producto.
+3. **Aparecen E10 y E11**: hosting, internacionalización, licencia, privacidad y la
+   validación de Microsoft. Nada de eso existía cuando el destinatario era una persona.
+
+Consecuencia de calendario: el MVP se retrasa alrededor de una semana y el total sube de
+~65–83 a ~78–105 días.
+
+Lo que **no** cambia: el cálculo sigue siendo 100 % local y la arquitectura del motor es
+la misma. Alojar el complemento en una URL significa que se descarga el programa, no que
+los datos salgan del equipo.
+
+---
+
+**2.2 — ¿El modo compatible entra en el MVP?** *(decisión original, luego invertida — se
+conserva por trazabilidad; ver §1.1)*
 Decisión: **no; entra en la V1**. Y el motivo es una consecuencia de tu propia respuesta 3.2:
 
 > Con Excel dentro del bucle, 1M de iteraciones son horas o días. Si tus corridas pueden ser de millones, **el modo compatible no puede darte lo que buscas en ningún caso** — solo sirve para modelos pequeños con miles de iteraciones. Meterlo en el MVP consumiría ~1 semana en algo que, en tu escenario real, casi nunca vas a usar.
@@ -43,18 +71,26 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 
 | Etapa | Nombre | Esfuerzo | Hito |
 |---|---|---|---|
-| E0 | Fundaciones | 2–3 d | |
-| E1 | Escáner de compatibilidad | 4–5 d | **v0.1 — primer entregable útil** |
-| E2 | Motor Nivel 0 | 15–20 d | |
-| E3 | Integración Excel + UI mínima | 6–8 d | **v0.5 — MVP: simula de verdad** |
+| E0 | Fundaciones | 2–3 d | ✅ hecha |
+| E1 | Escáner de compatibilidad | 4–5 d | ✅ **v0.1** (falta pasarlo por libros reales) |
+| E2 | Motor Nivel 0 | 15–20 d | en curso (parser hecho) |
+| E3 | Integración Excel + UI mínima **+ modo compatible** | 11–14 d | **v0.5 — MVP: simula de verdad, siempre** |
 | E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | |
 | E5 | Motor Nivel 1 (búsquedas, financieras, fechas) | 10–12 d | **v0.8** |
 | E6 | Escala D11 y rendimiento | 6–8 d | |
-| E7 | Análisis y visualización | 8–10 d | **v1.0 — producto completo** |
-| E8 | Modo compatible | 5–6 d | |
-| E9 | Distribución, Mac y documentación final | 4–5 d | **v1.1** |
+| E7 | Análisis y visualización | 8–10 d | **v1.0 — funcionalmente completo** |
+| E9 | Mac, empaquetado y documentación | 4–5 d | |
+| **E10** | **Producto: hosting, i18n, licencia, privacidad** | **8–12 d** | |
+| **E11** | **Validación y publicación en AppSource** | **5–8 d** | **v1.0 pública** |
 
-Total aproximado: **65–83 días** de trabajo efectivo. El MVP utilizable (v0.5) está en torno al día 25–35.
+Total aproximado: **78–105 días** de trabajo efectivo. El MVP utilizable (v0.5) está en torno al día 30–40.
+
+> **E8 (modo compatible) ya no es una etapa suelta**: se absorbe dentro de E3 por la
+> decisión 15. Se mantiene el número retirado para no romper las referencias de los
+> commits anteriores.
+>
+> **E10 y E11 son nuevas** y nacen del cambio de destino del proyecto (§1.1). No son
+> opcionales: sin ellas el complemento no puede llegar a un usuario que no seas tú.
 
 ---
 
@@ -192,7 +228,7 @@ La etapa crítica y la más larga. Es el corazón del producto.
 
 ---
 
-## E8 — Modo compatible
+## E8 — Modo compatible  *(absorbida en E3 por la decisión 15)*
 
 **Entregable:** la red de seguridad. Ningún modelo se queda sin poder simularse.
 
@@ -204,13 +240,63 @@ La etapa crítica y la más larga. Es el corazón del producto.
 
 ---
 
-## E9 — Distribución, Mac y documentación final · **v1.1**
+## E9 — Mac, empaquetado y documentación
 
 - Prueba real en **Mac** (D1). Esto se valida antes, no aquí: una prueba de humo en Mac debe hacerse ya en E4, cuando se toca el manifiesto. E9 es la validación completa.
 - Empaquetado y sideload documentado para ambos sistemas; manifiesto de producción sin `localhost`.
 - Re-registro del sideload apuntando a esta carpeta (hoy apunta a `1 complemento sensibilidad`).
 - **Documentación que permita a otra IA reconstruir el proyecto desde cero** (§21 de tus instrucciones maestras): decisiones, arquitectura, formatos, catálogo de funciones, cómo correr tests y benchmarks.
 - Manual de usuario.
+
+---
+
+## E10 — Producto: hosting, internacionalización, licencia y privacidad
+
+Etapa nueva, nacida del cambio de destino (§1.1). Nada de esto es opcional si el
+complemento tiene que llegar a alguien que no seas tú.
+
+- **Hosting HTTPS permanente** y manifiesto de producción sin `localhost`. Despliegue
+  automático desde el repositorio, con la versión visible en la interfaz para que el
+  soporte sepa qué está mirando el usuario.
+- **Internacionalización** (mínimo español e inglés). Se hace aquí solo porque la UI no
+  existe hasta E3; a partir de E3 **todo texto nuevo nace en el catálogo de cadenas**,
+  nunca incrustado en el código. Retrofitear i18n es de las cosas más caras que hay.
+- **Versionado estricto del formato `RiskModel`.** Desde la primera versión pública,
+  cada cambio necesita ruta de migración: habrá libros ajenos con la configuración
+  dentro y no se pueden romper.
+- **Licencia.** Requiere una decisión previa del usuario (ver §4): una comprobación
+  contra un servidor choca con la promesa de "no se conecta a Internet". Se puede
+  resolver con activación única o licencia firmada offline, pero hay que elegir qué se
+  promete, porque acaba en la política de privacidad.
+- **Mensajes de error para desconocidos.** Hoy están pensados para alguien que conoce el
+  proyecto. Un usuario que acaba de instalarlo necesita saber qué hacer, no qué falló.
+- **Telemetría opcional y explícita**, si la hay: nunca datos del libro, nunca activada
+  por defecto.
+
+**Criterio de hecho:** una persona ajena al proyecto, en un equipo limpio, instala el
+complemento desde la URL pública y simula un modelo sin ayuda.
+
+---
+
+## E11 — Validación y publicación en AppSource
+
+- Cuenta de Partner Center y envío del complemento.
+- Política de privacidad y condiciones de uso publicadas y enlazadas desde el manifiesto.
+- Canal de soporte operativo.
+- Pruebas en las plataformas que se declaren: **Microsoft valida lo que declaras**, así
+  que si el manifiesto dice Mac, tiene que funcionar en Mac de verdad.
+- Accesibilidad y requisitos de la lista de validación de Microsoft.
+- Material de la ficha: descripción, capturas, vídeo.
+
+**Criterio de hecho:** complemento publicado y instalable por cualquiera desde AppSource.
+
+**Riesgo propio:** la validación de Microsoft puede rechazar y obligar a iterar. No es
+raro que lleve varias rondas. Conviene revisar la lista de requisitos **antes** de E9,
+no al final.
+
+**Aviso de marca:** "@RISK" es marca registrada de Lumivero. El prefijo de funciones
+`RISK.` no debería dar problema, pero el nombre comercial y el material de marketing
+deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolver yo.
 
 ---
 
@@ -223,6 +309,9 @@ La etapa crítica y la más larga. Es el corazón del producto.
 | D11 no alcanzable en TypeScript | Benchmark de E6 | Rust→WASM solo para el ejecutor; el resto de `engine/` no cambia |
 | Las funciones `RISK.*` vuelven a no registrarse | E4 falla en Excel real | La causa raíz está documentada (C1–C7); si falla, es por algo nuevo y se diagnostica con la caché `Wef` |
 | Alcance que crece por los bordes | Cada etapa dice qué NO entra | Lo que surja va al CHANGELOG como idea, no a la etapa en curso |
+| **Cobertura de funciones insuficiente para usuarios desconocidos** | Quejas tras publicar | El modo compatible en el MVP garantiza que nada quede sin simular; el registro de funciones hace barato ampliar |
+| **Rechazo en la validación de Microsoft** | E11 | Revisar la lista de requisitos antes de E9, no al final |
+| **Soporte y compatibilidad con 100+ usuarios** | A partir de la publicación | Versionado estricto del formato, versión visible en la UI, mensajes de error autoexplicativos |
 
 ---
 
@@ -230,7 +319,8 @@ La etapa crítica y la más larga. Es el corazón del producto.
 
 | Cuándo | Qué |
 |---|---|
-| Ahora | Aprobar este roadmap. Y decidir si inviertes 2.2 (modo compatible al MVP) |
+| Ahora | **Decidir el modelo de licencia** y qué se promete exactamente sobre la conexión a Internet (§E10). Condiciona la arquitectura, así que cuanto antes mejor |
+| Antes de E10 | Cuenta de Partner Center, política de privacidad, condiciones de uso, canal de soporte, revisión de marca. Son tareas tuyas, no mías |
 | Al cerrar E1 | Pasar el escáner por tus libros reales y revisar juntos el catálogo del §4.2 |
 | Al cerrar E3 (MVP) | Probarlo con un modelo tuyo de verdad y decir qué falla |
 | Al cerrar E4 | Confirmar que `RISK.*` funciona en tu Excel, y probarlo en un Mac si tienes acceso a uno |

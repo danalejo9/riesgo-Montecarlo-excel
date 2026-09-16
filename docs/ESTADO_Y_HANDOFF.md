@@ -1,7 +1,8 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-15
-**Fase actual:** Fases 1 y 2 COMPLETADAS Y APROBADAS. **Fase 3 (Roadmap) ENTREGADA, pendiente de aprobación.** Después empieza la implementación (Fase 4, etapa E0).
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 empezada** (parser listo).
+**Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
 - [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md) — arquitectura objetivo, alternativas descartadas, estrategia de pruebas.
@@ -56,7 +57,7 @@ Los cinco hechos que hay que tener presentes:
 | # | Pregunta | Respuesta | Consecuencia técnica |
 |---|---|---|---|
 | 1 | Plataformas | Principalmente Excel de escritorio Windows (M365, es-ES, 16.0.20326 x64), **pero también debe funcionar en Mac**; deseable otras versiones | **Descarta XLL / Excel-DNA** (solo Windows). Obliga a mantener el formato Office Add-in web |
-| 2 | Distribución | Equipo **personal** | Sin catálogo de organización ni hosting corporativo. Sideload en Windows, carpeta compartida en Mac |
+| 2 | ~~Distribución~~ | ~~Equipo **personal**~~ — **SUPERADA por la decisión 14** | Ya no aplica. Ver §10 |
 | 3 | Qué funciones de Excel usan sus modelos | **No lo sabe, y decide NO medirlo ahora** | Se asume un catálogo típico de presupuestos (§4.2 de Fase 2). El escáner de compatibilidad pasa a ser el primer entregable de la Fase 4. Ver §5 |
 | 4 | ¿Motor rápido con cobertura parcial + fallback? | **SÍ — híbrido confirmado** | Es la arquitectura de la Fase 2. Ver §4 |
 | 5 | Git / GitHub | **Autorizado**: git local + repositorio privado en GitHub | Ejecutado el local. Ver §6 |
@@ -68,6 +69,9 @@ Los cinco hechos que hay que tener presentes:
 | 11 | **Escala real** | **Cientos de entradas y salidas; iteraciones que pueden llegar a millones** | Restricción dominante del proyecto. Obligó a rediseñar memoria: bloque adaptativo, t-digest, reservorio para sensibilidad |
 | 12 | Orden de construcción | **Delegado en mí** → escáner primero, motor después | Ver Fase 3, §1 |
 | 13 | Carpeta duplicada `1 complemento sensibilidad` | **Puede borrarse** ahora que hay Git | Ojo: el sideload de Excel apunta a ella; hay que re-registrar antes de borrarla |
+| 14 | **Destino del proyecto** | **Producto comercial**, para vender o publicar (AppSource). **100+ usuarios, público abierto** | **Invalida la D2 original ("equipo personal").** Ver §10 |
+| 15 | Modo compatible (Excel en el bucle) | **Entra en el MVP**, invirtiendo la decisión 2.2 | Con usuarios desconocidos, "no puedo simular tu modelo" es motivo de desinstalar |
+| 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
 
 ### Consecuencia arquitectónica principal
 
@@ -183,3 +187,51 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.
+
+---
+
+## 10. Cambio de destino: de herramienta personal a producto (2026-09-15)
+
+La decisión D2 original decía "equipo personal". **Ya no es cierta.** El usuario va a
+distribuir el complemento a más de 100 personas y quiere venderlo o publicarlo.
+
+Este apartado existe porque el cambio invalida supuestos anteriores y cualquiera que
+retome el proyecto debe leerlo antes que el resto.
+
+### 10.1 Qué invalida
+
+| Supuesto anterior | Estado |
+|---|---|
+| Sideload personal, sin hosting | **Muerto.** Hace falta hosting HTTPS permanente; `localhost:9090` solo sirve para desarrollo |
+| "El alcance del motor se define por los libros del usuario" | **Muerto.** Los usuarios traerán funciones que nadie ha previsto. Los libros propios son el suelo, no el techo |
+| Modo compatible aplazado a la V1 | **Invertido.** Entra en el MVP |
+| Mac "deseable" | **Obligatorio y bloqueante** si se declara en el manifiesto. Microsoft valida lo que declaras |
+| Formato `RiskModel` libre de cambiar | Libre **hasta la primera versión pública**. Después, cada cambio necesita migración |
+
+### 10.2 Qué NO cambia
+
+- **El cálculo sigue siendo 100 % local.** Los datos del libro no salen del equipo del
+  usuario. Alojar el complemento en una URL solo significa que se descarga el programa,
+  como una página web.
+- La arquitectura del motor (vectorizado, fuera del ciclo de recálculo) es exactamente
+  la misma. Si acaso, con usuarios variados importa aún más.
+
+### 10.3 Tensión que hay que resolver antes de publicar
+
+Un producto de pago suele necesitar comprobar la licencia contra un servidor, al menos
+una vez. Eso choca con la promesa "no se conecta a Internet". Se puede resolver con
+activación única o licencia firmada offline, pero **hay que decidir qué se promete
+exactamente**, porque acaba escrito en la ficha del producto y en la política de
+privacidad. Pendiente de decisión del usuario.
+
+### 10.4 Trabajo nuevo que antes no existía
+
+Técnico: hosting y despliegue, internacionalización (mínimo es/en), versionado estricto
+del formato guardado, compatibilidad hacia atrás, mensajes de error pensados para alguien
+que no conoce el producto, telemetría opcional y explícita (nunca datos del libro).
+
+No técnico, y responsabilidad del usuario: cuenta de Partner Center, política de
+privacidad y condiciones de uso publicadas, canal de soporte, modelo de precios, y
+revisión de marca. **Aviso:** "@RISK" es marca registrada de Lumivero; el prefijo de
+funciones `RISK.` no debería ser problema, pero el nombre comercial y el material de
+marketing sí deben revisarse.
