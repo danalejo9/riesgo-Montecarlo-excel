@@ -236,6 +236,38 @@ export function STDEV_S(args: Arg[], n: number): Buffer {
   return v;
 }
 
+/**
+ * `SUMAPRODUCTO`: multiplica posición a posición dos o más rangos del mismo
+ * tamaño y suma los productos. A diferencia de los reductores de arriba, aquí
+ * la posición dentro del rango importa — no se puede aplanar y sumar sin más
+ * (eso sería `SUM`, no `SUMPRODUCT`).
+ *
+ * Excel da `#¡VALOR!` si los rangos no miden lo mismo; sin canal de errores
+ * todavía (ver `types.ts`), se propaga `NaN`, el mismo convenio que ya usan
+ * `SQRT` de un negativo o una división por cero.
+ */
+export function SUMPRODUCT(args: Arg[], n: number): Buffer {
+  const out = nuevoBuffer(n);
+  if (args.length === 0) return out;
+
+  const largo = (args[0] as Arg).length;
+  if (args.some((a) => a.length !== largo)) {
+    out.fill(NaN);
+    return out;
+  }
+
+  for (let i = 0; i < n; i++) {
+    let acumulado = 0;
+    for (let k = 0; k < largo; k++) {
+      let producto = 1;
+      for (const arg of args) producto *= (arg[k] as Buffer)[i] as number;
+      acumulado += producto;
+    }
+    out[i] = acumulado;
+  }
+  return out;
+}
+
 export function STDEV_P(args: Arg[], n: number): Buffer {
   const v = VAR_P(args, n);
   for (let i = 0; i < n; i++) v[i] = Math.sqrt(v[i] as number);

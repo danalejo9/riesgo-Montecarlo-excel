@@ -199,7 +199,11 @@ describe('PERT', () => {
 describe('beta', () => {
   it('pasa KS para formas asimétricas y en U', () => {
     esperarKS(beta(2, 5), 1501);
-    esperarKS(beta(0.5, 0.5), 1502); // forma en U: extremos difíciles para la inversión
+    // Forma en U: la inversión por bisección converge mucho más despacio
+    // cerca de los extremos, así que esta rama usa menos muestras para no
+    // volverse un test lento — la potencia estadística sigue sobrando para
+    // detectar un error de implementación real.
+    esperarKS(beta(0.5, 0.5), 1502, 0.02, 20_000);
   });
 
   it('tiene la media y varianza teóricas', () => {

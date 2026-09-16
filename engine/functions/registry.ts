@@ -11,17 +11,17 @@
 import {
   ABS, AVERAGE, COUNT, EXP, INT, LN, LOG, LOG10, MAX, MEDIAN, MIN, MOD,
   POWER, PRODUCT, ROUND, ROUNDDOWN, ROUNDUP, SIGN, SQRT, STDEV_P, STDEV_S,
-  SUM, TRUNC, VAR_P, VAR_S,
+  SUM, SUMPRODUCT, TRUNC, VAR_P, VAR_S,
 } from './math.ts';
-import { AND, IF, NOT, OR, XOR } from './logic.ts';
+import { AND, IF, IFERROR, NOT, OR, XOR } from './logic.ts';
 import type { FuncionNivel0 } from './types.ts';
 
 export const REGISTRO_NIVEL_0: Record<string, FuncionNivel0> = {
-  SUM, PRODUCT, MIN, MAX, COUNT, AVERAGE, MEDIAN,
+  SUM, PRODUCT, MIN, MAX, COUNT, AVERAGE, MEDIAN, SUMPRODUCT,
   'STDEV.S': STDEV_S, 'STDEV.P': STDEV_P, 'VAR.S': VAR_S, 'VAR.P': VAR_P,
   ABS, SIGN, SQRT, INT, EXP, LN, LOG, LOG10, POWER, MOD,
   ROUND, ROUNDUP, ROUNDDOWN, TRUNC,
-  IF, AND, OR, NOT, XOR,
+  IF, IFERROR, AND, OR, NOT, XOR,
 };
 
 export function funcionSoportada(nombre: string): boolean {

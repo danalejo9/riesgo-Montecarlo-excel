@@ -58,6 +58,26 @@ export function NOT(args: Arg[], n: number): Buffer {
   return out;
 }
 
+/**
+ * `SI.ERROR(valor, valor_si_error)`: sustituye por `valor_si_error` cuando
+ * `valor` es un error. Sin canal de errores formal todavía (ver
+ * `types.ts`), esta implementación usa el convenio que ya rige en todo el
+ * registro: `NaN` es un error. Solo cubre el caso numérico — un
+ * `valor_si_error` de texto (`SI.ERROR(10/0;"sin datos")`) queda fuera hasta
+ * que exista ese canal, documentado en el libro de fidelidad
+ * (`tests/fixtures/fidelidad.xlsx`, caso L0-022).
+ */
+export function IFERROR(args: Arg[], n: number): Buffer {
+  const valor = (args[0] as Arg)[0] as Buffer;
+  const siError = (args[1] as Arg)[0] as Buffer;
+  const out = nuevoBuffer(n);
+  for (let i = 0; i < n; i++) {
+    const v = valor[i] as number;
+    out[i] = Number.isNaN(v) ? (siError[i] as number) : v;
+  }
+  return out;
+}
+
 export function XOR(args: Arg[], n: number): Buffer {
   const out = nuevoBuffer(n);
   for (const arg of args) {

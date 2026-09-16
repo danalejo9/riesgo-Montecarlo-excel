@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ABS, AND, AVERAGE, celda, COUNT, excelMod, excelRound, excelRoundUp,
-  excelTrunc, funcionSoportada, IF, INT, LN, LOG, LOG10, MAX, MEDIAN, MIN,
+  excelTrunc, funcionSoportada, IF, IFERROR, INT, LN, LOG, LOG10, MAX, MEDIAN, MIN,
   MOD, NOT, obtenerFuncion, OR, POWER, PRODUCT, ROUND, ROUNDDOWN, ROUNDUP,
-  SIGN, SQRT, STDEV_P, STDEV_S, SUM, TRUNC, VAR_P, VAR_S, XOR,
+  SIGN, SQRT, STDEV_P, STDEV_S, SUM, SUMPRODUCT, TRUNC, VAR_P, VAR_S, XOR,
   type Arg, type Buffer,
 } from '../../engine/functions/index.ts';
 
@@ -152,6 +152,15 @@ describe('otras funciones aritméticas', () => {
     expect(arr(LOG([c(8), c(2)], 1))).toEqual([3]);
     expect(arr(LOG([c(1000)], 1))).toEqual([3]); // sin base: LOG10
   });
+
+  it('SUMPRODUCT multiplica posición a posición y suma', () => {
+    // 1*10 + 2*20 + 3*30 = 140, ver tests/fixtures/fidelidad.xlsx caso L0-035.
+    expect(arr(SUMPRODUCT([rango([1], [2], [3]), rango([10], [20], [30])], 1))).toEqual([140]);
+  });
+
+  it('SUMPRODUCT con rangos de distinto tamaño da NaN, no lanza (Excel: #¡VALOR!)', () => {
+    expect(Number.isNaN(SUMPRODUCT([rango([1], [2]), rango([10])], 1)[0])).toBe(true);
+  });
 });
 
 describe('lógica: IF, AND, OR, NOT, XOR', () => {
@@ -175,6 +184,12 @@ describe('lógica: IF, AND, OR, NOT, XOR', () => {
   it('NOT y XOR', () => {
     expect(arr(NOT([c(0, 5)], 2))).toEqual([1, 0]);
     expect(arr(XOR([c(1, 0), c(0, 0)], 2))).toEqual([1, 0]);
+  });
+
+  it('IFERROR sustituye NaN (el convenio de error de este registro) por el valor alternativo', () => {
+    // Ver tests/fixtures/fidelidad.xlsx caso L0-022: el caso con un
+    // valor_si_error de texto queda fuera hasta que exista el canal de texto.
+    expect(arr(IFERROR([c(5, NaN), c(-1, -1)], 2))).toEqual([5, -1]);
   });
 });
 

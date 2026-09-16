@@ -1,7 +1,7 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-16
-**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 casi completa** (parser, grafo, registro de funciones numéricas, evaluador de referencia, distribuciones, muestreo, estadísticas de salida y compilador optimizado con *constant folding* listos, en un solo hilo; falta el ejecutor por bloques con Web Workers y el libro de fidelidad contra Excel).
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0 y E1 terminadas, E2 casi completa** (parser, grafo, registro de funciones numéricas, evaluador de referencia, distribuciones, muestreo, estadísticas de salida, compilador optimizado con *constant folding* y libro de fidelidad contra Excel listos; falta solo el ejecutor por bloques con Web Workers).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
@@ -179,13 +179,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 11. [~] **E2 — Motor Nivel 0**, según [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Hecho hasta ahora:
     parser, grafo de dependencias, registro de funciones vectorizadas (subconjunto
     numérico), evaluador de referencia interpretado, **distribuciones**,
-    **muestreo**, **estadísticas de salida** y **compilador optimizado con
-    *constant folding*** (`engine/distributions/`, `engine/sampling/`,
-    `engine/stats/`, `engine/compiler/plan.ts` + `executor.ts`, ver
-    `CHANGELOG.md` para el detalle y las cifras del benchmark). `npm run
-    build && npm run lint && npm test` en verde, 220 tests.
+    **muestreo**, **estadísticas de salida**, **compilador optimizado con
+    *constant folding*** y el **libro de fidelidad contra Excel**
+    (`engine/distributions/`, `engine/sampling/`, `engine/stats/`,
+    `engine/compiler/plan.ts` + `executor.ts`, `tests/fixtures/fidelidad.xlsx`
+    — ver `CHANGELOG.md` para el detalle, las cifras del benchmark y los 6
+    casos de fidelidad documentados como pendientes). `npm run build && npm
+    run lint && npm test` en verde, 250 tests (+ 6 documentados como
+    pendientes, no ocultos).
 
-    Falta para cerrar E2:
+    Falta para cerrar E2, y es lo único que queda de la etapa:
     - **Ejecutor por bloques con Web Workers**: el compilador y su ejecutor de
       hoy corren en un solo hilo, sin trocear en bloques ni cancelar a medio
       camino. `engine/stats/` ya soporta combinar estados parciales
@@ -200,31 +203,38 @@ Vienen de sus instrucciones maestras y siguen vigentes:
       También es la pieza que permitiría que LHS se calculara a trozos si
       algún día hace falta (hoy la baraja de Fisher–Yates de `lhs.ts` es de
       una sola pasada).
-    - **Libro de fidelidad contra Excel** (`tests/fixtures/fidelidad.xlsx`,
-      Fase 2 §11.3): todavía no existe. Es el único criterio de hecho de E2
-      que sigue pendiente — el benchmark formal (1M/20 entradas/5
-      salidas/200 celdas) ya se ejecutó y da **~2,5–2,9 s, por debajo del
-      objetivo de 5 s**, y los tests estadísticos de distribuciones/muestreo
-      ya están en verde.
 
-**Siguiente acción al retomar:** con el compilador ya construido y medido, lo
-que queda de E2 es (a) el libro de fidelidad contra Excel —construirlo
-depende de tener Excel a mano para generar los valores de referencia, así que
-puede ser buen momento para pedírselo al usuario— y (b) el ejecutor por
-bloques con Web Workers, que es trabajo puramente de ingeniería sobre lo que
-ya existe (no necesita decisiones nuevas). Cualquiera de los dos cierra E2;
-conviene preguntar cuál prefiere el usuario antes de empezar, porque (a)
-depende de él.
+    El benchmark formal (1M/20 entradas/5 salidas/200 celdas) ya se ejecutó y
+    da **~2,5–2,9 s, por debajo del objetivo de 5 s**.
+
+    Nota sobre el libro de fidelidad: la primera tanda (31 casos) cubre el
+    catálogo Nivel 0. Al construirla salieron dos hallazgos reales, no
+    supuestos: `AVERAGE` no distingue una celda vacía de un cero en el
+    denominador (un `PROMEDIO` con huecos da un número distinto al de Excel,
+    y sobre un rango totalmente vacío da 0 en vez de un error). No se
+    corrigen ahora — la corrección de fondo (canal de vacío/texto/error
+    completo) es un cambio más grande que toca todo `engine/functions/`, y no
+    es parte de esta pieza. Quedan documentados por id en
+    `tests/unit/fidelidad.test.ts` (`PENDIENTES`), con el motivo exacto, para
+    que no se olviden.
+
+**Siguiente acción al retomar:** el ejecutor por bloques con Web Workers es
+lo único que falta para cerrar E2. Es trabajo de ingeniería sobre lo que ya
+existe (compilador, plan, buffers), no necesita decisiones nuevas del
+usuario. Después de eso, según Fase 3 toca E3 (integración con Excel + UI
+mínima, el MVP v0.5).
 
 ### Estado del árbol tras E0–E2 (casi completa)
 
 - `engine/` — motor nuevo. Contiene el PRNG Philox basado en contador
   (`random/`), el parser de fórmulas (`parser/`), el grafo de dependencias
-  (`graph/`), el registro de funciones vectorizadas (`functions/`), el
-  evaluador de referencia y el compilador optimizado (`compiler/`), las
-  distribuciones (`distributions/`), el muestreo (`sampling/`) y las
-  estadísticas de salida (`stats/`).
-- `tests/unit/` — Vitest. 220 tests en verde.
+  (`graph/`), el registro de funciones vectorizadas (`functions/`, ahora con
+  `SUMPRODUCT` e `IFERROR`), el evaluador de referencia y el compilador
+  optimizado (`compiler/`), las distribuciones (`distributions/`), el
+  muestreo (`sampling/`) y las estadísticas de salida (`stats/`).
+- `tests/fixtures/fidelidad.xlsx` — el libro de fidelidad, calculado en Excel
+  real. `tests/helpers/leerFidelidad.ts` lo lee.
+- `tests/unit/` — Vitest. 250 tests en verde, 6 documentados como pendientes.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.

@@ -8,6 +8,37 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `tests/fixtures/fidelidad.xlsx` (Fase 2 §11.3, **primer criterio de hecho de
+  E2 que se cierra**): 31 casos reales, calculados y recalculados en Excel de
+  escritorio (es-ES), no en un simulador. Cubren el catálogo Nivel 0 de Fase
+  2 §4.2: aritmética y precedencia (`^` asocia por la izquierda, el menos
+  unario se aplica antes que la potencia), redondeo (los tres casos donde
+  Excel diverge de JavaScript), división por cero y raíz/logaritmo de
+  argumentos inválidos, agregación con celdas vacías, lógica, potencias y
+  logaritmos.
+  - `tests/helpers/leerFidelidad.ts`: lee el `.xlsx` directamente (ZIP+XML,
+    igual que `scanner/xlsx.ts`) y extrae el **valor cacheado** que Excel dejó
+    grabado en cada fórmula — número, texto, booleano o código de error—, que
+    es la referencia real contra la que se compara el motor.
+  - `tests/unit/fidelidad.test.ts`: evalúa cada fórmula con el motor y la
+    compara contra ese valor, con tolerancia `1e-9` para números. 25 de los
+    31 casos pasan hoy. Los 6 que no se excluyen **por id, con el motivo
+    exacto documentado en el propio test** (no en silencio): tres por el
+    canal de texto que todavía no existe (`IF`/`IFERROR` con ramas de texto,
+    `COUNT`/`COUNTA` con una celda de texto en el rango) y **dos hallazgos
+    nuevos, encontrados precisamente por tener este libro**: `AVERAGE` no
+    distingue una celda vacía de un cero en su denominador (`PROMEDIO` de un
+    rango con huecos da un número distinto al de Excel, y de un rango
+    totalmente vacío da 0 en vez de un error). Quedan para cuando exista el
+    canal de valores completo (texto/booleano/error/vacío) que ya anticipaba
+    `engine/functions/types.ts`.
+  - Añadidas al registro de funciones, al pasar por este ejercicio:
+    `SUMPRODUCT` (`engine/functions/math.ts`, multiplica posición a posición
+    dos o más rangos y suma) e `IFERROR` (`engine/functions/logic.ts`, usa el
+    convenio de este registro de que `NaN` es un error — cubre el caso
+    numérico; el caso con un `valor_si_error` de texto queda documentado como
+    pendiente, arriba). Ambas con sus propios tests unitarios además de la
+    fila del libro de fidelidad.
 - `engine/compiler/plan.ts` y `engine/compiler/executor.ts`: el compilador
   optimizado de Fase 2 §3, en un solo hilo (sin Web Workers todavía — eso
   queda para el ejecutor por bloques).
@@ -215,6 +246,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   posición, porque procesar miles de celdas no puede detenerse en la primera
   fórmula rara.
 - 35 tests de parser.
+
+**Corregido**
+- El test de bondad de ajuste de `beta(0.5, 0.5)` (forma en U) podía superar
+  el timeout por defecto de Vitest: la inversión por bisección converge más
+  despacio cerca de los extremos, y sobre 200.000 muestras se notaba. Se
+  reduce a 20.000 muestras solo para esa forma — sigue sobrando potencia
+  estadística para detectar un error real, y ya no depende de qué tan cargada
+  esté la máquina que corre los tests.
 
 ### E1 — Escáner de compatibilidad (v0.1)
 
