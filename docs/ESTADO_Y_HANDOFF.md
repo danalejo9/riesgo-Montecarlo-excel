@@ -118,7 +118,9 @@ Hecho el 2026-09-15 en `Riesgos_cuantificables`:
 4. Rama **`develop`** creada y activa. `main` queda reservada para versiones etiquetadas (SemVer).
 5. `.claude/` añadido a `.gitignore` (ya excluía `node_modules` y `dist`). No hay secretos en el código.
 
-**Pendiente (requiere acción del usuario):** crear el repositorio **privado y vacío** `riesgo-montecarlo-excel` en GitHub desde la web y pasar la URL para conectar el remoto y hacer el primer push. `gh` (GitHub CLI) **no está instalado** en este equipo; crearlo desde la web evita instalar nada.
+6. **Remoto conectado y subido**: `https://github.com/danalejo9/riesgo-Montecarlo-excel.git`. El repositorio ya tenía un commit inicial con un README automático de GitHub (`f68242e`); se **rebasó** la historia local encima en lugar de sobrescribirla, conservando el README heredado como contenido. `main`, `develop` y la etiqueta `v0.0.0-heredado` están en el remoto.
+
+Nota: `gh` (GitHub CLI) **no está instalado** en este equipo. Todas las operaciones de GitHub se hacen por `git` + web.
 
 La carpeta `1 complemento sensibilidad` queda como copia congelada; ya no es el mecanismo de respaldo.
 
