@@ -1,10 +1,11 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-15
-**Fase actual:** Fase 1 (Auditoría) COMPLETADA. **Fase 2 (Arquitectura) ENTREGADA, pendiente de aprobación.** Fase 3 (Roadmap) es lo siguiente.
+**Fase actual:** Fases 1 y 2 COMPLETADAS Y APROBADAS. **Fase 3 (Roadmap) ENTREGADA, pendiente de aprobación.** Después empieza la implementación (Fase 4, etapa E0).
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
 - [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md) — arquitectura objetivo, alternativas descartadas, estrategia de pruebas.
+- [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md) — etapas E0–E9, criterios de hecho, riesgos del plan.
 
 Este archivo existe para que cualquier sesión nueva (o cualquier otra IA) pueda retomar el trabajo sin releer toda la conversación anterior. Léelo entero antes de tocar nada.
 
@@ -61,6 +62,12 @@ Los cinco hechos que hay que tener presentes:
 | 5 | Git / GitHub | **Autorizado**: git local + repositorio privado en GitHub | Ejecutado el local. Ver §6 |
 | 6 | Nombres de las funciones personalizadas | **En inglés, espacio de nombres `RISK.`** | `RISK.NORMAL`, `RISK.TRIANGULAR`, … Se abandona `RIESGO.` |
 | 7 | Compatibilidad con libros ya configurados | **No hace falta migrar** | Formato nuevo `RiskModel v1`, sin soporte de `MonteCarloConfig` |
+| 8 | Aprobación de la Fase 2 | **Concedida**, incluidas las eliminaciones (Google Fonts, jspdf/html2canvas, recharts, modo muerto, tope de 50k) | Fase 2 cerrada |
+| 9 | ¿F9 debe mover el modelo? | **Sí**, como **modo exploración** conmutable | `RISK.*` volátiles con doble comportamiento según modo. Ver §6.1 de Fase 2 |
+| 10 | Método de muestreo | **Ambos**, Monte Carlo y LHS, seleccionables | LHS preseleccionado; el método se indica siempre en los resultados |
+| 11 | **Escala real** | **Cientos de entradas y salidas; iteraciones que pueden llegar a millones** | Restricción dominante del proyecto. Obligó a rediseñar memoria: bloque adaptativo, t-digest, reservorio para sensibilidad |
+| 12 | Orden de construcción | **Delegado en mí** → escáner primero, motor después | Ver Fase 3, §1 |
+| 13 | Carpeta duplicada `1 complemento sensibilidad` | **Puede borrarse** ahora que hay Git | Ojo: el sideload de Excel apunta a ella; hay que re-registrar antes de borrarla |
 
 ### Consecuencia arquitectónica principal
 
@@ -155,7 +162,10 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 2. [x] Confirmar la arquitectura híbrida de §4.
 3. [x] Autorizar Git y ejecutar el repositorio local (§6). Falta solo el remoto en GitHub.
 4. [x] **Fase 2 — Propuesta de arquitectura** → [`FASE2_ARQUITECTURA.md`](FASE2_ARQUITECTURA.md).
-5. [ ] **Aprobar la Fase 2** (los 5 puntos de su §16) antes de continuar.
-6. [ ] Crear el repositorio privado en GitHub y conectar el remoto.
-7. [ ] **Fase 3 — Roadmap** por etapas (MVP → V1 → …), con el escáner de compatibilidad como primer entregable.
-8. [ ] **Fase 4 — Implementación** en cambios pequeños y verificables, con pruebas y benchmarks tras cada bloque importante.
+5. [x] **Fase 2 aprobada** (los 5 puntos de su §16), con revisión posterior por D9–D11.
+6. [x] Repositorio en GitHub creado y remoto conectado.
+7. [x] **Fase 3 — Roadmap** → [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Escáner (E1) como primer entregable.
+8. [ ] **Aprobar la Fase 3**, y decidir si se invierte la decisión 2.2 (llevar el modo compatible al MVP).
+9. [ ] **Fase 4 — Implementación**, empezando por **E0 (Fundaciones)**: estructura de carpetas, Vitest, CI, limpieza del árbol heredado.
+
+**Siguiente acción al retomar:** si la Fase 3 está aprobada, empezar E0. Si no, resolver el punto 8.

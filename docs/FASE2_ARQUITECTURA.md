@@ -16,7 +16,13 @@ Documentos previos: [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) (
 | D4 | **No se miden los modelos reales por ahora**. Se asume un catálogo de funciones típico de presupuestos (§4.2) y se ajusta el alcance más adelante con el escáner | 2026-09-15 |
 | D5 | Nombres de funciones **en inglés**, espacio de nombres `RISK.` (`RISK.NORMAL`, `RISK.TRIANGULAR`, …) | 2026-09-15 |
 | D6 | **Formato de configuración nuevo**, sin migración de los libros hechos con la versión heredada | 2026-09-15 |
-| D7 | Git local + repositorio privado en GitHub | 2026-09-15 |
+| D7 | Git local + repositorio privado en GitHub (`danalejo9/riesgo-Montecarlo-excel`) | 2026-09-15 |
+| D8 | Arquitectura del §1–§15 **aprobada**, incluidas las eliminaciones del §16.4 | 2026-09-15 |
+| D9 | `RISK.*` declarativa por defecto, **pero con un "modo exploración" conmutable** en el que F9 vuelve a muestrear (§6.1) | 2026-09-15 |
+| D10 | Muestreo: **Monte Carlo y Latin Hypercube, ambos disponibles y seleccionables** por el usuario | 2026-09-15 |
+| D11 | **Escala real: cientos de entradas y salidas, e iteraciones que pueden llegar a millones.** No hay un tamaño "por defecto" | 2026-09-15 |
+
+> **D11 es la restricción más dura de todo el proyecto.** Cientos de variables × millones de iteraciones hace inviable retener las muestras completas (300 salidas × 1M × 8 B = **2,4 GB**). Obliga a tres cambios de diseño frente al borrador inicial: bloques de tamaño **adaptativo** (§3.1), percentiles por **t-digest** como comportamiento normal y no como excepción (§3.3), y sensibilidad calculada sobre un **reservorio acotado** (§3.4). Ver §10 y §15.
 
 > **Consecuencia de D4 — supuesto explícito que hay que vigilar.** El alcance del motor rápido se define en este documento sobre un catálogo *supuesto* de funciones de Excel, no medido. Si tus modelos reales usan funciones fuera del Nivel 1 (§4.2), no se rompe nada — caen al modo compatible — pero la promesa de velocidad no se cumpliría para esos modelos. Por eso el **escáner de compatibilidad es el primer entregable de la Fase 4** (§13): convierte el supuesto en dato antes de que cueste caro.
 
@@ -101,14 +107,20 @@ for (let i = 0; i < n; i++) d5[i] = b5[i] * c5[i];
 
 Esto es lo que ninguna librería de fórmulas existente hace, y es la razón de la decisión de §12.1.
 
-### 3.1 Ejecución por bloques (no 1M de golpe)
+### 3.1 Ejecución por bloques de tamaño adaptativo (no 1M de golpe)
 
-El motor no reserva `C × 1.000.000 × 8 bytes`. Procesa en **bloques de 65.536 muestras**:
+El motor no reserva `C × 1.000.000 × 8 bytes`. Procesa por bloques, y —por D11— **el tamaño de bloque no es fijo**: se calcula para que el conjunto de vivos quepa en un presupuesto de memoria por worker.
 
-- Memoria acotada. Un modelo de 500 celdas ocuparía 500 × 65.536 × 8 ≈ 260 MB por bloque, que sigue siendo mucho, así que el compilador aplica **reutilización de buffers por análisis de vida**: una celda intermedia cuyo último consumidor ya se calculó devuelve su buffer al pool. El pico pasa a ser proporcional al *ancho máximo del grafo*, no a su tamaño (típicamente 20–40 buffers → 10–20 MB por bloque).
+```
+tamañoBloque = clamp( presupuestoBytesPorWorker / (buffersVivos × 8), 4096, 65536 )
+```
+
+Con 20 buffers vivos el bloque es de 65.536 muestras; con 300 entradas declaradas cae a ~6.500. El número de bloques sube, el coste por muestra no cambia: el bucle interno sigue siendo plano y contiguo.
+
+- **Reutilización de buffers por análisis de vida**: una celda intermedia cuyo último consumidor ya se calculó devuelve su buffer al pool. El pico es proporcional al *ancho máximo del grafo*, no a su tamaño.
 - Los bloques encajan en caché mejor que un array de 8 MB.
 - Permite **progreso y cancelación reales** entre bloques (R5).
-- Las estadísticas se acumulan bloque a bloque; solo las salidas retienen la muestra completa.
+- Las estadísticas se acumulan bloque a bloque.
 
 ### 3.2 Paralelismo
 
@@ -116,11 +128,28 @@ El motor no reserva `C × 1.000.000 × 8 bytes`. Procesa en **bloques de 65.536 
 
 **PRNG:** contador determinista tipo **Philox/counter-based**, no Mulberry32 secuencial. Propiedad clave: la muestra i-ésima se calcula como `f(semilla, stream, i)`, sin depender de las anteriores. Esto da **reproducibilidad exacta independiente del número de núcleos** — la misma semilla da el mismo resultado en un equipo de 4 núcleos y en uno de 16. Con un PRNG secuencial repartido entre workers eso no se puede garantizar, y sin ello los tests de fidelidad dejan de ser fiables.
 
-### 3.3 Estadísticas
+### 3.3 Estadísticas con memoria acotada (revisado por D11)
 
-- **En streaming** (sin retener datos): media y varianza por Welford, mín/máx, momentos 3 y 4 (asimetría y curtosis), histograma sobre un rango fijado en una pasada previa corta.
-- **Percentiles exactos**: requieren la muestra ordenada. Se retiene un `Float64Array` por **salida** (no por celda): 1M × 8 B = 8 MB por salida. Con 5–10 salidas es perfectamente manejable. Por encima de un umbral (muchas salidas × muchas iteraciones) se ofrece conmutar a percentiles aproximados por t-digest, con error < 0,1 %.
-- **Nunca** se escriben 1M de filas en Excel salvo petición explícita del usuario (regla §7 de las instrucciones maestras).
+- **En streaming** (sin retener datos): media y varianza por Welford, mín/máx, momentos 3 y 4 (asimetría y curtosis), histograma sobre un rango fijado en una pasada previa corta. Coste: O(1) por salida, independiente de N.
+- **Percentiles.** El borrador inicial retenía la muestra completa por salida (8 MB por salida a 1M). Con cientos de salidas eso son gigabytes: inviable. Regla definitiva:
+
+  | Condición | Estrategia |
+  |---|---|
+  | `salidas × iteraciones × 8 B ≤ 100 MB` | Muestra completa retenida → **percentiles exactos** |
+  | Por encima | **t-digest** por salida (~16 KB cada una, error < 0,1 % incluso en P1/P99) |
+
+  El cambio es automático y **se muestra en la UI** — el usuario siempre sabe si un percentil es exacto o aproximado. 300 salidas por t-digest ocupan ~5 MB en total.
+- **Nunca** se escriben millones de filas en Excel salvo petición explícita del usuario (regla §7 de las instrucciones maestras).
+
+### 3.4 Sensibilidad con cientos de entradas (nuevo, por D11)
+
+El tornado necesita correlacionar cada entrada con cada salida. Spearman exige **rangos**, y los rangos exigen la muestra ordenada: 300 entradas × 1M × 8 B = 2,4 GB. Inaceptable.
+
+Solución: **reservorio acotado**. Se conserva una submuestra aleatoria uniforme de **20.000 iteraciones** de todas las entradas y salidas (300 × 20.000 × 8 ≈ 48 MB) y la sensibilidad se calcula sobre ella.
+
+Esto no es una degradación oculta, es estadística básica: el error típico de un coeficiente de correlación con n = 20.000 es ≈ 0,007. Para *ordenar* qué variables mandan en el resultado —que es para lo que sirve un tornado— sobra. Los percentiles y las probabilidades, que sí requieren precisión en las colas, siguen usando las N iteraciones completas.
+
+Consecuencia de UI: un tornado de 300 barras no se lee. Se muestran las **20 más influyentes** con acceso a la lista completa.
 
 ---
 
@@ -200,6 +229,25 @@ Reconstrucción completa siguiendo la plantilla oficial, corrigiendo C1–C7 de 
 
 **Semántica (cambio conceptual respecto al heredado):** `=RISK.NORMAL(1000; 50)` en una celda **declara** una entrada incierta y devuelve su **valor determinista** (la media, o un valor base configurable). No es volátil y no muestrea. El libro queda legible, auditable y estable; el motor lee la declaración y muestrea fuera. Es lo que permite que un modelo con `RISK.*` siga siendo un modelo de Excel normal cuando nadie está simulando.
 
+### 6.1 Modo exploración con F9 (D9)
+
+El usuario quiere poder pulsar **F9 y ver el modelo moverse**. Es una petición razonable: da intuición sobre el comportamiento del modelo antes de simular.
+
+Implementación: **todas las funciones `RISK.*` se declaran `volatile` en los metadatos** (la volatilidad no se puede activar y desactivar en caliente; es una propiedad estática de la función). El comportamiento se decide **dentro** de la función leyendo un indicador de modo en `OfficeRuntime.storage`:
+
+| Modo | Qué devuelve `=RISK.NORMAL(1000;50)` | Uso |
+|---|---|---|
+| **Declarativo** (por defecto) | Siempre 1000 (valor base). Excel recalcula, pero el número no cambia | Trabajo normal: modelo estable y auditable |
+| **Exploración** | Una muestra nueva en cada recálculo. F9 mueve todo el libro | Entender el modelo, demostrarlo a otros |
+
+Se conmuta con un botón en la cinta, con indicador visible de que el modo está activo.
+
+**Tres advertencias que la UI debe dar, no ocultar:**
+
+1. El modo exploración **no es una simulación**. Es una sola iteración visible. Las conclusiones se sacan de la simulación, no de pulsar F9 veinte veces.
+2. Las **correlaciones entre entradas no se respetan** en este modo: cada celda se muestrea por su cuenta. En un modelo donde acero y cemento van correlacionados, F9 puede mostrar combinaciones que la simulación nunca generaría.
+3. Con las funciones volátiles, **cada edición del libro recalcula todas las celdas `RISK.*`**. En un libro grande se nota. Por eso el modo declarativo devuelve un valor fijo: el coste de recálculo existe igual, pero el modelo no se desestabiliza. Si el libro es muy pesado, salir del modo exploración es lo correcto.
+
 Nombres (D5): `RISK.NORMAL`, `RISK.LOGNORMAL`, `RISK.UNIFORM`, `RISK.TRIANGULAR`, `RISK.PERT`, `RISK.BETA`, `RISK.GAMMA`, `RISK.WEIBULL`, `RISK.EXPONENTIAL`, `RISK.BERNOULLI`, `RISK.BINOMIAL`, `RISK.POISSON`, `RISK.DISCRETE`, `RISK.EMPIRICAL`, más `RISK.OUTPUT` para marcar salidas.
 
 ---
@@ -244,11 +292,14 @@ Antes de cualquier simulación se guarda el modo de cálculo y los valores origi
 
 **Añadidas:** Beta, Gamma, Weibull, Exponencial, Empírica continua, Discreta, y **truncamiento** genérico aplicable a cualquier distribución.
 
-**Muestreo:**
+**Muestreo (D10 — ambos métodos disponibles y seleccionables):**
 
-- Monte Carlo simple.
-- **Latin Hypercube** (recomendado por defecto): misma precisión con del orden de 1/10 de las iteraciones en modelos suaves. Encaja bien con el diseño por bloques mediante estratificación.
-- **Correlación entre entradas** por Iman–Conover (correlación de rangos, preserva las marginales). Es una carencia real del heredado: en un presupuesto, el precio del acero y el del cemento no son independientes, y tratarlos como tales infraestima la cola.
+- **Monte Carlo simple**: el estándar, sin supuestos. Necesario para comparar contra @RISK o contra resultados previos, y el único correcto si alguna vez se quiere un error estadístico limpiamente estimable.
+- **Latin Hypercube**: misma precisión con del orden de 1/10 de las iteraciones en modelos suaves. Se estratifica por bloque.
+- **Selector explícito en la UI**, guardado en el modelo (`settings.sampling`), con LHS preseleccionado por ser el que más rinde a igualdad de iteraciones. Los resultados indican siempre con qué método se generaron: un histograma de LHS y uno de MC no son comparables sin saberlo.
+- **Correlación entre entradas** por Iman–Conover (correlación de rangos, preserva las marginales). Carencia real del heredado: en un presupuesto, el precio del acero y el del cemento no son independientes, y tratarlos como tales infraestima la cola.
+
+  Ajuste por D11: Iman–Conover necesita ordenar las muestras, así que se aplica **por bloque y solo a los grupos de entradas efectivamente correlacionadas** que el usuario haya declarado — típicamente unas pocas, no las trescientas. Aplicarlo a la matriz completa de cientos de variables × millones de filas sería inviable en memoria, y además innecesario: las entradas sin correlación declarada son independientes por definición.
 
 ---
 
@@ -274,8 +325,11 @@ Metas que la Fase 4 debe **medir**, no estimar (regla del usuario):
 | 1M iter · 20 entradas · 5 salidas · modelo de 200 celdas aritméticas | < 5 s |
 | 1M iter · mismo modelo con 3 `BUSCARV` sobre tabla constante | < 8 s |
 | 100k iter · modelo de 2.000 celdas | < 3 s |
+| **1M iter · 300 entradas · 100 salidas · modelo de 3.000 celdas** (escenario D11) | < 60 s |
 | Análisis de compatibilidad de un libro de 50.000 fórmulas | < 2 s |
-| Memoria pico | < 600 MB |
+| Memoria pico, en cualquier escenario | < 800 MB |
+
+El escenario D11 es el que manda. Es también el que decide si hace falta Rust→WASM: si con TypeScript se queda en el entorno del minuto, es aceptable para una corrida de 300 variables; si se va a cinco minutos, se reabre §12.4.
 
 Si tras optimizar el TypeScript se incumple R1, entonces —y solo entonces— se evalúa **Rust→WASM** para el ejecutor. La decisión será por benchmark, no por preferencia.
 
@@ -372,16 +426,22 @@ docs/                   esta documentación
 | **El catálogo supuesto (D4) no cubre los modelos reales** | El escáner es el primer entregable; el modo compatible garantiza que nada quede sin simular |
 | El parser propio es el componente más costoso y el que más puede desviar el plazo | Alcance por niveles; el Nivel 0 ya da producto útil; tests de fidelidad desde el primer día |
 | Divergencia numérica silenciosa con Excel | §11.3 es bloqueante: sin fila en el libro de fidelidad, la función no se declara soportada |
-| Memoria en WebView2 con muchas salidas | Bloques + reutilización de buffers + percentiles aproximados por encima del umbral |
+| **Memoria en WebView2 con cientos de variables (D11)** | Bloque adaptativo (§3.1) + reutilización de buffers + t-digest (§3.3) + reservorio para sensibilidad (§3.4). Es el riesgo que más condiciona el diseño |
+| Que el escenario D11 no alcance tiempos aceptables ni optimizado | Se reabre Rust→WASM (§12.4); el motor está aislado en `engine/`, así que es sustituible sin tocar UI ni Excel |
+| Que el usuario saque conclusiones del modo exploración F9 en vez de la simulación | La UI advierte explícitamente, e indica que las correlaciones no se aplican en ese modo (§6.1) |
 | Registro "pegajoso" de funciones personalizadas durante el desarrollo | Script de limpieza de la caché `Wef` + ids estables documentados |
 | Distribución a Mac (sideload por carpeta compartida) | Se valida pronto, no al final: prueba real en Mac antes de cerrar el MVP |
 
 ---
 
-## 16. Qué necesita aprobación para pasar a Fase 3
+## 16. Aprobación — CONCEDIDA (2026-09-15)
 
-1. La arquitectura de este documento en conjunto.
-2. El catálogo por niveles del §4.2 como alcance del motor rápido.
-3. La semántica declarativa (no volátil) de las funciones `RISK.*` del §6.
-4. Eliminar del producto: Google Fonts, `jspdf`/`html2canvas`, `recharts` en el panel principal, el "modo estocástico/determinístico" muerto y el tope de 50.000 iteraciones.
-5. Crear el repositorio privado en GitHub para conectar el remoto.
+1. ✅ La arquitectura de este documento en conjunto.
+2. ✅ El catálogo por niveles del §4.2 como alcance del motor rápido.
+3. ✅ La semántica declarativa de `RISK.*` del §6, **con la adición del modo exploración F9** (§6.1, D9).
+4. ✅ Eliminar del producto: Google Fonts, `jspdf`/`html2canvas`, `recharts` en el panel principal, el "modo estocástico/determinístico" muerto y el tope de 50.000 iteraciones.
+5. ✅ Repositorio remoto conectado.
+
+Revisión posterior a la aprobación: D9, D10 y **D11** obligaron a revisar §3.1, §3.3, §3.4, §6.1, §8, §10 y §15. La arquitectura no cambia de forma; cambia el dimensionamiento.
+
+Continúa en [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md).
