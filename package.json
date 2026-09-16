@@ -12,7 +12,8 @@
     "dev-server": "vite",
     "start": "office-addin-debugging start manifest.xml desktop",
     "stop": "office-addin-debugging stop manifest.xml",
-    "validate-manifest": "office-addin-manifest validate manifest.xml"
+    "validate-manifest": "office-addin-manifest validate manifest.xml",
+    "scan": "node scanner/cli.ts"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",
@@ -29,6 +30,7 @@
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "fflate": "^0.8.3",
     "globals": "^17.6.0",
     "office-addin-debugging": "^6.1.1",
     "office-addin-manifest": "^2.1.5",

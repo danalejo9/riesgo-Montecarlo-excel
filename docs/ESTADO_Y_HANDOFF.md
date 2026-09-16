@@ -167,7 +167,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 7. [x] **Fase 3 — Roadmap** → [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md). Escáner (E1) como primer entregable.
 8. [x] **Fase 3 aprobada** (2026-09-15). La decisión 2.2 se mantiene: el modo compatible va a la V1, no al MVP.
 9. [x] **E0 — Fundaciones COMPLETADA**. Criterio de hecho cumplido: `npm run build && npm run lint && npm test` en verde, 16 tests. Ver `CHANGELOG.md`.
-10. [ ] **E1 — Escáner de compatibilidad**. Es el siguiente entregable (v0.1) y **necesita que el usuario lo pase por sus libros reales** para cerrarse.
+10. [~] **E1 — Escáner de compatibilidad**: implementado y probado (50 tests en verde). **Falta lo único que no puedo hacer yo: que el usuario lo pase por sus libros reales** y revisar juntos el catálogo del §4.2. Hasta entonces la etapa no se cierra.
+
+    ```
+    npm run scan -- "C:\ruta\Presupuesto.xlsx"
+    ```
 11. [ ] E2 en adelante, según [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md).
 
 **Siguiente acción al retomar:** empezar E1 (escáner de compatibilidad).

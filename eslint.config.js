@@ -14,4 +14,19 @@ export default defineConfig([
       globals: { ...globals.node, ...globals.browser },
     },
   },
+  {
+    // Regla de oro de la arquitectura (Fase 2, §2): el motor no depende del
+    // entorno. Ni de Node ni de Office. Asi puede correr en un Web Worker del
+    // panel y testearse en Node sin Excel. Que lo vigile el linter y no la
+    // buena voluntad.
+    files: ['engine/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['node:*', 'fs', 'path', 'os', 'zlib', 'fflate'], message: 'engine/ no puede depender del entorno (ver Fase 2, §2).' },
+          { group: ['../excel/*', '../ui/*', '../scanner/*'], message: 'engine/ no puede depender de las capas superiores.' },
+        ],
+      }],
+    },
+  },
 ])

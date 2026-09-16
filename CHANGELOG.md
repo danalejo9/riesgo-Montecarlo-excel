@@ -5,6 +5,35 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### E1 — Escáner de compatibilidad (v0.1)
+
+**Añadido**
+- `npm run scan -- <libro.xlsx>`: analiza libros reales y dice qué porcentaje de
+  sus fórmulas podría evaluar el motor rápido y qué funciones lo impiden, con
+  celda de ejemplo y frecuencia de uso.
+- Lectura directa del formato `.xlsx` (ZIP + XML) **sin abrir Excel y sin una
+  sola llamada de red**: hojas, fórmulas, fórmulas compartidas y matriciales,
+  nombres definidos, tablas, enlaces externos, VBA y Power Query.
+- Tokenizador de fórmulas que distingue funciones de nombres definidos, de
+  referencias y de texto entrecomillado — `LOG10(A1)` es una función y `LOG10`
+  a secas es una celda.
+- Catálogo de funciones por nivel (§4.2 de la arquitectura), con normalización
+  de los prefijos `_xlfn.` y `@` que añade Excel.
+- Medida del tamaño del problema para dimensionar el motor (D11): fórmulas,
+  referencias por fórmula y profundidad de la cadena de dependencias, calculada
+  con un recorrido iterativo que aguanta cadenas de decenas de miles de celdas.
+- Resumen agregado de varios libros con los bloqueantes ordenados por
+  frecuencia: es la lista de trabajo de E5.
+- Regla de ESLint que prohíbe a `engine/` importar Node, Office o capas
+  superiores. La regla de oro de la arquitectura la vigila el linter.
+- 34 tests nuevos, con libros `.xlsx` construidos en memoria en lugar de
+  fixtures binarios.
+
+**Corregido**
+- El veredicto usaba un umbral del 99,5 % y llegaba a declarar "compatible" un
+  libro con celdas bloqueantes. Ahora basta una para que no lo sea: el
+  porcentaje mide cuánto falta, no decide el veredicto.
+
 ### E0 — Fundaciones
 
 **Añadido**
