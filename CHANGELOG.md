@@ -8,6 +8,25 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### E2 — Motor Nivel 0 (en curso)
 
 **Añadido**
+- `engine/compiler/evaluate.ts`: **evaluador de referencia**, la pieza que une
+  parser + grafo + registro de funciones en un cálculo completo. Dado un
+  conjunto de celdas de entrada (ya muestreadas) y unas salidas, calcula todo
+  el subgrafo necesario en orden topológico. Es la versión **interpretada**
+  del motor —recorre el AST de cada celda directamente, sin el análisis de
+  vida de buffers ni el *constant folding* de Fase 2 §3.1— y existe para
+  validar la corrección de punta a punta antes de escribir el compilador
+  optimizado, que es el siguiente paso de E2.
+- Prueba informal (no el benchmark formal de Fase 2 §10, que llega con su
+  propia etapa y metodología): 1.000.000 de iteraciones sobre un modelo de 200
+  celdas encadenadas, con este evaluador sin optimizar, en ~8,7 s. Confirma
+  que la dirección arquitectónica funciona en la práctica antes de invertir en
+  la versión con reutilización de buffers.
+- Errores con la celda y el motivo exactos: referencia circular, función no
+  soportada, error de sintaxis, rango de columna/fila entera (no soportado
+  todavía), tamaño de buffer de entrada incorrecto. Nunca una excepción sin
+  contexto ni un resultado silenciosamente incorrecto.
+- 14 tests, incluida una cadena de dependencias con forma de presupuesto real
+  (cantidad × precio → subtotal → IVA → total).
 - `engine/functions/`: registro de funciones vectorizadas — **subconjunto
   numérico** por ahora (SUM, PRODUCT, MIN, MAX, COUNT, AVERAGE, MEDIAN,
   STDEV.S/P, VAR.S/P, ABS, SIGN, SQRT, INT, EXP, LN, LOG, LOG10, POWER, MOD,
