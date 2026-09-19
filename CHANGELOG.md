@@ -56,6 +56,52 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
     hacia sí misma, `settings` inválidos, agrupación simple y encadenada,
     contradicción detectada, y la conversión a `DefinicionEntrada[]` con y
     sin correlación.
+- `engine/modelo/guardian.ts`: el guardián transaccional de Fase 2 §7.3 (R5:
+  "nunca corromper el libro del usuario"). Antes de simular,
+  `iniciarProteccion` guarda el modo de cálculo y el valor original de cada
+  entrada en un registro de recuperación; `finalizarProteccion` lo borra al
+  terminar bien. Si el panel se cierra a mitad o el runtime muere, el
+  registro sigue en el libro la próxima vez que se abre —
+  `hayRecuperacionPendiente` lo detecta, y el usuario elige entre
+  `restaurarDesdeRecuperacion` (vuelve las celdas y el modo de cálculo a como
+  estaban) o `descartarRecuperacion` (se queda con lo que hay). No pisa un
+  registro ya existente: iniciar una protección encima de una simulación
+  interrumpida perdería justo los valores que hacían falta para deshacerla.
+  - La única frontera con Excel (`AlmacenGuardian`: leer/escribir
+    `workbook.settings`, leer/cambiar el modo de cálculo, leer/escribir una
+    celda) queda inyectada — no existe todavía, es trabajo del adaptador de
+    Office.js. Lo que sí se construye y prueba ahora, con un almacén
+    simulado en memoria, es la lógica de **cuándo** hacer cada cosa, que es
+    donde está el riesgo real de este mecanismo.
+  - 8 tests: guarda y cambia de modo al iniciar, no pisa una protección
+    activa, restaura sin tocar celdas al finalizar con éxito, detecta una
+    recuperación pendiente tras un cierre a medio camino, restaurar y
+    descartar hacen exactamente lo que dicen (uno toca las celdas y el modo,
+    el otro no), y se puede volver a proteger después de resolver cualquiera
+    de los dos.
+- `engine/stats/resumen.ts`: convierte lo que produce el ejecutor
+  (`EstadoWelford` + `TDigest` por salida) en lo que de verdad va a pintar el
+  panel — la parte de "Resultados: estadísticos, histograma y CDF" de E3 que
+  no depende de Office.js.
+  - `resumenEstadistico`: media, desviación, min, max y nueve percentiles
+    estándar (p1..p99). Marcados `percentilesAproximados: true` siempre —
+    vienen del t-digest, porque el ejecutor por bloques nunca retiene el
+    buffer completo de una salida (Fase 2 §3.3 exige que la UI pueda
+    distinguir un percentil exacto de uno aproximado).
+  - `curvaCDF`: puntos `(x, p)` a lo largo de toda la distribución para
+    dibujar la curva, con `p` espaciado por el punto medio de cada tramo.
+  - `puntosHistograma`: formatea un `Histograma` ya construido como bins
+    listos para un gráfico de barras.
+  - **Límite documentado, no resuelto aquí**: el histograma de una salida
+    calculada por bloques no tiene todavía acumulación en streaming (Fase 2
+    §3.3 pide fijar su rango en una pasada previa corta y sumar conteos
+    bloque a bloque); `puntosHistograma` sirve hoy para cuando se tiene el
+    buffer completo (p. ej. desde `evaluarModelo`), no para el camino por
+    bloques del ejecutor. Queda para cuando se aborde E6 (escala D11).
+  - 5 tests: percentiles y desviación de una normal conocida, las nueve
+    claves estándar presentes, monotonía de la curva CDF, su cercanía al
+    percentil exacto, y los límites de bin correctos al formatear un
+    histograma.
 
 ### E2 — Motor Nivel 0 · **completa**
 

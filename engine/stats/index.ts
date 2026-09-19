@@ -1,6 +1,14 @@
 export { construirHistograma, type Histograma } from './histogram.ts';
 export { percentilExacto, percentilesExactos } from './percentiles.ts';
 export {
+  curvaCDF,
+  puntosHistograma,
+  resumenEstadistico,
+  type BinHistograma,
+  type PuntoCDF,
+  type ResumenEstadistico,
+} from './resumen.ts';
+export {
   cuantilTDigest,
   combinarTDigest,
   construirTDigest,

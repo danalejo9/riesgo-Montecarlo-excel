@@ -224,10 +224,24 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     formato `RiskModel v1` en `workbook.settings`, guardián transaccional,
     panel React, informe de compatibilidad integrado.
 
-    Empezada por la parte que **no** necesita Excel: `engine/modelo/`
-    (formato `RiskModel v1`, validación, agrupación de correlaciones,
-    conversión a las entradas del ejecutor — ver `CHANGELOG.md`). Sigue
-    siendo código de `engine/`, probado en Node, sin Office.js.
+    Empezada por lo que **no** necesita Excel:
+    - `engine/modelo/`: formato `RiskModel v1`, validación, agrupación de
+      correlaciones, conversión a las entradas del ejecutor, y el
+      **guardián transaccional** (`guardian.ts`) — la lógica de cuándo
+      proteger/restaurar/descartar, probada con un almacén simulado en
+      memoria. La frontera real con Excel (`AlmacenGuardian`: leer/escribir
+      `workbook.settings`, cambiar el modo de cálculo, leer/escribir una
+      celda) queda inyectada, sin implementar todavía.
+    - `engine/stats/resumen.ts`: `resumenEstadistico` (media, desviación,
+      percentiles p1..p99 marcados como aproximados) y `curvaCDF` a partir de
+      lo que ya produce el ejecutor por bloques (Welford + t-digest) — la
+      parte de "Resultados" de E3 que es pura transformación de datos, sin
+      Office.js. `puntosHistograma` formatea un `Histograma` ya construido,
+      pero el histograma **por bloques** (acumulado en streaming, Fase 2
+      §3.3) no existe todavía — límite documentado en el propio archivo,
+      para cuando se aborde E6.
+
+    Sigue siendo código de `engine/`, probado en Node, sin Office.js.
 
     **Decisión confirmada con el usuario (2026-09-19): `RiskModel v1` va
     íntegro en inglés** (`type`, `mean`, `mode`, `with`, `coefficient`…),
@@ -245,19 +259,25 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     - **`resolverRef`**: `prepararEntradas` (`engine/modelo/`) ya espera esta
       función inyectada (rango con nombre → clave de celda); implementarla de
       verdad es Office.js puro.
-    - **Guardián transaccional** (Fase 2 §7.3): snapshot del modo de cálculo
-      y las entradas antes de simular, restauración si el panel se cierra a
-      mitad. Necesita `workbook.settings` real para probarse.
-    - **Panel React**, informe de compatibilidad integrado, resultados
-      (histograma, CDF).
+    - **`AlmacenGuardian` de verdad**: la lógica del guardián ya está y está
+      probada (arriba); falta conectarla a `workbook.settings`, al modo de
+      cálculo real y a la escritura de celdas — eso sí necesita Excel abierto
+      para verificarse.
+    - **Panel React**, informe de compatibilidad integrado, y el histograma
+      por bloques pendiente de `engine/stats/resumen.ts`.
 
 **Siguiente acción al retomar:** lo que se podía adelantar sin Excel
-(`engine/modelo/`, con el formato `RiskModel v1` ya en inglés y confirmado)
-ya está. Lo que sigue de E3 —adaptadores Office.js, guardián transaccional,
-panel— necesita Excel de verdad (Windows, el entorno verificado en §7) para
-probarse; no tiene sentido escribirlo a ciegas sin poder hacer sideload.
-Falta resolver con el usuario si tiene acceso a un entorno con Excel para
-probar; sin eso, no hay más terreno que cubrir solo en la nube dentro de E3.
+(`engine/modelo/` completo — formato, validación, correlaciones, guardián —
+y `engine/stats/resumen.ts`) ya está. Lo que sigue de E3 —adaptadores
+Office.js, conectar el guardián a Excel de verdad, panel— necesita Excel de
+verdad (Windows, el entorno verificado en §7) para probarse; no tiene
+sentido escribirlo a ciegas sin poder hacer sideload. El usuario confirmó
+que tendrá acceso a ese entorno más adelante; hasta entonces, no queda más
+terreno de E3 que cubrir solo en la nube — cualquier trabajo adicional aquí
+sería o (a) UI/presentación sin poder verse en un libro real, con el riesgo
+de tener que rehacerla, o (b) adelantar piezas de etapas posteriores (E4+)
+fuera de orden. Conviene esperar y usar el tiempo mientras tanto para lo que
+el usuario necesite, en vez de construir a ciegas.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -274,7 +294,7 @@ probar; sin eso, no hay más terreno que cubrir solo en la nube dentro de E3.
   real. `tests/helpers/leerFidelidad.ts` lo lee. `tests/helpers/poolNodeWorkers.ts`
   y `workerCalcularBloque.ts` son el pool de `worker_threads` que prueba el
   paralelismo real del ejecutor por bloques.
-- `tests/unit/` — Vitest. 298 tests en verde, 6 documentados como pendientes.
+- `tests/unit/` — Vitest. 311 tests en verde, 6 documentados como pendientes.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.

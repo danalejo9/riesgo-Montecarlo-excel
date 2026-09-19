@@ -5,6 +5,17 @@ export {
   type DistributionSpec,
   type LognormalParametrization,
 } from './distributionSchema.ts';
+export {
+  descartarRecuperacion,
+  finalizarProteccion,
+  hayRecuperacionPendiente,
+  iniciarProteccion,
+  restaurarDesdeRecuperacion,
+  VERSION_ESQUEMA_RECOVERY,
+  type AlmacenGuardian,
+  type RecoveryRecord,
+  type ResultadoProteccion,
+} from './guardian.ts';
 export { generarId } from './id.ts';
 export { prepararEntradas, type ResultadoPreparacion } from './prepararSimulacion.ts';
 export {
