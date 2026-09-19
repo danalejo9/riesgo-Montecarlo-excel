@@ -11,24 +11,33 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - `engine/modelo/`: el formato `RiskModel v1` (decisión D6, Fase 2 §7.2) —
   todavía sin nada de Office.js, la parte que sí se puede construir y probar
   en Node antes de tener Excel a mano.
-  - `riskModel.ts`: los tipos del modelo (`inputs`, `outputs`, `settings`,
-    igual que el boceto de Fase 2) y `validarRiskModel`, que valida un
-    `unknown` recién leído de `workbook.settings` — nunca hay que confiar en
-    que ese JSON tiene la forma esperada, puede venir de una versión anterior
-    o estar corrupto. La validación semántica de cada distribución (`min <=
-    moda <= max`, etc.) no se repite: se reutiliza `construirDesdeDescriptor`
-    de `engine/distributions/`, que ya la hace.
-  - **Decisión propia, a confirmar con el usuario**: el campo `dist` reutiliza
-    `DescriptorDistribucion` tal cual (nombres de campo en español: `tipo`,
-    `moda`) en vez de duplicar un tipo paralelo en inglés solo para calcar el
-    boceto de Fase 2 al pie de la letra (`type`, `mode`). Documentado en el
-    propio archivo — cambiarlo después de la primera versión pública exige
-    una migración (E10), así que conviene decidirlo ahora, no dar por hecho
-    que la elección actual es la definitiva.
+  - **Todo el formato persistido está en inglés**, a propósito y ya
+    confirmado con el usuario: es un producto comercial internacional
+    (decisión 14 del handoff), y es el único archivo del proyecto que va a
+    leer directamente alguien que no hable español. `dist: { type, mean,
+    stdDev, ... }`, `correlations: [{ with, coefficient }]`, `settings:
+    { iterations, seed, sampling, engine }` — nada de `tipo`/`moda`/`con`.
+  - `distributionSchema.ts`: `DistributionSpec`, la forma en inglés de una
+    distribución, con `toDescriptor`/`fromDescriptor` hacia
+    `DescriptorDistribucion` (en español, interno — serializa hacia un Web
+    Worker, nunca lo lee un humano). Es la frontera entre los dos idiomas:
+    el resto del motor no sabe que `RiskModel` existe, y `RiskModel` no sabe
+    que el descriptor interno tiene otros nombres. Un tipo desconocido (JSON
+    corrupto o de una versión futura) falla con un mensaje claro en vez de
+    devolver un objeto a medias. 18 tests: viaje de ida y vuelta sin pérdida
+    para las 13 distribuciones, el caso sin parametrización explícita, y el
+    tipo desconocido.
+  - `riskModel.ts`: los tipos del modelo (`inputs`, `outputs`, `settings`) y
+    `validarRiskModel`, que valida un `unknown` recién leído de
+    `workbook.settings` — nunca hay que confiar en que ese JSON tiene la
+    forma esperada, puede venir de una versión anterior o estar corrupto. La
+    validación semántica de cada distribución (`min <= mode <= max`, etc.)
+    no se repite: se reutiliza `toDescriptor` + `construirDesdeDescriptor`
+    de `engine/distributions/`, que ya la hacen.
   - `id.ts`: `generarId`, ids cortos y aleatorios (D6: "no marcas de tiempo",
     el error concreto del heredado).
   - `correlaciones.ts`: `agruparCorrelaciones` — las correlaciones que declara
-    cada entrada (`correlations: [{con, coeficiente}]`) se agrupan en
+    cada entrada (`correlations: [{with, coefficient}]`) se agrupan en
     componentes conexas, cada una con su matriz simétrica lista para
     Iman–Conover. Detecta declaraciones contradictorias (el mismo par con dos
     coeficientes distintos).
@@ -42,7 +51,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   - Todo sigue sin saber nada de Excel: `prepararEntradas` recibe
     `resolverRef` inyectado (rango con nombre → clave de celda), que es
     responsabilidad del adaptador de Office.js, todavía por construir.
-  - 17 tests: modelo válido, esquema desconocido rechazado sin intentar
+  - 17 tests más: modelo válido, esquema desconocido rechazado sin intentar
     migrar, ids/refs repetidos, correlación hacia una entrada inexistente o
     hacia sí misma, `settings` inválidos, agrupación simple y encadenada,
     contradicción detectada, y la conversión a `DefinicionEntrada[]` con y

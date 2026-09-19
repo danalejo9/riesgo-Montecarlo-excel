@@ -18,6 +18,7 @@ import { construirDesdeDescriptor } from '../distributions/index.ts';
 import type { DefinicionEntrada } from '../executor/entradas.ts';
 import { correlacionarImanConover, muestrearLHS, muestrearMonteCarlo } from '../sampling/index.ts';
 import { agruparCorrelaciones } from './correlaciones.ts';
+import { toDescriptor } from './distributionSchema.ts';
 import type { EntradaRiskModel, ModeloRiesgo } from './riskModel.ts';
 
 export type ResultadoPreparacion =
@@ -43,7 +44,7 @@ export function prepararEntradas(
       tipo: 'distribucion',
       clave: resolverRef(entrada.ref),
       id: entrada.id,
-      distribucion: entrada.dist,
+      distribucion: toDescriptor(entrada.dist),
       metodo: modelo.settings.sampling,
     });
   }
@@ -51,7 +52,7 @@ export function prepararEntradas(
   for (const grupo of agrupacion.grupos) {
     const buffers = grupo.ids.map((id) => {
       const entrada = porId.get(id) as EntradaRiskModel;
-      const dist = construirDesdeDescriptor(entrada.dist);
+      const dist = construirDesdeDescriptor(toDescriptor(entrada.dist));
       return modelo.settings.sampling === 'lhs'
         ? muestrearLHS(dist, id, seed, n)
         : muestrearMonteCarlo(dist, id, seed, n);

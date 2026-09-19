@@ -1,20 +1,15 @@
 /**
  * `RiskModel v1` (decisión D6, Fase 2 §7.2): el formato que se persiste en
  * `workbook.settings` para que un libro "recuerde" sus variables inciertas,
- * sus salidas y los ajustes de la última simulación. Las claves del JSON
- * (`inputs`, `dist`, `ref`…) siguen el boceto de la Fase 2 tal cual; los
- * nombres del código son en español, como el resto del proyecto.
+ * sus salidas y los ajustes de la última simulación.
  *
- * Decisión propia, a confirmar: el campo `dist` reutiliza directamente
- * `DescriptorDistribucion` (`engine/distributions/descriptor.ts`) — mismos
- * nombres de campo en español (`tipo`, `moda`, no `type`/`mode`) — en vez de
- * duplicar un tipo paralelo en inglés solo para calcar el boceto de la Fase 2
- * al pie de la letra. Una sola fuente de verdad para "cómo se describe una
- * distribución como datos", ya usada para mandarla a un Web Worker, ahora
- * también para guardarla. Si se prefieren las claves en inglés del boceto
- * original, es un cambio de nombres, no de forma — pero conviene decidirlo
- * ahora: cambiarlo después de la primera versión pública exige una migración
- * (Fase 3, E10).
+ * **Todo el formato está en inglés a propósito**, distinto del resto del
+ * código: es un producto comercial internacional (decisión 14 del handoff),
+ * y este es el archivo que va a inspeccionar un desarrollador externo o
+ * leer un usuario que no hable español. `dist` usa `DistributionSpec`
+ * (`distributionSchema.ts`), la forma en inglés de una distribución;
+ * `toDescriptor` la traduce a `DescriptorDistribucion` (en español, interno,
+ * el que ya usan el muestreo y los Web Workers) en la frontera, no antes.
  *
  * Cada variable conserva su **rango con nombre** (`ref`, algo como
  * `RM_in_7f3a`) — es lo que sobrevive a insertar o mover filas, y por lo que
@@ -23,25 +18,27 @@
  * Office.js (Fase 3, E3) — este módulo no sabe nada de Excel, solo del
  * formato de datos.
  */
-import { construirDesdeDescriptor, type DescriptorDistribucion } from '../distributions/index.ts';
+import { construirDesdeDescriptor } from '../distributions/index.ts';
+import { toDescriptor, type DistributionSpec } from './distributionSchema.ts';
 import type { MetodoMuestreo } from '../sampling/types.ts';
 
 export const VERSION_ESQUEMA_RISK_MODEL = 1;
 
-export type MotorSimulacion = 'auto' | 'rapido' | 'compatible';
+/** `'auto'` decide solo (Fase 2 §4); `'fast'`/`'compatible'` fuerzan el motor. */
+export type MotorSimulacion = 'auto' | 'fast' | 'compatible';
 
 export interface CorrelacionDeclarada {
   /** `id` de la otra entrada del mismo grupo correlacionado. */
-  con: string;
+  with: string;
   /** Coeficiente de correlación de rangos objetivo, en [-1, 1]. */
-  coeficiente: number;
+  coefficient: number;
 }
 
 export interface EntradaRiskModel {
   id: string;
   name: string;
   ref: string;
-  dist: DescriptorDistribucion;
+  dist: DistributionSpec;
   correlations: CorrelacionDeclarada[];
 }
 
@@ -70,7 +67,7 @@ export type ResultadoValidacion =
   | { ok: false; errores: string[] };
 
 const METODOS_MUESTREO: readonly MetodoMuestreo[] = ['monte-carlo', 'lhs'];
-const MOTORES: readonly MotorSimulacion[] = ['auto', 'rapido', 'compatible'];
+const MOTORES: readonly MotorSimulacion[] = ['auto', 'fast', 'compatible'];
 
 /**
  * Valida un `unknown` recién leído de `workbook.settings` (nunca hay que
@@ -78,7 +75,7 @@ const MOTORES: readonly MotorSimulacion[] = ['auto', 'rapido', 'compatible'];
  * puede venir de una versión anterior del complemento, o estar corrupto).
  *
  * La validación semántica de cada distribución (`min <= moda <= max`, etc.)
- * no se repite aquí: se reutiliza `construirDesdeDescriptor`, que ya la hace
+ * no se repite aquí: se reutiliza `toDescriptor` + `construirDesdeDescriptor`, que ya la hacen
  * y ya está probada — un `dist` con la forma correcta pero valores
  * imposibles se descarta con el mismo mensaje que vería cualquier otro
  * consumidor de esa distribución.
@@ -119,10 +116,10 @@ export function validarRiskModel(json: unknown): ResultadoValidacion {
   const idsEntradas = new Set(inputs.map((e) => e.id));
   for (const entrada of inputs) {
     for (const corr of entrada.correlations) {
-      if (corr.con === entrada.id) {
+      if (corr.with === entrada.id) {
         errores.push(`"${entrada.id}" declara una correlación consigo misma.`);
-      } else if (!idsEntradas.has(corr.con)) {
-        errores.push(`"${entrada.id}" declara una correlación con "${corr.con}", que no existe.`);
+      } else if (!idsEntradas.has(corr.with)) {
+        errores.push(`"${entrada.id}" declara una correlación con "${corr.with}", que no existe.`);
       }
     }
   }
@@ -170,7 +167,7 @@ function validarEntrada(v: unknown, ctx: string, errores: string[]): EntradaRisk
   if (!esTextoNoVacio(e.ref)) { errores.push(`${ctx}.ref debe ser un texto no vacío.`); ok = false; }
 
   try {
-    construirDesdeDescriptor(e.dist as DescriptorDistribucion);
+    construirDesdeDescriptor(toDescriptor(e.dist as DistributionSpec));
   } catch (err) {
     errores.push(`${ctx}.dist: ${err instanceof Error ? err.message : String(err)}`);
     ok = false;
@@ -189,16 +186,16 @@ function validarEntrada(v: unknown, ctx: string, errores: string[]): EntradaRisk
           return;
         }
         const cc = c as Record<string, unknown>;
-        const coefValido = typeof cc.coeficiente === 'number' && cc.coeficiente >= -1 && cc.coeficiente <= 1;
-        if (!esTextoNoVacio(cc.con)) { errores.push(`${ctx}.correlations[${i}].con debe ser un texto no vacío.`); ok = false; }
-        if (!coefValido) { errores.push(`${ctx}.correlations[${i}].coeficiente debe estar en [-1,1].`); ok = false; }
-        if (esTextoNoVacio(cc.con) && coefValido) correlations.push({ con: cc.con, coeficiente: cc.coeficiente as number });
+        const coefValido = typeof cc.coefficient === 'number' && cc.coefficient >= -1 && cc.coefficient <= 1;
+        if (!esTextoNoVacio(cc.with)) { errores.push(`${ctx}.correlations[${i}].with debe ser un texto no vacío.`); ok = false; }
+        if (!coefValido) { errores.push(`${ctx}.correlations[${i}].coefficient debe estar en [-1,1].`); ok = false; }
+        if (esTextoNoVacio(cc.with) && coefValido) correlations.push({ with: cc.with, coefficient: cc.coefficient as number });
       });
     }
   }
 
   if (!ok) return undefined;
-  return { id: e.id as string, name: e.name as string, ref: e.ref as string, dist: e.dist as DescriptorDistribucion, correlations };
+  return { id: e.id as string, name: e.name as string, ref: e.ref as string, dist: e.dist as DistributionSpec, correlations };
 }
 
 function validarSalida(v: unknown, ctx: string, errores: string[]): SalidaRiskModel | undefined {

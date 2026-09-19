@@ -1,4 +1,10 @@
 export { agruparCorrelaciones, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
+export {
+  fromDescriptor,
+  toDescriptor,
+  type DistributionSpec,
+  type LognormalParametrization,
+} from './distributionSchema.ts';
 export { generarId } from './id.ts';
 export { prepararEntradas, type ResultadoPreparacion } from './prepararSimulacion.ts';
 export {

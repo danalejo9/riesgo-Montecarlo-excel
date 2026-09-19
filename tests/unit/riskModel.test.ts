@@ -18,7 +18,7 @@ function modeloBase(): ModeloRiesgo {
         id: 'in_acero',
         name: 'Precio acero',
         ref: 'RM_in_acero',
-        dist: { tipo: 'pert', min: 800, moda: 950, max: 1400 },
+        dist: { type: 'pert', min: 800, mode: 950, max: 1400 },
         correlations: [],
       },
     ],
@@ -64,7 +64,7 @@ describe('validarRiskModel', () => {
 
   it('reutiliza la validación semántica de la distribución (no la duplica)', () => {
     const m = modeloBase();
-    (m.inputs[0] as EntradaRiskModel).dist = { tipo: 'pert', min: 10, moda: 5, max: 20 }; // moda fuera de rango
+    (m.inputs[0] as EntradaRiskModel).dist = { type: 'pert', min: 10, mode: 5, max: 20 }; // moda fuera de rango
     const r = validarRiskModel(m);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errores.some((e) => e.includes('PERT'))).toBe(true);
@@ -72,11 +72,11 @@ describe('validarRiskModel', () => {
 
   it('rechaza una correlación hacia una entrada inexistente o hacia sí misma', () => {
     const m = modeloBase();
-    (m.inputs[0] as EntradaRiskModel).correlations = [{ con: 'in_acero', coeficiente: 0.5 }];
+    (m.inputs[0] as EntradaRiskModel).correlations = [{ with: 'in_acero', coefficient: 0.5 }];
     let r = validarRiskModel(m);
     expect(r.ok).toBe(false);
 
-    (m.inputs[0] as EntradaRiskModel).correlations = [{ con: 'in_fantasma', coeficiente: 0.5 }];
+    (m.inputs[0] as EntradaRiskModel).correlations = [{ with: 'in_fantasma', coefficient: 0.5 }];
     r = validarRiskModel(m);
     expect(r.ok).toBe(false);
   });
@@ -89,8 +89,8 @@ describe('validarRiskModel', () => {
 });
 
 describe('agruparCorrelaciones', () => {
-  function entrada(id: string, correlations: { con: string; coeficiente: number }[] = []): EntradaRiskModel {
-    return { id, name: id, ref: `RM_${id}`, dist: { tipo: 'uniforme', min: 0, max: 1 }, correlations };
+  function entrada(id: string, correlations: { with: string; coefficient: number }[] = []): EntradaRiskModel {
+    return { id, name: id, ref: `RM_${id}`, dist: { type: 'uniform', min: 0, max: 1 }, correlations };
   }
 
   it('sin correlaciones declaradas, no hay grupos', () => {
@@ -100,7 +100,7 @@ describe('agruparCorrelaciones', () => {
   });
 
   it('agrupa un par correlacionado con matriz simétrica y diagonal 1', () => {
-    const a = entrada('a', [{ con: 'b', coeficiente: 0.6 }]);
+    const a = entrada('a', [{ with: 'b', coefficient: 0.6 }]);
     const b = entrada('b');
     const r = agruparCorrelaciones([a, b]);
     expect(r.ok).toBe(true);
@@ -116,8 +116,8 @@ describe('agruparCorrelaciones', () => {
   });
 
   it('encadena en un solo grupo a-b-c aunque a y c no se declaren directamente', () => {
-    const a = entrada('a', [{ con: 'b', coeficiente: 0.5 }]);
-    const b = entrada('b', [{ con: 'c', coeficiente: 0.3 }]);
+    const a = entrada('a', [{ with: 'b', coefficient: 0.5 }]);
+    const b = entrada('b', [{ with: 'c', coefficient: 0.3 }]);
     const c = entrada('c');
     const d = entrada('d'); // independiente, no debe aparecer en ningún grupo
     const r = agruparCorrelaciones([a, b, c, d]);
@@ -128,15 +128,15 @@ describe('agruparCorrelaciones', () => {
   });
 
   it('detecta una declaración contradictoria entre el mismo par', () => {
-    const a = entrada('a', [{ con: 'b', coeficiente: 0.5 }]);
-    const b = entrada('b', [{ con: 'a', coeficiente: 0.9 }]); // mismo par, valor distinto
+    const a = entrada('a', [{ with: 'b', coefficient: 0.5 }]);
+    const b = entrada('b', [{ with: 'a', coefficient: 0.9 }]); // mismo par, valor distinto
     const r = agruparCorrelaciones([a, b]);
     expect(r.ok).toBe(false);
   });
 
   it('una declaración simétrica consistente (a dice b, b dice a, mismo valor) no es un error', () => {
-    const a = entrada('a', [{ con: 'b', coeficiente: 0.7 }]);
-    const b = entrada('b', [{ con: 'a', coeficiente: 0.7 }]);
+    const a = entrada('a', [{ with: 'b', coefficient: 0.7 }]);
+    const b = entrada('b', [{ with: 'a', coefficient: 0.7 }]);
     const r = agruparCorrelaciones([a, b]);
     expect(r.ok).toBe(true);
   });
@@ -157,8 +157,8 @@ describe('prepararEntradas', () => {
     const modelo: ModeloRiesgo = {
       schema: 1,
       inputs: [
-        { id: 'acero', name: 'Acero', ref: 'RM_acero', dist: { tipo: 'normal', media: 800, desviacion: 50 }, correlations: [{ con: 'cemento', coeficiente: 0.8 }] },
-        { id: 'cemento', name: 'Cemento', ref: 'RM_cemento', dist: { tipo: 'normal', media: 300, desviacion: 20 }, correlations: [] },
+        { id: 'acero', name: 'Acero', ref: 'RM_acero', dist: { type: 'normal', mean: 800, stdDev: 50 }, correlations: [{ with: 'cemento', coefficient: 0.8 }] },
+        { id: 'cemento', name: 'Cemento', ref: 'RM_cemento', dist: { type: 'normal', mean: 300, stdDev: 20 }, correlations: [] },
       ],
       outputs: [],
       settings: { iterations: 50_000, seed: 42, sampling: 'monte-carlo', engine: 'auto' },
@@ -178,8 +178,8 @@ describe('prepararEntradas', () => {
     const modelo: ModeloRiesgo = {
       schema: 1,
       inputs: [
-        { id: 'a', name: 'a', ref: 'RM_a', dist: { tipo: 'uniforme', min: 0, max: 1 }, correlations: [{ con: 'b', coeficiente: 0.5 }] },
-        { id: 'b', name: 'b', ref: 'RM_b', dist: { tipo: 'uniforme', min: 0, max: 1 }, correlations: [{ con: 'a', coeficiente: -0.5 }] },
+        { id: 'a', name: 'a', ref: 'RM_a', dist: { type: 'uniform', min: 0, max: 1 }, correlations: [{ with: 'b', coefficient: 0.5 }] },
+        { id: 'b', name: 'b', ref: 'RM_b', dist: { type: 'uniform', min: 0, max: 1 }, correlations: [{ with: 'a', coefficient: -0.5 }] },
       ],
       outputs: [],
       settings: { iterations: 1000, seed: 1, sampling: 'monte-carlo', engine: 'auto' },

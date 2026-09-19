@@ -1,7 +1,7 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-16
-**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada** (formato `RiskModel v1`, la parte que no necesita Excel — ver §9.12). El resto de E3 necesita Excel de verdad.
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada** (formato `RiskModel v1`, en inglés y confirmado con el usuario — la parte que no necesita Excel, ver §9.12). El resto de E3 necesita Excel de verdad.
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
@@ -229,13 +229,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     conversión a las entradas del ejecutor — ver `CHANGELOG.md`). Sigue
     siendo código de `engine/`, probado en Node, sin Office.js.
 
-    **Decisión propia sin confirmar, revisar antes de seguir**: el campo
-    `dist` de `RiskModel` reutiliza `DescriptorDistribucion` con sus nombres
-    en español (`tipo`, `moda`), no las claves en inglés del boceto de Fase 2
-    §7.2 (`type`, `mode`). Es un cambio de nombres, no de forma, pero
-    conviene decidirlo antes de que el formato quede persistido de verdad en
-    algún libro — después de la primera versión pública, cambiarlo exige una
-    migración (E10).
+    **Decisión confirmada con el usuario (2026-09-19): `RiskModel v1` va
+    íntegro en inglés** (`type`, `mean`, `mode`, `with`, `coefficient`…),
+    para que un desarrollador o usuario que no hable español pueda leerlo
+    directamente — coherente con la decisión 14 (producto comercial
+    internacional). El motor interno (`engine/distributions/descriptor.ts`)
+    se queda en español porque es puramente interno; `engine/modelo/distributionSchema.ts`
+    es la traducción entre los dos mundos (`toDescriptor`/`fromDescriptor`).
+    Ya no es una decisión abierta.
 
     Todo lo que sigue **sí** necesita Excel de verdad y no se puede avanzar
     más en la nube:
@@ -251,13 +252,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
       (histograma, CDF).
 
 **Siguiente acción al retomar:** lo que se podía adelantar sin Excel
-(`engine/modelo/`) ya está. Lo que sigue de E3 —adaptadores Office.js,
-guardián transaccional, panel— necesita Excel de verdad (Windows, el entorno
-verificado en §7) para probarse; no tiene sentido escribirlo a ciegas sin
-poder hacer sideload. Antes de seguir, hay que resolver con el usuario: (a)
-si tiene acceso a un entorno con Excel para probar, y (b) confirmar o
-cambiar la decisión de nombres de campo de `RiskModel` de arriba, antes de
-que dependa de ella más código.
+(`engine/modelo/`, con el formato `RiskModel v1` ya en inglés y confirmado)
+ya está. Lo que sigue de E3 —adaptadores Office.js, guardián transaccional,
+panel— necesita Excel de verdad (Windows, el entorno verificado en §7) para
+probarse; no tiene sentido escribirlo a ciegas sin poder hacer sideload.
+Falta resolver con el usuario si tiene acceso a un entorno con Excel para
+probar; sin eso, no hay más terreno que cubrir solo en la nube dentro de E3.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -274,7 +274,7 @@ que dependa de ella más código.
   real. `tests/helpers/leerFidelidad.ts` lo lee. `tests/helpers/poolNodeWorkers.ts`
   y `workerCalcularBloque.ts` son el pool de `worker_threads` que prueba el
   paralelismo real del ejecutor por bloques.
-- `tests/unit/` — Vitest. 280 tests en verde, 6 documentados como pendientes.
+- `tests/unit/` — Vitest. 298 tests en verde, 6 documentados como pendientes.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.

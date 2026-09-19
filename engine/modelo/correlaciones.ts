@@ -41,7 +41,7 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
   };
 
   for (const e of entradas) padre.set(e.id, e.id);
-  for (const e of entradas) for (const c of e.correlations) unir(e.id, c.con);
+  for (const e of entradas) for (const c of e.correlations) unir(e.id, c.with);
 
   const porGrupo = new Map<string, string[]>();
   for (const e of entradas) {
@@ -64,20 +64,20 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
       const entrada = entradaPorId.get(id) as EntradaRiskModel;
       for (const corr of entrada.correlations) {
         const i = indice.get(id) as number;
-        const j = indice.get(corr.con);
+        const j = indice.get(corr.with);
         if (j === undefined) continue; // ya reportado por validarRiskModel
 
         const clave = i < j ? `${i},${j}` : `${j},${i}`;
         const previo = declarados.get(clave);
-        if (previo !== undefined && previo !== corr.coeficiente) {
+        if (previo !== undefined && previo !== corr.coefficient) {
           errores.push(
-            `Correlación contradictoria entre "${id}" y "${corr.con}": declarada dos veces con valores distintos (${previo} y ${corr.coeficiente}).`,
+            `Correlación contradictoria entre "${id}" y "${corr.with}": declarada dos veces con valores distintos (${previo} y ${corr.coefficient}).`,
           );
           continue;
         }
-        declarados.set(clave, corr.coeficiente);
-        (matriz[i] as number[])[j] = corr.coeficiente;
-        (matriz[j] as number[])[i] = corr.coeficiente;
+        declarados.set(clave, corr.coefficient);
+        (matriz[i] as number[])[j] = corr.coefficient;
+        (matriz[j] as number[])[i] = corr.coefficient;
       }
     }
 
