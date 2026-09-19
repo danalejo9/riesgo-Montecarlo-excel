@@ -5,6 +5,49 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### E3 — Integración Excel + UI mínima (en curso)
+
+**Añadido**
+- `engine/modelo/`: el formato `RiskModel v1` (decisión D6, Fase 2 §7.2) —
+  todavía sin nada de Office.js, la parte que sí se puede construir y probar
+  en Node antes de tener Excel a mano.
+  - `riskModel.ts`: los tipos del modelo (`inputs`, `outputs`, `settings`,
+    igual que el boceto de Fase 2) y `validarRiskModel`, que valida un
+    `unknown` recién leído de `workbook.settings` — nunca hay que confiar en
+    que ese JSON tiene la forma esperada, puede venir de una versión anterior
+    o estar corrupto. La validación semántica de cada distribución (`min <=
+    moda <= max`, etc.) no se repite: se reutiliza `construirDesdeDescriptor`
+    de `engine/distributions/`, que ya la hace.
+  - **Decisión propia, a confirmar con el usuario**: el campo `dist` reutiliza
+    `DescriptorDistribucion` tal cual (nombres de campo en español: `tipo`,
+    `moda`) en vez de duplicar un tipo paralelo en inglés solo para calcar el
+    boceto de Fase 2 al pie de la letra (`type`, `mode`). Documentado en el
+    propio archivo — cambiarlo después de la primera versión pública exige
+    una migración (E10), así que conviene decidirlo ahora, no dar por hecho
+    que la elección actual es la definitiva.
+  - `id.ts`: `generarId`, ids cortos y aleatorios (D6: "no marcas de tiempo",
+    el error concreto del heredado).
+  - `correlaciones.ts`: `agruparCorrelaciones` — las correlaciones que declara
+    cada entrada (`correlations: [{con, coeficiente}]`) se agrupan en
+    componentes conexas, cada una con su matriz simétrica lista para
+    Iman–Conover. Detecta declaraciones contradictorias (el mismo par con dos
+    coeficientes distintos).
+  - `prepararSimulacion.ts`: `prepararEntradas` convierte un `ModeloRiesgo`
+    validado en las `DefinicionEntrada[]` que espera `engine/executor/`. Las
+    variables sin correlación quedan perezosas (el ejecutor decide si puede
+    generarlas por tramos); las de un grupo correlacionado se materializan
+    enteras y se correlacionan con Iman–Conover antes de entrar al ejecutor —
+    igual límite que ya tiene LHS, por la misma razón (hace falta el buffer
+    completo para reordenar por rangos).
+  - Todo sigue sin saber nada de Excel: `prepararEntradas` recibe
+    `resolverRef` inyectado (rango con nombre → clave de celda), que es
+    responsabilidad del adaptador de Office.js, todavía por construir.
+  - 17 tests: modelo válido, esquema desconocido rechazado sin intentar
+    migrar, ids/refs repetidos, correlación hacia una entrada inexistente o
+    hacia sí misma, `settings` inválidos, agrupación simple y encadenada,
+    contradicción detectada, y la conversión a `DefinicionEntrada[]` con y
+    sin correlación.
+
 ### E2 — Motor Nivel 0 · **completa**
 
 **Añadido**

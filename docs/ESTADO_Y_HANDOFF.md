@@ -1,7 +1,7 @@
 # Estado del proyecto y traspaso de contexto
 
 **Última actualización:** 2026-09-16
-**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas**. Siguiente etapa: **E3 — integración con Excel + UI mínima (MVP v0.5)**.
+**Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada** (formato `RiskModel v1`, la parte que no necesita Excel — ver §9.12). El resto de E3 necesita Excel de verdad.
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
 - [`FASE1_AUDITORIA_TECNICA.md`](FASE1_AUDITORIA_TECNICA.md) — diagnóstico completo con evidencia y benchmarks.
@@ -217,24 +217,49 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `npm run build && npm run lint && npm test` en verde: 263 tests (+ 6
     documentados como pendientes, no ocultos).
 
-12. [ ] **E3 — Integración Excel + UI mínima + modo compatible**, según
+12. [~] **E3 — Integración Excel + UI mínima + modo compatible**, según
     [`FASE3_ROADMAP.md`](FASE3_ROADMAP.md) — **v0.5, el MVP**: el ciclo
     completo funcionando de verdad (definir entradas, marcar salidas, simular
     un millón de iteraciones, ver resultados), adaptadores Office.js,
     formato `RiskModel v1` en `workbook.settings`, guardián transaccional,
-    panel React, informe de compatibilidad integrado. Es la primera etapa
-    que toca algo fuera de `engine/` — hasta ahora todo se ha construido y
-    probado en Node, sin Excel.
+    panel React, informe de compatibilidad integrado.
 
-**Siguiente acción al retomar:** empezar E3. A diferencia de E0–E2, esta
-etapa necesita Excel de verdad (Windows, el entorno verificado en §7) para
-probar la integración con Office.js — no se puede avanzar solo en la nube.
-Conviene revisar con el usuario, antes de escribir código: (a) si tiene
-acceso a un entorno de desarrollo con Excel para sideload y pruebas
-manuales, y (b) el orden concreto dentro de E3 (adaptadores Office.js
-primero, o el formato `RiskModel v1` y el guardián transaccional primero).
+    Empezada por la parte que **no** necesita Excel: `engine/modelo/`
+    (formato `RiskModel v1`, validación, agrupación de correlaciones,
+    conversión a las entradas del ejecutor — ver `CHANGELOG.md`). Sigue
+    siendo código de `engine/`, probado en Node, sin Office.js.
 
-### Estado del árbol tras E0–E2 (completa)
+    **Decisión propia sin confirmar, revisar antes de seguir**: el campo
+    `dist` de `RiskModel` reutiliza `DescriptorDistribucion` con sus nombres
+    en español (`tipo`, `moda`), no las claves en inglés del boceto de Fase 2
+    §7.2 (`type`, `mode`). Es un cambio de nombres, no de forma, pero
+    conviene decidirlo antes de que el formato quede persistido de verdad en
+    algún libro — después de la primera versión pública, cambiarlo exige una
+    migración (E10).
+
+    Todo lo que sigue **sí** necesita Excel de verdad y no se puede avanzar
+    más en la nube:
+    - **Adaptadores Office.js**: lector del grafo en lote (fórmulas,
+      precedentes) y escritor de resultados. No existen todavía.
+    - **`resolverRef`**: `prepararEntradas` (`engine/modelo/`) ya espera esta
+      función inyectada (rango con nombre → clave de celda); implementarla de
+      verdad es Office.js puro.
+    - **Guardián transaccional** (Fase 2 §7.3): snapshot del modo de cálculo
+      y las entradas antes de simular, restauración si el panel se cierra a
+      mitad. Necesita `workbook.settings` real para probarse.
+    - **Panel React**, informe de compatibilidad integrado, resultados
+      (histograma, CDF).
+
+**Siguiente acción al retomar:** lo que se podía adelantar sin Excel
+(`engine/modelo/`) ya está. Lo que sigue de E3 —adaptadores Office.js,
+guardián transaccional, panel— necesita Excel de verdad (Windows, el entorno
+verificado en §7) para probarse; no tiene sentido escribirlo a ciegas sin
+poder hacer sideload. Antes de seguir, hay que resolver con el usuario: (a)
+si tiene acceso a un entorno con Excel para probar, y (b) confirmar o
+cambiar la decisión de nombres de campo de `RiskModel` de arriba, antes de
+que dependa de ella más código.
+
+### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
 - `engine/` — motor nuevo, **completo para Nivel 0**. Contiene el PRNG Philox
   basado en contador (`random/`), el parser de fórmulas (`parser/`), el
@@ -242,13 +267,14 @@ primero, o el formato `RiskModel v1` y el guardián transaccional primero).
   (`functions/`, con `SUMPRODUCT` e `IFERROR`), el evaluador de referencia y
   el compilador optimizado (`compiler/`), las distribuciones
   (`distributions/`, con su forma serializable en `descriptor.ts`), el
-  muestreo (`sampling/`), las estadísticas de salida (`stats/`) y el
-  ejecutor por bloques (`executor/`).
+  muestreo (`sampling/`), las estadísticas de salida (`stats/`), el
+  ejecutor por bloques (`executor/`) y el formato `RiskModel v1`
+  (`modelo/`, parte de E3, ver arriba).
 - `tests/fixtures/fidelidad.xlsx` — el libro de fidelidad, calculado en Excel
   real. `tests/helpers/leerFidelidad.ts` lo lee. `tests/helpers/poolNodeWorkers.ts`
   y `workerCalcularBloque.ts` son el pool de `worker_threads` que prueba el
   paralelismo real del ejecutor por bloques.
-- `tests/unit/` — Vitest. 263 tests en verde, 6 documentados como pendientes.
+- `tests/unit/` — Vitest. 280 tests en verde, 6 documentados como pendientes.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.
