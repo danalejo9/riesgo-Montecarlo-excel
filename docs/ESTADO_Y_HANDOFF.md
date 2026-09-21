@@ -72,6 +72,7 @@ Los cinco hechos que hay que tener presentes:
 | 14 | **Destino del proyecto** | **Producto comercial**, para vender o publicar (AppSource). **100+ usuarios, público abierto** | **Invalida la D2 original ("equipo personal").** Ver §10 |
 | 15 | Modo compatible (Excel en el bucle) | **Entra en el MVP**, invirtiendo la decisión 2.2 | Con usuarios desconocidos, "no puedo simular tu modelo" es motivo de desinstalar |
 | 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
+| 17 | **Configuración regional** (separador decimal) | **Se lee de Office al crear el modelo y se guarda en el libro** (`RiskModel v1`) | Ni se pregunta al usuario ni se relee en cada ejecución: el libro queda reproducible entre máquinas con idiomas distintos, que es lo que necesita un producto que van a compartir 100+ personas. Ver §9.14 |
 
 ### Consecuencia arquitectónica principal
 
