@@ -11,6 +11,9 @@ export * from './math.ts';
 export * from './logic.ts';
 export * from './info.ts';
 export * from './condicionales.ts';
+export * from './fechas.ts';
+export * from './financieras.ts';
+export { mapaNumerico, nAriaNumerica, zipNumerico, type Resultado } from './elemental.ts';
 export {
   compilarCriterio, compilarCriterioTexto, cumple, type Comparador, type Criterio,
 } from './criterios.ts';

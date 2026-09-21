@@ -23,7 +23,6 @@
 import type { ErrorExcel } from '../parser/ast.ts';
 import { coercionNumerica } from '../values/coercion.ts';
 import {
-  comoVectorNumerico,
   crearConstructor,
   errorEn,
   numeroConstante,
@@ -44,133 +43,48 @@ import {
   REGLAS_CALCULO,
   REGLAS_CONTEO,
 } from './agregacion.ts';
+import { mapaNumerico, zipNumerico, type Resultado } from './elemental.ts';
 import type { Argumento } from './types.ts';
-
-/** Resultado de una operación elemental: un número o el error de Excel. */
-type Resultado = number | ErrorExcel;
-
-// --- Andamiaje elemento a elemento --------------------------------------
-
-function mapa(arg: Argumento | undefined, n: number, f: (x: number) => Resultado): Columna {
-  const c = arg?.columnas[0];
-  if (!c) return numeroConstante(0, n);
-
-  const rapido = comoVectorNumerico(c);
-  if (rapido) {
-    const out = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const r = f(rapido[i] as number);
-      if (typeof r === 'string') return mapaGeneral(c, n, f); // hay errores: se rehace
-      out[i] = r;
-    }
-    return vectorNumerico(out);
-  }
-  return mapaGeneral(c, n, f);
-}
-
-function mapaGeneral(c: Columna, n: number, f: (x: number) => Resultado): Columna {
-  const b = crearConstructor(n);
-  for (let i = 0; i < n; i++) {
-    const v = coercionNumerica(c, i);
-    if (typeof v === 'string') {
-      b.ponerError(i, v);
-      continue;
-    }
-    const r = f(v);
-    if (typeof r === 'string') b.ponerError(i, r);
-    else b.ponerNumero(i, r);
-  }
-  return b.terminar();
-}
-
-function zip(
-  a: Argumento | undefined,
-  b: Argumento | undefined,
-  n: number,
-  f: (x: number, y: number) => Resultado,
-): Columna {
-  const ca = a?.columnas[0];
-  const cb = b?.columnas[0];
-  if (!ca || !cb) return numeroConstante(0, n);
-
-  const ra = comoVectorNumerico(ca);
-  const rb = comoVectorNumerico(cb);
-  if (ra && rb) {
-    const out = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const r = f(ra[i] as number, rb[i] as number);
-      if (typeof r === 'string') return zipGeneral(ca, cb, n, f);
-      out[i] = r;
-    }
-    return vectorNumerico(out);
-  }
-  return zipGeneral(ca, cb, n, f);
-}
-
-function zipGeneral(
-  ca: Columna,
-  cb: Columna,
-  n: number,
-  f: (x: number, y: number) => Resultado,
-): Columna {
-  const out = crearConstructor(n);
-  for (let i = 0; i < n; i++) {
-    const va = coercionNumerica(ca, i);
-    if (typeof va === 'string') {
-      out.ponerError(i, va);
-      continue;
-    }
-    const vb = coercionNumerica(cb, i);
-    if (typeof vb === 'string') {
-      out.ponerError(i, vb);
-      continue;
-    }
-    const r = f(va, vb);
-    if (typeof r === 'string') out.ponerError(i, r);
-    else out.ponerNumero(i, r);
-  }
-  return out.terminar();
-}
 
 // --- Aritmética elemental ------------------------------------------------
 
 export function ABS(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, Math.abs);
+  return mapaNumerico(args[0], n, Math.abs);
 }
 
 export function SIGN(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, Math.sign);
+  return mapaNumerico(args[0], n, Math.sign);
 }
 
 export function SQRT(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, (x) => (x < 0 ? '#NUM!' : Math.sqrt(x)));
+  return mapaNumerico(args[0], n, (x) => (x < 0 ? '#NUM!' : Math.sqrt(x)));
 }
 
 export function INT(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, Math.floor);
+  return mapaNumerico(args[0], n, Math.floor);
 }
 
 export function EXP(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, Math.exp);
+  return mapaNumerico(args[0], n, Math.exp);
 }
 
 export function LN(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, (x) => (x <= 0 ? '#NUM!' : Math.log(x)));
+  return mapaNumerico(args[0], n, (x) => (x <= 0 ? '#NUM!' : Math.log(x)));
 }
 
 export function LOG10(args: Argumento[], n: number): Columna {
-  return mapa(args[0], n, (x) => (x <= 0 ? '#NUM!' : Math.log10(x)));
+  return mapaNumerico(args[0], n, (x) => (x <= 0 ? '#NUM!' : Math.log10(x)));
 }
 
 /** `LOG(número; [base])`; base 10 si se omite. */
 export function LOG(args: Argumento[], n: number): Columna {
   if (args.length < 2) return LOG10(args, n);
-  return zip(args[0], args[1], n, (x, base) =>
+  return zipNumerico(args[0], args[1], n, (x, base) =>
     x <= 0 || base <= 0 || base === 1 ? '#NUM!' : Math.log(x) / Math.log(base));
 }
 
 export function POWER(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, (base, exp) => {
+  return zipNumerico(args[0], args[1], n, (base, exp) => {
     const r = base ** exp;
     // Base negativa con exponente fraccionario: Excel da #¡NUM!, JS da NaN.
     return Number.isNaN(r) && !Number.isNaN(base) && !Number.isNaN(exp) ? '#NUM!' : r;
@@ -178,7 +92,7 @@ export function POWER(args: Argumento[], n: number): Columna {
 }
 
 export function MOD(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, (x, y) => (y === 0 ? '#DIV/0!' : excelMod(x, y)));
+  return zipNumerico(args[0], args[1], n, (x, y) => (y === 0 ? '#DIV/0!' : excelMod(x, y)));
 }
 
 export function excelMod(dividendo: number, divisor: number): number {
@@ -205,21 +119,21 @@ export function excelTrunc(x: number, digitos: number): number {
 }
 
 export function ROUND(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, excelRound);
+  return zipNumerico(args[0], args[1], n, excelRound);
 }
 
 export function ROUNDUP(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, excelRoundUp);
+  return zipNumerico(args[0], args[1], n, excelRoundUp);
 }
 
 export function ROUNDDOWN(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, excelTrunc);
+  return zipNumerico(args[0], args[1], n, excelTrunc);
 }
 
 /** `TRUNC(número; [decimales])`; decimales 0 si se omite. */
 export function TRUNC(args: Argumento[], n: number): Columna {
-  if (args.length < 2) return mapa(args[0], n, (x) => excelTrunc(x, 0));
-  return zip(args[0], args[1], n, excelTrunc);
+  if (args.length < 2) return mapaNumerico(args[0], n, (x) => excelTrunc(x, 0));
+  return zipNumerico(args[0], args[1], n, excelTrunc);
 }
 
 // --- Agregación ----------------------------------------------------------
@@ -537,7 +451,7 @@ export function SMALL(args: Argumento[], n: number): Columna {
 
 /** `REDOND.MULT`: al múltiplo más cercano; los signos deben coincidir. */
 export function MROUND(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, (x, m) => {
+  return zipNumerico(args[0], args[1], n, (x, m) => {
     if (m === 0) return 0;
     if (x !== 0 && Math.sign(x) !== Math.sign(m)) return '#NUM!'; // Excel es estricto aquí
     return Math.sign(x) * Math.round(Math.abs(x) / Math.abs(m)) * Math.abs(m);
@@ -552,7 +466,7 @@ export function MROUND(args: Argumento[], n: number): Columna {
  * redondea *hacia* cero pese a llamarse "superior".
  */
 export function CEILING(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, (x, s) => {
+  return zipNumerico(args[0], args[1], n, (x, s) => {
     if (s === 0) return 0;
     if (x > 0 && s < 0) return '#NUM!';
     return Math.ceil(x / s) * s;
@@ -560,7 +474,7 @@ export function CEILING(args: Argumento[], n: number): Columna {
 }
 
 export function FLOOR(args: Argumento[], n: number): Columna {
-  return zip(args[0], args[1], n, (x, s) => {
+  return zipNumerico(args[0], args[1], n, (x, s) => {
     if (s === 0) return '#DIV/0!';
     if (x > 0 && s < 0) return '#NUM!';
     return Math.floor(x / s) * s;

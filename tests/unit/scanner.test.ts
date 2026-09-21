@@ -128,7 +128,8 @@ describe('cobertura', () => {
     // El catálogo cubre BUSCARV, pero el motor todavía no la implementa, así
     // que el libro NO corre hoy. Decir "compatible" aquí sería la respuesta
     // tranquilizadora y falsa que este escáner existe para evitar: pasó de
-    // verdad con `Caso_practico.xlsx`, que usa FIN.MES, MES, AÑO y TIR.
+    // verdad con `Caso_practico.xlsx`, que usaba FIN.MES, MES, AÑO y TIR
+    // (ya implementadas; BUSCARV sigue pendiente).
     expect(veredicto(inf)).toBe('pendiente');
     expect(inf.pendientes.map((f) => f.nombre)).toEqual(['VLOOKUP']);
     expect(inf.bloqueantes).toEqual([]); // no es un bloqueo: es trabajo pendiente
@@ -140,13 +141,13 @@ describe('cobertura', () => {
         nombre: 'H',
         celdas: [
           { ref: 'A1', formula: 'SUM(B1:B9)' },        // implementada
-          { ref: 'A2', formula: 'EOMONTH(C1,1)' },      // Nivel 1, sin implementar
+          { ref: 'A2', formula: 'YEARFRAC(C1,C2)' },     // Nivel 1, sin implementar
           { ref: 'A3', formula: 'INDIRECT("A"&1)' },    // no soportada por diseño
         ],
       }],
     });
 
-    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['EOMONTH']);
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['YEARFRAC']);
     expect(inf.bloqueantes.map((f) => f.nombre)).toEqual(['INDIRECT']);
     // Un bloqueante pesa más que un pendiente: no basta con esperar.
     expect(veredicto(inf)).not.toBe('pendiente');

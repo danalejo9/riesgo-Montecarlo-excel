@@ -36,11 +36,27 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
     expect(faltan).toEqual([]);
   });
 
-  it('las funciones de Nivel 1 ya implementadas son las de criterio', () => {
+  it('el Nivel 1 implementado es exactamente el que se ha ido construyendo', () => {
+    // Esta lista crece a propósito, y a mano: obliga a que añadir una función
+    // sea una decisión visible en el diff y no un efecto colateral.
     const implementadasN1 = [...NIVEL_1].filter((f) => implementadas.has(f)).sort();
-    expect(implementadasN1).toEqual(
-      ['AVERAGEIF', 'AVERAGEIFS', 'COUNTIF', 'COUNTIFS', 'SUMIF', 'SUMIFS'].sort(),
-    );
+    expect(implementadasN1).toEqual([
+      // Criterio: 3.183 usos en el libro real del usuario.
+      'AVERAGEIF', 'AVERAGEIFS', 'COUNTIF', 'COUNTIFS', 'SUMIF', 'SUMIFS',
+      // Fecha: 900 usos en Caso_practico.xlsx.
+      'DATE', 'DAY', 'DAYS', 'EDATE', 'EOMONTH', 'MONTH', 'WEEKDAY', 'YEAR',
+      // Financieras.
+      'IRR', 'NPV',
+    ].sort());
+  });
+
+  it('las búsquedas de Nivel 1 siguen sin implementar, y el escáner debe decirlo', () => {
+    // BUSCARV, INDICE y COINCIDIR son el siguiente bloque grande. Mientras no
+    // existan, un libro que las use no corre: el escáner lo marca como
+    // "pendiente", no como compatible.
+    for (const f of ['VLOOKUP', 'INDEX', 'MATCH', 'XLOOKUP']) {
+      expect(implementadas.has(f)).toBe(false);
+    }
   });
 
   it('nada clasificado como Nivel 2 o no soportado está implementado a escondidas', () => {

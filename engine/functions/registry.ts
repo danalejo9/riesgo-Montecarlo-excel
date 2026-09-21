@@ -19,6 +19,8 @@ import {
 import {
   ISBLANK, ISERR, ISERROR, ISLOGICAL, ISNA, ISNONTEXT, ISNUMBER, ISTEXT, NA,
 } from './info.ts';
+import { DATE, DAY, DAYS, EDATE, EOMONTH, MONTH, WEEKDAY, YEAR } from './fechas.ts';
+import { IRR, NPV } from './financieras.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -31,8 +33,10 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   LARGE, SMALL,
   IF, IFERROR, IFNA, AND, OR, NOT, XOR, TRUE, FALSE,
   ISBLANK, ISNUMBER, ISTEXT, ISNONTEXT, ISLOGICAL, ISERROR, ISERR, ISNA, NA,
-  // Nivel 1: las funciones de criterio (Fase 2 §4.2).
+  // Nivel 1 (Fase 2 §4.2): criterio, fecha y financieras.
   SUMIF, SUMIFS, COUNTIF, COUNTIFS, AVERAGEIF, AVERAGEIFS,
+  DATE, YEAR, MONTH, DAY, EOMONTH, EDATE, DAYS, WEEKDAY,
+  NPV, IRR,
 };
 
 /**

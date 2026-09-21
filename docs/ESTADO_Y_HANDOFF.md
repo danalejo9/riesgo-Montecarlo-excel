@@ -136,7 +136,22 @@ Funciones más usadas: `SI` (6.254), `REDONDEAR` (5.536), `SUMA` (3.022), `SUMAR
 2. Pero las **funciones de criterio** (`SUMAR.SI*`, `CONTAR.SI*`, `PROMEDIO.SI*`) suman **3.183 usos**: no son un extra de Nivel 1, son el bloque que decide si el motor sirve para un presupuesto real. Se implementaron de inmediato.
 3. `ESBLANCO` y los criterios estaban bloqueados por la **misma causa raíz**: el motor solo modelaba números. De ahí el canal de valores (§9.13).
 
-Queda pendiente pasar el escáner por **más libros** del usuario para confirmar que este no es un caso atípico, y repetirlo ahora que `ESBLANCO` y el Nivel 1 están implementados: el informe debería dar 100 % compatible.
+### 5.1 Segundo libro, y una lección sobre el propio escáner (2026-09-21)
+
+El usuario pasó el escáner por un segundo libro, `Caso_practico.xlsx` (6 hojas, 22.799 fórmulas, 97,2 % de cobertura solo con Nivel 0), y el informe dijo **"✅ Compatible con el motor rápido"**.
+
+Era falso. Ese libro usa `FIN.MES`, `MES` y `AÑO` 300 veces cada una, y `TIR` cuatro, y ninguna estaba implementada: el motor se habría atragantado con él.
+
+**La causa era conceptual, no un descuido**: el veredicto miraba el *catálogo previsto* (§4.2 de Fase 2) y no el *registro de funciones*. Son dos cosas distintas —el catálogo es el plan, el registro es lo que existe— y confundirlas produce exactamente la clase de respuesta tranquilizadora y falsa que el escáner existe para evitar. Es la segunda vez que aparece la misma deriva; la primera fue con diez funciones de Nivel 0 inexistentes.
+
+Corregido en dos frentes:
+
+1. El informe separa ahora **bloqueantes** (fuera del catálogo: no correrán sin cambiar el roadmap) de **pendientes** (dentro del catálogo pero sin implementar: correrán en cuanto se escriban, sin tocar el libro). El verde exige que no haya ni unas ni otras, y el escáner consulta el registro del motor directamente, así que no puede volver a desincronizarse.
+2. Se implementaron las funciones que faltaban: `FECHA`, `AÑO`, `MES`, `DIA`, `FIN.MES`, `FECHA.MES`, `DIAS`, `DIASEM`, `VNA` y `TIR`.
+
+Con eso, **los dos libros reales del usuario dan compatible de verdad**.
+
+Queda pendiente pasar el escáner por más libros suyos: dos no bastan para dar el catálogo por bueno, aunque ya son mucho más que cero.
 
 ---
 
