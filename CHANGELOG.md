@@ -5,6 +5,120 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Canal de valores y Nivel 1 (2026-09-21)
+
+Disparado por el primer dato real: el usuario pasó el escáner de E1 por un
+libro suyo de verdad (`Humedales_v1_completo`, 132 hojas, 95.317 celdas con
+contenido, 16.609 fórmulas). El resultado cerró el supuesto que llevaba
+abierto desde la Fase 1 (§5 del handoff, decisión 3):
+
+- Con **solo Nivel 0**: 85,2 % de las fórmulas evaluables.
+- Con **Nivel 0 + Nivel 1**: todo el libro salvo **7 usos de `ESBLANCO`**.
+- Las funciones de criterio (`SUMAR.SI.CONJUNTO` 1.666, `CONTAR.SI` 1.052,
+  `PROMEDIO.SI.CONJUNTO` 396, `SUMAR.SI` 69) son **3.183 usos**: el bloque
+  que de verdad decide si el motor rápido sirve para un presupuesto real.
+
+Ambas cosas —`ESBLANCO` y los criterios— estaban bloqueadas por la misma
+causa raíz: el motor solo modelaba números.
+
+**Añadido**
+
+- `engine/values/`: el modelo de valores con los cinco tipos de celda de
+  Excel (número, texto, lógico, vacío, error).
+  - `columna.ts`: una `Columna` son los N valores de una celda en las N
+    iteraciones, en tres formas — vector numérico plano (el caso dominante y
+    el único que recorren los bucles del registro), constante no numérica (un
+    texto o un vacío no necesita un millón de copias) y mixta
+    (`SI(A1>10;"alto";5)`, el caso raro). Los constructores colapsan siempre a
+    la forma más compacta, así que la forma es información fiable.
+  - `coercion.ts`: las reglas de conversión y comparación de Excel, con sus
+    límites escritos: la conversión de texto a número no acepta moneda,
+    millares ni el separador decimal de es-ES, porque el motor todavía no
+    recibe configuración regional.
+  - `buffer.ts`: el buffer numérico crudo de las fronteras (entradas
+    muestreadas, salidas que se reducen a estadísticas), que antes vivía en
+    `engine/functions/types.ts`.
+- `engine/functions/agregacion.ts`: las reglas de contexto de Excel, que no
+  son las que uno supondría y ahora viven en un solo sitio. Dentro de un rango
+  solo cuentan los números; sueltos, un lógico vale 1 y el texto "5" se
+  convierte. Un error se propaga en `SUMA` y se ignora en `CONTAR`.
+- `engine/functions/info.ts`: `ESBLANCO`, `ESNUMERO`, `ESTEXTO`, `ESNOTEXTO`,
+  `ESLOGICO`, `ESERROR`, `ESERR`, `ESND`, `NOD`. Ninguna podía existir sin el
+  canal de valores: sin él una celda vacía y un cero eran el mismo valor.
+- `engine/functions/criterios.ts` y `condicionales.ts`: la gramática de
+  criterios (comparadores, texto sin distinguir mayúsculas, comodines `*` y
+  `?` con `~` para escaparlos, y los criterios sobre vacío `""` y `"<>"`) y
+  las seis funciones que la usan. Precalculan el conjunto de coincidencias una
+  sola vez cuando los rangos de criterio no dependen de la simulación, que es
+  el caso normal: son etiquetas.
+- Diez funciones de Nivel 0 que el catálogo prometía y nadie había
+  implementado: `REDOND.MULT`, `MULTIPLO.SUPERIOR`, `MULTIPLO.INFERIOR`,
+  `SUMA.CUADRADOS`, `PERCENTIL(.INC)`, `CUARTIL(.INC)`, `K.ESIMO.MAYOR`,
+  `K.ESIMO.MENOR`. Más `SI.ND`, `CONTARA`, `CONTAR.BLANCO`, `VERDADERO`,
+  `FALSO`.
+- `npm run bench` (`bench/motor.ts`): el benchmark como archivo del
+  repositorio. Antes era un script suelto, así que la cifra que cita el
+  criterio de hecho de E2 no se podía volver a medir.
+- `tests/unit/catalogoVsRegistro.test.ts`: ata el catálogo del escáner al
+  registro del motor.
+
+**Corregido**
+
+- **Los seis casos pendientes del libro de fidelidad quedan cerrados: 31/31
+  contra lo que Excel calculó de verdad, sin excepciones** (antes 25/31).
+  - `PROMEDIO` ya no cuenta las celdas vacías en el denominador (L0-031: daba
+    13,33 donde Excel da 20) y un rango sin números da `#¡DIV/0!` en vez de 0
+    (L0-032). Eran los dos hallazgos nuevos de la primera tanda.
+  - `SI(...;"mayor";"menor")` devuelve texto (L0-040) y
+    `SI.ERROR(10/0;"sin datos")` devuelve "sin datos" (L0-022).
+  - `CONTAR` y `CONTARA` se diferencian de verdad (L0-033, L0-034).
+- Los errores llevan su código. El convenio anterior era `NaN` para todo, así
+  que `#¡DIV/0!` y `#¡NUM!` eran indistinguibles; el test de fidelidad compara
+  ahora el código exacto que Excel escribió en la celda.
+- **Dos derivas entre el escáner y el motor.** El escáner contaba como
+  cubiertas diez funciones de Nivel 0 que no existían —un informe de
+  compatibilidad optimista es peor que no tener informe— y clasificaba como
+  bloqueantes de Nivel 2 las `ES*` que ya se podían implementar. Corregidas
+  las dos y atadas con un test para que no vuelvan a separarse.
+
+**Rendimiento**
+
+Medido en este contenedor, mismo modelo y misma máquina, comparando el commit
+anterior al canal de valores con el actual (1.000.000 de iteraciones, 20
+entradas, 5 salidas, 200 celdas intermedias, un solo hilo):
+
+| | tiempo |
+|---|---|
+| Antes del canal de valores | 18,37 s / 18,29 s |
+| Después | 18,64 s / 18,61 s |
+| Modelo con texto y `SUMAR.SI.CONJUNTO` | 16,22 s |
+
+Diferencia ~1,5 %, dentro del ruido, y la media de la salida sale idéntica
+hasta el último decimal (5.655.827,14): el canal de valores no cambió ni el
+resultado ni el coste del camino numérico. Lo consigue el camino rápido — cada
+función comprueba **una vez por llamada** si sus argumentos ya son vectores
+numéricos y, si lo son, recorre el mismo bucle plano de antes.
+
+Ojo al comparar con los 8,5 s que cita el criterio de hecho de E2: aquello se
+midió en el equipo del usuario (Windows, Node 24), no en este contenedor, que
+es aproximadamente el doble de lento. La comparación válida es la de la tabla,
+antes contra después en la misma máquina.
+
+**Huecos conocidos que deja este trabajo**
+
+- Una salida no numérica (un texto, o un error en algunas iteraciones) se
+  convierte a `NaN` al reducirse a estadísticas, y contamina la media sin
+  decir por qué. Lo correcto es contar esas iteraciones y enseñárselas al
+  usuario ("3.412 de 1.000.000 dieron #¡DIV/0!"); es trabajo del informe de
+  resultados (E6) y exige tocar el formato que viaja entre workers.
+  Documentado en `aBufferNumerico`.
+- Los casos límite de los criterios (qué hace exactamente `"<>texto"` con una
+  celda vacía, entre otros) están implementados según lo documentado por
+  Microsoft, pero **no verificados contra Excel de verdad**. Necesitan una
+  segunda tanda del libro de fidelidad.
+- La conversión de texto a número ignora la configuración regional, así que un
+  "1,5" escrito en un libro es-ES no se convierte.
+
 ### E3 — Integración Excel + UI mínima (en curso)
 
 **Añadido**
