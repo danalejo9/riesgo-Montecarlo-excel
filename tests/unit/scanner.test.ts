@@ -124,7 +124,32 @@ describe('cobertura', () => {
 
     expect(inf.coberturaN0).toBe(75);
     expect(inf.coberturaN0N1).toBe(100);
-    expect(veredicto(inf)).toBe('compatible');
+
+    // El catálogo cubre BUSCARV, pero el motor todavía no la implementa, así
+    // que el libro NO corre hoy. Decir "compatible" aquí sería la respuesta
+    // tranquilizadora y falsa que este escáner existe para evitar: pasó de
+    // verdad con `Caso_practico.xlsx`, que usa FIN.MES, MES, AÑO y TIR.
+    expect(veredicto(inf)).toBe('pendiente');
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['VLOOKUP']);
+    expect(inf.bloqueantes).toEqual([]); // no es un bloqueo: es trabajo pendiente
+  });
+
+  it('distingue lo pendiente de implementar de lo que no correrá nunca', () => {
+    const inf = escanear({
+      hojas: [{
+        nombre: 'H',
+        celdas: [
+          { ref: 'A1', formula: 'SUM(B1:B9)' },        // implementada
+          { ref: 'A2', formula: 'EOMONTH(C1,1)' },      // Nivel 1, sin implementar
+          { ref: 'A3', formula: 'INDIRECT("A"&1)' },    // no soportada por diseño
+        ],
+      }],
+    });
+
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['EOMONTH']);
+    expect(inf.bloqueantes.map((f) => f.nombre)).toEqual(['INDIRECT']);
+    // Un bloqueante pesa más que un pendiente: no basta con esperar.
+    expect(veredicto(inf)).not.toBe('pendiente');
   });
 
   it('señala la celda y la función exactas que bloquean', () => {

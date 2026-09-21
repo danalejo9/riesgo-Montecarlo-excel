@@ -7,6 +7,7 @@
  *   3. ¿De qué tamaño es el problema? (para dimensionar el motor, D11)
  */
 
+import { funcionSoportada } from '../engine/functions/registry.ts';
 import {
   clasificar,
   esFuncionPropia,
@@ -27,6 +28,14 @@ export interface UsoFuncion {
   ejemplo: string;
   /** Es una funcion del propio complemento (`RISK.*`): declara una entrada. */
   propia: boolean;
+  /**
+   * Si el motor la sabe evaluar **hoy**, consultado al registro de verdad.
+   *
+   * No es lo mismo que estar en el catálogo: el catálogo es el plan (§4.2 de
+   * Fase 2) y el registro es la implementación. Confundirlos hace que el
+   * informe prometa velocidad sobre un libro que el motor no puede correr.
+   */
+  implementada: boolean;
 }
 
 export interface Informe {
@@ -45,7 +54,10 @@ export interface Informe {
   coberturaN0N1: number;
 
   funciones: UsoFuncion[];
+  /** Fuera del catálogo previsto: no correrán sin cambiar el roadmap. */
   bloqueantes: UsoFuncion[];
+  /** Dentro del catálogo pero aún sin implementar: correrán cuando se hagan. */
+  pendientes: UsoFuncion[];
 
   celdasVolatiles: number;
   referenciasExternas: number;
@@ -94,7 +106,18 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
 
       const previo = usos.get(nombre);
       if (previo) previo.veces++;
-      else usos.set(nombre, { nombre, nivel: propia ? 'n0' : nivel, veces: 1, ejemplo: origen, propia });
+      else {
+        usos.set(nombre, {
+          nombre,
+          nivel: propia ? 'n0' : nivel,
+          veces: 1,
+          ejemplo: origen,
+          propia,
+          // Una función propia (`RISK.*`) declara una entrada; no la evalúa el
+          // registro, así que no tiene sentido preguntarle si la implementa.
+          implementada: propia || funcionSoportada(nombre),
+        });
+      }
 
       if (esVolatil(nombre)) volatil = true;
       peor = peorNivel(peor, propia ? 'propia' : nivel);
@@ -161,6 +184,11 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
     funciones,
     bloqueantes: funciones.filter(
       (f) => f.nivel === 'n2' || f.nivel === 'no-soportada' || f.nivel === 'desconocida',
+    ),
+    // Previstas por el catálogo pero todavía sin implementar: el libro correrá
+    // en el motor rápido en cuanto existan, pero hoy no.
+    pendientes: funciones.filter(
+      (f) => !f.implementada && (f.nivel === 'n0' || f.nivel === 'n1'),
     ),
     celdasVolatiles,
     referenciasExternas,
