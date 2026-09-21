@@ -10,4 +10,8 @@ export { aplanar, argRango, argValor, type Argumento, type FuncionExcel } from '
 export * from './math.ts';
 export * from './logic.ts';
 export * from './info.ts';
+export * from './condicionales.ts';
+export {
+  compilarCriterio, compilarCriterioTexto, cumple, type Comparador, type Criterio,
+} from './criterios.ts';
 export { funcionSoportada, obtenerFuncion, REGISTRO } from './registry.ts';

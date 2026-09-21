@@ -448,6 +448,125 @@ function raiz(v: Resultado): Resultado {
   return typeof v === 'string' ? v : Math.sqrt(v);
 }
 
+export function SUMSQ(args: Argumento[], n: number): Columna {
+  return reducir(args, n, 0, (a, x) => a + x * x, (a) => a);
+}
+
+// --- Estadísticos de orden -----------------------------------------------
+
+/**
+ * `PERCENTIL`, `CUARTIL`, `K.ESIMO.MAYOR` y `K.ESIMO.MENOR` agregan todos sus
+ * argumentos menos el último, que es un escalar (el percentil o la k).
+ */
+function porIteracionConEscalar(
+  args: Argumento[],
+  n: number,
+  calcular: (valores: Float64Array, largo: number, escalar: number) => Resultado,
+): Columna {
+  const datos = args.slice(0, -1);
+  const colEscalar = args[args.length - 1]?.columnas[0];
+  if (!colEscalar || datos.length === 0) {
+    const b = crearConstructor(n);
+    for (let i = 0; i < n; i++) b.ponerError(i, '#VALUE!');
+    return b.terminar();
+  }
+
+  const buffer = new Float64Array(totalDeColumnas(datos));
+  const estado = { largo: 0 };
+  const salida = crearConstructor(n);
+
+  for (let i = 0; i < n; i++) {
+    const err = recoger(datos, i, buffer, estado);
+    if (err) {
+      salida.ponerError(i, err);
+      continue;
+    }
+    const escalar = coercionNumerica(colEscalar, i);
+    if (typeof escalar === 'string') {
+      salida.ponerError(i, escalar);
+      continue;
+    }
+    const r = calcular(buffer, estado.largo, escalar);
+    if (typeof r === 'string') salida.ponerError(i, r);
+    else salida.ponerNumero(i, r);
+  }
+  return salida.terminar();
+}
+
+/** Percentil "inclusivo": el de `PERCENTIL.INC`, con interpolación lineal. */
+function percentilInclusivo(valores: Float64Array, largo: number, k: number): Resultado {
+  if (largo === 0 || k < 0 || k > 1) return '#NUM!';
+  const orden = valores.slice(0, largo).sort();
+  const pos = k * (largo - 1);
+  const bajo = Math.floor(pos);
+  const alto = Math.ceil(pos);
+  const vBajo = orden[bajo] as number;
+  if (bajo === alto) return vBajo;
+  return vBajo + (pos - bajo) * ((orden[alto] as number) - vBajo);
+}
+
+export function PERCENTILE(args: Argumento[], n: number): Columna {
+  return porIteracionConEscalar(args, n, percentilInclusivo);
+}
+
+export function QUARTILE(args: Argumento[], n: number): Columna {
+  return porIteracionConEscalar(args, n, (v, largo, q) => {
+    const qi = Math.trunc(q);
+    if (qi < 0 || qi > 4) return '#NUM!';
+    return percentilInclusivo(v, largo, qi / 4);
+  });
+}
+
+export function LARGE(args: Argumento[], n: number): Columna {
+  return porIteracionConEscalar(args, n, (v, largo, k) => {
+    const ki = Math.trunc(k);
+    if (largo === 0 || ki < 1 || ki > largo) return '#NUM!';
+    return v.slice(0, largo).sort()[largo - ki] as number;
+  });
+}
+
+export function SMALL(args: Argumento[], n: number): Columna {
+  return porIteracionConEscalar(args, n, (v, largo, k) => {
+    const ki = Math.trunc(k);
+    if (largo === 0 || ki < 1 || ki > largo) return '#NUM!';
+    return v.slice(0, largo).sort()[ki - 1] as number;
+  });
+}
+
+// --- Redondeo a múltiplos -------------------------------------------------
+
+/** `REDOND.MULT`: al múltiplo más cercano; los signos deben coincidir. */
+export function MROUND(args: Argumento[], n: number): Columna {
+  return zip(args[0], args[1], n, (x, m) => {
+    if (m === 0) return 0;
+    if (x !== 0 && Math.sign(x) !== Math.sign(m)) return '#NUM!'; // Excel es estricto aquí
+    return Math.sign(x) * Math.round(Math.abs(x) / Math.abs(m)) * Math.abs(m);
+  });
+}
+
+/**
+ * `MULTIPLO.SUPERIOR` y `MULTIPLO.INFERIOR` en su forma clásica.
+ *
+ * `ceil(x/s)*s` y `floor(x/s)*s` reproducen el comportamiento de Excel en los
+ * cuatro cuadrantes de signos, incluido `MULTIPLO.SUPERIOR(-2,5;1) = -2`, que
+ * redondea *hacia* cero pese a llamarse "superior".
+ */
+export function CEILING(args: Argumento[], n: number): Columna {
+  return zip(args[0], args[1], n, (x, s) => {
+    if (s === 0) return 0;
+    if (x > 0 && s < 0) return '#NUM!';
+    return Math.ceil(x / s) * s;
+  });
+}
+
+export function FLOOR(args: Argumento[], n: number): Columna {
+  return zip(args[0], args[1], n, (x, s) => {
+    if (s === 0) return '#DIV/0!';
+    if (x > 0 && s < 0) return '#NUM!';
+    return Math.floor(x / s) * s;
+  });
+}
+
 /**
  * `SUMAPRODUCTO`: multiplica posición a posición dos o más rangos del mismo
  * tamaño y suma los productos. A diferencia de los reductores, aquí la

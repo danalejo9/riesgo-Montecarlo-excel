@@ -13,7 +13,8 @@
     "start": "office-addin-debugging start manifest.xml desktop",
     "stop": "office-addin-debugging stop manifest.xml",
     "validate-manifest": "office-addin-manifest validate manifest.xml",
-    "scan": "node scanner/cli.ts"
+    "scan": "node scanner/cli.ts",
+    "bench": "node --experimental-strip-types --no-warnings bench/motor.ts"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",
