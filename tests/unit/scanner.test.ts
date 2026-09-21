@@ -153,6 +153,26 @@ describe('cobertura', () => {
     expect(veredicto(inf)).not.toBe('pendiente');
   });
 
+  it('una fórmula matricial impide el verde aunque sus funciones estén soportadas', () => {
+    // El motor no implementa semántica de matrices: `SUMA(A1:A2*B1:B2)` falla
+    // aunque SUMA esté soportada. Verificado contra el evaluador, no supuesto.
+    const inf = escanear({
+      hojas: [{
+        nombre: 'H',
+        celdas: [
+          { ref: 'A1', formula: 'SUM(B1:B9)' },
+          { ref: 'A2', formula: 'SUM(B1:B2*C1:C2)', matricial: true },
+        ],
+      }],
+    });
+
+    expect(inf.bloqueantes).toEqual([]);
+    expect(inf.pendientes).toEqual([]);
+    expect(inf.formulasMatriciales).toBe(1);
+    expect(veredicto(inf)).toBe('matricial');
+    expect(inf.celdasMatriciales).toEqual(['H!A2']);
+  });
+
   it('señala la celda y la función exactas que bloquean', () => {
     const inf = escanear({
       hojas: [{

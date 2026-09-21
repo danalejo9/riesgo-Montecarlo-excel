@@ -20,7 +20,7 @@ import type { Informe } from './analyze.ts';
  *
  * El porcentaje sí sirve para medir *cuánto* falta, y por eso se muestra.
  */
-export type Veredicto = 'compatible' | 'pendiente' | 'casi' | 'incompatible';
+export type Veredicto = 'compatible' | 'pendiente' | 'matricial' | 'casi' | 'incompatible';
 
 /**
  * Hay dos formas distintas de que un libro no corra, y confundirlas fue un
@@ -39,6 +39,10 @@ export type Veredicto = 'compatible' | 'pendiente' | 'casi' | 'incompatible';
 export function veredicto(inf: Informe): Veredicto {
   if (inf.bloqueantes.length > 0) return inf.coberturaN0N1 >= 95 ? 'casi' : 'incompatible';
   if (inf.pendientes.length > 0) return 'pendiente';
+  // Una fórmula matricial usa semántica de matrices, que el motor no
+  // implementa, por muy soportadas que estén las funciones que contiene. No
+  // basta con listarla entre las "señales": impide el verde.
+  if (inf.formulasMatriciales > 0) return 'matricial';
   return 'compatible';
 }
 
@@ -62,6 +66,14 @@ export function formatearTexto(inf: Informe): string {
     l.push('      Están todas dentro del catálogo previsto, así que el libro correrá en el');
     l.push('      motor rápido en cuanto se escriban; hoy todavía no. No hay que reescribir');
     l.push(`      nada del libro. Son ${miles(usosPendientes)} uso(s) en total.`);
+  } else if (v === 'matricial') {
+    l.push(`  ⚠️   Casi — ${miles(inf.formulasMatriciales)} fórmula(s) matriciales lo impiden`);
+    l.push('      Todas las funciones del libro están soportadas, pero una fórmula matricial');
+    l.push('      opera sobre rangos enteros a la vez (como {=SUMA(A1:A9*B1:B9)}), y el motor');
+    l.push('      no implementa esa semántica. Suelen poder reescribirse con SUMAPRODUCTO.');
+    if (inf.celdasMatriciales.length > 0) {
+      l.push(`      Están en: ${inf.celdasMatriciales.join(', ')}`);
+    }
   } else if (v === 'casi') {
     l.push(`  ⚠️   Casi compatible — ${miles(celdasBloqueadas)} fórmula(s) lo impiden`);
     l.push(`      Son pocas (${inf.coberturaN0N1} % del libro ya está cubierto): merece la pena`);
@@ -115,7 +127,6 @@ export function formatearTexto(inf: Informe): string {
   if (inf.tienePowerQuery) señales.push('Power Query o conexiones externas');
   if (inf.enlacesExternos > 0) señales.push(`${inf.enlacesExternos} enlace(s) a otros libros`);
   if (inf.derrames > 0) señales.push(`${inf.derrames} referencia(s) de derrame (matrices dinámicas)`);
-  if (inf.formulasMatriciales > 0) señales.push(`${miles(inf.formulasMatriciales)} fórmula(s) matriciales`);
   if (inf.celdasVolatiles > 0) señales.push(`${miles(inf.celdasVolatiles)} celda(s) con funciones volátiles`);
   if (inf.referenciasExternas > 0) señales.push(`${miles(inf.referenciasExternas)} fórmula(s) con referencias externas`);
 

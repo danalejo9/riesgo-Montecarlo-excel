@@ -59,6 +59,9 @@ export interface Informe {
   /** Dentro del catálogo pero aún sin implementar: correrán cuando se hagan. */
   pendientes: UsoFuncion[];
 
+  /** Dónde están las fórmulas matriciales, para poder nombrarlas en el informe. */
+  celdasMatriciales: string[];
+
   celdasVolatiles: number;
   referenciasExternas: number;
   derrames: number;
@@ -178,6 +181,10 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
     formulas: total,
     formulasCompartidas: libro.formulas.filter((f) => f.compartida).length,
     formulasMatriciales: libro.formulas.filter((f) => f.matricial).length,
+    celdasMatriciales: libro.formulas
+      .filter((f) => f.matricial)
+      .slice(0, 25)
+      .map((f) => `${f.hoja}!${f.ref}`),
     formulasPorNivel,
     coberturaN0: porcentaje(cubiertasN0, total),
     coberturaN0N1: porcentaje(cubiertasN0N1, total),

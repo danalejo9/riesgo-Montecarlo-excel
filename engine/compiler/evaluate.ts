@@ -169,6 +169,18 @@ export function evaluarNodo(
     }
 
     case 'binaria': {
+      // `A1:A3*B1:B3` solo tiene sentido con semántica matricial, que el motor
+      // no implementa. Se detecta aquí para poder decirlo con esas palabras:
+      // el mensaje genérico de más abajo ("un rango no es un valor") es cierto
+      // pero no le dice a nadie qué hacer.
+      if (nodo.izq.tipo === 'rango' || nodo.der.tipo === 'rango') {
+        return {
+          ok: false,
+          motivo: 'Fórmula matricial: operar con rangos enteros exige semántica de matrices, ' +
+            'que el motor rápido no implementa todavía',
+        };
+      }
+
       const izq = evaluarNodo(nodo.izq, hojaActual, valores, n);
       if (!izq.ok) return izq;
       const der = evaluarNodo(nodo.der, hojaActual, valores, n);
