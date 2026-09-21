@@ -72,6 +72,13 @@ describe('libro de fidelidad (tests/fixtures/fidelidad.xlsx)', () => {
     expect(casos.length).toBeGreaterThanOrEqual(31);
   });
 
+  it('todos los casos traen el valor que Excel calculó, no una celda en blanco', () => {
+    // Sin esto, un libro que nadie hubiera abierto en Excel se leería con
+    // ceros y los casos que valen 0 pasarían solos, dando por verificada una
+    // batería que no ha comparado nada.
+    expect(casos.filter((c) => !c.calculado).map((c) => c.id)).toEqual([]);
+  });
+
   it('todos los ids de PENDIENTES existen de verdad en el libro (motivos no obsoletos)', () => {
     const ids = new Set(casos.map((c) => c.id));
     for (const id of Object.keys(PENDIENTES)) expect(ids.has(id)).toBe(true);

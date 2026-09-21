@@ -18,6 +18,16 @@ export interface CasoFidelidad {
   formula: string;
   /** Lo que Excel calculó para esa fórmula, ya interpretado por tipo. */
   valorEsperado: ValorCelda;
+  /**
+   * Si la celda traía de verdad un valor cacheado.
+   *
+   * Un libro recién generado tiene las fórmulas escritas pero ningún valor:
+   * Excel todavía no lo ha abierto. Sin esta bandera esos casos se leerían
+   * como el número 0 —porque `Number('')` es 0, no `NaN`— y los que de verdad
+   * valen 0 pasarían por accidente, dando por verificado un libro que nadie
+   * ha calculado.
+   */
+  calculado: boolean;
   notas: string;
 }
 
@@ -65,7 +75,12 @@ function leerCeldasDeHoja(xml: string): Map<string, CeldaCruda> {
     const formula = fm ? desescapar(fm[1] ?? '').trim() : undefined;
 
     const vm = /<v>([\s\S]*?)<\/v>/.exec(trozo);
-    const valorCrudo = vm ? desescapar(vm[1]) : undefined;
+    // Una celda de texto en línea (`t="inlineStr"`) guarda su contenido en
+    // `<is><t>` y no tiene `<v>`. Excel siempre escribe cadenas compartidas,
+    // pero un generador puede escribirlas en línea: el libro recién generado,
+    // antes de pasar por Excel, viene así.
+    const im = /<is>[\s\S]*?<t\b[^>]*>([\s\S]*?)<\/t>[\s\S]*?<\/is>/.exec(trozo);
+    const valorCrudo = vm ? desescapar(vm[1] ?? '') : im ? desescapar(im[1] ?? '') : undefined;
 
     celdas.set(ref, { tipo, formula, valorCrudo });
   }
@@ -80,6 +95,7 @@ function interpretarValor(celda: CeldaCruda, sharedStrings: string[]): ValorCeld
     case 'b':
       return { tipo: 'booleano', valor: crudo === '1' };
     case 'str':
+    case 'inlineStr':
       return { tipo: 'texto', valor: crudo };
     case 's':
       return { tipo: 'texto', valor: sharedStrings[Number(crudo)] ?? '' };
@@ -164,6 +180,7 @@ export function leerCasosFidelidad(ruta: string): CasoFidelidad[] {
       descripcion: textoPlano(celdas.get(`C${fila}`), sharedStrings),
       formula: e.formula,
       valorEsperado: interpretarValor(e, sharedStrings),
+      calculado: e.valorCrudo !== undefined,
       notas: textoPlano(celdas.get(`F${fila}`), sharedStrings),
     });
   }
