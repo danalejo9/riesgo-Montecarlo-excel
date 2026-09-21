@@ -406,6 +406,43 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     sí hacía el escáner: un libro real llega con `_xlfn.IFNA` escrito así, de
     modo que esto habría fallado en producción. Corregido y con test.
 
+15. [~] **E3 arrancado: manifiesto nuevo, build de la UI y panel de diagnóstico (2026-09-21)**
+
+    Primer entregable **sideloadeable** del proyecto. Hasta aquí no había nada
+    que Excel pudiera cargar: el `manifest.xml` de la raíz era todavía el
+    heredado, el que nunca funcionó.
+
+    - **`manifest.xml` reescrito**, con Id nuevo (el viejo puede estar en la
+      caché de Office de la máquina del usuario) y los defectos de la
+      auditoría corregidos: `<Requirements>` declarado, y **ninguna función
+      personalizada declarada todavía** — apuntar `RISK.*` a un `functions.js`
+      inexistente reproduciría el defecto 3 en otra forma. Entrarán cuando
+      estén escritas.
+    - **`excel/`**: la capa de Office.js. `entorno.ts` (host, plataforma,
+      idioma y qué conjuntos de `ExcelApi` hay disponibles) y `seleccion.ts`
+      (lectura en lote de la selección). Desde el primer archivo se respeta la
+      regla que el heredado rompía: pedir en lote y sincronizar una vez, nunca
+      una llamada por celda.
+    - **`ui/`**: panel React mínimo, sin librería de componentes ni fuentes
+      remotas, con tema claro y oscuro.
+    - **Build**: `npm run build` vuelve a ser `tsc -b && vite build`. Raíz de
+      Vite en `ui/`, para que las URL servidas coincidan exactamente con las
+      del manifiesto. `tsconfig.ui.json` separa la capa con DOM y `office-js`
+      del motor, que sigue sin saber nada del entorno.
+
+    **El panel no simula nada a propósito.** Contesta tres preguntas que no se
+    podían contestar sin Excel delante: ¿carga el complemento?, ¿qué APIs hay
+    en esta máquina (difieren entre Windows y Mac)?, ¿se puede leer el libro?
+    Si el sideload está mal, es mucho mejor descubrirlo con cien líneas que
+    con mil.
+
+    **Lo que no se pudo verificar aquí**: `npm run validate-manifest` necesita
+    el servicio en línea de Microsoft y el entorno de desarrollo en la nube lo
+    bloquea (403). Se comprobó a mano que el XML está bien formado, que el
+    orden de los elementos respeta el esquema (que es sensible al orden), que
+    no falta ningún `resid` y que existen todos los recursos que el manifiesto
+    pide. La validación de verdad la tiene que hacer el usuario.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **Decidir de dónde sale la configuración regional** (ver el punto 14). Es
@@ -420,7 +457,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
    `"<>5"` numérico contra una celda vacía (hoy implementado por coherencia
    con el caso de texto, sin verificar), y el Nivel 1 de búsquedas
    (`BUSCARV`, `INDICE`/`COINCIDIR`) cuando se implementen.
-4. **Adaptadores Office.js** (lector del grafo en lote, escritor de
+4. **Que el usuario haga el primer sideload** y devuelva lo que enseñe el
+   panel de diagnóstico: plataforma, versión y qué conjuntos de `ExcelApi`
+   tiene. Ese dato decide qué puede usar el adaptador y no se puede averiguar
+   de otra forma.
+5. **Adaptadores Office.js** (lector del grafo en lote, escritor de
    resultados), `resolverRef`, y conectar el `AlmacenGuardian` a
    `workbook.settings` de verdad. Esto sí necesita Excel abierto y sideload
    funcionando, y hasta que exista no hay nada nuevo que sideloadear: el

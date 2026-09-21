@@ -23,5 +23,5 @@
     "noUncheckedIndexedAccess": false,
     "erasableSyntaxOnly": true
   },
-  "include": ["engine", "scanner", "tests"]
+  "include": ["engine", "scanner", "tests", "bench"]
 }

@@ -4,7 +4,7 @@
   "version": "0.1.0-dev",
   "type": "module",
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,7 +14,8 @@
     "stop": "office-addin-debugging stop manifest.xml",
     "validate-manifest": "office-addin-manifest validate manifest.xml",
     "scan": "node scanner/cli.ts",
-    "bench": "node --experimental-strip-types --no-warnings bench/motor.ts"
+    "bench": "node --experimental-strip-types --no-warnings bench/motor.ts",
+    "build:tipos": "tsc -b"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",
