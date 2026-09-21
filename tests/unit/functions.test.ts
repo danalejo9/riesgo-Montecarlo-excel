@@ -337,6 +337,17 @@ describe('registro de funciones', () => {
     expect(funcionSoportada('SUBTOTAL')).toBe(false);
   });
 
+  it('quita el prefijo _xlfn. con el que Excel guarda las funciones posteriores a 2007', () => {
+    // Un libro real trae `_xlfn.IFNA` en el XML aunque la barra de fórmulas
+    // muestre SI.ND. Lo destapó el caso N1-046 del libro de fidelidad.
+    expect(funcionSoportada('_xlfn.IFNA')).toBe(true);
+    expect(obtenerFuncion('_xlfn.IFNA')).toBe(obtenerFuncion('IFNA'));
+  });
+
+  it('no normaliza _xludf., que marca una función que ni Excel reconoció', () => {
+    expect(funcionSoportada('_xludf.IFNA')).toBe(false);
+  });
+
   it('obtenerFuncion devuelve la implementación correcta', () => {
     const f = obtenerFuncion('sum');
     expect(f).toBeDefined();

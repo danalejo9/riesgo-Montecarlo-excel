@@ -41,7 +41,20 @@ const CLAVE_FORMULA = claveDeReferencia(HOJA, CELDA_FORMULA);
  * Casos que no se pueden comparar todavía, por id y con el motivo. Igual que
  * en la primera tanda: nunca se descarta uno en silencio.
  */
-const PENDIENTES: Record<string, string> = {};
+const PENDIENTES: Record<string, string> = {
+  'N1-046':
+    'No verificado por un defecto del generador, no del motor: las funciones posteriores a ' +
+    'Excel 2007 se escriben en el XML con el prefijo `_xlfn.`, y `generar-nivel1.py` escribió ' +
+    '`IFNA` a secas. Excel la tomó por una función definida por el usuario (la reescribió como ' +
+    '`_xludf.IFNA`) y devolvió #¿NOMBRE?. Ya está corregido en el generador; se verificará en la ' +
+    'siguiente tanda.',
+  'N1-049':
+    'Hallazgo real, no un fallo a corregir sin más: el Excel es-ES del usuario convierte 1,5 a ' +
+    'texto con **coma** ("1,5") y el motor produce "1.5", porque no recibe información de ' +
+    'configuración regional. Confirma con dato el hueco que ya estaba documentado. Arreglarlo ' +
+    'exige decidir de dónde sale la configuración regional (ver el handoff §9.14), así que no ' +
+    'se parchea aquí.',
+};
 
 /**
  * Los datos auxiliares sobre los que operan los casos. **Tienen que ser

@@ -35,10 +35,25 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   SUMIF, SUMIFS, COUNTIF, COUNTIFS, AVERAGEIF, AVERAGEIFS,
 };
 
+/**
+ * Excel guarda en el XML las funciones posteriores a 2007 con el prefijo
+ * `_xlfn.` (y las de ámbito de hoja con `_xlws.`), aunque en la barra de
+ * fórmulas se vean sin él: `SI.ND` se escribe `_xlfn.IFNA`. Un libro real
+ * llega con esos prefijos, así que el registro tiene que quitarlos antes de
+ * buscar — `scanner/catalog.ts` ya hacía lo mismo por su cuenta.
+ *
+ * `_xludf.` es distinto y **no** se normaliza: es lo que Excel antepone a una
+ * función que no reconoce, y tomarla por buena sería fingir soporte de algo
+ * que ni el propio Excel supo calcular.
+ */
+function normalizar(nombre: string): string {
+  return nombre.replace(/^_xlfn\./i, '').replace(/^_xlws\./i, '').toUpperCase();
+}
+
 export function funcionSoportada(nombre: string): boolean {
-  return Object.prototype.hasOwnProperty.call(REGISTRO, nombre.toUpperCase());
+  return Object.prototype.hasOwnProperty.call(REGISTRO, normalizar(nombre));
 }
 
 export function obtenerFuncion(nombre: string): FuncionExcel | undefined {
-  return REGISTRO[nombre.toUpperCase()];
+  return REGISTRO[normalizar(nombre)];
 }

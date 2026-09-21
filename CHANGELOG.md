@@ -5,6 +5,49 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Nivel 1 verificado contra Excel (2026-09-21)
+
+Segunda tanda del libro de fidelidad: 50 casos calculados por el Excel real
+del usuario (`tests/fixtures/fidelidad-nivel1.xlsx`, generado con
+`tests/fixtures/generar-nivel1.py`). **48 coinciden**; los 2 restantes quedan
+documentados por id, no ocultos.
+
+**Corregido**
+
+- **Una celda vacía sí coincide con un criterio `"<>"` de valor concreto.** El
+  motor hacía lo contrario, porque yo había supuesto que una celda vacía nunca
+  entra en una comparación. Excel dice que una vacía es "distinta de obra", así
+  que `SUMAR.SI(M:M;"<>obra";N:N)` da 4100 y no 3400 (caso N1-011). Corregido
+  en `criterios.ts`, con el test unitario que afirmaba lo contrario reescrito.
+  Ninguna cantidad de tests propios lo habría encontrado: comprobaban lo que yo
+  creí que hacía Excel.
+- **El registro no quitaba el prefijo `_xlfn.`** con el que Excel guarda en el
+  XML las funciones posteriores a 2007 (`SI.ND` se escribe `_xlfn.IFNA`). El
+  escáner sí lo hacía; el motor no, así que habría fallado con libros reales.
+  `_xludf.` no se normaliza a propósito: marca una función que ni el propio
+  Excel reconoció.
+- El lector del libro de fidelidad daba por bueno un libro sin calcular: una
+  celda sin valor se leía como el número 0, porque `Number('')` es 0 y no
+  `NaN`, y cualquier caso cuya respuesta fuera 0 pasaba por accidente. Ahora
+  expone si el valor estaba de verdad cacheado y ambas tandas lo comprueban.
+
+**Verificado (estaba bien, ahora con respaldo)**
+
+Comodines `*`, `?` y `~`; criterios sobre vacío `""` y `"<>"`; que `CONTAR.SI`
+ignora un error dentro del rango y `SUMAR.SI` no lo propaga; los cuatro
+cuadrantes de signos de `MULTIPLO.SUPERIOR`/`MULTIPLO.INFERIOR`, incluido
+`MULTIPLO.SUPERIOR(-2,5;1) = -2`; y los estadísticos de orden.
+
+**Pendiente, con motivo**
+
+- `N1-049`: el Excel es-ES del usuario convierte un número a texto con **coma
+  decimal** (`1,5&""` da `"1,5"`) y el motor produce `"1.5"`. Confirma con dato
+  el hueco de configuración regional. No se parchea: antes hay que decidir de
+  dónde sale esa configuración (`Office.context`, una opción del panel, o el
+  propio libro), y es una decisión del usuario ligada a la internacionalización.
+- `N1-046`: no verificado por un defecto del generador —escribió `IFNA` sin el
+  prefijo `_xlfn.`— y no del motor. Corregido el generador para la próxima tanda.
+
 ### Canal de valores y Nivel 1 (2026-09-21)
 
 Disparado por el primer dato real: el usuario pasó el escáner de E1 por un

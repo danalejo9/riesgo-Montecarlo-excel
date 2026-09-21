@@ -346,22 +346,65 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     - La conversión de texto a número ignora la configuración regional: un
       "1,5" escrito en un libro es-ES no se convierte.
 
+14. [~] **Segunda tanda del libro de fidelidad: Nivel 1 verificado (2026-09-21)**
+
+    50 casos calculados por el Excel real del usuario
+    (`tests/fixtures/fidelidad-nivel1.xlsx`, generado con
+    `tests/fixtures/generar-nivel1.py`). **48 coinciden**; los 2 restantes
+    están documentados por id en `PENDIENTES`, no ocultos.
+
+    Lo que confirmó que estaba bien: los comodines (`*`, `?`, `~` para
+    escaparlos), los criterios sobre vacío (`""` y `"<>"`), que `CONTAR.SI`
+    ignora un error dentro del rango y `SUMAR.SI` no lo propaga, y los cuatro
+    cuadrantes de signos de `MULTIPLO.SUPERIOR`/`MULTIPLO.INFERIOR` —
+    incluido `MULTIPLO.SUPERIOR(-2,5;1) = -2`, que redondea *hacia* cero pese
+    al nombre.
+
+    **Un error real del motor, encontrado justo por esto:** yo había
+    implementado que una celda vacía no coincide nunca con un criterio de
+    valor concreto. Es falso para `<>`. Excel dice que una celda vacía **sí**
+    es "distinta de obra", así que `SUMAR.SI(M:M;"<>obra";N:N)` suma también
+    esa fila: 4100 y no 3400. Corregido en `engine/functions/criterios.ts`,
+    con el test unitario que afirmaba lo contrario reescrito. Es exactamente
+    el tipo de fallo que ninguna cantidad de tests propios habría encontrado,
+    porque los tests propios comprueban lo que uno creyó.
+
+    **Un hallazgo con consecuencias de diseño, no un fallo a parchear:** el
+    Excel es-ES del usuario convierte un número a texto con **coma decimal**
+    (`1,5&""` da `"1,5"`), y el motor produce `"1.5"`. Confirma con dato el
+    hueco de configuración regional que ya estaba documentado como sospecha.
+    Afecta a más de lo que parece: a la concatenación, a la conversión de
+    texto a número (un `"1,5"` escrito en una celda debería valer 1,5) y a
+    cualquier comparación que pase por texto. **Antes de arreglarlo hay que
+    decidir de dónde sale esa configuración**: de `Office.context`
+    (`displayLanguage` / `decimalSeparator`), de una opción del panel, o del
+    propio libro. Es una decisión para el usuario, ligada a la
+    internacionalización del §10.4, y no debe tomarse a la ligera porque
+    cambia el significado de datos numéricos.
+
+    **Un defecto del generador, no del motor:** las funciones posteriores a
+    Excel 2007 se guardan en el XML con el prefijo `_xlfn.`, y el generador
+    escribió `IFNA` a secas; Excel la tomó por una función definida por el
+    usuario y devolvió `#¿NOMBRE?`. Corregido en el generador. De paso
+    destapó que el registro del motor tampoco quitaba ese prefijo, cosa que
+    sí hacía el escáner: un libro real llega con `_xlfn.IFNA` escrito así, de
+    modo que esto habría fallado en producción. Corregido y con test.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Pedirle al usuario la segunda tanda del libro de fidelidad** (ahora tiene
-   Excel a mano). Debe cubrir el Nivel 1 y los casos límite que hoy están
-   implementados "según la documentación" pero sin verificar: `SUMAR.SI` y
-   `CONTAR.SI` con comodines, con criterios sobre vacío (`""`, `"<>"`) y
-   contra celdas de error; `PROMEDIO.SI.CONJUNTO` con varios criterios; y el
-   comportamiento de `"<>texto"` frente a una celda vacía. Es el mismo
-   procedimiento de la primera tanda: se genera el `.xlsx`, lo abre en Excel
-   real, recalcula, lo devuelve. Sin eso, el Nivel 1 no puede declararse
-   verificado, por mucho que sus tests unitarios pasen.
+1. **Decidir de dónde sale la configuración regional** (ver el punto 14). Es
+   una decisión del usuario, no técnica: hoy el motor da `"1.5"` donde su
+   Excel da `"1,5"`, y hasta resolverlo el caso N1-049 se queda pendiente.
 2. **Volver a pasar el escáner** por el mismo libro y por otros suyos. Con
    `ESBLANCO` y el Nivel 1 implementados, el informe debería decir 100 %
    compatible en vez de "7 fórmulas lo impiden"; si no lo dice, hay algo que
    revisar. Y conviene confirmar con más libros que el primero no era atípico.
-3. **Adaptadores Office.js** (lector del grafo en lote, escritor de
+3. **Una tercera tanda del libro de fidelidad** cuando toque, con lo que esta
+   dejó sin cubrir: `SI.ND` (que se cayó por el prefijo `_xlfn.`), un criterio
+   `"<>5"` numérico contra una celda vacía (hoy implementado por coherencia
+   con el caso de texto, sin verificar), y el Nivel 1 de búsquedas
+   (`BUSCARV`, `INDICE`/`COINCIDIR`) cuando se implementen.
+4. **Adaptadores Office.js** (lector del grafo en lote, escritor de
    resultados), `resolverRef`, y conectar el `AlmacenGuardian` a
    `workbook.settings` de verdad. Esto sí necesita Excel abierto y sideload
    funcionando, y hasta que exista no hay nada nuevo que sideloadear: el

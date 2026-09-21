@@ -159,7 +159,11 @@ CASOS = [
     ("N1-043", "tipo", "ESERROR sobre una división por cero", "ISERROR(P3)", "motor: VERDADERO"),
     ("N1-044", "tipo", "ESERR distingue #N/A del resto de errores", "ISERR(P3)", "motor: VERDADERO"),
     ("N1-045", "tipo", "CONTAR.BLANCO sobre el rango de categorías", "COUNTBLANK(M2:M8)", "motor: 1"),
-    ("N1-046", "tipo", "SI.ND atrapa #N/A", 'IFNA(NA(),"ok")', 'motor: el texto "ok"'),
+    # OJO con el prefijo `_xlfn.`: las funciones posteriores a Excel 2007 se
+    # guardan así en el XML. Sin él, Excel las toma por funciones definidas por
+    # el usuario, las reescribe como `_xludf.IFNA` y devuelve #¿NOMBRE?. Pasó
+    # en la primera vuelta de esta tanda con este mismo caso.
+    ("N1-046", "tipo", "SI.ND atrapa #N/A", '_xlfn.IFNA(NA(),"ok")', 'motor: el texto "ok"'),
 
     # --- Concatenación y comparación de texto ---
     ("N1-047", "texto", "Concatenación con &", '"a"&"b"', 'motor: "ab"'),

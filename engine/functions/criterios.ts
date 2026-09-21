@@ -19,13 +19,15 @@
  *
  * **Reglas de coincidencia, con lo que se ha decidido en cada caso dudoso:**
  *
- * - Una celda **vacía** no coincide nunca con un criterio numérico, ni
- *   siquiera con `"<1"` o `"<>5"`: Excel la salta, no la trata como 0.
+ * - Una celda **vacía** no coincide con un criterio de comparación (`">0"`,
+ *   `"<1"`, `"=5"`): Excel la salta, no la trata como 0. **Pero sí coincide
+ *   con `"<>"` seguido de un valor concreto** — una celda vacía es, para
+ *   Excel, "distinta de obra". Esto último es contraintuitivo y lo dice el
+ *   caso N1-011 del libro de fidelidad, no una suposición.
  * - `""` coincide con las celdas vacías y con la cadena vacía que devuelve
- *   una fórmula; `"<>"` coincide con todo lo que no esté vacío.
+ *   una fórmula; `"<>"` a secas coincide con todo lo que no esté vacío.
  * - Un criterio de texto con `=` solo coincide con celdas de texto; con `<>`
- *   coincide con cualquier celda no vacía que no sea ese texto, números
- *   incluidos.
+ *   coincide con cualquier otra celda, números y vacías incluidas.
  * - Una celda con **error** no coincide con ningún criterio (y no lo propaga:
  *   `CONTAR.SI` sobre un rango con `#N/A` cuenta el resto sin fallar).
  * - Los comodines solo actúan en comparaciones de texto con `=` y `<>`.
@@ -134,8 +136,18 @@ export function cumple(crit: Criterio, c: Columna, i: number): boolean {
     return crit.comparador === '<>' ? !vacia : vacia;
   }
 
-  // Ninguna celda vacía entra en una comparación con un valor concreto.
-  if (vacia) return false;
+  if (vacia) {
+    // Una celda vacía **sí** cuenta como "distinta de" un valor concreto, y no
+    // participa con ningún otro comparador. No es lo que yo supuse: lo dijo
+    // Excel. El caso N1-011 del libro de fidelidad (`SUMAR.SI` con `"<>obra"`
+    // sobre un rango con una categoría vacía) da 4100 y no 3400 — la fila de
+    // categoría vacía entra en la suma.
+    //
+    // Verificado para un criterio de texto. Para uno numérico (`"<>5"` contra
+    // una celda vacía) se aplica la misma regla por coherencia, pero todavía
+    // no hay un caso del libro que lo confirme.
+    return crit.comparador === '<>';
+  }
 
   if (crit.numero !== undefined) {
     if (tipo !== NUMERO && tipo !== LOGICO) {

@@ -62,10 +62,17 @@ describe('gramática de criterios', () => {
     expect(cumple(compilarCriterioTexto('CEMENTO'), textoConstante('cemento', 1), 0)).toBe(true);
   });
 
-  it('una celda vacía no coincide con ningún criterio numérico', () => {
-    for (const s of ['>0', '<1', '<>5', '0']) {
+  it('una celda vacía no coincide con un criterio de comparación', () => {
+    for (const s of ['>0', '<1', '0']) {
       expect(cumple(compilarCriterioTexto(s), vacioConstante(1), 0)).toBe(false);
     }
+  });
+
+  it('pero una celda vacía SÍ es "distinta de" un valor concreto', () => {
+    // Contraintuitivo, y lo dice Excel: caso N1-011 del libro de fidelidad.
+    // Este test afirmaba lo contrario hasta que el libro volvió calculado.
+    expect(cumple(compilarCriterioTexto('<>obra'), vacioConstante(1), 0)).toBe(true);
+    expect(cumple(compilarCriterioTexto('<>5'), vacioConstante(1), 0)).toBe(true);
   });
 
   it('"" coincide con las vacías y "<>" con las no vacías', () => {
