@@ -1,33 +1,36 @@
 /**
  * Registro de funciones vectorizadas disponibles para el compilador.
  *
- * Deliberadamente pequeño todavía: es el subconjunto numérico de Nivel 0 (ver
- * types.ts para el alcance exacto). Cada función nueva se añade aquí como una
- * entrada más — es justo la propiedad de "añadir cobertura es barato" que
- * pide la decisión 16 del handoff, ahora que el producto es para público
- * abierto y el catálogo nunca estará completo.
+ * Añadir cobertura tiene que ser barato —decisión 16 del handoff, ahora que el
+ * producto es para público abierto y el catálogo nunca estará completo—, así
+ * que una función nueva es una entrada más en esta tabla.
  */
 
 import {
-  ABS, AVERAGE, COUNT, EXP, INT, LN, LOG, LOG10, MAX, MEDIAN, MIN, MOD,
-  POWER, PRODUCT, ROUND, ROUNDDOWN, ROUNDUP, SIGN, SQRT, STDEV_P, STDEV_S,
-  SUM, SUMPRODUCT, TRUNC, VAR_P, VAR_S,
+  ABS, AVERAGE, COUNT, COUNTA, COUNTBLANK, EXP, INT, LN, LOG, LOG10, MAX, MEDIAN,
+  MIN, MOD, POWER, PRODUCT, ROUND, ROUNDDOWN, ROUNDUP, SIGN, SQRT, STDEV_P,
+  STDEV_S, SUM, SUMPRODUCT, TRUNC, VAR_P, VAR_S,
 } from './math.ts';
-import { AND, IF, IFERROR, NOT, OR, XOR } from './logic.ts';
-import type { FuncionNivel0 } from './types.ts';
+import { AND, FALSE, IF, IFERROR, IFNA, NOT, OR, TRUE, XOR } from './logic.ts';
+import {
+  ISBLANK, ISERR, ISERROR, ISLOGICAL, ISNA, ISNONTEXT, ISNUMBER, ISTEXT, NA,
+} from './info.ts';
+import type { FuncionExcel } from './types.ts';
 
-export const REGISTRO_NIVEL_0: Record<string, FuncionNivel0> = {
-  SUM, PRODUCT, MIN, MAX, COUNT, AVERAGE, MEDIAN, SUMPRODUCT,
+export const REGISTRO: Record<string, FuncionExcel> = {
+  SUM, PRODUCT, MIN, MAX, COUNT, COUNTA, COUNTBLANK, AVERAGE, MEDIAN, SUMPRODUCT,
   'STDEV.S': STDEV_S, 'STDEV.P': STDEV_P, 'VAR.S': VAR_S, 'VAR.P': VAR_P,
+  STDEV: STDEV_S, // alias heredado de Excel: STDEV es la versión muestral
   ABS, SIGN, SQRT, INT, EXP, LN, LOG, LOG10, POWER, MOD,
   ROUND, ROUNDUP, ROUNDDOWN, TRUNC,
-  IF, IFERROR, AND, OR, NOT, XOR,
+  IF, IFERROR, IFNA, AND, OR, NOT, XOR, TRUE, FALSE,
+  ISBLANK, ISNUMBER, ISTEXT, ISNONTEXT, ISLOGICAL, ISERROR, ISERR, ISNA, NA,
 };
 
 export function funcionSoportada(nombre: string): boolean {
-  return Object.prototype.hasOwnProperty.call(REGISTRO_NIVEL_0, nombre.toUpperCase());
+  return Object.prototype.hasOwnProperty.call(REGISTRO, nombre.toUpperCase());
 }
 
-export function obtenerFuncion(nombre: string): FuncionNivel0 | undefined {
-  return REGISTRO_NIVEL_0[nombre.toUpperCase()];
+export function obtenerFuncion(nombre: string): FuncionExcel | undefined {
+  return REGISTRO[nombre.toUpperCase()];
 }

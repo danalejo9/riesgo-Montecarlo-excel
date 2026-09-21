@@ -9,7 +9,8 @@
  */
 import type { ErrorPlan, Plan } from '../compiler/plan.ts';
 import { ejecutarPlan } from '../compiler/executor.ts';
-import type { Buffer } from '../functions/types.ts';
+import { aBufferNumerico, type Buffer } from '../values/buffer.ts';
+import type { Columna } from '../values/columna.ts';
 import type { Grafo } from '../graph/graph.ts';
 import { tdigestDeBuffer } from '../stats/tdigest.ts';
 import { acumular, crearWelford } from '../stats/welford.ts';
@@ -37,7 +38,9 @@ export function calcularBloque(
 
   const parcial: ResultadoBloque = new Map();
   for (const clave of plan.salidas) {
-    const buffer = r.valores.get(clave) as Buffer;
+    // Una salida tiene que ser numérica para poder reducirse a estadísticas;
+    // ver el hueco documentado en `aBufferNumerico`.
+    const buffer = aBufferNumerico(r.valores.get(clave) as Columna, bloque.largo);
     parcial.set(clave, {
       welford: acumular(crearWelford(), buffer),
       digest: tdigestDeBuffer(buffer, compresionTDigest),

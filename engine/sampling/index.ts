@@ -1,5 +1,5 @@
 import type { Distribution } from '../distributions/types.ts';
-import type { Buffer } from '../functions/types.ts';
+import type { Buffer } from '../values/buffer.ts';
 import { muestrearLHS } from './lhs.ts';
 import { muestrearMonteCarlo } from './montecarlo.ts';
 import type { MetodoMuestreo } from './types.ts';

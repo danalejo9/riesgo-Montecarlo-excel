@@ -1,5 +1,5 @@
 import type { Distribution } from '../distributions/types.ts';
-import { nuevoBuffer, type Buffer } from '../functions/types.ts';
+import { nuevoBuffer, type Buffer } from '../values/buffer.ts';
 import { uniformAt, streamOf } from '../random/index.ts';
 
 /**

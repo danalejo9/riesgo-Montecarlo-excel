@@ -29,12 +29,19 @@
  * muchas celdas intermedias — que es exactamente D11.
  */
 import type { Grafo, NodoGrafo } from '../graph/graph.ts';
-import { nuevoBuffer, type Buffer } from '../functions/types.ts';
+import type { Buffer } from '../values/buffer.ts';
+import {
+  desdeEscalar,
+  vacioConstante,
+  valorEn,
+  vectorNumerico,
+  type Columna,
+} from '../values/columna.ts';
 import { evaluarNodo } from './evaluate.ts';
 import type { ErrorPlan, Plan } from './plan.ts';
 
 export type ResultadoEjecucion =
-  | { ok: true; valores: Map<string, Buffer> }
+  | { ok: true; valores: Map<string, Columna> }
   | { ok: false; error: ErrorPlan };
 
 export function ejecutarPlan(
@@ -43,7 +50,7 @@ export function ejecutarPlan(
   entradas: Map<string, Buffer>,
   n: number,
 ): ResultadoEjecucion {
-  const valores = new Map<string, Buffer>();
+  const valores = new Map<string, Columna>();
   const salidasSet = new Set(plan.salidas);
   const enPlan = new Set(plan.orden);
 
@@ -73,7 +80,7 @@ export function ejecutarPlan(
           error: { clave, motivo: `El buffer de entrada tiene ${provista.length} muestras y se esperaban ${n}` },
         };
       }
-      valores.set(clave, provista);
+      valores.set(clave, vectorNumerico(provista));
       marcarConsumidas(grafo, clave, consumir);
       continue;
     }
@@ -86,28 +93,28 @@ export function ejecutarPlan(
     const constante = plan.esConstante.has(clave);
     const nLocal = constante ? 1 : n;
 
-    let buffer: Buffer;
+    let columna: Columna;
     if (!nodo.ast) {
-      buffer = nuevoBuffer(nLocal); // vacía = 0, ver evaluate.ts
+      columna = vacioConstante(nLocal); // celda vacía: vacía, no cero
     } else {
       const r = evaluarNodo(nodo.ast, nodo.hoja, valores, nLocal);
       if (!r.ok) return { ok: false, error: { clave, motivo: r.motivo } };
-      buffer = r.buffer;
+      columna = r.columna;
     }
 
     if (constante && necesitaDifundirse(grafo, clave, plan, enPlan, salidasSet)) {
-      buffer = difundir(buffer[0] as number, n);
+      columna = desdeEscalar(valorEn(columna, 0), n);
     }
 
-    valores.set(clave, buffer);
+    valores.set(clave, columna);
     marcarConsumidas(grafo, clave, consumir);
   }
 
-  const resultado = new Map<string, Buffer>();
+  const resultado = new Map<string, Columna>();
   for (const clave of plan.salidas) {
-    const b = valores.get(clave);
-    if (!b) return { ok: false, error: { clave, motivo: 'Salida no calculada (no debería ocurrir)' } };
-    resultado.set(clave, b);
+    const c = valores.get(clave);
+    if (!c) return { ok: false, error: { clave, motivo: 'Salida no calculada (no debería ocurrir)' } };
+    resultado.set(clave, c);
   }
   return { ok: true, valores: resultado };
 }
@@ -130,12 +137,6 @@ function necesitaDifundirse(
     if (enPlan.has(dependiente) && !plan.esConstante.has(dependiente)) return true;
   }
   return false;
-}
-
-function difundir(valor: number, n: number): Buffer {
-  const b = nuevoBuffer(n);
-  b.fill(valor);
-  return b;
 }
 
 /**

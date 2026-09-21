@@ -4,6 +4,8 @@ import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engi
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { ejecutarPlan } from '../../engine/compiler/executor.ts';
 import { compilarPlan } from '../../engine/compiler/plan.ts';
+import { nums } from '../helpers/valores.ts';
+import { errorEn, type Columna } from '../../engine/values/columna.ts';
 
 const H = 'Hoja1';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -47,8 +49,8 @@ describe('compilarPlan + ejecutarPlan — paridad con el evaluador de referencia
     expect(referencia.ok).toBe(true);
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
-      expect(Array.from(compilado.valores.get(k('A1')) as Float64Array)).toEqual(
-        Array.from(referencia.valores.get(k('A1')) as Float64Array),
+      expect(nums(compilado.valores.get(k('A1')))).toEqual(
+        nums(referencia.valores.get(k('A1'))),
       );
     }
   });
@@ -69,8 +71,8 @@ describe('compilarPlan + ejecutarPlan — paridad con el evaluador de referencia
     expect(referencia.ok).toBe(true);
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
-      expect(Array.from(compilado.valores.get(k('E1')) as Float64Array)).toEqual(
-        Array.from(referencia.valores.get(k('E1')) as Float64Array),
+      expect(nums(compilado.valores.get(k('E1')))).toEqual(
+        nums(referencia.valores.get(k('E1'))),
       );
     }
   });
@@ -88,14 +90,14 @@ describe('compilarPlan + ejecutarPlan — paridad con el evaluador de referencia
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
       for (const clave of salidas) {
-        expect(Array.from(compilado.valores.get(clave) as Float64Array)).toEqual(
-          Array.from(referencia.valores.get(clave) as Float64Array),
+        expect(nums(compilado.valores.get(clave))).toEqual(
+          nums(referencia.valores.get(clave)),
         );
       }
     }
   });
 
-  it('división por cero da NaN en ambos, no lanza', () => {
+  it('división por cero da #¡DIV/0! en ambos, no lanza', () => {
     const g = grafoDe({ A1: 'B1/C1' });
     const n = 1;
     const entradas = new Map([[k('B1'), entradaConstante(10, n)], [k('C1'), entradaConstante(0, n)]]);
@@ -105,8 +107,8 @@ describe('compilarPlan + ejecutarPlan — paridad con el evaluador de referencia
     expect(referencia.ok).toBe(true);
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
-      expect(Number.isNaN(compilado.valores.get(k('A1'))?.[0])).toBe(true);
-      expect(Number.isNaN(referencia.valores.get(k('A1'))?.[0])).toBe(true);
+      expect(errorEn(compilado.valores.get(k('A1')) as Columna, 0)).toBe('#DIV/0!');
+      expect(errorEn(referencia.valores.get(k('A1')) as Columna, 0)).toBe('#DIV/0!');
     }
   });
 
@@ -119,9 +121,9 @@ describe('compilarPlan + ejecutarPlan — paridad con el evaluador de referencia
     expect(referencia.ok).toBe(true);
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
-      const esperado = Array.from(referencia.valores.get(k('C1')) as Float64Array);
+      const esperado = nums(referencia.valores.get(k('C1')));
       expect(esperado.every((x) => x === 60)).toBe(true);
-      expect(Array.from(compilado.valores.get(k('C1')) as Float64Array)).toEqual(esperado);
+      expect(nums(compilado.valores.get(k('C1')))).toEqual(esperado);
     }
   });
 });
@@ -166,8 +168,8 @@ describe('compilarPlan — constant folding', () => {
     expect(referencia.ok).toBe(true);
     expect(compilado.ok).toBe(true);
     if (referencia.ok && compilado.ok) {
-      expect(Array.from(compilado.valores.get(k('H1')) as Float64Array)).toEqual(
-        Array.from(referencia.valores.get(k('H1')) as Float64Array),
+      expect(nums(compilado.valores.get(k('H1')))).toEqual(
+        nums(referencia.valores.get(k('H1'))),
       );
     }
   });

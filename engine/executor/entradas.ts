@@ -17,7 +17,7 @@
  *   `resolverEntradas`, antes de que empiece el troceo en bloques.
  */
 import { construirDesdeDescriptor, type DescriptorDistribucion } from '../distributions/index.ts';
-import type { Buffer } from '../functions/types.ts';
+import type { Buffer } from '../values/buffer.ts';
 import { muestrearLHS, muestrearMonteCarloBloque } from '../sampling/index.ts';
 import type { MetodoMuestreo } from '../sampling/types.ts';
 

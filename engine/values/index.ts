@@ -1,3 +1,4 @@
+export { aBufferNumerico, nuevoBuffer, type Buffer } from './buffer.ts';
 export {
   coercionLogica,
   coercionNumerica,

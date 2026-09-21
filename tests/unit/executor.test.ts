@@ -14,6 +14,7 @@ import {
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import { muestrearLHS, muestrearMonteCarlo } from '../../engine/sampling/index.ts';
 import { cuantilTDigest, percentilExacto } from '../../engine/stats/index.ts';
+import { nums } from '../helpers/valores.ts';
 
 const H = 'Hoja1';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -151,7 +152,7 @@ describe('simularPorBloques', () => {
     const ref = evaluarModelo(g, new Map([[k('X1'), xCompleto]]), [k('A1')], n);
     expect(ref.ok).toBe(true);
     if (!ref.ok) return;
-    const bufferRef = ref.valores.get(k('A1')) as Float64Array;
+    const bufferRef = Float64Array.from(nums(ref.valores.get(k('A1'))));
 
     const salida = resultado.porSalida.get(k('A1'))!;
     const p50Exacto = percentilExacto(bufferRef, 0.5);

@@ -18,7 +18,7 @@
  * approach to inducing rank correlation among input variables".
  */
 import { invNormalCDF } from '../distributions/mathfn.ts';
-import { nuevoBuffer, type Buffer } from '../functions/types.ts';
+import { nuevoBuffer, type Buffer } from '../values/buffer.ts';
 import { uniformAt, streamOf } from '../random/index.ts';
 
 /**
