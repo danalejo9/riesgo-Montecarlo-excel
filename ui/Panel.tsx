@@ -16,7 +16,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { analizarCompatibilidad, type InformeCompatibilidad } from '../excel/compatibilidad.ts';
 import { leerEntorno, versionMaximaDisponible, type EntornoOffice } from '../excel/entorno.ts';
+import { leerLibro, type EstadisticasLectura } from '../excel/lectorLibro.ts';
 import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 
 export function Panel() {
@@ -24,6 +26,10 @@ export function Panel() {
   const [seleccion, setSeleccion] = useState<SeleccionLeida | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [leyendo, setLeyendo] = useState(false);
+
+  const [estadisticas, setEstadisticas] = useState<EstadisticasLectura | null>(null);
+  const [informe, setInforme] = useState<InformeCompatibilidad | null>(null);
+  const [progreso, setProgreso] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -41,6 +47,27 @@ export function Panel() {
     } catch (e) {
       setError(mensajeDe(e));
     } finally {
+      setLeyendo(false);
+    }
+  }, []);
+
+  const alLeerLibro = useCallback(async () => {
+    setLeyendo(true);
+    setError(null);
+    setInforme(null);
+    setEstadisticas(null);
+    setProgreso('Leyendo hojas…');
+    try {
+      const libro = await leerLibro({
+        progreso: (hechas, total) => setProgreso(`Leyendo hojas… ${hechas} de ${total}`),
+      });
+      setEstadisticas(libro.estadisticas);
+      setProgreso('Analizando fórmulas…');
+      setInforme(analizarCompatibilidad(libro.formulas));
+    } catch (e) {
+      setError(mensajeDe(e));
+    } finally {
+      setProgreso(null);
       setLeyendo(false);
     }
   }, []);
@@ -106,8 +133,86 @@ export function Panel() {
           </dl>
         )}
       </section>
+
+      <section>
+        <h2>Compatibilidad del libro</h2>
+        <p className="tenue">
+          Lee todas las hojas y analiza cada fórmula con el mismo motor que
+          hará la simulación. Debería coincidir con lo que dice{' '}
+          <code>npm run scan</code> sobre el mismo archivo: son dos caminos
+          independientes hasta la misma respuesta.
+        </p>
+        <button type="button" onClick={() => void alLeerLibro()} disabled={leyendo}>
+          {leyendo ? 'Trabajando…' : 'Analizar el libro'}
+        </button>
+        {progreso && <p className="tenue">{progreso}</p>}
+
+        {estadisticas && (
+          <dl>
+            <dt>Hojas</dt>
+            <dd>{estadisticas.hojasVisibles} visibles de {estadisticas.hojas}</dd>
+            <dt>Con contenido</dt><dd>{miles(estadisticas.celdasConContenido)} celdas</dd>
+            <dt>Recorridas</dt><dd>{miles(estadisticas.celdasRecorridas)} celdas</dd>
+            <dt>Fórmulas</dt><dd>{miles(estadisticas.formulas)}</dd>
+            <dt>Viajes a Excel</dt><dd>{estadisticas.sincronizaciones}</dd>
+            <dt>Tiempo</dt><dd>{(estadisticas.milisegundos / 1000).toFixed(2)} s</dd>
+          </dl>
+        )}
+
+        {informe && (
+          <>
+            <h3>
+              {informe.noSoportadas.length === 0
+                ? '✓ El motor sabe evaluar todas las funciones'
+                : `${informe.noSoportadas.length} función(es) sin soporte`}
+            </h3>
+            <dl>
+              <dt>Cobertura</dt><dd>{informe.cobertura} % de las fórmulas</dd>
+              <dt>Evaluables</dt>
+              <dd>{miles(informe.formulasEvaluables)} de {miles(informe.formulasAnalizadas)}</dd>
+            </dl>
+
+            {informe.noSoportadas.length > 0 && (
+              <ul className="conjuntos">
+                {informe.noSoportadas.slice(0, 20).map((f) => (
+                  <li key={f.nombre} className="no">
+                    <span className="marca">✗</span>
+                    <span className="nombre">{f.nombre}</span>
+                    <span className="tenue">{miles(f.veces)} usos · {f.ejemplo}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {informe.formulasConErrorDeSintaxis > 0 && (
+              <>
+                {/*
+                  Esto no es un problema del libro sino del parser del motor:
+                  una fórmula válida en Excel que aquí no se entiende. Es
+                  información valiosa y por eso se enseña aparte, con ejemplos.
+                */}
+                <h3>
+                  {miles(informe.formulasConErrorDeSintaxis)} fórmula(s) que el
+                  motor no supo leer
+                </h3>
+                <p className="tenue">
+                  Son válidas en Excel; es el parser del motor el que se queda
+                  corto. Estos ejemplos hacen falta para arreglarlo:
+                </p>
+                <pre className="ejemplos">
+                  {informe.ejemplosDeErrorDeSintaxis.join('\n')}
+                </pre>
+              </>
+            )}
+          </>
+        )}
+      </section>
     </main>
   );
+}
+
+function miles(n: number): string {
+  return n.toLocaleString('es-ES');
 }
 
 /**

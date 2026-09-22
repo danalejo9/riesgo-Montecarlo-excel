@@ -102,3 +102,23 @@ button:disabled { opacity: .6; cursor: default; }
 .error pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; }
 
 .aviso { max-width: 42ch; }
+
+.ejemplos {
+  margin: 6px 0 0;
+  padding: 8px;
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--texto) 4%, transparent);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+}
+
+code {
+  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--texto) 8%, transparent);
+}
