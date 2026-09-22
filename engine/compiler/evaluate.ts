@@ -266,7 +266,9 @@ function evaluarArgumento(
 
   const r = evaluarNodo(nodo, hojaActual, valores, n);
   if (!r.ok) return r;
-  return { ok: true, arg: argValor(r.columna) };
+  // El hueco se marca además de valer 0: hay funciones donde "no lo escribí"
+  // y "escribí 0" no son lo mismo. Ver `Argumento.omitido`.
+  return { ok: true, arg: argValor(r.columna, nodo.tipo === 'vacio') };
 }
 
 /** Los operadores de comparación, que devuelven lógicos y no números. */

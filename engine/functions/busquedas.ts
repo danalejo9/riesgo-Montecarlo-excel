@@ -113,6 +113,55 @@ function buscarAproximado(
   return encontrado;
 }
 
+/**
+ * El vecino más cercano por debajo (o por encima) **sin suponer orden**.
+ *
+ * `buscarAproximado` sirve a `BUSCARV`, `BUSCARH` y `COINCIDIR`, que Excel
+ * define sobre una lista ordenada y que por eso pueden cortar en cuanto se
+ * pasan. `BUSCARX` y `COINCIDIRX` son justamente la familia que **no** exige
+ * ese orden con sus modos -1 y 1 (solo los modos binarios ±2 lo exigen), así
+ * que aquí hay que recorrer entero y quedarse con el mejor candidato.
+ *
+ * Reutilizar el otro daba `#N/A` buscando "el siguiente más grande" que 700 en
+ * una lista que empieza por 0: cortaba en el primer elemento.
+ */
+function buscarCercano(
+  buscado: Columna,
+  i: number,
+  largo: number,
+  celda: (k: number) => Columna | undefined,
+  haciaArriba: boolean,
+): number {
+  let mejor = -1;
+  let mejorColumna: Columna | undefined;
+
+  for (let k = 0; k < largo; k++) {
+    const c = celda(k);
+    if (!c || tipoEn(c, i) === VACIO) continue;
+
+    const orden = compararEn(c, buscado, i);
+    if (typeof orden === 'string') continue; // un error en la tabla no participa
+
+    // Coincidencia exacta: no hay nada más cercano, y Excel la prefiere.
+    if (orden === 0) return k;
+    if (haciaArriba ? orden < 0 : orden > 0) continue; // está en el lado que no es
+
+    if (mejorColumna === undefined) {
+      mejor = k;
+      mejorColumna = c;
+      continue;
+    }
+    // Entre dos candidatos del lado bueno gana el más próximo al buscado.
+    const contra = compararEn(c, mejorColumna, i);
+    if (typeof contra === 'string') continue;
+    if (haciaArriba ? contra < 0 : contra > 0) {
+      mejor = k;
+      mejorColumna = c;
+    }
+  }
+  return mejor;
+}
+
 // --- Índice precalculado --------------------------------------------------
 
 /**
@@ -396,7 +445,9 @@ export function XLOOKUP(args: Argumento[], n: number): Columna {
   const largo = rangoBusqueda.columnas.length;
   if (rangoDevuelto.columnas.length !== largo) return todoError('#VALUE!', n);
 
-  const siNoEncontrado = args[3]?.columnas[0];
+  // Un cuarto argumento omitido (`BUSCARX(x;a;b;;-1)`) no es un valor por
+  // defecto: pide el `#N/A` de siempre. Ver `Argumento.omitido`.
+  const siNoEncontrado = args[3]?.omitido === true ? undefined : args[3]?.columnas[0];
   const salida = crearConstructor(n);
 
   for (let i = 0; i < n; i++) {
@@ -417,7 +468,7 @@ export function XLOOKUP(args: Argumento[], n: number): Columna {
       // El modo 2 es "con comodines", que es lo que `buscarExacto` ya hace.
       k = buscarExacto(buscado, i, largo, celda);
     } else {
-      k = buscarAproximado(buscado, i, largo, celda, modo > 0);
+      k = buscarCercano(buscado, i, largo, celda, modo > 0);
     }
 
     if (k < 0) {
@@ -457,7 +508,7 @@ export function XMATCH(args: Argumento[], n: number): Columna {
     const m = Math.trunc(modo);
     const k = m === 0 || m === 2
       ? buscarExacto(buscado, i, largo, celda)
-      : buscarAproximado(buscado, i, largo, celda, m > 0);
+      : buscarCercano(buscado, i, largo, celda, m > 0);
 
     if (k < 0) salida.ponerError(i, '#N/A');
     else salida.ponerNumero(i, (alReves ? largo - 1 - k : k) + 1);

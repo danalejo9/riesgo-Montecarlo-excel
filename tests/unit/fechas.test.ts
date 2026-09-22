@@ -192,11 +192,18 @@ describe('amortización: PAGO, VA, VF, NPER, TASA', () => {
       .toBeCloseTo(0.05 / 12, 8);
   });
 
-  it('PAGOINT y PAGOPRIN suman la cuota completa', () => {
+  it('PAGOINT y PAGOPRIN llevan el signo del pago y suman la cuota completa', () => {
     const interes = nums(IPMT([c(0.05 / 12), c(1), c(360), c(200000)], 1))[0] as number;
     const capital = nums(PPMT([c(0.05 / 12), c(1), c(360), c(200000)], 1))[0] as number;
 
-    expect(interes).toBeCloseTo(200000 * (0.05 / 12), 8);
+    // **Negativos**: son parte de la cuota, que es dinero que sale. Este test
+    // afirmaba lo contrario y por eso no cazó el fallo: `PAGOINT` devolvía
+    // +833,33 donde Excel da -833,33, y `PAGOPRIN` absorbía el error entero
+    // (-1906,98 en vez de -240,31) manteniendo la identidad de la última
+    // línea, que seguía cuadrando. Una identidad que se cumple no demuestra
+    // que sus dos términos sean correctos.
+    expect(interes).toBeCloseTo(-200000 * (0.05 / 12), 8);
+    expect(capital).toBeCloseTo(-240.30991269, 6);
     expect(interes + capital).toBeCloseTo(PAGO_HIPOTECA, 8);
   });
 

@@ -41,6 +41,17 @@ export interface Argumento {
   esRango: boolean;
   /** Dimensiones, si vino de un rango. `columnas` va ordenado por columnas. */
   forma?: FormaRango;
+  /**
+   * El hueco de `SUMA(A1;;B1)` o de `BUSCARX(x;a;b;;-1)`: un argumento que el
+   * usuario **no escribió**.
+   *
+   * Llega como el número 0, porque eso es lo que Excel hace con un hueco en
+   * casi todas partes. Pero en unas pocas funciones "no lo escribí" y "escribí
+   * 0" significan cosas distintas: el cuarto argumento de `BUSCARX` es el
+   * valor a devolver si no encuentra nada, y omitirlo pide un `#N/A`, no un
+   * cero. Sin esta marca las dos cosas son indistinguibles.
+   */
+  omitido?: boolean;
 }
 
 /**
@@ -62,8 +73,8 @@ export function celdaEn(arg: Argumento, fila: number, col: number): Columna | un
 export type FuncionExcel = (args: Argumento[], n: number) => Columna;
 
 /** Envuelve una columna como argumento suelto (celda o expresión). */
-export function argValor(c: Columna): Argumento {
-  return { columnas: [c], esRango: false };
+export function argValor(c: Columna, omitido = false): Argumento {
+  return omitido ? { columnas: [c], esRango: false, omitido } : { columnas: [c], esRango: false };
 }
 
 /** Envuelve las columnas de un rango como un único argumento. */

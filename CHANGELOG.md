@@ -5,6 +5,40 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Tercera tanda del libro de fidelidad, y dos fallos reales que destapó (2026-09-22)
+
+86 casos de financieras, búsquedas y fechas
+(`tests/fixtures/generar-nivel2.py` → `fidelidad-nivel2.xlsx`). Pasarlos por el
+motor **antes** de mandar el libro a Excel ya encontró tres cosas.
+
+**Corregido**
+
+- **El signo de `PAGOINT` y `PAGOPRIN` estaba invertido.** `PAGOINT` devolvía
+  +833,33 donde Excel da -833,33 (los intereses son parte de la cuota, que es
+  dinero que sale) y `PAGOPRIN` absorbía el error entero: -1906,98 en vez de
+  -240,31. El test unitario lo daba por bueno porque comprobaba la identidad
+  `PAGOINT + PAGOPRIN = PAGO`, **que se cumplía con los dos términos mal**.
+  Una identidad que cuadra no demuestra que sus términos sean correctos.
+- **`BUSCARX` y `COINCIDIRX` con los modos -1 y 1 reutilizaban la búsqueda de
+  `BUSCARV`**, que supone la lista ordenada y corta en cuanto se pasa. Pero
+  esa familia es justamente la que **no** exige orden con esos modos (solo con
+  los binarios ±2). Buscar "el siguiente más grande" que 700 en una lista que
+  empieza por 0 daba `#N/A`.
+- **Un argumento omitido era indistinguible de un cero.** `BUSCARX(x;a;b;;-1)`
+  tomaba el hueco del cuarto argumento como un valor por defecto igual a 0 y
+  devolvía 0 en vez de `#N/A`. `Argumento` gana una marca `omitido`.
+
+**Añadido**
+
+- `tests/unit/fidelidadNivel2.test.ts`, que se activa solo en cuanto el libro
+  vuelva calculado de Excel. Cubre: `TIR` (con estimación, sin raíz, y con dos
+  raíces), `VNA`, `TIR.NO.PER`/`VNA.NO.PER`, `PAGO`/`VA`/`VF`/`NPER`/`TASA`,
+  `PAGOINT`/`PAGOPRIN` con pagos al principio del periodo, `BUSCARV` exacta y
+  aproximada **sobre tabla desordenada**, `BUSCARH`, `INDICE`, `COINCIDIR`,
+  `BUSCARX`/`COINCIDIRX` con todos sus modos, `ELEGIR`, `SI.ND` con su prefijo
+  `_xlfn.`, el criterio `"<>5"` contra una celda vacía, y ocho casos de fechas
+  incluido el 29 de febrero de 1900 que nunca existió.
+
 ### El ciclo completo: definir un modelo, simular y ver resultados (2026-09-22)
 
 El complemento deja de ser un panel de diagnóstico. Marcar celdas inciertas,

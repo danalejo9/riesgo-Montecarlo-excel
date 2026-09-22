@@ -422,16 +422,35 @@ export function IPMT(args: Argumento[], n: number): Columna {
     const p = Math.trunc(periodo);
     if (p < 1 || p > nper) return '#NUM!';
 
-    const pago = pagoDe(tasa, nper, va, vf, tipo);
-    if (typeof pago === 'string') return pago;
-
-    // En la modalidad "al principio del periodo" la primera cuota se paga
-    // antes de que transcurra ningún periodo, así que no genera intereses.
-    if (tipo === 1 && p === 1) return 0;
-
-    const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
-    return (tipo === 1 ? saldo - pago : saldo) * tasa;
+    return interesDe(tasa, p, nper, va, vf, tipo);
   });
+}
+
+/**
+ * Los intereses del periodo `p`, con el signo del pago.
+ *
+ * **El signo importa y es fácil equivocarlo.** Con `va` positivo (el dinero
+ * que te prestan), la cuota de `PAGO` sale negativa: es dinero que sale. Los
+ * intereses son parte de esa cuota, así que salen negativos también. El saldo
+ * pendiente, en cambio, es positivo. Sin el signo, `PAGOINT` devolvía +833,33
+ * donde Excel da -833,33, y `PAGOPRIN` absorbía el error entero (-1906,98 en
+ * vez de -240,31) manteniendo la identidad `PAGOINT + PAGOPRIN = PAGO` — que
+ * es lo que hacía que el fallo no saltara a la vista.
+ *
+ * Extraído para que las dos funciones no puedan volver a discrepar.
+ */
+function interesDe(
+  tasa: number, p: number, nper: number, va: number, vf: number, tipo: number,
+): number | ErrorExcel {
+  const pago = pagoDe(tasa, nper, va, vf, tipo);
+  if (typeof pago === 'string') return pago;
+
+  // En la modalidad "al principio del periodo" la primera cuota se paga antes
+  // de que transcurra ningún periodo, así que no genera intereses.
+  if (tipo === 1 && p === 1) return 0;
+
+  const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
+  return -(tipo === 1 ? saldo - pago : saldo) * tasa;
 }
 
 /** `PAGOPRIN(tasa; periodo; nper; va; [vf]; [tipo])`: la parte de capital. */
@@ -444,8 +463,11 @@ export function PPMT(args: Argumento[], n: number): Columna {
     const pago = pagoDe(tasa, nper, va, vf, tipo);
     if (typeof pago === 'string') return pago;
 
-    const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
-    const intereses = tipo === 1 && p === 1 ? 0 : (tipo === 1 ? saldo - pago : saldo) * tasa;
+    const intereses = interesDe(tasa, p, nper, va, vf, tipo);
+    if (typeof intereses === 'string') return intereses;
+
+    // Lo que no son intereses es capital. Escrito como resta, la identidad
+    // `PAGOINT + PAGOPRIN = PAGO` se cumple por construcción.
     return pago - intereses;
   });
 }
