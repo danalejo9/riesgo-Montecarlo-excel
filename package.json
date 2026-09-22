@@ -10,12 +10,13 @@
     "test:watch": "vitest",
     "check": "npm run build && npm run lint && npm test",
     "dev-server": "vite",
-    "start": "office-addin-debugging start manifest.xml desktop",
+    "start": "office-addin-debugging start manifest.xml desktop --no-debug --dev-server-port 9090",
     "stop": "office-addin-debugging stop manifest.xml",
     "validate-manifest": "office-addin-manifest validate manifest.xml",
     "scan": "node scanner/cli.ts",
     "bench": "node --experimental-strip-types --no-warnings bench/motor.ts",
-    "build:tipos": "tsc -b"
+    "build:tipos": "tsc -b",
+    "start:depurar": "office-addin-debugging start manifest.xml desktop --dev-server-port 9090"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",
