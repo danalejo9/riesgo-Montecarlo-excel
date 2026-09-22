@@ -103,6 +103,40 @@ function modeloConCriterios(): { celdas: FormulaCelda[]; salidas: string[] } {
   return { celdas, salidas };
 }
 
+/**
+ * Un modelo con una tabla de tarifas consultada con `BUSCARV` en cada celda
+ * intermedia. Mide lo que el docstring de `busquedas.ts` advierte: la búsqueda
+ * se repite en cada iteración porque el valor buscado depende de una entrada.
+ */
+function modeloConBuscarV(): { celdas: FormulaCelda[]; salidas: string[] } {
+  const celdas: FormulaCelda[] = [];
+  const FILAS_TABLA = 100;
+
+  // Tabla de tarifas en Y:Z, ordenada: tramo -> precio.
+  for (let i = 1; i <= FILAS_TABLA; i++) {
+    celdas.push({ hoja: HOJA, col: 25, fila: i, formula: String(i * 20) });
+    celdas.push({ hoja: HOJA, col: 26, fila: i, formula: String(100 - i * 0.5) });
+  }
+
+  for (let i = 1; i <= INTERMEDIAS; i++) {
+    const entrada = `A${(i % ENTRADAS) + 1}`;
+    celdas.push({
+      hoja: HOJA,
+      col: 2,
+      fila: i,
+      formula: `VLOOKUP(${entrada},Y1:Z${FILAS_TABLA},2)*${entrada}`,
+    });
+  }
+
+  const salidas: string[] = [];
+  for (let s = 1; s <= SALIDAS; s++) {
+    const desde = (s - 1) * 40 + 1;
+    celdas.push({ hoja: HOJA, col: 3, fila: s, formula: `SUM(B${desde}:B${desde + 39})` });
+    salidas.push(k(`C${s}`));
+  }
+  return { celdas, salidas };
+}
+
 function entradas(): DefinicionEntrada[] {
   const defs: DefinicionEntrada[] = [];
   for (let i = 1; i <= ENTRADAS; i++) {
@@ -155,4 +189,5 @@ console.log(`  Node ${process.version}, un solo hilo (ejecutor secuencial)\n`);
 
 await medir('numérico puro', modeloNumerico);
 await medir('con texto y SUMIFS', modeloConCriterios);
+await medir('con BUSCARV (tabla de 100)', modeloConBuscarV);
 console.log('');

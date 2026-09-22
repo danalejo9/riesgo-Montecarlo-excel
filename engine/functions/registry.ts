@@ -20,7 +20,12 @@ import {
   ISBLANK, ISERR, ISERROR, ISLOGICAL, ISNA, ISNONTEXT, ISNUMBER, ISTEXT, NA,
 } from './info.ts';
 import { DATE, DAY, DAYS, EDATE, EOMONTH, MONTH, WEEKDAY, YEAR } from './fechas.ts';
-import { IRR, NPV } from './financieras.ts';
+import {
+  FV, IPMT, IRR, NPER, NPV, PMT, PPMT, PV, RATE, XIRR, XNPV,
+} from './financieras.ts';
+import {
+  CHOOSE, HLOOKUP, INDEX, MATCH, VLOOKUP, XLOOKUP, XMATCH,
+} from './busquedas.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -36,7 +41,10 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   // Nivel 1 (Fase 2 §4.2): criterio, fecha y financieras.
   SUMIF, SUMIFS, COUNTIF, COUNTIFS, AVERAGEIF, AVERAGEIFS,
   DATE, YEAR, MONTH, DAY, EOMONTH, EDATE, DAYS, WEEKDAY,
-  NPV, IRR,
+  NPV, IRR, XNPV, XIRR,
+  PMT, PV, FV, NPER, RATE, IPMT, PPMT,
+  // Búsquedas: el mayor hueco de generalidad que tenía el motor.
+  VLOOKUP, HLOOKUP, INDEX, MATCH, XLOOKUP, XMATCH, CHOOSE,
 };
 
 /**

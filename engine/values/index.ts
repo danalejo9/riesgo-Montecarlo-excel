@@ -12,6 +12,7 @@ export {
   crearConstructor,
   comoVectorNumerico,
   desdeEscalar,
+  esInvariante,
   errorConstante,
   errorEn,
   esVacioEn,

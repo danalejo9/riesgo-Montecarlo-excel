@@ -253,7 +253,13 @@ function evaluarArgumento(
         columnas.push(c);
       }
     }
-    return { ok: true, arg: argRango(columnas) };
+    // La forma la necesitan las búsquedas: `BUSCARV` tiene que saber cuántas
+    // columnas tiene la tabla para poder ir a la que le piden.
+    const forma = {
+      filas: ref.fila2 - ref.fila1 + 1,
+      cols: ref.col2 - ref.col1 + 1,
+    };
+    return { ok: true, arg: argRango(columnas, forma) };
   }
 
   const r = evaluarNodo(nodo, hojaActual, valores, n);

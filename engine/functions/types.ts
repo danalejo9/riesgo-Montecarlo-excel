@@ -21,11 +21,41 @@
 
 import type { Columna } from '../values/columna.ts';
 
+/**
+ * Filas y columnas de un rango.
+ *
+ * Hace falta porque las funciones de búsqueda operan sobre la **rejilla**, no
+ * sobre una lista: `BUSCARV(x; A1:D9; 3)` necesita saber que la tabla tiene
+ * cuatro columnas para poder ir a la tercera. Los reductores (`SUMA`,
+ * `PROMEDIO`) no la usan: para ellos un rango sí es una lista.
+ */
+export interface FormaRango {
+  filas: number;
+  cols: number;
+}
+
 export interface Argumento {
   /** Una columna si es celda o expresión; tantas como celdas si es un rango. */
   columnas: Columna[];
   /** Si vino de una referencia de rango. Ver el docstring del módulo. */
   esRango: boolean;
+  /** Dimensiones, si vino de un rango. `columnas` va ordenado por columnas. */
+  forma?: FormaRango;
+}
+
+/**
+ * La celda `(fila, col)` de un rango, ambas empezando en 0.
+ *
+ * El aplanado es **por columnas** —así lo recorre el evaluador—, de modo que
+ * la celda de la fila `f` y la columna `c` está en la posición `c * filas + f`.
+ * Equivocar el orden da una tabla transpuesta y resultados plausibles pero
+ * falsos, que es la peor clase de error.
+ */
+export function celdaEn(arg: Argumento, fila: number, col: number): Columna | undefined {
+  const forma = arg.forma;
+  if (!forma) return undefined;
+  if (fila < 0 || col < 0 || fila >= forma.filas || col >= forma.cols) return undefined;
+  return arg.columnas[col * forma.filas + fila];
 }
 
 /** Firma común de toda función del registro. `n` es el número de iteraciones. */
@@ -37,8 +67,8 @@ export function argValor(c: Columna): Argumento {
 }
 
 /** Envuelve las columnas de un rango como un único argumento. */
-export function argRango(columnas: Columna[]): Argumento {
-  return { columnas, esRango: true };
+export function argRango(columnas: Columna[], forma?: FormaRango): Argumento {
+  return { columnas, esRango: true, forma: forma ?? { filas: columnas.length, cols: 1 } };
 }
 
 /** Todas las columnas de todos los argumentos, en orden de aparición. */

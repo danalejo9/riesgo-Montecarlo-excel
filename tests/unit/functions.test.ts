@@ -333,7 +333,7 @@ describe('registro de funciones', () => {
     expect(funcionSoportada('SUM')).toBe(true);
     expect(funcionSoportada('STDEV.S')).toBe(true);
     expect(funcionSoportada('ISBLANK')).toBe(true);
-    expect(funcionSoportada('VLOOKUP')).toBe(false);
+    expect(funcionSoportada('YEARFRAC')).toBe(false); // Nivel 1, todavía pendiente
     expect(funcionSoportada('SUBTOTAL')).toBe(false);
   });
 

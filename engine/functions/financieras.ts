@@ -229,3 +229,362 @@ export function IRR(args: Argumento[], n: number): Columna {
   }
   return salida.terminar();
 }
+
+// --- Amortización: la familia PAGO/VA/VF/TASA/NPER -------------------------
+
+/**
+ * Las cinco se relacionan por una sola ecuación, la del valor temporal del
+ * dinero, y cada una despeja una incógnita distinta:
+ *
+ *     va·(1+i)^n + pago·(1 + i·tipo)·((1+i)^n − 1)/i + vf = 0
+ *
+ * con `i` la tasa por periodo, `n` el número de periodos y `tipo` 0 si se paga
+ * al final del periodo (lo normal) o 1 si al principio.
+ *
+ * **El convenio de signos de Excel confunde siempre**: el dinero que sale es
+ * negativo y el que entra, positivo. Por eso `PAGO` de un préstamo devuelve un
+ * número **negativo** —es lo que pagas—, y quien no lo espera cree que hay un
+ * error. Se reproduce tal cual.
+ *
+ * El caso `i = 0` no es un caso límite que se pueda ignorar: un préstamo sin
+ * intereses hace cero el denominador. Se resuelve con la fórmula lineal, que
+ * es el límite correcto de la anterior.
+ */
+
+/** `undefined` en la lista de valores por omisión marca un argumento obligatorio. */
+const OBLIGATORIO = undefined;
+
+/**
+ * Andamiaje de las financieras de argumentos escalares.
+ *
+ * Los valores por omisión viven en un solo sitio —la lista `defectos`— en vez
+ * de repartidos por cada cuerpo, que es donde se desincronizan.
+ */
+function financiera(
+  args: Argumento[],
+  n: number,
+  defectos: readonly (number | undefined)[],
+  calcular: (v: readonly number[]) => number | ErrorExcel,
+): Columna {
+  const salida = crearConstructor(n);
+  const valores = new Array<number>(defectos.length);
+
+  for (let i = 0; i < n; i++) {
+    let error: ErrorExcel | undefined;
+
+    for (let j = 0; j < defectos.length && !error; j++) {
+      const c = args[j]?.columnas[0];
+      if (!c) {
+        const porOmision = defectos[j];
+        if (porOmision === undefined) error = '#VALUE!'; // obligatorio y ausente
+        else valores[j] = porOmision;
+        continue;
+      }
+      const v = coercionNumerica(c, i);
+      if (typeof v === 'string') error = v;
+      else valores[j] = v;
+    }
+
+    if (error) {
+      salida.ponerError(i, error);
+      continue;
+    }
+    const r = calcular(valores);
+    if (typeof r === 'string') salida.ponerError(i, r);
+    else salida.ponerNumero(i, r);
+  }
+  return salida.terminar();
+}
+
+/** La cuota. Extraída porque PAGOINT y PAGOPRIN también la necesitan. */
+function pagoDe(tasa: number, nper: number, va: number, vf: number, tipo: number): number | ErrorExcel {
+  if (nper === 0) return '#NUM!';
+  if (tasa === 0) return -(va + vf) / nper;
+  const f = (1 + tasa) ** nper;
+  return (-tasa * (va * f + vf)) / ((1 + tasa * tipo) * (f - 1));
+}
+
+/** Saldo pendiente tras `periodos` cuotas ya pagadas. */
+function saldoTras(tasa: number, periodos: number, va: number, pago: number, tipo: number): number {
+  if (tasa === 0) return va + pago * periodos;
+  const f = (1 + tasa) ** periodos;
+  return va * f + pago * (1 + tasa * tipo) * ((f - 1) / tasa);
+}
+
+/** `PAGO(tasa; nper; va; [vf]; [tipo])`. Negativo: es dinero que sale. */
+export function PMT(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) =>
+    pagoDe(v[0] as number, v[1] as number, v[2] as number, v[3] as number, v[4] as number));
+}
+
+/** `VA(tasa; nper; pago; [vf]; [tipo])`: el valor actual. */
+export function PV(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) => {
+    const [tasa, nper, pago, vf, tipo] = v as [number, number, number, number, number];
+    if (tasa === 0) return -(vf + pago * nper);
+    const f = (1 + tasa) ** nper;
+    return -(vf + pago * (1 + tasa * tipo) * ((f - 1) / tasa)) / f;
+  });
+}
+
+/** `VF(tasa; nper; pago; [va]; [tipo])`: el valor futuro. */
+export function FV(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) => {
+    const [tasa, nper, pago, va, tipo] = v as [number, number, number, number, number];
+    if (tasa === 0) return -(va + pago * nper);
+    const f = (1 + tasa) ** nper;
+    return -(va * f + pago * (1 + tasa * tipo) * ((f - 1) / tasa));
+  });
+}
+
+/** `NPER(tasa; pago; va; [vf]; [tipo])`: cuántos periodos hacen falta. */
+export function NPER(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) => {
+    const [tasa, pago, va, vf, tipo] = v as [number, number, number, number, number];
+    if (pago === 0 && tasa === 0) return '#NUM!';
+    if (tasa === 0) return -(va + vf) / pago;
+
+    const ajustado = pago * (1 + tasa * tipo);
+    const numerador = ajustado - vf * tasa;
+    const denominador = va * tasa + ajustado;
+    if (denominador === 0 || numerador / denominador <= 0) return '#NUM!';
+    return Math.log(numerador / denominador) / Math.log(1 + tasa);
+  });
+}
+
+/**
+ * `TASA(nper; pago; va; [vf]; [tipo]; [estimación])`.
+ *
+ * No tiene solución cerrada: se resuelve numéricamente igual que `TIR`, con
+ * Newton desde la estimación y bisección si no converge. La derivada se toma
+ * numéricamente: la analítica de esta ecuación es larga, fácil de equivocar, y
+ * aquí el coste de una evaluación más es irrelevante.
+ */
+export function RATE(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0, 0.1], (v) => {
+    const [nper, pago, va, vf, tipo, estimacion] = v as [number, number, number, number, number, number];
+    if (nper === 0) return '#NUM!';
+
+    const saldo = (i: number): number => {
+      if (i === 0) return va + pago * nper + vf;
+      const f = (1 + i) ** nper;
+      return va * f + pago * (1 + i * tipo) * ((f - 1) / i) + vf;
+    };
+
+    let r = estimacion;
+    for (let iter = 0; iter < ITERACIONES_NEWTON; iter++) {
+      if (r <= -1) break;
+      const y = saldo(r);
+      if (Math.abs(y) < TOLERANCIA) return r;
+      const h = 1e-7;
+      const pendiente = (saldo(r + h) - y) / h;
+      if (pendiente === 0 || !Number.isFinite(pendiente)) break;
+      const siguiente = r - y / pendiente;
+      if (!Number.isFinite(siguiente)) break;
+      if (Math.abs(siguiente - r) < TOLERANCIA) return siguiente;
+      r = siguiente;
+    }
+    return raizPorBiseccion(saldo);
+  });
+}
+
+/** Bisección genérica sobre una función de la tasa, de -99,99 % al 900 %. */
+function raizPorBiseccion(f: (x: number) => number): number | ErrorExcel {
+  let izq = -0.9999;
+  let fIzq = f(izq);
+
+  for (let paso = 1; paso <= 2000; paso++) {
+    const der = -0.9999 + paso * 0.005;
+    const fDer = f(der);
+
+    if (Number.isFinite(fIzq) && Number.isFinite(fDer) && fIzq * fDer <= 0) {
+      let a = izq;
+      let b = der;
+      let signoA = Math.sign(fIzq);
+      for (let iter = 0; iter < 200; iter++) {
+        const medio = (a + b) / 2;
+        const fm = f(medio);
+        if (Math.abs(fm) < TOLERANCIA) return medio;
+        if (Math.sign(fm) === signoA) { a = medio; signoA = Math.sign(fm); } else b = medio;
+      }
+      return (a + b) / 2;
+    }
+    izq = der;
+    fIzq = fDer;
+  }
+  return '#NUM!';
+}
+
+/** `PAGOINT(tasa; periodo; nper; va; [vf]; [tipo])`: la parte de intereses. */
+export function IPMT(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) => {
+    const [tasa, periodo, nper, va, vf, tipo] = v as [number, number, number, number, number, number];
+    const p = Math.trunc(periodo);
+    if (p < 1 || p > nper) return '#NUM!';
+
+    const pago = pagoDe(tasa, nper, va, vf, tipo);
+    if (typeof pago === 'string') return pago;
+
+    // En la modalidad "al principio del periodo" la primera cuota se paga
+    // antes de que transcurra ningún periodo, así que no genera intereses.
+    if (tipo === 1 && p === 1) return 0;
+
+    const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
+    return (tipo === 1 ? saldo - pago : saldo) * tasa;
+  });
+}
+
+/** `PAGOPRIN(tasa; periodo; nper; va; [vf]; [tipo])`: la parte de capital. */
+export function PPMT(args: Argumento[], n: number): Columna {
+  return financiera(args, n, [OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, OBLIGATORIO, 0, 0], (v) => {
+    const [tasa, periodo, nper, va, vf, tipo] = v as [number, number, number, number, number, number];
+    const p = Math.trunc(periodo);
+    if (p < 1 || p > nper) return '#NUM!';
+
+    const pago = pagoDe(tasa, nper, va, vf, tipo);
+    if (typeof pago === 'string') return pago;
+
+    const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
+    const intereses = tipo === 1 && p === 1 ? 0 : (tipo === 1 ? saldo - pago : saldo) * tasa;
+    return pago - intereses;
+  });
+}
+
+// --- Flujos con fechas: VNA.NO.PER y TIR.NO.PER ---------------------------
+
+/**
+ * `VNA` y `TIR` suponen periodos regulares. Un proyecto real casi nunca los
+ * tiene: los desembolsos caen cuando caen. `VNA.NO.PER` y `TIR.NO.PER` toman
+ * las fechas de cada flujo y descuentan por **días reales entre 365**, que es
+ * la convención que fija Excel (no 360, ni días hábiles).
+ *
+ * El primer flujo marca el origen: su exponente es cero, pase lo que pase con
+ * el orden de las fechas.
+ */
+const DIAS_POR_ANIO = 365;
+
+interface FlujoFechado {
+  importe: number;
+  /** Días transcurridos desde el primer flujo. */
+  dias: number;
+}
+
+/** Empareja importes con fechas, por posición. */
+function recogerFlujosFechados(
+  valores: Argumento | undefined,
+  fechas: Argumento | undefined,
+  i: number,
+): FlujoFechado[] | ErrorExcel {
+  if (!valores || !fechas) return '#VALUE!';
+  const columnasValor = valores.columnas;
+  const columnasFecha = fechas.columnas;
+  if (columnasValor.length !== columnasFecha.length || columnasValor.length === 0) return '#NUM!';
+
+  const flujos: FlujoFechado[] = [];
+  let origen: number | undefined;
+
+  for (let k = 0; k < columnasValor.length; k++) {
+    const cv = columnasValor[k] as Columna;
+    const cf = columnasFecha[k] as Columna;
+    if (tipoEn(cv, i) === ERROR || tipoEn(cf, i) === ERROR) return '#VALUE!';
+    if (tipoEn(cv, i) !== NUMERO || tipoEn(cf, i) !== NUMERO) continue;
+
+    const serie = Math.floor(numeroEn(cf, i));
+    if (origen === undefined) origen = serie;
+    // Excel exige que la primera fecha sea la más temprana.
+    if (serie < origen) return '#NUM!';
+    flujos.push({ importe: numeroEn(cv, i), dias: serie - origen });
+  }
+  return flujos.length === 0 ? '#NUM!' : flujos;
+}
+
+function vanFechado(flujos: readonly FlujoFechado[], tasa: number): number {
+  let acc = 0;
+  for (const f of flujos) acc += f.importe / (1 + tasa) ** (f.dias / DIAS_POR_ANIO);
+  return acc;
+}
+
+/** `VNA.NO.PER(tasa; valores; fechas)`. */
+export function XNPV(args: Argumento[], n: number): Columna {
+  const colTasa = args[0]?.columnas[0];
+  const salida = crearConstructor(n);
+
+  for (let i = 0; i < n; i++) {
+    if (!colTasa) {
+      salida.ponerError(i, '#VALUE!');
+      continue;
+    }
+    const tasa = coercionNumerica(colTasa, i);
+    if (typeof tasa === 'string') {
+      salida.ponerError(i, tasa);
+      continue;
+    }
+    if (tasa <= -1) {
+      salida.ponerError(i, '#NUM!');
+      continue;
+    }
+
+    const flujos = recogerFlujosFechados(args[1], args[2], i);
+    if (typeof flujos === 'string') {
+      salida.ponerError(i, flujos);
+      continue;
+    }
+    salida.ponerNumero(i, vanFechado(flujos, tasa));
+  }
+  return salida.terminar();
+}
+
+/** `TIR.NO.PER(valores; fechas; [estimación])`. */
+export function XIRR(args: Argumento[], n: number): Columna {
+  const colEstimacion = args[2]?.columnas[0];
+  const salida = crearConstructor(n);
+
+  for (let i = 0; i < n; i++) {
+    const flujos = recogerFlujosFechados(args[0], args[1], i);
+    if (typeof flujos === 'string') {
+      salida.ponerError(i, flujos);
+      continue;
+    }
+    if (!flujos.some((f) => f.importe > 0) || !flujos.some((f) => f.importe < 0)) {
+      salida.ponerError(i, '#NUM!'); // sin cambio de signo no hay raíz
+      continue;
+    }
+
+    let estimacion = 0.1;
+    if (colEstimacion) {
+      const g = coercionNumerica(colEstimacion, i);
+      if (typeof g === 'string') {
+        salida.ponerError(i, g);
+        continue;
+      }
+      estimacion = g;
+    }
+
+    const r = resolverTasaFechada(flujos, estimacion);
+    if (typeof r === 'string') salida.ponerError(i, r);
+    else salida.ponerNumero(i, r);
+  }
+  return salida.terminar();
+}
+
+function resolverTasaFechada(flujos: readonly FlujoFechado[], estimacion: number): number | ErrorExcel {
+  let r = estimacion;
+  for (let iter = 0; iter < ITERACIONES_NEWTON; iter++) {
+    if (r <= -1) break;
+    const y = vanFechado(flujos, r);
+    if (Math.abs(y) < TOLERANCIA) return r;
+
+    let derivada = 0;
+    for (const f of flujos) {
+      const t = f.dias / DIAS_POR_ANIO;
+      derivada -= (t * f.importe) / (1 + r) ** (t + 1);
+    }
+    if (derivada === 0 || !Number.isFinite(derivada)) break;
+
+    const siguiente = r - y / derivada;
+    if (!Number.isFinite(siguiente)) break;
+    if (Math.abs(siguiente - r) < TOLERANCIA) return siguiente;
+    r = siguiente;
+  }
+  return raizPorBiseccion((x) => vanFechado(flujos, x));
+}

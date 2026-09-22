@@ -45,18 +45,20 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       'AVERAGEIF', 'AVERAGEIFS', 'COUNTIF', 'COUNTIFS', 'SUMIF', 'SUMIFS',
       // Fecha: 900 usos en Caso_practico.xlsx.
       'DATE', 'DAY', 'DAYS', 'EDATE', 'EOMONTH', 'MONTH', 'WEEKDAY', 'YEAR',
-      // Financieras.
-      'IRR', 'NPV',
+      // Búsquedas: no las pidió ningún libro concreto. Entraron porque están
+      // en casi todos los modelos ajenos, que es el objetivo del producto.
+      'CHOOSE', 'HLOOKUP', 'INDEX', 'MATCH', 'VLOOKUP', 'XLOOKUP', 'XMATCH',
+      // Financieras, incluidas las de amortización y las de flujos fechados.
+      'FV', 'IPMT', 'IRR', 'NPER', 'NPV', 'PMT', 'PPMT', 'PV', 'RATE', 'XIRR', 'XNPV',
     ].sort());
   });
 
-  it('las búsquedas de Nivel 1 siguen sin implementar, y el escáner debe decirlo', () => {
-    // BUSCARV, INDICE y COINCIDIR son el siguiente bloque grande. Mientras no
-    // existan, un libro que las use no corre: el escáner lo marca como
-    // "pendiente", no como compatible.
-    for (const f of ['VLOOKUP', 'INDEX', 'MATCH', 'XLOOKUP']) {
-      expect(implementadas.has(f)).toBe(false);
-    }
+  it('lo que queda de Nivel 1 es lo que el escáner debe seguir marcando pendiente', () => {
+    const pendientes = [...NIVEL_1].filter((f) => !implementadas.has(f)).sort();
+    expect(pendientes).toEqual([
+      'DATEDIF', 'DATEVALUE', 'DAYS360', 'IFS', 'LOOKUP', 'MAXIFS', 'MINIFS',
+      'NETWORKDAYS', 'OFFSET', 'SWITCH', 'WORKDAY', 'YEARFRAC',
+    ]);
   });
 
   it('nada clasificado como Nivel 2 o no soportado está implementado a escondidas', () => {

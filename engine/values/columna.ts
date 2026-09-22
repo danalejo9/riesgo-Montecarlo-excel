@@ -75,7 +75,26 @@ export type ValorEscalar =
  *   error (se distinguen por `tipos[i]`, nunca por el contenido).
  */
 export type Columna =
-  | { forma: 'vector'; tipo: typeof NUMERO | typeof LOGICO; datos: Float64Array }
+  | {
+      forma: 'vector';
+      tipo: typeof NUMERO | typeof LOGICO;
+      datos: Float64Array;
+      /**
+       * `true` si se sabe que las N posiciones valen lo mismo.
+       *
+       * Lo ponen los constructores que rellenan un único valor y la difusión
+       * de una celda constante del compilador: en esos casos la invariancia es
+       * un hecho conocido, no algo que haya que redescubrir recorriendo el
+       * array. Ausente significa "no consta", nunca "varía".
+       *
+       * Existe porque redescubrirlo cuesta O(N) y hay funciones —las
+       * búsquedas, las de criterio— que pueden precalcular muchísimo trabajo
+       * cuando sus datos no cambian entre iteraciones. Sin esta bandera,
+       * `BUSCARV` sobre una tabla de 100 filas tardaba 281 s en un millón de
+       * iteraciones, medido.
+       */
+      invariante?: boolean;
+    }
   | { forma: 'constante'; n: number; valor: ValorEscalar }
   | {
       forma: 'mixta';
@@ -98,13 +117,24 @@ export function vectorLogico(datos: Float64Array): Columna {
 export function numeroConstante(valor: number, n: number): Columna {
   const datos = new Float64Array(n);
   datos.fill(valor);
-  return vectorNumerico(datos);
+  return { forma: 'vector', tipo: NUMERO, datos, invariante: true };
 }
 
 export function logicoConstante(valor: boolean, n: number): Columna {
   const datos = new Float64Array(n);
   datos.fill(valor ? 1 : 0);
-  return vectorLogico(datos);
+  return { forma: 'vector', tipo: LOGICO, datos, invariante: true };
+}
+
+/**
+ * Si consta que la columna vale lo mismo en todas las iteraciones.
+ *
+ * Es deliberadamente conservadora: `false` significa "no consta", no "varía".
+ * Quien la use para saltarse trabajo tiene que seguir siendo correcto cuando
+ * devuelve `false` sobre una columna que en realidad era constante.
+ */
+export function esInvariante(c: Columna): boolean {
+  return c.forma === 'constante' || (c.forma === 'vector' && c.invariante === true);
 }
 
 export function textoConstante(texto: string, n: number): Columna {

@@ -115,7 +115,7 @@ describe('cobertura', () => {
         nombre: 'H',
         celdas: [
           { ref: 'A1', formula: 'SUM(B1:B9)' },
-          { ref: 'A2', formula: 'VLOOKUP(C1,Tarifas!A:B,2,FALSE)' },
+          { ref: 'A2', formula: 'YEARFRAC(C1,C2)' },
           { ref: 'A3', formula: 'SUM(D1:D9)' },
           { ref: 'A4', formula: 'SUM(E1:E9)' },
         ],
@@ -125,13 +125,12 @@ describe('cobertura', () => {
     expect(inf.coberturaN0).toBe(75);
     expect(inf.coberturaN0N1).toBe(100);
 
-    // El catálogo cubre BUSCARV, pero el motor todavía no la implementa, así
+    // El catálogo cubre FRAC.AÑO, pero el motor todavía no la implementa, así
     // que el libro NO corre hoy. Decir "compatible" aquí sería la respuesta
     // tranquilizadora y falsa que este escáner existe para evitar: pasó de
-    // verdad con `Caso_practico.xlsx`, que usaba FIN.MES, MES, AÑO y TIR
-    // (ya implementadas; BUSCARV sigue pendiente).
+    // verdad con `Caso_practico.xlsx`, que usaba FIN.MES, MES, AÑO y TIR.
     expect(veredicto(inf)).toBe('pendiente');
-    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['VLOOKUP']);
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['YEARFRAC']);
     expect(inf.bloqueantes).toEqual([]); // no es un bloqueo: es trabajo pendiente
   });
 

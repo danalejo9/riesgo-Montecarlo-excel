@@ -4,7 +4,9 @@ import {
   DATE, DAY, DAYS, EDATE, EOMONTH, MONTH, WEEKDAY, YEAR,
   partesDeSerie, serieDePartes,
 } from '../../engine/functions/fechas.ts';
-import { IRR, NPV } from '../../engine/functions/financieras.ts';
+import {
+  FV, IPMT, IRR, NPER, NPV, PMT, PPMT, PV, RATE, XIRR, XNPV,
+} from '../../engine/functions/financieras.ts';
 import { argRango, argValor, type Argumento } from '../../engine/functions/types.ts';
 import {
   errorEn, numeroConstante, tipoEn, ERROR, type Columna,
@@ -155,5 +157,77 @@ describe('TIR', () => {
     const r = nums(IRR([rango(...flujos)], 1))[0] as number;
     const van = flujos.reduce((acc, v, k) => acc + v / (1 + r) ** k, 0);
     expect(van).toBeCloseTo(0, 6);
+  });
+});
+
+describe('amortización: PAGO, VA, VF, NPER, TASA', () => {
+  // Referencias calculadas fuera del motor con la ecuación del valor temporal
+  // del dinero, para no comprobar el código contra sí mismo.
+  const PAGO_HIPOTECA = -1073.6432460242795; // 200.000 al 5 % anual, 30 años
+
+  it('PAGO devuelve un número negativo: es dinero que sale', () => {
+    expect(nums(PMT([c(0.05 / 12), c(360), c(200000)], 1))[0])
+      .toBeCloseTo(PAGO_HIPOTECA, 8);
+  });
+
+  it('PAGO sin intereses reparte el capital en partes iguales', () => {
+    // El caso tasa = 0 hace cero el denominador de la fórmula general; se
+    // resuelve con el límite lineal, no con un caso especial inventado.
+    expect(nums(PMT([c(0), c(12), c(1200)], 1))).toEqual([-100]);
+  });
+
+  it('VF y VA son coherentes entre sí', () => {
+    expect(nums(FV([c(0.06), c(10), c(-1000)], 1))[0]).toBeCloseTo(13180.79494238091, 6);
+    expect(nums(PV([c(0.08), c(5), c(-2000)], 1))[0]).toBeCloseTo(7985.420074156177, 6);
+  });
+
+  it('NPER recupera el plazo a partir de la cuota', () => {
+    // Cierra el círculo: con la cuota que devolvió PAGO, NPER da los 360 meses.
+    expect(nums(NPER([c(0.05 / 12), c(PAGO_HIPOTECA), c(200000)], 1))[0])
+      .toBeCloseTo(360, 6);
+  });
+
+  it('TASA recupera el interés a partir de la cuota', () => {
+    expect(nums(RATE([c(360), c(PAGO_HIPOTECA), c(200000)], 1))[0])
+      .toBeCloseTo(0.05 / 12, 8);
+  });
+
+  it('PAGOINT y PAGOPRIN suman la cuota completa', () => {
+    const interes = nums(IPMT([c(0.05 / 12), c(1), c(360), c(200000)], 1))[0] as number;
+    const capital = nums(PPMT([c(0.05 / 12), c(1), c(360), c(200000)], 1))[0] as number;
+
+    expect(interes).toBeCloseTo(200000 * (0.05 / 12), 8);
+    expect(interes + capital).toBeCloseTo(PAGO_HIPOTECA, 8);
+  });
+
+  it('un periodo fuera del plazo es #¡NUM!', () => {
+    expect(errorDe(IPMT([c(0.05), c(0), c(12), c(1000)], 1))).toBe('#NUM!');
+    expect(errorDe(PPMT([c(0.05), c(13), c(12), c(1000)], 1))).toBe('#NUM!');
+  });
+});
+
+describe('flujos con fechas: VNA.NO.PER y TIR.NO.PER', () => {
+  // 1 de enero de 2024, 1 de julio de 2024 y 1 de enero de 2025.
+  const FECHAS = rango(45292, 45474, 45658);
+  const FLUJOS = rango(-10000, 6000, 6000);
+
+  it('VNA.NO.PER descuenta por días reales entre 365', () => {
+    expect(nums(XNPV([c(0.1), FLUJOS, FECHAS], 1))[0]).toBeCloseTo(1174.6438284632468, 6);
+  });
+
+  it('TIR.NO.PER encuentra la tasa que anula el valor actual', () => {
+    const r = nums(XIRR([FLUJOS, FECHAS], 1))[0] as number;
+    expect(r).toBeCloseTo(0.278158944317214, 6);
+
+    // Comprobación independiente: con esa tasa, el valor actual es cero.
+    expect(nums(XNPV([c(r), FLUJOS, FECHAS], 1))[0]).toBeCloseTo(0, 6);
+  });
+
+  it('sin cambio de signo no hay tasa', () => {
+    expect(errorDe(XIRR([rango(100, 200, 300), FECHAS], 1))).toBe('#NUM!');
+  });
+
+  it('si las listas no miden lo mismo, #¡NUM!', () => {
+    expect(errorDe(XNPV([c(0.1), rango(-100, 50), FECHAS], 1))).toBe('#NUM!');
   });
 });

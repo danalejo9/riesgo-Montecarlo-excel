@@ -473,6 +473,52 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     no falta ningún `resid` y que existen todos los recursos que el manifiesto
     pide. La validación de verdad la tiene que hacer el usuario.
 
+16. [~] **Búsquedas y financieras completas (2026-09-22)** — el giro de
+    prioridad que pidió el usuario: dejar de seguir el rastro de sus dos
+    libros y cubrir lo que necesita **cualquier** libro.
+
+    El motor tenía 73 funciones, pero faltaban `BUSCARV`, `INDICE`,
+    `COINCIDIR`, `BUSCARX`… Que ninguno de los dos libros medidos las use es
+    **suerte, no representatividad**: una tabla de tarifas consultada con
+    `BUSCARV` está en casi todos los modelos de presupuesto ajenos.
+
+    Añadidas: `BUSCARV`, `BUSCARH`, `INDICE`, `COINCIDIR`, `BUSCARX`,
+    `COINCIDIRX`, `ELEGIR`; y las financieras estructuradas `PAGO`, `VA`,
+    `VF`, `NPER`, `TASA`, `PAGOINT`, `PAGOPRIN`, `VNA.NO.PER`, `TIR.NO.PER`.
+    El motor pasa de 73 a 91 funciones.
+
+    **Una decisión de modelo**: `Argumento` gana la **forma** del rango (filas
+    × columnas). Hasta ahora un rango llegaba aplanado, y `BUSCARV` necesita
+    saber cuántas columnas tiene la tabla. El aplanado es por columnas, así
+    que la celda (f, c) está en `c * filas + f`; equivocar ese orden da una
+    tabla transpuesta y resultados plausibles pero falsos.
+
+    **Un problema de rendimiento real, encontrado midiendo y no suponiendo.**
+    El docstring de `busquedas.ts` advertía que la búsqueda se repite en cada
+    iteración. El benchmark lo cuantificó: **281 s** para un millón de
+    iteraciones con 200 `BUSCARV` sobre una tabla de 100 filas, contra 17 s
+    del modelo numérico. Inaceptable.
+
+    La causa: la tabla no cambia entre iteraciones, pero el motor no tenía
+    forma de saberlo y la recorría entera cada vez pasando por el despacho del
+    canal de valores. La solución es una bandera `invariante` en `Columna`,
+    que ponen los constructores que rellenan un único valor: la invariancia es
+    un hecho **conocido** en el momento de construir, no algo que haya que
+    redescubrir recorriendo el array. Con ella, las búsquedas extraen las
+    claves una sola vez y usan búsqueda binaria cuando están ordenadas.
+
+    **281 s → 32 s, con la media de salida idéntica** (3.020.927,67), que es
+    lo que prueba que la semántica no cambió. La binaria solo se usa si las
+    claves están de verdad ordenadas; si la tabla está desordenada —error
+    frecuente que Excel tampoco detecta— se sigue recorriendo linealmente,
+    que es lo que reproduce el comportamiento de Excel.
+
+    **Lo que queda pendiente de verificar contra Excel**: toda esta tanda.
+    `BUSCARV` aproximado sobre tabla desordenada, `TASA` y `TIR.NO.PER`
+    (resueltas numéricamente, y Excel se rinde a las 20 iteraciones mientras
+    el motor es más tenaz), y el convenio de signos de `PAGOINT`/`PAGOPRIN`
+    con pagos al principio del periodo. Va a la tercera tanda del libro.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **Decidir de dónde sale la configuración regional** (ver el punto 14). Es
