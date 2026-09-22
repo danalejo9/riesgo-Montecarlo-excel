@@ -178,7 +178,37 @@ La carpeta `1 complemento sensibilidad` queda como copia congelada; ya no es el 
 - Windows 11, Node v24.15.0, npm 11.12.1, git 2.55.0. Sin `gh`.
 - Excel: Microsoft 365, versión 16.0.20326.20144, x64, cultura **es-ES**.
 - Certificados de desarrollo presentes en `~/.office-addin-dev-certs` (válidos).
-- Sideload registrado en `HKCU\SOFTWARE\Microsoft\Office\16.0\WEF\Developer` apuntando a **la carpeta antigua** (`Documents\1 complemento sensibilidad`), no a esta. Hay que re-registrar cuando se empiece a probar en Excel desde esta carpeta.
+- Sideload **re-registrado el 2026-09-21** apuntando al repositorio actual (`riesgo-montecarlo-v2`), con el Id nuevo `6c55c606-966a-443c-b0af-ad9b854af48f`. El registro del complemento heredado (`b5137d5a-…`, en `1 complemento sensibilidad`) se eliminó de esa misma clave.
+
+### 7.1 Entorno de Office verificado dentro de Excel (2026-09-21)
+
+Medido por el propio panel de diagnóstico, no supuesto:
+
+| | |
+|---|---|
+| Host / plataforma | Excel / PC |
+| Versión | 16.0.20326.20144 |
+| Idioma de la interfaz | **es-ES** |
+| `ExcelApi` disponible | **hasta 1.12** (todos los conjuntos que el complemento necesita) |
+
+**Esto desbloquea decisiones que estaban en el aire**, porque no hay que
+programar contra el mínimo común denominador en la máquina del usuario:
+
+- `ExcelApi 1.8` → `getDirectPrecedents`: el grafo de dependencias se puede
+  pedir a Excel en vez de deducirlo solo del texto de las fórmulas.
+- `ExcelApi 1.9` → modo de cálculo y `suspendApiCalculationUntilNextSync`:
+  es lo que necesita el guardián transaccional (§7.3 de Fase 2) para
+  proteger el libro de verdad.
+- `ExcelApi 1.12` → lectura de fórmulas en lote más eficiente, que es la
+  operación dominante al leer un libro de 132 hojas.
+
+**Ojo con generalizar**: esto es la máquina del usuario, con M365 al día.
+Un cliente con Office 2019 o Excel para Mac tendrá menos, y el complemento
+sigue teniendo que degradar con elegancia — por eso `entorno.ts` comprueba
+cada conjunto por separado en vez de fiarse del número de versión.
+
+El **idioma es-ES confirma** que la decisión 17 (configuración regional) no
+es teórica: este Excel escribe los decimales con coma.
 - Servidor de desarrollo previsto: Vite en `https://localhost:9090`.
 
 ---
