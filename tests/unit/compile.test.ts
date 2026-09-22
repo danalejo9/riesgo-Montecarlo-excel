@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { ejecutarPlan } from '../../engine/compiler/executor.ts';
-import { compilarPlan } from '../../engine/compiler/plan.ts';
+import { compilarPlan, type Plan } from '../../engine/compiler/plan.ts';
 import { nums } from '../helpers/valores.ts';
-import { errorEn, type Columna } from '../../engine/values/columna.ts';
+import { errorEn, NUMERO, TEXTO, type Columna, type ValorEscalar } from '../../engine/values/columna.ts';
 
 const H = 'Hoja1';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -224,5 +224,84 @@ describe('ejecutarPlan — contrato de salida', () => {
         expect(r.valores.has(k('B1'))).toBe(false);
       }
     }
+  });
+});
+
+describe('valores estáticos del libro', () => {
+  // Hasta que el grafo supo de ellos, una celda sin fórmula se evaluaba como
+  // vacía. En un libro de juguete daba igual, porque las constantes viven
+  // dentro de las fórmulas; en un modelo real los datos están en celdas y las
+  // fórmulas los referencian, así que media hoja valía cero sin avisar.
+  function grafoConValores(formulas: Record<string, string>, valores: Record<string, ValorEscalar>) {
+    const celdas: FormulaCelda[] = Object.entries(formulas).map(([ref, formula]) => ({
+      hoja: H,
+      col: colDe(ref),
+      fila: filaDe(ref),
+      formula,
+    }));
+    const datos = Object.entries(valores).map(([ref, valor]) => ({
+      hoja: H,
+      col: colDe(ref),
+      fila: filaDe(ref),
+      valor,
+    }));
+    return construirGrafo(celdas, datos).grafo;
+  }
+
+  const colDe = (ref: string) =>
+    [...((/^\$?([A-Za-z]{1,3})/.exec(ref) as RegExpExecArray)[1] as string)].reduce(
+      (acc, c) => acc * 26 + (c.toUpperCase().charCodeAt(0) - 64),
+      0,
+    );
+  const filaDe = (ref: string) => Number((/([0-9]{1,7})$/.exec(ref) as RegExpExecArray)[1]);
+
+  it('una fórmula ve el número de la celda de datos', () => {
+    const g = grafoConValores({ C1: 'A1*B1' }, { B1: { tipo: NUMERO, numero: 7 } });
+    const entradas = new Map([[k('A1'), Float64Array.from([2, 3])]]);
+
+    const r = ejecutarPlan(g, (compilarPlan(g, new Set(entradas.keys()), [k('C1')]) as { plan: Plan }).plan, entradas, 2);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(nums(r.valores.get(k('C1')) as Columna)).toEqual([14, 21]);
+  });
+
+  it('el evaluador de referencia y el compilado coinciden', () => {
+    const g = grafoConValores(
+      { C1: 'IF(B1="alto",A1*2,A1)', D1: 'C1+E1' },
+      { B1: { tipo: TEXTO, texto: 'alto' }, E1: { tipo: NUMERO, numero: 100 } },
+    );
+    const entradas = new Map([[k('A1'), Float64Array.from([5, 6])]]);
+
+    const referencia = evaluarModelo(g, entradas, [k('D1')], 2);
+    const compilado = compilarYEjecutar(g, entradas, [k('D1')], 2);
+
+    expect(referencia.ok).toBe(true);
+    expect(compilado.ok).toBe(true);
+    if (!referencia.ok || !compilado.ok) return;
+    expect(nums(compilado.valores.get(k('D1')) as Columna)).toEqual([110, 112]);
+    expect(nums(referencia.valores.get(k('D1')) as Columna)).toEqual([110, 112]);
+  });
+
+  it('una celda sin valor y sin fórmula sigue siendo vacía, no cero', () => {
+    // La distinción que costó rehacer medio motor: CONTAR cuenta números, y
+    // una celda vacía no es un número.
+    const g = grafoConValores({ C1: 'COUNT(A1:B1)' }, {});
+    const entradas = new Map([[k('A1'), Float64Array.from([1, 1])]]);
+    const r = compilarYEjecutar(g, entradas, [k('C1')], 2);
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(nums(r.valores.get(k('C1')) as Columna)).toEqual([1, 1]);
+  });
+
+  it('si una celda tiene fórmula y valor, manda la fórmula', () => {
+    // Un valor es el resultado de calcular la fórmula, no un dato aparte.
+    const g = grafoConValores({ B1: 'A1*10' }, { B1: { tipo: NUMERO, numero: 999 } });
+    const entradas = new Map([[k('A1'), Float64Array.from([2, 2])]]);
+    const r = compilarYEjecutar(g, entradas, [k('B1')], 2);
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(nums(r.valores.get(k('B1')) as Columna)).toEqual([20, 20]);
   });
 });

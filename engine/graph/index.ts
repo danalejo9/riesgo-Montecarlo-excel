@@ -5,6 +5,7 @@ export {
   type FormulaCelda,
   type Grafo,
   type NodoGrafo,
+  type ValorCelda,
 } from './graph.ts';
 
 export { ordenarTopologicamente, type OrdenTopologico } from './toposort.ts';

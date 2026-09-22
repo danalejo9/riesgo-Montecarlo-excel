@@ -95,7 +95,9 @@ export function ejecutarPlan(
 
     let columna: Columna;
     if (!nodo.ast) {
-      columna = vacioConstante(nLocal); // celda vacía: vacía, no cero
+      // Sin fórmula: o es un dato del libro, o está vacía de verdad. Vacía no
+      // es cero, y por eso se distinguen.
+      columna = nodo.valor === undefined ? vacioConstante(nLocal) : desdeEscalar(nodo.valor, nLocal);
     } else {
       const r = evaluarNodo(nodo.ast, nodo.hoja, valores, nLocal);
       if (!r.ok) return { ok: false, error: { clave, motivo: r.motivo } };

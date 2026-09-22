@@ -12,6 +12,7 @@
  */
 
 import { claveCelda, columnaDeLetras, recorrer, type Nodo, type RefCelda, type RefRango } from '../parser/ast.ts';
+import type { ValorEscalar } from '../values/columna.ts';
 import { parsear } from '../parser/parse.ts';
 
 export interface FormulaCelda {
@@ -21,6 +22,20 @@ export interface FormulaCelda {
   formula: string;
 }
 
+/**
+ * Una celda con valor pero sin fórmula: los datos del modelo.
+ *
+ * Son mayoría en cualquier libro real y **no son un detalle**: sin ellas, una
+ * fórmula que multiplique por la celda de al lado multiplica por vacío. El
+ * lector de Excel las separa de las fórmulas (`ValorEstatico`) y entran aquí.
+ */
+export interface ValorCelda {
+  hoja: string;
+  col: number;
+  fila: number;
+  valor: ValorEscalar;
+}
+
 export interface NodoGrafo {
   clave: string;
   hoja: string;
@@ -28,6 +43,12 @@ export interface NodoGrafo {
   fila: number;
   /** `undefined` si la celda no tiene fórmula (es una entrada/constante). */
   ast?: Nodo;
+  /**
+   * El valor de una celda sin fórmula. `undefined` en una celda con fórmula,
+   * y también en una celda de verdad vacía — que no es lo mismo que un cero,
+   * y por eso se distingue.
+   */
+  valor?: ValorEscalar;
   /** Error de parseo de esta celda, si lo hubo. */
   errorParseo?: { mensaje: string; pos: number };
 }
@@ -49,7 +70,10 @@ export interface ConstruccionGrafo {
   rangosNoExpandidos: number;
 }
 
-export function construirGrafo(celdas: FormulaCelda[]): ConstruccionGrafo {
+export function construirGrafo(
+  celdas: FormulaCelda[],
+  valores: readonly ValorCelda[] = [],
+): ConstruccionGrafo {
   const nodos = new Map<string, NodoGrafo>();
   const dependencias = new Map<string, Set<string>>();
   const dependientes = new Map<string, Set<string>>();
@@ -82,6 +106,17 @@ export function construirGrafo(celdas: FormulaCelda[]): ConstruccionGrafo {
     } else {
       nodo.errorParseo = r.error;
     }
+  }
+
+  // Los valores sin fórmula. Van después de las fórmulas y antes de las
+  // aristas: una celda puede aparecer en las dos listas si el libro está mal
+  // leído, y en ese caso manda la fórmula — un valor es el resultado de
+  // calcularla, no un dato independiente.
+  for (const v of valores) {
+    const clave = claveCelda(v.hoja, v.col, v.fila);
+    const nodo = obtenerNodo(clave, v.hoja, v.col, v.fila);
+    if (nodo.ast || nodo.errorParseo) continue;
+    nodo.valor = v.valor;
   }
 
   // Segunda pasada: recorrer cada AST y crear las aristas de dependencia.

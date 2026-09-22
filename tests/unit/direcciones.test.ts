@@ -6,7 +6,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { componerDireccion, partirDireccion } from '../../excel/direcciones.ts';
+import {
+  claveDesdeDireccion,
+  componerDireccion,
+  esDireccionDirecta,
+  partirDireccion,
+} from '../../excel/direcciones.ts';
 
 describe('partirDireccion', () => {
   it('separa hoja y rango', () => {
@@ -51,5 +56,39 @@ describe('componerDireccion', () => {
     for (const hoja of ['Hoja1', 'Flujo de caja', "Caja de Ana's", '¡Ojo!', 'Año 2026']) {
       expect(partirDireccion(componerDireccion(hoja, 'B7'))).toEqual({ hoja, rango: 'B7' });
     }
+  });
+});
+
+describe('claveDesdeDireccion', () => {
+  it('da la clave que usa el grafo del motor', () => {
+    expect(claveDesdeDireccion('Hoja1!B7')).toBe('Hoja1!B7');
+  });
+
+  it('normaliza las referencias absolutas', () => {
+    // Si el modelo guardara $B$7 y el libro devolviera B7, el motor buscaría
+    // una celda que no existe.
+    expect(claveDesdeDireccion('Hoja1!$B$7')).toBe('Hoja1!B7');
+    expect(claveDesdeDireccion('Hoja1!$B7')).toBe('Hoja1!B7');
+  });
+
+  it('una dirección sin hoja usa la hoja activa', () => {
+    expect(claveDesdeDireccion('B7', 'Flujo de caja')).toBe('Flujo de caja!B7');
+    expect(claveDesdeDireccion('B7')).toBeUndefined();
+  });
+
+  it('un rango o un nombre no dan clave: no son una celda', () => {
+    expect(claveDesdeDireccion('Hoja1!B7:C9')).toBeUndefined();
+    expect(claveDesdeDireccion('Tasa_IVA', 'Hoja1')).toBeUndefined();
+  });
+});
+
+describe('esDireccionDirecta', () => {
+  it('distingue una dirección de un nombre definido', () => {
+    expect(esDireccionDirecta('Hoja1!B7')).toBe(true);
+    expect(esDireccionDirecta('$B$7')).toBe(true);
+    expect(esDireccionDirecta('Tasa_IVA')).toBe(false);
+    expect(esDireccionDirecta('Hoja1!B7:C9')).toBe(false);
+    // Una eñe no hace directa a una dirección, ni rompe la comprobación.
+    expect(esDireccionDirecta('Año_base')).toBe(false);
   });
 });

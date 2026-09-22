@@ -62,6 +62,26 @@ export interface ModeloRiesgo {
   settings: ConfiguracionRiskModel;
 }
 
+/**
+ * El modelo con el que empieza un libro que nunca se ha simulado.
+ *
+ * Los valores por defecto son una decisión de producto, no un relleno.
+ * **10.000 iteraciones** y no un millón: es lo que tarda unos segundos en el
+ * motor rápido y unos minutos en el compatible, así que la primera simulación
+ * de cualquiera termina y enseña algo. El millón es para cuando el usuario ya
+ * sabe qué está mirando. **Semilla fija** (no aleatoria) porque un resultado
+ * que no se puede reproducir no se puede discutir con nadie, y discutirlo es
+ * justo para lo que sirve un análisis de riesgo.
+ */
+export function modeloVacio(): ModeloRiesgo {
+  return {
+    schema: VERSION_ESQUEMA_RISK_MODEL,
+    inputs: [],
+    outputs: [],
+    settings: { iterations: 10_000, seed: 12345, sampling: 'monte-carlo', engine: 'auto' },
+  };
+}
+
 export type ResultadoValidacion =
   | { ok: true; modelo: ModeloRiesgo }
   | { ok: false; errores: string[] };

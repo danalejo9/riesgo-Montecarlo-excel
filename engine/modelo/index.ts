@@ -5,6 +5,7 @@ export {
   type DistributionSpec,
   type LognormalParametrization,
 } from './distributionSchema.ts';
+export { describirMotivo, elegirMotor, type EleccionMotor, type MotivoIncompatible } from './eleccionMotor.ts';
 export {
   descartarRecuperacion,
   finalizarProteccion,
@@ -19,6 +20,7 @@ export {
 export { generarId } from './id.ts';
 export { prepararEntradas, type ResultadoPreparacion } from './prepararSimulacion.ts';
 export {
+  modeloVacio,
   validarRiskModel,
   VERSION_ESQUEMA_RISK_MODEL,
   type ConfiguracionRiskModel,

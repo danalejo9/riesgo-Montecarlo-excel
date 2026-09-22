@@ -33,6 +33,7 @@ import { coercionNumerica, coercionTexto, compararEn } from '../values/coercion.
 import {
   comoVectorNumerico,
   crearConstructor,
+  desdeEscalar,
   errorConstante,
   errorEn,
   logicoConstante,
@@ -100,7 +101,8 @@ export function evaluarModelo(
     }
 
     if (!nodo.ast) {
-      valores.set(clave, vacioConstante(n)); // celda vacía: vacía, no cero
+      // Sin fórmula: o es un dato del libro, o está vacía de verdad.
+      valores.set(clave, nodo.valor === undefined ? vacioConstante(n) : desdeEscalar(nodo.valor, n));
       continue;
     }
 

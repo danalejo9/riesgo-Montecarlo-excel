@@ -12,6 +12,8 @@
  * hace Excel cuando el usuario escribe `B7` en un cuadro de diálogo.
  */
 
+import { claveDeReferencia } from '../engine/graph/index.ts';
+
 export interface DireccionPartida {
   /** `undefined` si la dirección no nombraba hoja. */
   hoja?: string;
@@ -59,4 +61,34 @@ export function componerDireccion(hoja: string, rango: string): string {
   const necesitaComillas = /[^A-Za-z0-9_.]/.test(hoja);
   const nombre = necesitaComillas ? `'${hoja.replace(/'/g, "''")}'` : hoja;
   return `${nombre}!${rango}`;
+}
+
+/**
+ * Una dirección es "directa" si nombra una celda por su letra y su número
+ * (`B7`, `Hoja1!$B$7`). Lo que no lo sea es un nombre definido (`Tasa_IVA`) y
+ * hay que preguntarle a Excel dónde está.
+ */
+export function esDireccionDirecta(direccion: string): boolean {
+  return REF_CELDA.test(partirDireccion(direccion).rango);
+}
+
+const REF_CELDA = /^\$?[A-Za-z]{1,3}\$?[0-9]{1,7}$/;
+
+/**
+ * La clave que usa el grafo del motor (`Hoja!B7`) a partir de una dirección de
+ * Excel.
+ *
+ * Normaliza los `$` de las referencias absolutas: `Hoja1!$B$7` y `Hoja1!B7`
+ * son la misma celda, y si el modelo guardara una forma y el libro devolviera
+ * la otra, el motor buscaría una celda que no existe.
+ *
+ * Devuelve `undefined` si la dirección no nombra una sola celda —un rango, un
+ * nombre definido— en vez de lanzar: quien llama tiene que decidir si eso es
+ * un error del usuario o algo que preguntarle a Excel.
+ */
+export function claveDesdeDireccion(direccion: string, hojaActiva?: string): string | undefined {
+  const { hoja, rango } = partirDireccion(direccion);
+  const destino = hoja ?? hojaActiva;
+  if (destino === undefined || !REF_CELDA.test(rango)) return undefined;
+  return claveDeReferencia(destino, rango);
 }
