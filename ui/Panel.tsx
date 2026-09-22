@@ -1,35 +1,51 @@
 /**
- * Panel de diagnóstico: el primer hito verificable de E3.
+ * El panel: el ciclo completo del producto en tres pestañas.
  *
- * Deliberadamente **no** simula nada. Su trabajo es contestar tres preguntas
- * que hasta ahora no se podían contestar sin Excel delante, y que condicionan
- * todo lo que venga después:
+ * Deja de ser un panel de diagnóstico. Aquí se define el modelo, se simula y
+ * se leen los resultados; el diagnóstico sigue estando, en su pestaña, porque
+ * es lo primero que hay que mirar cuando algo no va.
  *
- *   1. ¿Carga el complemento? (el heredado nunca llegó a hacerlo)
- *   2. ¿Qué conjuntos de `ExcelApi` hay en esta máquina? De eso depende qué
- *      APIs puede usar el adaptador, y difiere entre Windows y Mac.
- *   3. ¿Se puede leer el libro de verdad, en lote y sin errores?
+ * Lo que este archivo decide, y que no es evidente:
  *
- * Es poco código a propósito: si algo del sideload está mal, es mucho mejor
- * descubrirlo aquí que dentro de un panel de mil líneas.
+ * **El modelo se carga al abrir y se guarda en cada cambio.** Vive en el
+ * libro, así que abrir el complemento sobre un libro ya trabajado enseña el
+ * modelo de quien lo hizo. Un modelo guardado que ya no valga —de una versión
+ * anterior, corrupto— **no se pisa en silencio**: se enseña el problema y el
+ * JSON crudo, y el usuario decide.
+ *
+ * **Cancelar es de verdad.** `debeCancelar` se consulta entre rondas de
+ * bloques y cada pocas iteraciones en el modo compatible. Se guarda en una
+ * `ref` y no en un estado porque el bucle lee su valor actual, no el que había
+ * cuando empezó: con un `useState` capturaría el `false` inicial para siempre.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { analizarCompatibilidad, type InformeCompatibilidad } from '../excel/compatibilidad.ts';
-import { leerEntorno, versionMaximaDisponible, type EntornoOffice } from '../excel/entorno.ts';
-import { leerLibro, type EstadisticasLectura } from '../excel/lectorLibro.ts';
-import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
+import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
+import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
+import {
+  ejecutarSimulacion,
+  type AvanceSimulacion,
+  type ResultadoSimulacionPanel,
+} from '../excel/ejecutarSimulacion.ts';
+import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { Diagnostico } from './Diagnostico.tsx';
+import { Modelo } from './Modelo.tsx';
+import { Resultados } from './Resultados.tsx';
+import { duracion, miles, porcentaje } from './formato.ts';
+
+type Pestana = 'modelo' | 'resultados' | 'diagnostico';
 
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
-  const [seleccion, setSeleccion] = useState<SeleccionLeida | null>(null);
+  const [pestana, setPestana] = useState<Pestana>('modelo');
+  const [modelo, setModelo] = useState<ModeloRiesgo | null>(null);
+  const [modeloInvalido, setModeloInvalido] = useState<{ errores: string[]; crudo: string } | null>(null);
+  const [resultado, setResultado] = useState<ResultadoSimulacionPanel | null>(null);
+  const [avance, setAvance] = useState<AvanceSimulacion | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [leyendo, setLeyendo] = useState(false);
-
-  const [estadisticas, setEstadisticas] = useState<EstadisticasLectura | null>(null);
-  const [informe, setInforme] = useState<InformeCompatibilidad | null>(null);
-  const [progreso, setProgreso] = useState<string | null>(null);
+  const [simulando, setSimulando] = useState(false);
+  const cancelado = useRef(false);
 
   useEffect(() => {
     try {
@@ -37,46 +53,67 @@ export function Panel() {
     } catch (e) {
       setError(mensajeDe(e));
     }
+
+    void (async () => {
+      try {
+        const lectura = await leerModelo();
+        if (lectura.estado === 'ok') setModelo(lectura.modelo);
+        else if (lectura.estado === 'vacio') setModelo(modeloVacio());
+        else setModeloInvalido({ errores: lectura.errores, crudo: lectura.crudo });
+      } catch (e) {
+        setError(mensajeDe(e));
+      }
+    })();
   }, []);
 
-  const alLeerSeleccion = useCallback(async () => {
-    setLeyendo(true);
-    setError(null);
-    try {
-      setSeleccion(await leerSeleccion());
-    } catch (e) {
-      setError(mensajeDe(e));
-    } finally {
-      setLeyendo(false);
-    }
+  const cambiarModelo = useCallback((m: ModeloRiesgo) => {
+    setModelo(m);
+    void guardarModelo(m).then((r) => {
+      if (!r.ok) setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
+    });
   }, []);
 
-  const alLeerLibro = useCallback(async () => {
-    setLeyendo(true);
+  const simular = useCallback(async () => {
+    if (!modelo) return;
+    cancelado.current = false;
+    setSimulando(true);
     setError(null);
-    setInforme(null);
-    setEstadisticas(null);
-    setProgreso('Leyendo hojas…');
+    setResultado(null);
+    setAvance({ fase: 'resolviendo', mensaje: 'Preparando…' });
+
     try {
-      const libro = await leerLibro({
-        progreso: (hechas, total) => setProgreso(`Leyendo hojas… ${hechas} de ${total}`),
+      const r = await ejecutarSimulacion({
+        modelo,
+        progreso: setAvance,
+        debeCancelar: () => cancelado.current,
       });
-      setEstadisticas(libro.estadisticas);
-      setProgreso('Analizando fórmulas…');
-      setInforme(analizarCompatibilidad(libro.formulas));
+      setResultado(r);
+      if (r.ok) setPestana('resultados');
     } catch (e) {
       setError(mensajeDe(e));
     } finally {
-      setProgreso(null);
-      setLeyendo(false);
+      setAvance(null);
+      setSimulando(false);
     }
-  }, []);
+  }, [modelo]);
 
   return (
     <main>
       <header>
         <h1>Riesgo Monte Carlo</h1>
-        <p className="version">Panel de diagnóstico · E3</p>
+        <nav className="pestanas">
+          {(['modelo', 'resultados', 'diagnostico'] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={p === pestana ? 'activa' : ''}
+              onClick={() => setPestana(p)}
+              disabled={p === 'resultados' && !(resultado?.ok === true)}
+            >
+              {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
+            </button>
+          ))}
+        </nav>
       </header>
 
       {error && (
@@ -86,133 +123,88 @@ export function Panel() {
         </section>
       )}
 
-      <section>
-        <h2>Entorno</h2>
-        {!entorno ? (
-          <p className="tenue">Leyendo…</p>
+      {resultado && !resultado.ok && (
+        <section className="error">
+          <h2>{resultado.mensaje}</h2>
+          <ul className="motivos">
+            {resultado.detalles.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {avance && <Progreso avance={avance} alCancelar={() => (cancelado.current = true)} />}
+
+      {modeloInvalido && (
+        <section className="error">
+          <h2>El modelo guardado en este libro no se entiende</h2>
+          <ul className="motivos">
+            {modeloInvalido.errores.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+          <p className="tenue">
+            No se ha tocado nada. Puedes empezar un modelo nuevo —lo que hay se
+            perderá— o cerrar el panel y recuperar una copia del libro.
+          </p>
+          <pre className="ejemplos">{modeloInvalido.crudo}</pre>
+          <button
+            type="button"
+            onClick={() => {
+              setModeloInvalido(null);
+              cambiarModelo(modeloVacio());
+            }}
+          >
+            Empezar un modelo nuevo
+          </button>
+        </section>
+      )}
+
+      {pestana === 'modelo' &&
+        (modelo ? (
+          <Modelo modelo={modelo} alCambiar={cambiarModelo} alSimular={() => void simular()} ocupado={simulando} />
         ) : (
-          <>
-            <dl>
-              <dt>Host</dt><dd>{entorno.host}</dd>
-              <dt>Plataforma</dt><dd>{entorno.plataforma}</dd>
-              <dt>Versión</dt><dd>{entorno.version}</dd>
-              <dt>Idioma</dt><dd>{entorno.idioma}</dd>
-              <dt>ExcelApi</dt><dd>hasta {versionMaximaDisponible(entorno)}</dd>
-            </dl>
+          !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
+        ))}
 
-            <h3>Conjuntos de API disponibles</h3>
-            <ul className="conjuntos">
-              {entorno.conjuntos.map((c) => (
-                <li key={c.version} className={c.disponible ? 'si' : 'no'}>
-                  <span className="marca">{c.disponible ? '✓' : '✗'}</span>
-                  <span className="nombre">ExcelApi {c.version}</span>
-                  <span className="tenue">{c.para}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+      {pestana === 'resultados' && resultado?.ok === true && <Resultados resultado={resultado} />}
 
-      <section>
-        <h2>Lectura del libro</h2>
-        <p className="tenue">
-          Selecciona un rango en la hoja y pulsa el botón. Comprueba que el
-          panel puede leer fórmulas de verdad, en una sola llamada a Excel.
-        </p>
-        <button type="button" onClick={() => void alLeerSeleccion()} disabled={leyendo}>
-          {leyendo ? 'Leyendo…' : 'Leer la selección'}
-        </button>
-
-        {seleccion && (
-          <dl>
-            <dt>Dirección</dt><dd>{seleccion.direccion}</dd>
-            <dt>Hoja</dt><dd>{seleccion.hoja}</dd>
-            <dt>Tamaño</dt><dd>{seleccion.filas} × {seleccion.columnas}</dd>
-            <dt>Con fórmula</dt><dd>{seleccion.celdasConFormula}</dd>
-          </dl>
-        )}
-      </section>
-
-      <section>
-        <h2>Compatibilidad del libro</h2>
-        <p className="tenue">
-          Lee todas las hojas y analiza cada fórmula con el mismo motor que
-          hará la simulación. Debería coincidir con lo que dice{' '}
-          <code>npm run scan</code> sobre el mismo archivo: son dos caminos
-          independientes hasta la misma respuesta.
-        </p>
-        <button type="button" onClick={() => void alLeerLibro()} disabled={leyendo}>
-          {leyendo ? 'Trabajando…' : 'Analizar el libro'}
-        </button>
-        {progreso && <p className="tenue">{progreso}</p>}
-
-        {estadisticas && (
-          <dl>
-            <dt>Hojas</dt>
-            <dd>{estadisticas.hojasVisibles} visibles de {estadisticas.hojas}</dd>
-            <dt>Con contenido</dt><dd>{miles(estadisticas.celdasConContenido)} celdas</dd>
-            <dt>Recorridas</dt><dd>{miles(estadisticas.celdasRecorridas)} celdas</dd>
-            <dt>Fórmulas</dt><dd>{miles(estadisticas.formulas)}</dd>
-            <dt>Viajes a Excel</dt><dd>{estadisticas.sincronizaciones}</dd>
-            <dt>Tiempo</dt><dd>{(estadisticas.milisegundos / 1000).toFixed(2)} s</dd>
-          </dl>
-        )}
-
-        {informe && (
-          <>
-            <h3>
-              {informe.noSoportadas.length === 0
-                ? '✓ El motor sabe evaluar todas las funciones'
-                : `${informe.noSoportadas.length} función(es) sin soporte`}
-            </h3>
-            <dl>
-              <dt>Cobertura</dt><dd>{informe.cobertura} % de las fórmulas</dd>
-              <dt>Evaluables</dt>
-              <dd>{miles(informe.formulasEvaluables)} de {miles(informe.formulasAnalizadas)}</dd>
-            </dl>
-
-            {informe.noSoportadas.length > 0 && (
-              <ul className="conjuntos">
-                {informe.noSoportadas.slice(0, 20).map((f) => (
-                  <li key={f.nombre} className="no">
-                    <span className="marca">✗</span>
-                    <span className="nombre">{f.nombre}</span>
-                    <span className="tenue">{miles(f.veces)} usos · {f.ejemplo}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {informe.formulasConErrorDeSintaxis > 0 && (
-              <>
-                {/*
-                  Esto no es un problema del libro sino del parser del motor:
-                  una fórmula válida en Excel que aquí no se entiende. Es
-                  información valiosa y por eso se enseña aparte, con ejemplos.
-                */}
-                <h3>
-                  {miles(informe.formulasConErrorDeSintaxis)} fórmula(s) que el
-                  motor no supo leer
-                </h3>
-                <p className="tenue">
-                  Son válidas en Excel; es el parser del motor el que se queda
-                  corto. Estos ejemplos hacen falta para arreglarlo:
-                </p>
-                <pre className="ejemplos">
-                  {informe.ejemplosDeErrorDeSintaxis.join('\n')}
-                </pre>
-              </>
-            )}
-          </>
-        )}
-      </section>
+      {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}
     </main>
   );
 }
 
-function miles(n: number): string {
-  return n.toLocaleString('es-ES');
+/**
+ * El progreso. Con Excel en el bucle **se dice el ritmo medido y lo que
+ * falta**, no una barra sin números: la diferencia entre esperar dos minutos
+ * y esperar dos horas la tiene que saber el usuario mientras espera, no
+ * después.
+ */
+function Progreso({ avance, alCancelar }: { avance: AvanceSimulacion; alCancelar: () => void }) {
+  const pct = porcentaje(avance.completadas ?? 0, avance.totales ?? 0);
+  const restantes = (avance.totales ?? 0) - (avance.completadas ?? 0);
+  const ritmo = avance.iteracionesPorSegundo;
+
+  return (
+    <section className="progreso">
+      <p>{avance.mensaje}</p>
+      {avance.totales !== undefined && (
+        <>
+          <div className="barra" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+            <div className="relleno" style={{ width: `${pct}%` }} />
+          </div>
+          <p className="tenue">
+            {miles(avance.completadas ?? 0)} de {miles(avance.totales)}
+            {ritmo !== undefined && ritmo > 0 && ` · ${miles(ritmo)} it/s · quedan ${duracion((restantes / ritmo) * 1000)}`}
+          </p>
+        </>
+      )}
+      <button type="button" className="plano" onClick={alCancelar}>
+        Cancelar
+      </button>
+    </section>
+  );
 }
 
 /**

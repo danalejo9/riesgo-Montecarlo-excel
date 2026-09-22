@@ -1,0 +1,301 @@
+/**
+ * La pestaña del modelo: qué celdas son inciertas, qué se está midiendo y con
+ * cuántas iteraciones.
+ *
+ * Es la parte del complemento con la que el usuario pasa más tiempo, así que
+ * dos decisiones la gobiernan:
+ *
+ * **Se marca desde la selección, no escribiendo direcciones.** El usuario ya
+ * tiene el cursor en la celda que le preocupa; pedirle que teclee `Flujo!D12`
+ * es pedirle que se equivoque. El botón lee la selección, y si hay más de una
+ * celda lo dice en vez de quedarse con la primera.
+ *
+ * **Se guarda solo, en el libro.** No hay botón de guardar: cada cambio
+ * confirmado va a `workbook.settings`. Un panel que se puede cerrar sin querer
+ * —y en Excel se cierra sin querer— no debe poder perder el trabajo de nadie.
+ */
+
+import { useCallback, useState } from 'react';
+
+import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
+import {
+  describirDistribucion,
+  generarId,
+  resumirDistribucion,
+  type DistributionSpec,
+  type EntradaRiskModel,
+  type ModeloRiesgo,
+  type SalidaRiskModel,
+} from '../engine/modelo/index.ts';
+import { EditorDistribucion } from './EditorDistribucion.tsx';
+import { miles } from './formato.ts';
+
+const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangular')?.porDefecto ?? {
+  type: 'triangular',
+  min: 0,
+  mode: 1,
+  max: 2,
+};
+
+/**
+ * La distribución que se propone al marcar una celda: una triangular de ±10 %
+ * **alrededor del valor que ya tiene**.
+ *
+ * No es una estimación de nada —el usuario tiene que ajustarla— pero es un
+ * punto de partida con el orden de magnitud correcto. Proponer (0; 1; 2) sobre
+ * una celda que vale 1.200 obliga a borrar tres campos antes de poder pensar,
+ * y con diez entradas eso es treinta campos.
+ *
+ * Con un cero o con una celda que no sea un número no hay magnitud de la que
+ * partir, así que se deja la genérica en vez de inventar una.
+ */
+function distribucionInicial(valor: number | undefined): DistributionSpec {
+  if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
+  const margen = Math.abs(valor) * 0.1;
+  return { type: 'triangular', min: valor - margen, mode: valor, max: valor + margen };
+}
+
+export function Modelo({
+  modelo,
+  alCambiar,
+  alSimular,
+  ocupado,
+}: {
+  modelo: ModeloRiesgo;
+  alCambiar: (m: ModeloRiesgo) => void;
+  alSimular: () => void;
+  ocupado: boolean;
+}) {
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<string | null>(null);
+
+  /** La celda seleccionada, o un aviso de por qué no vale. */
+  const celdaSeleccionada = useCallback(async (): Promise<SeleccionLeida | null> => {
+    setAviso(null);
+    const sel = await leerSeleccion();
+    if (sel.filas * sel.columnas !== 1) {
+      setAviso(`Has seleccionado ${sel.filas} × ${sel.columnas} celdas. Selecciona una sola.`);
+      return null;
+    }
+    return sel;
+  }, []);
+
+  const anadirEntrada = useCallback(async () => {
+    const sel = await celdaSeleccionada();
+    if (!sel) return;
+    const ref = sel.direccion;
+    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
+      setAviso(`${ref} ya está en el modelo.`);
+      return;
+    }
+    const entrada: EntradaRiskModel = {
+      id: generarId('in'),
+      name: ref,
+      ref,
+      dist: distribucionInicial(sel.valor),
+      correlations: [],
+    };
+    alCambiar({ ...modelo, inputs: [...modelo.inputs, entrada] });
+    setAbierta(entrada.id);
+  }, [modelo, alCambiar, celdaSeleccionada]);
+
+  const anadirSalida = useCallback(async () => {
+    const sel = await celdaSeleccionada();
+    if (!sel) return;
+    const ref = sel.direccion;
+    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
+      setAviso(`${ref} ya está en el modelo.`);
+      return;
+    }
+    const salida: SalidaRiskModel = { id: generarId('out'), name: ref, ref };
+    alCambiar({ ...modelo, outputs: [...modelo.outputs, salida] });
+  }, [modelo, alCambiar, celdaSeleccionada]);
+
+  const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
+    alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === id ? { ...e, ...cambio } : e)) });
+
+  const listo = modelo.inputs.length > 0 && modelo.outputs.length > 0;
+
+  return (
+    <>
+      {aviso && <p className="aviso-linea">{aviso}</p>}
+
+      <section>
+        <h2>Entradas inciertas</h2>
+        <p className="tenue">
+          Las celdas cuyo valor no conoces. Selecciona una en la hoja y añádela.
+        </p>
+
+        {modelo.inputs.length === 0 && <p className="tenue">Todavía no hay ninguna.</p>}
+
+        <ul className="fichas">
+          {modelo.inputs.map((entrada) => (
+            <li key={entrada.id}>
+              <div className="cabecera">
+                <button
+                  type="button"
+                  className="plano"
+                  onClick={() => setAbierta(abierta === entrada.id ? null : entrada.id)}
+                >
+                  {abierta === entrada.id ? '▾' : '▸'} {entrada.name}
+                </button>
+                <span className="tenue">{resumirDistribucion(entrada.dist)}</span>
+                <button
+                  type="button"
+                  className="plano borrar"
+                  title="Quitar del modelo"
+                  onClick={() => alCambiar({ ...modelo, inputs: modelo.inputs.filter((e) => e.id !== entrada.id) })}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {abierta === entrada.id && (
+                <div className="detalle">
+                  <label className="campo ancho">
+                    <span className="tenue">Nombre</span>
+                    <input
+                      type="text"
+                      value={entrada.name}
+                      onChange={(e) => cambiarEntrada(entrada.id, { name: e.target.value })}
+                    />
+                  </label>
+                  <p className="tenue">Celda: {entrada.ref}</p>
+                  <EditorDistribucion
+                    spec={entrada.dist}
+                    alCambiar={(dist) => cambiarEntrada(entrada.id, { dist })}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+
+        <button type="button" onClick={() => void anadirEntrada()} disabled={ocupado}>
+          Añadir la selección como entrada
+        </button>
+      </section>
+
+      <section>
+        <h2>Salidas</h2>
+        <p className="tenue">Lo que quieres medir: el resultado del que verás la distribución.</p>
+
+        {modelo.outputs.length === 0 && <p className="tenue">Todavía no hay ninguna.</p>}
+
+        <ul className="fichas">
+          {modelo.outputs.map((salida) => (
+            <li key={salida.id}>
+              <div className="cabecera">
+                <input
+                  type="text"
+                  className="nombre-suelto"
+                  value={salida.name}
+                  onChange={(e) =>
+                    alCambiar({
+                      ...modelo,
+                      outputs: modelo.outputs.map((s) =>
+                        s.id === salida.id ? { ...s, name: e.target.value } : s,
+                      ),
+                    })
+                  }
+                />
+                <span className="tenue">{salida.ref}</span>
+                <button
+                  type="button"
+                  className="plano borrar"
+                  title="Quitar del modelo"
+                  onClick={() => alCambiar({ ...modelo, outputs: modelo.outputs.filter((s) => s.id !== salida.id) })}
+                >
+                  ✕
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <button type="button" onClick={() => void anadirSalida()} disabled={ocupado}>
+          Añadir la selección como salida
+        </button>
+      </section>
+
+      <section>
+        <h2>Ajustes</h2>
+        <div className="parametros">
+          <label className="campo">
+            <span className="tenue">Iteraciones</span>
+            <select
+              value={modelo.settings.iterations}
+              onChange={(e) =>
+                alCambiar({ ...modelo, settings: { ...modelo.settings, iterations: Number(e.target.value) } })
+              }
+            >
+              {[1_000, 10_000, 100_000, 1_000_000].map((n) => (
+                <option key={n} value={n}>
+                  {miles(n)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="campo">
+            <span className="tenue">Semilla</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              defaultValue={String(modelo.settings.seed)}
+              onBlur={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n)) {
+                  alCambiar({ ...modelo, settings: { ...modelo.settings, seed: Math.trunc(n) } });
+                }
+              }}
+            />
+            <span className="tenue ayuda">La misma semilla da el mismo resultado.</span>
+          </label>
+
+          <label className="campo">
+            <span className="tenue">Muestreo</span>
+            <select
+              value={modelo.settings.sampling}
+              onChange={(e) =>
+                alCambiar({
+                  ...modelo,
+                  settings: { ...modelo.settings, sampling: e.target.value as ModeloRiesgo['settings']['sampling'] },
+                })
+              }
+            >
+              <option value="monte-carlo">Monte Carlo</option>
+              <option value="lhs">Hipercubo latino</option>
+            </select>
+          </label>
+
+          <label className="campo">
+            <span className="tenue">Motor</span>
+            <select
+              value={modelo.settings.engine}
+              onChange={(e) =>
+                alCambiar({
+                  ...modelo,
+                  settings: { ...modelo.settings, engine: e.target.value as ModeloRiesgo['settings']['engine'] },
+                })
+              }
+            >
+              <option value="auto">Automático</option>
+              <option value="fast">Rápido</option>
+              <option value="compatible">Compatible (Excel en el bucle)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <button type="button" className="principal" onClick={alSimular} disabled={ocupado || !listo}>
+          {ocupado ? 'Simulando…' : 'Simular'}
+        </button>
+        {!listo && (
+          <p className="tenue">Hace falta al menos una entrada y una salida.</p>
+        )}
+      </section>
+    </>
+  );
+}

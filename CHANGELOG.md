@@ -5,6 +5,55 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### El ciclo completo: definir un modelo, simular y ver resultados (2026-09-22)
+
+El complemento deja de ser un panel de diagnóstico. Marcar celdas inciertas,
+darles una distribución, marcar lo que se quiere medir, simular y leer la
+curva de probabilidad: el MVP de E3, entero, salvo su verificación en Excel.
+
+**Añadido**
+
+- **`engine/modelo/eleccionMotor.ts`** — decide si puede el motor rápido
+  **antes** de simular, y si no, lo dice con nombre de celda: "Flujo!D12 usa
+  YEARFRAC". Predice exactamente los cinco rechazos del evaluador, y cada uno
+  se prueba dos veces: que lo señale, y que el evaluador de verdad falle.
+- **`excel/almacenModelo.ts`** — el `RiskModel v1` guardado **en el libro**,
+  no en el navegador: el modelo es trabajo del usuario y viaja con el archivo.
+- **`excel/resolverRef.ts`** — lo que `prepararEntradas` esperaba inyectado
+  desde E3. Direcciones y nombres definidos, en un viaje.
+- **`excel/ejecutarSimulacion.ts`** — la coreografía completa, con un tipo de
+  error por cada cosa que el usuario puede arreglar.
+- **`engine/modelo/catalogoDistribuciones.ts`** — las trece distribuciones
+  descritas en español, para que el panel las pinte sin un `switch` de trece
+  ramas. Atado con un test, como el catálogo del escáner.
+- **El panel**: pestañas Modelo / Resultados / Diagnóstico, editor de
+  distribuciones, ajustes, progreso con ritmo medido y cancelación, y la curva
+  de probabilidad acumulada en SVG con cursor de lectura.
+- **`ui/banco/`: un banco de pruebas con un Excel de mentira**, para poder
+  desarrollar el panel sin Excel. Se abre en `/banco/` con `npm run
+  dev-server`. Dice de sí mismo lo que no puede probar.
+
+**Corregido**
+
+- **Los valores estáticos del libro no llegaban al motor.** `construirGrafo`
+  solo recibía fórmulas, así que una celda sin fórmula se evaluaba como vacía.
+  En un libro de juguete daba igual —las constantes viven dentro de las
+  fórmulas— pero en un modelo real los datos están en celdas y las fórmulas los
+  referencian: media hoja valía cero sin avisar.
+- El lexer rechazaba las letras no ASCII, de modo que un nombre definido
+  `Año_base` salía como error de sintaxis, que el informe presenta como un
+  fallo *del motor*.
+
+**Decidido**
+
+- **La distribución que se propone al marcar una celda va alrededor del valor
+  que ya tiene** (triangular de ±10 %). Proponer (0; 1; 2) sobre una celda que
+  vale 1.200 obliga a borrar tres campos antes de poder pensar.
+- **No hay botón de guardar**: cada cambio confirmado va al libro. Un panel que
+  se cierra sin querer no debe poder perder el trabajo de nadie.
+- **Un modelo guardado que no se entiende no se pisa en silencio**: se enseña
+  el problema y el JSON crudo, y decide el usuario.
+
 ### Modo compatible: Excel dentro del bucle (2026-09-22)
 
 La red de seguridad del producto (decisión 15), construida entera: un libro

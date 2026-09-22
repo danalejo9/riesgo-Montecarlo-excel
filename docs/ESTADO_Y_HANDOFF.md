@@ -594,34 +594,98 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     otra máquina. `medirRitmoEnExcel` existe justamente para sustituir ese
     número supuesto por uno medido en cuanto haya Excel delante.
 
+18. [~] **El ciclo completo y el panel del MVP (2026-09-22)** — el
+    complemento deja de ser un panel de diagnóstico.
+
+    Lo que faltaba no era motor: era la coreografía y la interfaz. Ahora se
+    marcan celdas inciertas desde la selección, se les da una distribución, se
+    marca lo que se quiere medir, se simula y se lee la curva.
+
+    **`engine/modelo/eleccionMotor.ts`: decir que no puede el rápido, antes.**
+    Predice cuál de los cinco rechazos del evaluador va a ocurrir —función
+    desconocida, fórmula matricial, nombre sin resolver, constante matricial,
+    error de sintaxis— recorriendo el subgrafo necesario para las salidas, y lo
+    dice con nombre de celda. Cada caso se prueba **dos veces**: que lo señale,
+    y que el evaluador de verdad falle con esa fórmula. Predecir de más manda
+    al modo lento a quien no lo necesita; de menos, promete una simulación que
+    va a fallar a mitad. Avisa además de una salida que no depende de ninguna
+    entrada, que casi siempre es una celda mal marcada.
+
+    **Los adaptadores que faltaban**: `almacenModelo.ts` (el `RiskModel v1`
+    dentro del libro, porque el modelo es trabajo del usuario y tiene que
+    viajar con el archivo), `resolverRef.ts` (direcciones y nombres definidos,
+    un viaje) y `ejecutarSimulacion.ts` (la coreografía, con un tipo de error
+    por cada cosa que el usuario puede arreglar).
+
+    **El panel**: pestañas Modelo / Resultados / Diagnóstico; editor de
+    distribuciones que se pinta solo desde `CATALOGO_DISTRIBUCIONES`; ajustes;
+    progreso con ritmo medido y cancelación de verdad; y la curva de
+    probabilidad acumulada en SVG, con cursor de lectura. La CDF y no el
+    histograma porque contesta la pregunta que se hace delante de un análisis
+    de riesgo —*¿qué probabilidad hay de pasarme de X?*— y porque el histograma
+    por bloques sigue sin existir.
+
+    **Un hueco real, encontrado construyendo esto: los valores estáticos del
+    libro no llegaban al motor.** `construirGrafo` solo recibía fórmulas, así
+    que una celda sin fórmula se evaluaba como vacía. En los tests y en el
+    libro de fidelidad daba igual, porque las constantes viven dentro de las
+    fórmulas; en un modelo real los datos están en celdas y las fórmulas los
+    referencian, de modo que media hoja valía cero **sin avisar de nada**. El
+    grafo lleva ahora el valor de las celdas sin fórmula, por los dos
+    evaluadores, y una celda de verdad vacía sigue siendo vacía y no cero.
+
+    **`ui/banco/`: un Excel de mentira.** Como la verificación en Excel está
+    aplazada, el panel se desarrolla y se mira sobre un libro falso servido en
+    `/banco/`. Se ha ejecutado el ciclo completo en un navegador real, con los
+    dos motores: 10.000 iteraciones por el rápido en 26 ms y 1.000 por el
+    compatible, **con la misma mediana** (71,2 mil) — que es la comprobación
+    que valida que las dos rutas simulan el mismo modelo con la misma semilla.
+    El banco dice de sí mismo lo que **no** puede probar: como sus propiedades
+    están disponibles sin esperar al `sync()`, no caza un `load` sin su `sync`,
+    que es el error más típico de Office.js.
+
+    **Dos decisiones de producto que se ven:**
+    - La distribución que se propone al marcar una celda va **alrededor del
+      valor que ya tiene** (triangular de ±10 %). Proponer (0; 1; 2) sobre una
+      celda que vale 1.200 obliga a borrar tres campos antes de poder pensar.
+    - **No hay botón de guardar.** Cada cambio confirmado va al libro; un panel
+      que se cierra sin querer no debe poder perder el trabajo de nadie. Y un
+      modelo guardado que no se entiende no se pisa en silencio: se enseña el
+      problema y el JSON crudo.
+
+    **Lo que sigue sin verificarse**: todo `excel/` dentro de Excel. Y el panel
+    no edita todavía las **correlaciones**, que el motor sí sabe aplicar
+    (Iman–Conover, `engine/modelo/correlaciones.ts`): hoy solo se pueden
+    declarar editando el JSON del modelo a mano.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar el modo compatible dentro de Excel** (punto 17). Es lo único que
-   puede invalidar lo recién construido, y son tres preguntas concretas: ¿el
-   `recalculate` encolado surte efecto antes del `sync`?, ¿se puede cambiar el
-   modo de cálculo?, ¿cuántas iteraciones por segundo da un libro real? Ese
-   último número es el que decide si el modo compatible se ofrece con 10.000
-   iteraciones o con 1.000.000.
-2. **Decidir de dónde sale la configuración regional** (ver el punto 14). Ya
-   está decidido con el usuario —de Office, guardándola en el libro— y falta
-   implementarlo ahora que el adaptador de Office.js puede suministrar el
-   dato. Hasta entonces el motor da `"1.5"` donde su Excel da `"1,5"` y el
-   caso N1-049 sigue pendiente.
-3. **Una tercera tanda del libro de fidelidad**, con lo que dejó sin cubrir la
-   segunda: `SI.ND` (que se cayó por el prefijo `_xlfn.`), un criterio `"<>5"`
-   numérico contra una celda vacía, y todo el punto 16 — `BUSCARV` aproximado
-   sobre tabla desordenada, `TASA`, `TIR.NO.PER`, y el convenio de signos de
-   `PAGOINT`/`PAGOPRIN` con pagos al principio del periodo.
-4. **El resto de los adaptadores de Office.js**: el escritor de resultados y
-   `resolverRef` (rango con nombre → clave de celda), que `prepararEntradas`
-   espera inyectado desde E3.
+1. **Probar el ciclo completo dentro de Excel.** Ya no son tres preguntas
+   sueltas del modo compatible: es el producto entero de una pasada. Marcar dos
+   celdas de un libro real, simular por el rápido, mirar la curva; y luego
+   forzar el compatible y ver **cuántas iteraciones por segundo** da. Ese
+   número decide si el modo compatible se ofrece con 10.000 iteraciones o con
+   un millón. Del modo compatible siguen abiertas las otras dos: si el
+   `recalculate` encolado surte efecto antes del `sync`, y si se puede cambiar
+   el modo de cálculo sin permisos extra.
+2. **Las correlaciones en el panel.** El motor las aplica desde Fase 2 y hoy no
+   hay forma de declararlas sin editar JSON a mano: una capacidad construida y
+   entera que el usuario no puede usar.
+3. **La configuración regional** (punto 14). Decidida —de Office, guardada en
+   el libro— y ahora implementable, porque el adaptador ya puede suministrar el
+   dato. Cierra el caso N1-049 y la coma decimal del Excel es-ES.
+4. **Una tercera tanda del libro de fidelidad**: `SI.ND` (que se cayó por el
+   prefijo `_xlfn.`), un criterio `"<>5"` numérico contra una celda vacía, y
+   todo el punto 16 — `BUSCARV` aproximado sobre tabla desordenada, `TASA`,
+   `TIR.NO.PER`, y el convenio de signos de `PAGOINT`/`PAGOPRIN`.
 5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**. El escáner las
    señala como lo único que impide el 100 %; el usuario cree que son
-   `SUMAPRODUCTO`. Falta que las pase para saber si basta con implementar la
-   multiplicación elemento a elemento en contexto matricial.
+   `SUMAPRODUCTO`. Falta que las pase.
 6. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
    `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
+7. **El escritor de resultados** (volcar la simulación a una hoja nueva) y el
+   histograma por bloques que `engine/stats/resumen.ts` documenta como hueco.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -647,8 +711,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   (`libroCalculable.ts`, `simulacionCompatible.ts`) y el `AlmacenGuardian`
   real (`almacenGuardian.ts`). **Nada de esta carpeta se ha ejecutado dentro
   de Excel más allá del panel de diagnóstico** (ver punto 17).
-- `ui/` — el panel React, servido por Vite desde `ui/` como raíz.
-- `tests/unit/` — Vitest. **524 tests en verde**, 2 saltados y documentados
+- `ui/` — el panel React (Modelo / Resultados / Diagnóstico), servido por Vite
+  desde `ui/` como raíz. `ui/banco/` es el banco de pruebas con un Excel de
+  mentira, en `/banco/`: sirve para desarrollar la interfaz sin Excel y dice de
+  sí mismo lo que no puede probar.
+- `tests/unit/` — Vitest. **568 tests en verde**, 2 saltados y documentados
   por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es `tsc -b && vite build` desde E3.

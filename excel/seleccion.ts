@@ -20,6 +20,14 @@ export interface SeleccionLeida {
   formulas: string[][];
   /** Cuántas celdas de la selección tienen de verdad una fórmula. */
   celdasConFormula: number;
+  /**
+   * El valor de la celda, si la selección es una sola y contiene un número.
+   *
+   * Lo usa el panel para proponer una distribución **alrededor de lo que ya
+   * hay**: una triangular (0; 1; 2) sobre una celda que vale 1.200 no es un
+   * punto de partida, es un estorbo que el usuario tiene que borrar.
+   */
+  valor?: number;
 }
 
 export async function leerSeleccion(): Promise<SeleccionLeida> {
@@ -28,7 +36,7 @@ export async function leerSeleccion(): Promise<SeleccionLeida> {
     const hoja = rango.worksheet;
 
     // Todo lo que se necesita, pedido de una vez.
-    rango.load(['address', 'rowCount', 'columnCount', 'formulas']);
+    rango.load(['address', 'rowCount', 'columnCount', 'formulas', 'values']);
     hoja.load('name');
     await context.sync();
 
@@ -42,7 +50,11 @@ export async function leerSeleccion(): Promise<SeleccionLeida> {
       }),
     );
 
+    const crudo = (rango.values as unknown[][])?.[0]?.[0];
+    const unaSola = rango.rowCount === 1 && rango.columnCount === 1;
+
     return {
+      valor: unaSola && typeof crudo === 'number' ? crudo : undefined,
       direccion: rango.address,
       hoja: hoja.name,
       filas: rango.rowCount,

@@ -42,6 +42,10 @@ export default defineConfig({
       input: {
         taskpane: resolve(__dirname, 'ui/taskpane.html'),
         commands: resolve(__dirname, 'ui/commands.html'),
+        // El banco de pruebas (`/banco/`): el panel sobre un Excel de mentira,
+        // para poder desarrollar la interfaz sin Excel. No lo carga el
+        // manifiesto; se abre a mano.
+        banco: resolve(__dirname, 'ui/banco/index.html'),
       },
     },
   },

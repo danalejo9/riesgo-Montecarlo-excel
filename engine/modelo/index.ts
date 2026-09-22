@@ -1,3 +1,11 @@
+export {
+  CATALOGO_DISTRIBUCIONES,
+  describirDistribucion,
+  resumirDistribucion,
+  type DescripcionDistribucion,
+  type ParametroDistribucion,
+  type TipoDistribucion,
+} from './catalogoDistribuciones.ts';
 export { agruparCorrelaciones, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
 export {
   fromDescriptor,
