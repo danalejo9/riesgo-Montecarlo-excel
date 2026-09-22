@@ -246,7 +246,14 @@ CASOS = [
     ("N2-074", "fecha", "FECHA.MES un mes después del 31 de enero", "EDATE(DATE(2026,1,31),1)",
      "A VERIFICAR. motor: 28/02/2026 (recorta al último día del mes)"),
     ("N2-075", "fecha", "FIN.MES hacia atrás", "EOMONTH(DATE(2026,3,15),-2)", "motor: 31/01/2026"),
-    ("N2-076", "fecha", "DIAS entre dos fechas", "DAYS(DATE(2026,3,1),DATE(2026,2,1))", "motor: 28"),
+    # `DIAS` (DAYS) es de Excel 2013, así que en el XML va con el prefijo
+    # `_xlfn.`, igual que `SI.ND`. Sin él, Excel la toma por una función
+    # definida por el usuario y devuelve #¿NOMBRE?. Pasó en la primera vuelta
+    # de esta tanda, exactamente como había pasado con `SI.ND` en la anterior:
+    # la lista de funciones que necesitan prefijo es más larga de lo que
+    # parece, y solo se descubre probándolas.
+    ("N2-076", "fecha", "DIAS entre dos fechas", "_xlfn.DAYS(DATE(2026,3,1),DATE(2026,2,1))",
+     "motor: 28"),
     ("N2-077", "fecha", "DIASEM de un martes, convenio por omisión",
      "WEEKDAY(DATE(2026,9,22))", "motor: 3 (domingo = 1)"),
     ("N2-078", "fecha", "DIASEM con convenio 2 (lunes = 1)", "WEEKDAY(DATE(2026,9,22),2)",

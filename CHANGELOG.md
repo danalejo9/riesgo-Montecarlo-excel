@@ -5,6 +5,39 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### La tercera tanda vuelve de Excel: 87 de 89 (2026-09-22)
+
+El libro calculado por el Excel real del usuario. Dos casos no coincidieron, y
+solo uno era del motor.
+
+**Corregido**
+
+- **`PAGOINT` con pagos al principio del periodo y periodo > 1.** Excel da
+  -828,878382 y el motor daba -836,787 (caso N2-032). Con pagos al principio la
+  cuota se paga **antes** de que el periodo devengue intereses, así que el
+  interés se descuenta un periodo; el motor le restaba la cuota al saldo, que
+  es otra cosa. Es el segundo fallo de esta familia en dos vueltas: la primera
+  lo encontré yo revisando signos, esta lo encontró Excel.
+- **El generador escribía `DAYS` sin el prefijo `_xlfn.`** (es de Excel 2013),
+  así que Excel la tomó por una función definida por el usuario y devolvió
+  #¿NOMBRE?. Mismo defecto que tuvo `SI.ND` en la tanda anterior: la lista de
+  funciones que necesitan prefijo es más larga de lo que parece y solo se
+  descubre probándolas. Corregido; el caso queda documentado como pendiente
+  hasta la próxima tanda en vez de darse por bueno.
+
+**Verificado contra Excel** (85 casos que ya coincidían): `TIR` con y sin
+estimación —incluido el flujo de dos raíces, donde Excel devuelve 0 con la
+estimación por omisión y 2,414 con otra, exactamente como el motor—, `VNA`,
+`TIR.NO.PER`, `VNA.NO.PER`, toda la familia de préstamos, `BUSCARV` aproximada
+**sobre tabla desordenada**, los modos ±1 de `BUSCARX` (que esta misma semana
+estaban rotos), `INDICE`, `COINCIDIR`, `ELEGIR`, `SI.ND`, el criterio `"<>5"`
+contra una celda vacía, y el 29 de febrero de 1900 que nunca existió.
+
+Y una confirmación que importa: **`TASA` no converge igual que Excel y da lo
+mismo**. El caso N2-026 esperaba un `#¡NUM!` de Excel —se rinde a las 20
+iteraciones— y Excel devolvió -0,424417, el mismo número que el motor. La
+divergencia que estaba documentada como riesgo no existe.
+
 ### Tercera tanda del libro de fidelidad, y dos fallos reales que destapó (2026-09-22)
 
 86 casos de financieras, búsquedas y fechas

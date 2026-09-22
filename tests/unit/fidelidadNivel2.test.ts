@@ -44,7 +44,15 @@ const CLAVE_FORMULA = claveDeReferencia(HOJA, CELDA_FORMULA);
  * Casos que no se pueden comparar todavía, por id y con el motivo. Igual que
  * en las tandas anteriores: nunca se descarta uno en silencio.
  */
-const PENDIENTES: Record<string, string> = {};
+const PENDIENTES: Record<string, string> = {
+  'N2-076':
+    'No verificado por un defecto del generador, no del motor: `DIAS` (DAYS) es de Excel 2013 y ' +
+    'en el XML va con el prefijo `_xlfn.`, que el generador no puso. Excel la tomó por una ' +
+    'función definida por el usuario y devolvió #¿NOMBRE?. Es la segunda vez que pasa —antes con ' +
+    '`SI.ND`— y la lección es que la lista de funciones que necesitan prefijo es más larga de lo ' +
+    'que parece y solo se descubre probándolas. Corregido en el generador; se verifica en la ' +
+    'próxima tanda. El riesgo real es bajo: `DIAS` es una resta de números de serie.',
+};
 
 /**
  * Cuántos decimales se exigen. Las financieras iterativas no pueden compararse

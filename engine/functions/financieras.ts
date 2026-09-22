@@ -450,7 +450,13 @@ function interesDe(
   if (tipo === 1 && p === 1) return 0;
 
   const saldo = saldoTras(tasa, p - 1, va, pago, tipo);
-  return -(tipo === 1 ? saldo - pago : saldo) * tasa;
+
+  // Con pagos al principio, la cuota de cada periodo se paga **antes** de que
+  // ese periodo devengue intereses, así que el interés se descuenta un
+  // periodo. Verificado contra Excel con el caso N2-032 del libro de
+  // fidelidad: `PAGOINT(0,05/12; 2; 360; 200000; 0; 1)` da -828,878382, y no
+  // los -836,787 que salían de restarle la cuota al saldo.
+  return tipo === 1 ? (-saldo * tasa) / (1 + tasa) : -saldo * tasa;
 }
 
 /** `PAGOPRIN(tasa; periodo; nper; va; [vf]; [tipo])`: la parte de capital. */
