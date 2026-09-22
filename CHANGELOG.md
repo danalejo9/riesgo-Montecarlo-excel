@@ -5,6 +5,31 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Resaltado en la hoja, libro de demostración, y el hueco más viejo cerrado (2026-09-22)
+
+**Añadido**
+
+- **`excel/resaltado.ts`**: las entradas se pintan de amarillo en la hoja y las
+  salidas de verde. El relleno anterior de cada celda se guarda en el propio
+  libro, así que quitarlo la deja exactamente como estaba —incluido "sin
+  relleno", que no es lo mismo que blanco—. No se tocan bordes ni fuentes.
+- **`ejemplos/demo-proyecto-aurora.xlsx`** y su generador: el flujo de caja a
+  cinco años de una empresa ficticia, con instrucciones de qué celdas marcar y
+  qué resultado debería salir. Probar sobre un libro del usuario mezcla dos
+  incógnitas; este lo conocemos los dos.
+
+**Corregido**
+
+- **Una salida no numérica ya no envenena las estadísticas.** Con la `TIR` como
+  salida, unas 3 de cada 1.000 iteraciones dan `#¡NUM!` —un flujo que no cambia
+  de signo no tiene tasa— y un solo `NaN` dejaba la media, la desviación y
+  todos los percentiles en `NaN`. Era el hueco que `aBufferNumerico`
+  documentaba desde que se construyó el canal de valores, aplazado a E6 por
+  tocar el formato que viaja entre workers. El libro de demostración lo
+  convirtió en un "sin datos" en pantalla y dejó de poder aplazarse: ahora se
+  cuentan, se excluyen y se enseñan, en los dos motores. El caso normal no paga
+  ni una copia de buffer.
+
 ### La tercera tanda vuelve de Excel: 87 de 89 (2026-09-22)
 
 El libro calculado por el Excel real del usuario. Dos casos no coincidieron, y

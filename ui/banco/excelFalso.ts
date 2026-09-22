@@ -88,6 +88,13 @@ function recalcular(): void {
 /** Qué celda está "seleccionada". El banco la cambia con un desplegable. */
 export const seleccion = { ref: 'B3' };
 
+/**
+ * El relleno de cada celda, que aquí no se ve pero sí se puede comprobar: el
+ * banco lo enseña como texto, y así se verifica que el resaltado pinta las
+ * celdas correctas y las despinta al quitarlas del modelo.
+ */
+export const rellenos = new Map<string, string>();
+
 function celda(ref: string): Celda {
   return (LIBRO[ref] ??= {});
 }
@@ -102,6 +109,18 @@ function tipoDeValor(v: Celda['valor']): string {
 function rangoFalso(ref: string) {
   const objetivo = celda(ref);
   return {
+    format: {
+      fill: {
+        get color() {
+          return rellenos.get(ref) ?? '';
+        },
+        set color(v: string) {
+          rellenos.set(ref, v);
+        },
+        clear: () => rellenos.delete(ref),
+        load: () => {},
+      },
+    },
     address: `${HOJA}!${ref}`,
     rowCount: 1,
     columnCount: 1,

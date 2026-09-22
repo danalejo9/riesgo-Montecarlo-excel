@@ -56,11 +56,11 @@ export interface ResultadoSalida {
   resumen: ResumenEstadistico;
   cdf: PuntoCDF[];
   /**
-   * Iteraciones en las que esta salida no dio un número. Solo lo sabe el modo
-   * compatible; en el rápido es `undefined` y no cero, porque no es lo mismo
-   * "ninguna" que "no se contaron" (hueco de `aBufferNumerico`, E6).
+   * Iteraciones en las que esta salida no dio un número: una `TIR` sin raíz,
+   * una división por cero. Excluidas de las estadísticas y contadas aparte,
+   * en los dos motores.
    */
-  noNumericas?: number;
+  noNumericas: number;
 }
 
 export interface SimulacionCompletada {
@@ -201,6 +201,7 @@ function porElRapido(
             s?.digest ?? { compresion: 100, centroides: [], pesoTotal: 0, min: Infinity, max: -Infinity },
           ),
           cdf: s ? curvaCDF(s.digest) : [],
+          noNumericas: s?.noNumericas ?? 0,
         };
       }),
     };

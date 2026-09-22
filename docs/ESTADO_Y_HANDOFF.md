@@ -658,34 +658,73 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (Iman–Conover, `engine/modelo/correlaciones.ts`): hoy solo se pueden
     declarar editando el JSON del modelo a mano.
 
+19. [~] **Verificación en Excel, resaltado y libro de demostración (2026-09-22)**
+
+    La tercera tanda del libro de fidelidad volvió calculada por el Excel real
+    del usuario: **87 de 89**. Los dos fallos y lo que enseñan están en el
+    CHANGELOG; lo que importa aquí es que **`TIR`, `VAN`, `TIR.NO.PER`, toda la
+    familia de préstamos y todas las búsquedas están ahora verificadas contra
+    Excel**, no contra mi lectura de la documentación.
+
+    **Resaltado en la hoja** (`excel/resaltado.ts`). Sin él, el modelo solo
+    existía en el panel: se marcaba `C5` como entrada y la hoja no se enteraba.
+    Ahora las entradas se pintan de amarillo y las salidas de verde —el
+    convenio de décadas en modelización financiera— y el relleno anterior de
+    cada celda se guarda **en el propio libro**, de modo que quitar el
+    resaltado la deja exactamente como estaba, incluido "sin relleno", que no
+    es lo mismo que blanco. No se tocan bordes ni fuentes: restaurarlos
+    fielmente exigiría guardar ocho propiedades por celda y el relleno se ve
+    igual de bien.
+
+    **Libro de demostración** (`ejemplos/generar-demo.py` →
+    `demo-proyecto-aurora.xlsx`). Probar sobre un libro real del usuario mezcla
+    dos incógnitas —¿falla el complemento o falla el modelo?— y obliga a tocar
+    un archivo que le importa. Este lo conocemos los dos: una empresa ficticia
+    con precio, unidades, crecimiento, costes, amortización, impuestos y valor
+    residual, sin una sola función rara, con una hoja de instrucciones que dice
+    qué celdas marcar y **qué resultado debería salir**.
+
+    **Un fallo real que destapó la demo, y que era el hueco más viejo
+    documentado del proyecto.** Con la `TIR` como salida, unas 3 de cada 1.000
+    iteraciones dan `#¡NUM!` —un flujo que no cambia de signo no tiene tasa— y
+    **un solo `NaN` dejaba la media, la desviación y todos los percentiles en
+    `NaN`**. Es el hueco que `aBufferNumerico` documentaba desde el canal de
+    valores y que se había aplazado a E6 por tocar el formato que viaja entre
+    workers. La demo lo convirtió en un "sin datos" en la pantalla, así que se
+    arregló: `ParcialSalida` gana `noNumericas`, el conteo se suma bloque a
+    bloque y el panel lo enseña. Los dos motores lo cuentan igual, y el caso
+    normal —ninguna mala— no paga ni una copia de buffer.
+
+    **Pedido por el usuario y no hecho todavía**: botones en la cinta de Excel
+    (pestaña Riesgo) que abran directamente Modelo, Resultados o Diagnóstico.
+    Hoy la cinta solo abre el panel. Exige tocar el manifiesto, añadir iconos y
+    un comando por botón; está anotado a petición suya para más adelante.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar el ciclo completo dentro de Excel.** Ya no son tres preguntas
-   sueltas del modo compatible: es el producto entero de una pasada. Marcar dos
-   celdas de un libro real, simular por el rápido, mirar la curva; y luego
-   forzar el compatible y ver **cuántas iteraciones por segundo** da. Ese
-   número decide si el modo compatible se ofrece con 10.000 iteraciones o con
-   un millón. Del modo compatible siguen abiertas las otras dos: si el
-   `recalculate` encolado surte efecto antes del `sync`, y si se puede cambiar
-   el modo de cálculo sin permisos extra.
+1. **El libro de demostración, dentro de Excel.** Es la prueba end-to-end que
+   falta: marcar las cinco entradas y las tres salidas que dicen sus
+   instrucciones, simular por el rápido y comparar con los valores que la hoja
+   anuncia. Y después forzar el modo compatible para medir **cuántas
+   iteraciones por segundo** da una máquina real — el único número del que
+   depende cómo se ofrece ese modo, y que sigue siendo una suposición.
 2. **Las correlaciones en el panel.** El motor las aplica desde Fase 2 y hoy no
-   hay forma de declararlas sin editar JSON a mano: una capacidad construida y
-   entera que el usuario no puede usar.
-3. **La configuración regional** (punto 14). Decidida —de Office, guardada en
-   el libro— y ahora implementable, porque el adaptador ya puede suministrar el
-   dato. Cierra el caso N1-049 y la coma decimal del Excel es-ES.
-4. **Una tercera tanda del libro de fidelidad**: `SI.ND` (que se cayó por el
-   prefijo `_xlfn.`), un criterio `"<>5"` numérico contra una celda vacía, y
-   todo el punto 16 — `BUSCARV` aproximado sobre tabla desordenada, `TASA`,
-   `TIR.NO.PER`, y el convenio de signos de `PAGOINT`/`PAGOPRIN`.
-5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**. El escáner las
-   señala como lo único que impide el 100 %; el usuario cree que son
-   `SUMAPRODUCTO`. Falta que las pase.
-6. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
+   hay forma de declararlas sin editar JSON a mano: una capacidad entera que el
+   usuario no puede usar.
+3. **Botones en la cinta** (Modelo / Resultados / Diagnóstico), pedidos por el
+   usuario. Manifiesto, iconos y un comando por botón.
+4. **La configuración regional** (punto 14). Decidida —de Office, guardada en
+   el libro— y ya implementable.
+5. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.` (lo
+   único que quedó sin verificar de la tercera) y lo que traiga el Nivel 2 de
+   texto cuando se implemente.
+6. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**, que siguen siendo
+   lo único que impide el 100 % en ese libro.
+7. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
    `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
-7. **El escritor de resultados** (volcar la simulación a una hoja nueva) y el
-   histograma por bloques que `engine/stats/resumen.ts` documenta como hueco.
+8. **El escritor de resultados** (volcar la simulación a una hoja nueva) y el
+   histograma por bloques.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -715,7 +754,8 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   desde `ui/` como raíz. `ui/banco/` es el banco de pruebas con un Excel de
   mentira, en `/banco/`: sirve para desarrollar la interfaz sin Excel y dice de
   sí mismo lo que no puede probar.
-- `tests/unit/` — Vitest. **568 tests en verde**, 2 saltados y documentados
+- `ejemplos/` — el libro de demostración y su generador.
+- `tests/unit/` — Vitest. **656 tests en verde**, 2 saltados y documentados
   por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es `tsc -b && vite build` desde E3.

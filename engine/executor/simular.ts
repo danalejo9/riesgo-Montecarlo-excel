@@ -38,6 +38,11 @@ export interface OpcionesSimulacion {
 export interface SalidaSimulada {
   welford: EstadoWelford;
   digest: TDigest;
+  /**
+   * Iteraciones en las que la salida no dio un número utilizable, excluidas de
+   * `welford` y de `digest`. Ver `ParcialSalida.noNumericas`.
+   */
+  noNumericas: number;
 }
 
 export type ResultadoSimulacion =
@@ -76,9 +81,11 @@ export async function simularPorBloques(
 
   const acumuladoWelford = new Map<string, EstadoWelford>();
   const digestsPorSalida = new Map<string, TDigest[]>();
+  const noNumericasPorSalida = new Map<string, number>();
   for (const clave of plan.salidas) {
     acumuladoWelford.set(clave, crearWelford());
     digestsPorSalida.set(clave, []);
+    noNumericasPorSalida.set(clave, 0);
   }
 
   let completadas = 0;
@@ -100,6 +107,7 @@ export async function simularPorBloques(
           if (!p) continue;
           acumuladoWelford.set(clave, combinar(acumuladoWelford.get(clave) as EstadoWelford, p.welford));
           (digestsPorSalida.get(clave) as TDigest[]).push(p.digest);
+          noNumericasPorSalida.set(clave, (noNumericasPorSalida.get(clave) as number) + (p.noNumericas ?? 0));
         }
       }
 
@@ -116,6 +124,7 @@ export async function simularPorBloques(
     porSalida.set(clave, {
       welford: acumuladoWelford.get(clave) as EstadoWelford,
       digest: combinarTDigest(digestsPorSalida.get(clave) as TDigest[], compresionTDigest),
+      noNumericas: noNumericasPorSalida.get(clave) as number,
     });
   }
 

@@ -38,13 +38,39 @@ export function calcularBloque(
 
   const parcial: ResultadoBloque = new Map();
   for (const clave of plan.salidas) {
-    // Una salida tiene que ser numérica para poder reducirse a estadísticas;
-    // ver el hueco documentado en `aBufferNumerico`.
     const buffer = aBufferNumerico(r.valores.get(clave) as Columna, bloque.largo);
+    const { utiles, noNumericas } = separarUtilizables(buffer);
     parcial.set(clave, {
-      welford: acumular(crearWelford(), buffer),
-      digest: tdigestDeBuffer(buffer, compresionTDigest),
+      welford: acumular(crearWelford(), utiles),
+      digest: tdigestDeBuffer(utiles, compresionTDigest),
+      noNumericas,
     });
   }
   return { ok: true, parcial };
+}
+
+/**
+ * Aparta lo que no es un número utilizable antes de reducir a estadísticas.
+ *
+ * `aBufferNumerico` marca con `NaN` lo que no pudo convertir, y un solo `NaN`
+ * deja la media, la desviación y todos los percentiles en `NaN`. Con una `TIR`
+ * como salida eso pasa de verdad: un flujo que en alguna iteración no cambia
+ * de signo no tiene tasa. La respuesta correcta no es propagar el `NaN` ni
+ * fingir un cero, sino calcular con lo que sí vale y **decir cuántas no**.
+ *
+ * El caso normal —ninguna mala— no paga nada: se devuelve el mismo buffer sin
+ * copiarlo.
+ */
+function separarUtilizables(buffer: Buffer): { utiles: Buffer; noNumericas: number } {
+  let malas = 0;
+  for (let i = 0; i < buffer.length; i++) if (!Number.isFinite(buffer[i] as number)) malas++;
+  if (malas === 0) return { utiles: buffer, noNumericas: 0 };
+
+  const utiles = new Float64Array(buffer.length - malas);
+  let j = 0;
+  for (let i = 0; i < buffer.length; i++) {
+    const v = buffer[i] as number;
+    if (Number.isFinite(v)) utiles[j++] = v;
+  }
+  return { utiles, noNumericas: malas };
 }

@@ -17,6 +17,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
 import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 import {
   describirDistribucion,
@@ -216,6 +217,23 @@ export function Modelo({
         <button type="button" onClick={() => void anadirSalida()} disabled={ocupado}>
           Añadir la selección como salida
         </button>
+      </section>
+
+      <section>
+        <h2>Resaltado en la hoja</h2>
+        <p className="tenue">
+          Las entradas se pintan de amarillo y las salidas de verde, el convenio
+          de toda la vida en modelización financiera. Al quitarlo, cada celda
+          vuelve al relleno que tenía.
+        </p>
+        <div className="botonera">
+          <button type="button" onClick={() => void aplicarResaltado(modelo)} disabled={ocupado}>
+            Resaltar en la hoja
+          </button>
+          <button type="button" onClick={() => void quitarResaltado()} disabled={ocupado}>
+            Quitar el resaltado
+          </button>
+        </div>
       </section>
 
       <section>

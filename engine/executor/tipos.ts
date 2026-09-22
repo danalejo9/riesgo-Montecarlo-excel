@@ -6,6 +6,21 @@ import type { Bloque } from './bloques.ts';
 export interface ParcialSalida {
   welford: EstadoWelford;
   digest: TDigest;
+  /**
+   * Iteraciones del bloque en las que la salida no dio un número utilizable:
+   * un error de Excel (`#¡NUM!` de una `TIR` sin raíz), un texto, un infinito.
+   *
+   * **No entran en `welford` ni en `digest`.** Antes sí entraban, como `NaN`,
+   * y bastaba una para dejar la media, la desviación y todos los percentiles
+   * en `NaN` sin decir por qué. Con una `TIR` como salida eso no es un caso
+   * raro: un flujo que en algunas iteraciones no cambia de signo no tiene
+   * tasa, y Excel devuelve `#¡NUM!` con toda la razón.
+   *
+   * Contarlas y enseñarlas —"3.412 de 1.000.000 no tuvieron TIR"— es a la vez
+   * más honesto y más útil que un `NaN`. Viaja en el mensaje de cada bloque
+   * porque el hilo principal tiene que poder sumarlas.
+   */
+  noNumericas: number;
 }
 
 /** clave de celda de salida -> su parcial en un bloque concreto. */

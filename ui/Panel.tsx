@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
 import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
+import { aplicarResaltado } from '../excel/resaltado.ts';
 import {
   ejecutarSimulacion,
   type AvanceSimulacion,
@@ -67,7 +68,16 @@ export function Panel() {
   }, []);
 
   const cambiarModelo = useCallback((m: ModeloRiesgo) => {
-    setModelo(m);
+    setModelo((anterior) => {
+      // El resaltado solo se rehace cuando cambian **las celdas**, no en cada
+      // pulsación al renombrar una entrada: pintar la hoja es un viaje a Excel
+      // y hacerlo por cada tecla se nota.
+      if (anterior === null || refsDe(anterior) !== refsDe(m)) {
+        void aplicarResaltado(m).catch((e: unknown) => setError(mensajeDe(e)));
+      }
+      return m;
+    });
+
     void guardarModelo(m).then((r) => {
       if (!r.ok) setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
     });
@@ -205,6 +215,11 @@ function Progreso({ avance, alCancelar }: { avance: AvanceSimulacion; alCancelar
       </button>
     </section>
   );
+}
+
+/** Las celdas del modelo, en una cadena que se puede comparar de un vistazo. */
+function refsDe(m: ModeloRiesgo): string {
+  return [...m.inputs.map((e) => e.ref), '|', ...m.outputs.map((s) => s.ref)].join(',');
 }
 
 /**

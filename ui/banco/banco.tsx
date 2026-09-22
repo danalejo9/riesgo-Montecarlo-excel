@@ -6,17 +6,25 @@
  * el docstring de `excelFalso.ts`, que dice exactamente qué no puede cazar.
  */
 
-import { StrictMode, useState } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { CELDAS, instalarExcelFalso, seleccion } from './excelFalso.ts';
+import { CELDAS, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
 
 instalarExcelFalso();
 
 function Banco() {
   const [celda, setCelda] = useState(seleccion.ref);
+  const [, repintar] = useState(0);
+
+  // El banco no dibuja una cuadrícula, así que el resaltado se comprueba
+  // leyéndolo: si aquí no aparece la celda con su color, no se ha pintado.
+  useEffect(() => {
+    const id = setInterval(() => repintar((v) => v + 1), 500);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <>
@@ -38,6 +46,11 @@ function Banco() {
             ))}
           </select>
         </label>
+        <span className="rellenos">
+          {rellenos.size === 0
+            ? ' · sin resaltado'
+            : ` · resaltado: ${[...rellenos].map(([r, c]) => `${r}=${c}`).join(', ')}`}
+        </span>
       </div>
       <Panel />
     </>

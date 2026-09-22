@@ -257,3 +257,6 @@ button.principal { width: 100%; padding: 8px; font-weight: 600; }
 /* El nombre de una salida lo escribe el usuario: se enseña tal cual, sin la
    mayúscula forzada que llevan los títulos de sección del panel. */
 h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); letter-spacing: 0; }
+
+.botonera { display: flex; flex-wrap: wrap; gap: 8px; }
+.botonera button { margin-top: 8px; }
