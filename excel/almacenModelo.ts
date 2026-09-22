@@ -80,10 +80,22 @@ export async function guardarModelo(modelo: ModeloRiesgo): Promise<{ ok: true } 
   return { ok: true };
 }
 
-/** Borra el modelo del libro. Limpiar dos veces es inofensivo. */
+/**
+ * Borra el modelo del libro.
+ *
+ * Se comprueba que esté antes de borrarlo, en dos viajes. Office.js no promete
+ * que `delete()` sobre un objeto nulo sea inofensivo, y borrar algo que no
+ * existe no debe poder fallar: es justo la operación que se usa para recuperar
+ * un libro con un modelo que no se entiende.
+ */
 export async function borrarModelo(): Promise<void> {
   await Excel.run(async (context) => {
-    context.workbook.settings.getItemOrNullObject(CLAVE_MODELO).delete();
+    const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_MODELO);
+    ajuste.load('isNullObject');
+    await context.sync();
+
+    if (ajuste.isNullObject) return;
+    ajuste.delete();
     await context.sync();
   });
 }

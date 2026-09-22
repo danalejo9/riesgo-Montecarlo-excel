@@ -71,6 +71,10 @@ export async function cargarAlmacenGuardian(
   await context.sync();
 
   let recovery = ajuste.isNullObject ? undefined : interpretarRegistro(ajuste.value);
+  // Si el ajuste existe en el libro, aunque su contenido no se entienda. Es
+  // distinto de `recovery !== undefined`: un registro corrupto se descarta
+  // como valor pero sigue ocupando la clave, y hay que poder borrarlo.
+  let existeEnLibro = !ajuste.isNullObject;
   let modo = app.calculationMode as string;
 
   const valores = new Map<string, number>();
@@ -84,13 +88,18 @@ export async function cargarAlmacenGuardian(
 
     writeRecovery(record) {
       recovery = record;
+      existeEnLibro = true;
       ajustes.add(CLAVE_RECOVERY, JSON.stringify(record));
     },
 
     clearRecovery() {
       recovery = undefined;
-      // `getItemOrNullObject` + `delete` no falla si ya no estaba, que es lo
-      // que hace falta: limpiar dos veces tiene que ser inofensivo.
+      // Solo se borra lo que se sabe que está. Office.js no promete que
+      // `delete()` sobre un objeto nulo sea inofensivo, y este borrado corre
+      // en el `finally` de la simulación: una excepción aquí taparía el error
+      // de verdad que la hizo terminar, que es el peor sitio donde arriesgar.
+      if (!existeEnLibro) return;
+      existeEnLibro = false;
       ajustes.getItemOrNullObject(CLAVE_RECOVERY).delete();
     },
 
