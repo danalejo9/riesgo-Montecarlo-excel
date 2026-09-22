@@ -5,6 +5,46 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Modo compatible: Excel dentro del bucle (2026-09-22)
+
+La red de seguridad del producto (decisión 15), construida entera: un libro
+con funciones que el motor no conoce ya tiene respuesta, porque lo calcula
+Excel. Falta ejecutarla dentro de Excel — el usuario aplazó esa parte.
+
+**Añadido**
+
+- `engine/compatible/` — el bucle, las estadísticas, la cancelación y la
+  estimación de tiempo, **puros y probados en Node** detrás de la interfaz
+  `LibroCalculable`. Un único método, `calcularIteracion`, porque Office.js
+  encola escritura + recálculo + lectura en una sola sincronización y
+  separarlas triplicaría los viajes, que es donde se va todo el tiempo de este
+  modo.
+- `tiempoEstimado` / `convieneAvisar` y `medirRitmo`: con Excel en el bucle se
+  dice lo que va a tardar, **siempre, y con un número medido sobre el libro
+  del usuario**. La auditoría midió ~3 h para un millón de iteraciones.
+- `excel/libroCalculable.ts`, `excel/simulacionCompatible.ts`,
+  `excel/direcciones.ts` y `excel/rangos.ts` — el adaptador de Office.js. Una
+  iteración, un `context.sync()`; rangos resueltos fuera del bucle;
+  `recalculate` y no `full`.
+- **`excel/almacenGuardian.ts`: el `AlmacenGuardian` de verdad**, sobre
+  `workbook.settings`, el modo de cálculo y las celdas. Lo que el guardián
+  transaccional esperaba desde E3. Resuelve el desajuste síncrono/asíncrono
+  con una foto al cargar y un volcado al final: dos viajes a Excel, no veinte.
+- 22 tests nuevos del modo compatible y del parseo de direcciones (524 en
+  total, en verde).
+
+**Decidido**
+
+- **Las iteraciones no numéricas se cuentan, no se propagan.** Una salida que
+  dé `#¡DIV/0!` en 12 de 5.000 iteraciones ya no deja las estadísticas en
+  `NaN` sin explicación: esas 12 se excluyen y se informan en `noNumericas`.
+  Cierra el hueco de `aBufferNumerico` **en este modo**; en el modo rápido
+  sigue abierto (toca el formato que viaja entre workers, E6).
+- **Al terminar se restauran los valores, no solo el modo de cálculo**, también
+  cuando la simulación va bien. El modo compatible escribe en el libro del
+  usuario y la última iteración deja números aleatorios en sus entradas;
+  dejarlos ahí es corromper el libro despacio (R5).
+
 ### Nivel 1 verificado contra Excel (2026-09-21)
 
 Segunda tanda del libro de fidelidad: 50 casos calculados por el Excel real

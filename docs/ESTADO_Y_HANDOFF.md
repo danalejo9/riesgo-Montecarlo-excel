@@ -519,31 +519,109 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     el motor es más tenaz), y el convenio de signos de `PAGOINT`/`PAGOPRIN`
     con pagos al principio del periodo. Va a la tercera tanda del libro.
 
+17. [~] **Modo compatible: Excel dentro del bucle (2026-09-22)** — la red de
+    seguridad del producto (decisión 15), construida entera salvo su
+    verificación dentro de Excel.
+
+    El motor rápido es cuatro órdenes de magnitud más veloz, pero solo sabe
+    las 91 funciones que tiene implementadas. Con usuarios desconocidos eso no
+    basta: un libro con una función que falte se queda sin respuesta, y "no
+    puedo simular tu modelo" es motivo de desinstalar. El modo compatible
+    invierte el trato — escribe las entradas en las celdas, le pide a Excel
+    que recalcule y lee las salidas, una iteración cada vez — y funciona con
+    **cualquier** libro, porque lo calcula Excel.
+
+    **La decisión que lo hace comprobable sin Excel**: `LibroCalculable`
+    (`engine/compatible/tipos.ts`), una interfaz con un único método,
+    `calcularIteracion`. Es el mismo patrón que `EjecutorDeBloques`: el bucle,
+    las estadísticas, la cancelación y la estimación de tiempo son lógica pura
+    probada en Node con un libro de mentira, y el adaptador de Office.js es una
+    capa fina encima. Es **un** método y no tres (escribir / recalcular / leer)
+    porque en Office.js las tres cosas se encolan y se resuelven en **una sola**
+    sincronización: separarlas invitaría a hacer tres viajes por iteración, y
+    en este modo el coste *es* el viaje.
+
+    Lo que hay:
+    - `engine/compatible/simularCompatible.ts` — el bucle, con t-digest por
+      tramos (igual que `simularPorBloques` con los bloques, para no acumular
+      un millón de valores sueltos por salida), y `medirRitmo`, que corre unas
+      pocas iteraciones reales y las tira.
+    - `engine/compatible/tiempo.ts` — `tiempoEstimado` y `convieneAvisar`.
+      Está en el motor y no en el panel porque la regla es de producto: con
+      Excel en el bucle **se dice el tiempo, siempre, y medido**. La auditoría
+      midió ~3 h para un millón de iteraciones; descubrirlo a los veinte
+      minutos es sentirse engañado.
+    - `excel/libroCalculable.ts` — el adaptador real. Una iteración, un
+      `context.sync()`; los rangos se resuelven una vez, fuera del bucle;
+      `recalculate` y no `full`, para no tirar la cadena de dependencias que
+      Excel ya mantiene.
+    - `excel/almacenGuardian.ts` — **el `AlmacenGuardian` de verdad**, lo que
+      el guardián esperaba desde E3. Resuelve el desajuste entre una interfaz
+      síncrona y un Office.js asíncrono con una foto y un volcado: una lectura
+      en lote al cargar (registro pendiente, modo de cálculo, valor actual de
+      cada entrada), escrituras encoladas, un `aplicar()` al final. Dos viajes
+      a Excel, no veinte.
+    - `excel/simulacionCompatible.ts` — la coreografía completa dentro de un
+      único `Excel.run`.
+    - `excel/direcciones.ts` (puro, probado) y `excel/rangos.ts` (el trozo que
+      necesita el tipo `Excel.Range`), separados para que partir `Hoja!Rango`
+      se pueda probar sin arrastrar los globales de Office al proyecto del
+      motor. No es ceremonia: basta una hoja llamada "Flujo de caja" para que
+      un `split('!')` ingenuo falle.
+
+    **Dos decisiones que cambian lo que ve el usuario:**
+    - **Las iteraciones no numéricas se cuentan, no se propagan.** Si una
+      salida da `#¡DIV/0!` en 12 de 5.000 iteraciones, meter ese `NaN` en
+      Welford deja las estadísticas en `NaN` sin decir por qué. En modo
+      compatible se excluyen y se cuentan en `noNumericas`. Esto **cierra a
+      medias** el hueco que documenta `aBufferNumerico`: cerrado en este modo,
+      todavía abierto en el modo rápido, donde tocar el formato que viaja
+      entre workers es trabajo de E6.
+    - **Al terminar se restauran los valores, no solo el modo de cálculo.** El
+      modo compatible escribe en el libro del usuario, y la última iteración
+      deja en sus entradas un número aleatorio cualquiera. Por eso se usa
+      siempre `restaurarDesdeRecuperacion` y no `finalizarProteccion`, también
+      cuando todo va bien: terminar "con éxito" dejando el modelo con datos
+      inventados es corromper el libro despacio (R5).
+
+    **Lo que no se ha verificado**: nada de `excel/` se ha ejecutado dentro de
+    Excel todavía — el usuario aplazó esa parte. Los tres puntos donde puede
+    fallar y no lo sabemos: que `application.calculate(recalculate)` dentro de
+    un `Excel.run` compartido recalcule de verdad antes del `sync` (si no,
+    habría que partir en dos sincronizaciones y el modo costaría el doble),
+    que el modo de cálculo se pueda cambiar sin permisos extra, y **cuál es el
+    ritmo real** — las ~93 iteraciones/s de la auditoría son de otro motor y
+    otra máquina. `medirRitmoEnExcel` existe justamente para sustituir ese
+    número supuesto por uno medido en cuanto haya Excel delante.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Decidir de dónde sale la configuración regional** (ver el punto 14). Es
-   una decisión del usuario, no técnica: hoy el motor da `"1.5"` donde su
-   Excel da `"1,5"`, y hasta resolverlo el caso N1-049 se queda pendiente.
-2. **Volver a pasar el escáner** por el mismo libro y por otros suyos. Con
-   `ESBLANCO` y el Nivel 1 implementados, el informe debería decir 100 %
-   compatible en vez de "7 fórmulas lo impiden"; si no lo dice, hay algo que
-   revisar. Y conviene confirmar con más libros que el primero no era atípico.
-3. **Una tercera tanda del libro de fidelidad** cuando toque, con lo que esta
-   dejó sin cubrir: `SI.ND` (que se cayó por el prefijo `_xlfn.`), un criterio
-   `"<>5"` numérico contra una celda vacía (hoy implementado por coherencia
-   con el caso de texto, sin verificar), y el Nivel 1 de búsquedas
-   (`BUSCARV`, `INDICE`/`COINCIDIR`) cuando se implementen.
-4. **Que el usuario haga el primer sideload** y devuelva lo que enseñe el
-   panel de diagnóstico: plataforma, versión y qué conjuntos de `ExcelApi`
-   tiene. Ese dato decide qué puede usar el adaptador y no se puede averiguar
-   de otra forma.
-5. **Adaptadores Office.js** (lector del grafo en lote, escritor de
-   resultados), `resolverRef`, y conectar el `AlmacenGuardian` a
-   `workbook.settings` de verdad. Esto sí necesita Excel abierto y sideload
-   funcionando, y hasta que exista no hay nada nuevo que sideloadear: el
-   `manifest.xml` de la raíz sigue siendo el **heredado**, apuntando al código
-   viejo que no compila. Ojo con esto: registrar el sideload hoy solo carga el
-   complemento antiguo y roto, no el motor nuevo.
+1. **Probar el modo compatible dentro de Excel** (punto 17). Es lo único que
+   puede invalidar lo recién construido, y son tres preguntas concretas: ¿el
+   `recalculate` encolado surte efecto antes del `sync`?, ¿se puede cambiar el
+   modo de cálculo?, ¿cuántas iteraciones por segundo da un libro real? Ese
+   último número es el que decide si el modo compatible se ofrece con 10.000
+   iteraciones o con 1.000.000.
+2. **Decidir de dónde sale la configuración regional** (ver el punto 14). Ya
+   está decidido con el usuario —de Office, guardándola en el libro— y falta
+   implementarlo ahora que el adaptador de Office.js puede suministrar el
+   dato. Hasta entonces el motor da `"1.5"` donde su Excel da `"1,5"` y el
+   caso N1-049 sigue pendiente.
+3. **Una tercera tanda del libro de fidelidad**, con lo que dejó sin cubrir la
+   segunda: `SI.ND` (que se cayó por el prefijo `_xlfn.`), un criterio `"<>5"`
+   numérico contra una celda vacía, y todo el punto 16 — `BUSCARV` aproximado
+   sobre tabla desordenada, `TASA`, `TIR.NO.PER`, y el convenio de signos de
+   `PAGOINT`/`PAGOPRIN` con pagos al principio del periodo.
+4. **El resto de los adaptadores de Office.js**: el escritor de resultados y
+   `resolverRef` (rango con nombre → clave de celda), que `prepararEntradas`
+   espera inyectado desde E3.
+5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**. El escáner las
+   señala como lo único que impide el 100 %; el usuario cree que son
+   `SUMAPRODUCTO`. Falta que las pase para saber si basta con implementar la
+   multiplicación elemento a elemento en contexto matricial.
+6. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
+   `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
+   `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -555,17 +633,26 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   Excel)**, el evaluador de referencia y el compilador optimizado
   (`compiler/`), las distribuciones (`distributions/`, con su forma
   serializable en `descriptor.ts`), el muestreo (`sampling/`), las
-  estadísticas de salida (`stats/`), el ejecutor por bloques (`executor/`) y
-  el formato `RiskModel v1` (`modelo/`, parte de E3, ver arriba).
+  estadísticas de salida (`stats/`), el ejecutor por bloques (`executor/`), el
+  formato `RiskModel v1` (`modelo/`, parte de E3, ver arriba) y el **modo
+  compatible** (`compatible/`: el bucle con Excel dentro, puro y probado sin
+  Excel tras la interfaz `LibroCalculable`).
 - `tests/fixtures/fidelidad.xlsx` — el libro de fidelidad, calculado en Excel
   real. `tests/helpers/leerFidelidad.ts` lo lee. `tests/helpers/poolNodeWorkers.ts`
   y `workerCalcularBloque.ts` son el pool de `worker_threads` que prueba el
   paralelismo real del ejecutor por bloques.
 - `bench/motor.ts` — el benchmark reproducible (`npm run bench`).
-- `tests/unit/` — Vitest. **385 tests en verde, ninguno saltado.**
+- `excel/` — la capa de Office.js: entorno, selección, lector del libro en
+  lote, informe de compatibilidad, el adaptador del modo compatible
+  (`libroCalculable.ts`, `simulacionCompatible.ts`) y el `AlmacenGuardian`
+  real (`almacenGuardian.ts`). **Nada de esta carpeta se ha ejecutado dentro
+  de Excel más allá del panel de diagnóstico** (ver punto 17).
+- `ui/` — el panel React, servido por Vite desde `ui/` como raíz.
+- `tests/unit/` — Vitest. **524 tests en verde**, 2 saltados y documentados
+  por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
-- `npm run build` es solo `tsc -b`: no hay `vite build` hasta E3, cuando se reconstruyan los puntos de entrada HTML.
-- `manifest.xml` en la raíz es todavía el **heredado** (espacio de nombres `RIESGO.`, `ExtensionPoint` mal colocado, apunta a `public/functions.js` del código viejo). No sirve para probar el motor nuevo; se reescribe en E3.
+- `npm run build` es `tsc -b && vite build` desde E3.
+- `manifest.xml` en la raíz está **reescrito** (Id nuevo, `<Requirements>` declarado, sin funciones personalizadas todavía) y **sideloadeado con éxito** en el Excel del usuario: Windows, 16.0.20326.20144, es-ES, `ExcelApi` hasta 1.12.
 - CI en GitHub Actions (`.github/workflows/ci.yml`): tipos + lint + tests en cada push a `main` y `develop`.
 
 ---
