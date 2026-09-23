@@ -782,27 +782,38 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     **Cuarta tanda de fidelidad**, 90 casos, esperando volver de Excel. Los 90
     se pasaron por el motor antes de enviarla y coinciden con sus notas.
 
+23. [x] **Cuarta tanda verificada, configuración regional y `TEXTO` (2026-09-23)**
+
+    **La cuarta tanda volvió de Excel con 87 de 90**, y los tres que no
+    coincidieron eran justo los tres sondeos de configuración regional puestos
+    a propósito. Ningún fallo del motor en el Nivel 2. Un cuarto desajuste
+    aparente (`UNIRCADENAS`) era del lector del libro de fidelidad, que perdía
+    los textos terminados en espacio (`<v xml:space="preserve">`).
+
+    **La configuración regional** (`engine/values/regional.ts`,
+    `excel/regional.ts`): separador decimal, de miles y nombres de los lógicos,
+    leídos de Excel (no deducidos del idioma), guardados con el modelo y
+    transportados a los workers. Es un ajuste de módulo, con su coste pagado y
+    probado con `worker_threads` reales. **Los cuatro casos pendientes por esto
+    —N1-049, T4-013, T4-052, T4-072— pasan ahora contra los valores de Excel**,
+    porque los libros de fidelidad se evalúan en español, que es como los
+    calculó el Excel del usuario.
+
+    **`TEXTO`**, que dependía de ella. Con él el Nivel 2 de texto está completo.
+    Quinta tanda de fidelidad (36 casos) esperando a Excel.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **La cuarta tanda de fidelidad, de vuelta de Excel.** Es lo único que dice
-   si el Nivel 2 está bien. Tres casos (T4-013, T4-052, T4-072) sondean la
-   configuración regional y se espera que fallen: eso mide el trabajo del
-   punto 3.
-2. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir.** Con el
-   diagnóstico nuevo, el usuario puede decir si el ajuste está en el libro o no.
-3. **La configuración regional.** Ya no es opcional: desbloquea `TEXTO`,
-   arregla `VALOR` con coma decimal y cierra N1-049 y los sondeos de la cuarta
-   tanda. Decidida —de Office, guardada en el libro—.
-4. **El resto del Nivel 1** (12), que es más usado en modelos que lo que queda
-   del Nivel 2: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
+1. **La quinta tanda (`TEXTO`) de vuelta de Excel.** Las abreviaturas de meses
+   y días y el AM/PM en español no se pueden saber sin él.
+2. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
+   diagnóstico de ajustes guardados.
+3. **El resto del Nivel 1** (12): `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
    `DIA.LAB`, `DIAS.LAB`, `FECHANUMERO`.
-5. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza de
-   cada salida. Convierte "aquí está la distribución" en "aquí está dónde
-   actuar".
-6. **`LET`**: es la más usada de lo que queda del Nivel 2 en libros modernos.
-7. **Botones en la cinta**, pedidos por el usuario.
-8. **Las tres fórmulas matriciales de `Caso_practico.xlsx`.**
+4. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
+5. **`LET`**, y los **botones en la cinta**.
+6. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -833,7 +844,7 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   mentira, en `/banco/`: sirve para desarrollar la interfaz sin Excel y dice de
   sí mismo lo que no puede probar.
 - `ejemplos/` — el libro de demostración y su generador.
-- `tests/unit/` — Vitest. **725 tests en verde**, 2 saltados y documentados
+- `tests/unit/` — Vitest. **841 tests en verde**, 2 saltados y documentados
   por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es `tsc -b && vite build` desde E3.

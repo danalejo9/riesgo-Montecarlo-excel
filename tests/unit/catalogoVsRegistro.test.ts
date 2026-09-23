@@ -70,7 +70,7 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       // Texto.
       'CHAR', 'CODE', 'CONCAT', 'CONCATENATE', 'EXACT', 'FIND', 'HYPERLINK', 'LEFT', 'LEN',
       'LOWER', 'MID', 'N', 'NUMBERVALUE', 'PROPER', 'REPLACE', 'REPT', 'RIGHT', 'SEARCH',
-      'SUBSTITUTE', 'T', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
+      'SUBSTITUTE', 'T', 'TEXT', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
       // Agregados que excluyen los subtotales intermedios.
       'AGGREGATE', 'SUBTOTAL',
     ].sort());
@@ -79,8 +79,6 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
   it('lo que queda de Nivel 2 es lo que el escáner debe seguir marcando bloqueante', () => {
     const pendientes = [...NIVEL_2].filter((f) => !implementadas.has(f)).sort();
     expect(pendientes).toEqual([
-      // Depende de la configuración regional por cuatro sitios; entra con ella.
-      'TEXT',
       // Matriciales dinámicas: devuelven varias celdas ("derraman") y el motor
       // modela una celda por valor. Necesitan otro modelo, no otra función.
       'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TEXTSPLIT', 'TRANSPOSE', 'UNIQUE',

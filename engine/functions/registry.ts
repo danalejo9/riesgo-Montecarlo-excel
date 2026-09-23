@@ -26,6 +26,7 @@ import {
 import {
   CHOOSE, HLOOKUP, INDEX, MATCH, VLOOKUP, XLOOKUP, XMATCH,
 } from './busquedas.ts';
+import { TEXT } from './formato.ts';
 import { AGGREGATE, SUBTOTAL } from './subtotales.ts';
 import {
   CHAR, CODE, CONCAT, CONCATENATE, EXACT, FIND, HYPERLINK, LEFT, LEN, LOWER, MID, N,
@@ -56,6 +57,8 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   LEN, LEFT, RIGHT, MID, UPPER, LOWER, PROPER, TRIM,
   CONCATENATE, CONCAT, TEXTJOIN, FIND, SEARCH, SUBSTITUTE, REPLACE, REPT,
   CHAR, CODE, EXACT, VALUE, NUMBERVALUE, TYPE, N, T, HYPERLINK,
+  // Con la configuración regional, que es de lo que depende casi entera.
+  TEXT,
   // Nivel 2: agregados que no cuentan dos veces los subtotales intermedios.
   SUBTOTAL, AGGREGATE,
 };

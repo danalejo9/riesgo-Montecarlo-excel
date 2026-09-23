@@ -82,7 +82,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E2 | Motor Nivel 0 | 15–20 d | ✅ hecha — 57/57 funciones, fidelidad verificada contra Excel |
 | E3 | Integración Excel + UI **+ modo compatible** | 11–14 d | ✅ **v0.5 — el MVP simula de verdad en Excel** |
 | E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | ⬜ no empezada |
-| E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 32/44, N2 27/41 — texto, búsquedas, financieras y fechas |
+| E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 32/44, N2 28/41 — texto completo, búsquedas, financieras y fechas |
 | E6 | Escala D11 y rendimiento | 6–8 d | 🟡 el ejecutor por bloques está; falta el histograma en *streaming* |
 | E7 | Análisis y visualización | 8–10 d | 🟡 estadísticos, percentiles, CDF y volcado a hoja hechos |
 | E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
@@ -103,14 +103,14 @@ nadie más que a su autor.
 |---|---|---|
 | Nivel 0 | Aritmética, agregación, lógica, redondeo, estadísticos de orden | **57 / 57** |
 | Nivel 1 | Criterios, fechas, financieras, búsquedas | **32 / 44** |
-| Nivel 2 | Texto, matriciales dinámicas, `SUBTOTALES`, `LET`/`LAMBDA` | **27 / 41** |
+| Nivel 2 | Texto, matriciales dinámicas, `SUBTOTALES`, `LET`/`LAMBDA` | **28 / 41** |
 
 Faltan de Nivel 1: `BUSCAR`, `DESREF`, `MAX.SI.CONJUNTO`, `MIN.SI.CONJUNTO`,
 `SI.CONJUNTO`, `CAMBIAR`, `DIAS360`, `SIFECHA`, `DIA.LAB`, `DIAS.LAB`,
 `FECHANUMERO`, `FRAC.AÑO`.
 
-Faltan de Nivel 2, en tres grupos que no se parecen entre sí:
-- **`TEXTO`**, que espera a la configuración regional.
+Faltan de Nivel 2, en dos grupos que no se parecen entre sí (el texto está
+completo desde que llegó la configuración regional):
 - **Las matriciales dinámicas** (`FILTRAR`, `ORDENAR`, `ORDENARPOR`, `UNICOS`,
   `SECUENCIA`, `DIVIDIRTEXTO`, `TRANSPONER`, `MMULT`, `MINVERSA`): devuelven
   varias celdas, y el motor modela una celda por valor. Es otro modelo, no

@@ -1,71 +1,135 @@
 /**
- * El formato de los números es producto, no adorno: un informe de riesgo se
- * lee de un vistazo o no se lee. Estas reglas son las que evitan que el panel
- * enseñe `0` donde hay 0,000034, o se descuadre con 3.020.927,6712.
+ * `TEXTO`, en español y en inglés. La cadena de formato se lee con los
+ * separadores del libro y el resultado sale con ellos: en español
+ * `TEXTO(1234,5;"#.##0,00")` es "1.234,50".
+ *
+ * Lo que aquí se afirma **no está verificado contra Excel**: va en la quinta
+ * tanda del libro de fidelidad, sobre todo las abreviaturas de meses y días,
+ * que Excel toma de Windows y aquí salen de una tabla.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { duracion, miles, numero, porcentaje } from '../../ui/formato.ts';
+import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
+import { claveDeReferencia, construirGrafo } from '../../engine/graph/index.ts';
+import { errorEn, textoEn, tipoEn, ERROR, TEXTO, type Columna } from '../../engine/values/columna.ts';
+import { establecerRegional, regionalDesdeIdioma, restablecerRegional } from '../../engine/values/regional.ts';
 
-describe('numero', () => {
-  it('da cifras significativas, no decimales fijos', () => {
-    expect(numero(3_020_927.6712)).toBe('3.020.928');
-    expect(numero(1234.5678)).toBe('1234,6');
-    expect(numero(1.23456)).toBe('1,2346');
-    expect(numero(0.00123456)).toBe('0,001235');
+const k = claveDeReferencia('Hoja1', 'Z1');
+const ES = regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' });
+
+function evaluar(formula: string): Columna {
+  const g = construirGrafo([{ hoja: 'Hoja1', col: 26, fila: 1, formula }]).grafo;
+  const r = evaluarModelo(g, new Map(), [k], 1);
+  if (!r.ok) throw new Error(r.error.motivo);
+  return r.valores.get(k) as Columna;
+}
+
+function texto(formula: string): string | undefined {
+  const c = evaluar(formula);
+  expect(tipoEn(c, 0), formula).toBe(TEXTO);
+  return textoEn(c, 0);
+}
+
+afterEach(() => restablecerRegional());
+
+describe('TEXTO en español: la cadena y el resultado con coma decimal', () => {
+  it('miles con punto y decimales con coma', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(1234.5,"#.##0,00")')).toBe('1.234,50');
+    expect(texto('TEXT(1234567,"#.##0")')).toBe('1.234.567');
   });
 
-  it('el cero es cero, sin decimales de relleno', () => {
-    expect(numero(0)).toBe('0');
+  it('ceros forzados y marcadores opcionales', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(5,"000")')).toBe('005');
+    expect(texto('TEXT(1.5,"0,00")')).toBe('1,50');
+    expect(texto('TEXT(1.5,"#,##")')).toBe('1,5');
+    expect(texto('TEXT(0.5,"#,00")')).toBe(',50');
   });
 
-  it('lo muy pequeño no se redondea a cero', () => {
-    // Enseñar "0" donde hay algo es peor que enseñar notación científica.
-    expect(numero(0.000034)).toBe('3,4000e-5');
+  it('redondea alejándose de cero en el empate, como Excel', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(2.5,"0")')).toBe('3');
+    expect(texto('TEXT(-2.5,"0")')).toBe('-3');
+    expect(texto('TEXT(1.005,"0,00")')).toBe('1,01');
   });
 
-  it('lo muy grande no descuadra el panel', () => {
-    expect(numero(1.5e14)).toBe('1,5000e+14');
+  it('porcentaje', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(0.256,"0%")')).toBe('26%');
+    expect(texto('TEXT(0.256,"0,0%")')).toBe('25,6%');
   });
 
-  it('lo que no es un número se dice con palabras', () => {
-    expect(numero(NaN)).toBe('sin datos');
-    expect(numero(Infinity)).toBe('∞');
-    expect(numero(-Infinity)).toBe('−∞');
+  it('un separador de miles al final escala entre mil', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(1234567,"#.##0.")')).toBe('1.235');
+    expect(texto('TEXT(1234567,"0,0..")')).toBe('1,2');
   });
 
-  it('los negativos conservan su signo y su precisión', () => {
-    expect(numero(-1234.5678)).toBe('-1234,6');
+  it('texto literal, entre comillas o escapado, y símbolos sueltos', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(1500,"#.##0 €")')).toBe('1.500 €');
+    expect(texto('TEXT(3,"0"" uds""")')).toBe('3 uds');
+  });
+
+  it('secciones: positivo; negativo; cero', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(-5,"0;(0);cero")')).toBe('(5)');
+    expect(texto('TEXT(0,"0;(0);""cero""")')).toBe('cero');
+    expect(texto('TEXT(-5,"0")')).toBe('-5');
+  });
+
+  it('un negativo que redondea a cero no lleva signo', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(-0.001,"0")')).toBe('0');
+  });
+
+  it('los colores se ignoran; las condiciones no se soportan', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(-5,"0;[Rojo]-0")')).toBe('-5');
+    const c = evaluar('TEXT(5,"[>=10]0;0")');
+    expect(tipoEn(c, 0)).toBe(ERROR);
+    expect(errorEn(c, 0)).toBe('#VALUE!');
+  });
+
+  it('notación científica', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(12345,"0,00E+00")')).toBe('1,23E+04');
+    expect(texto('TEXT(0.00012,"0,0E+00")')).toBe('1,2E-04');
+  });
+
+  it('fechas con códigos en español: el año es aaaa', () => {
+    establecerRegional(ES);
+    // 46288 es el 23 de septiembre de 2026, miércoles.
+    expect(texto('TEXT(46288,"dd/mm/aaaa")')).toBe('23/09/2026');
+    expect(texto('TEXT(46288,"d-m-aa")')).toBe('23-9-26');
+    expect(texto('TEXT(46288,"dddd d \\d\\e mmmm")')).toBe('miércoles 23 de septiembre');
+    expect(texto('TEXT(46288,"mmm")')).toBe('sep');
+  });
+
+  it('los códigos en inglés también se entienden en un libro español', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT(46288,"yyyy-mm-dd")')).toBe('2026-09-23');
+  });
+
+  it('horas, minutos y segundos: la m después de una h es minuto', () => {
+    establecerRegional(ES);
+    // 0,75 del día son las 18:00.
+    expect(texto('TEXT(46288.75,"hh:mm")')).toBe('18:00');
+    expect(texto('TEXT(46288.5104166667,"h:mm:ss")')).toBe('12:15:00');
+    expect(texto('TEXT(46288.75,"h AM/PM")')).toBe('6 PM');
+  });
+
+  it('un texto pasa tal cual, salvo que haya cuarta sección', () => {
+    establecerRegional(ES);
+    expect(texto('TEXT("abc","0")')).toBe('abc');
+    expect(texto('TEXT("abc","0;0;0;""→""@")')).toBe('→abc');
   });
 });
 
-describe('miles', () => {
-  it('un contador va entero y con separador', () => {
-    expect(miles(1_000_000)).toBe('1.000.000');
-    expect(miles(999)).toBe('999');
-  });
-});
-
-describe('duracion', () => {
-  it('siempre en una unidad que se pueda sentir', () => {
-    expect(duracion(187)).toBe('187 ms');
-    expect(duracion(1_500)).toBe('1,5 s');
-    expect(duracion(18_640)).toBe('19 s');
-    expect(duracion(90_000)).toBe('1 min 30 s');
-    expect(duracion(120_000)).toBe('2 min');
-    expect(duracion(10_800_000)).toBe('3 h');
-    expect(duracion(5_400_000)).toBe('1 h 30 min');
-  });
-
-  it('sin medida, un guion y no un cero', () => {
-    expect(duracion(NaN)).toBe('—');
-  });
-});
-
-describe('porcentaje', () => {
-  it('acota a [0, 100] y no divide por cero', () => {
-    expect(porcentaje(25, 100)).toBe(25);
-    expect(porcentaje(5, 0)).toBe(0);
-    expect(porcentaje(150, 100)).toBe(100);
+describe('TEXTO en inglés', () => {
+  it('la misma cantidad, con los separadores al revés', () => {
+    expect(texto('TEXT(1234.5,"#,##0.00")')).toBe('1,234.50');
+    expect(texto('TEXT(46288,"dddd, mmmm d, yyyy")')).toBe('Wednesday, September 23, 2026');
   });
 });

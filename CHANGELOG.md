@@ -5,6 +5,32 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### TEXTO, y el Nivel 2 de texto completo (2026-09-23)
+
+**Añadido**
+
+- **`TEXTO`** (`engine/functions/formato.ts`), la última función de texto que
+  faltaba. Depende de la configuración regional por cuatro sitios, y por eso
+  entra después de ella: la cadena de formato se lee con los separadores del
+  libro (`"#.##0,00"` en español), el resultado sale con ellos (`1.234,50`),
+  los códigos de fecha están traducidos (`aaaa`, y también `yyyy`) y los
+  nombres de meses y días son del idioma (`miércoles 23 de septiembre`).
+  Cubre secciones, `0`/`#`/`?`, miles y su uso como escala, porcentaje,
+  científica, literales, colores, y fechas y horas. Las condiciones entre
+  corchetes, las fracciones y el relleno devuelven `#¡VALOR!` en vez de un
+  resultado inventado.
+- **Quinta tanda del libro de fidelidad** (`tests/fixtures/generar-tanda5.py`),
+  36 casos de `TEXTO` escritos en español, esperando a Excel. Los que no se
+  pueden saber sin él: las abreviaturas de meses y días (Excel las toma de
+  Windows), qué escribe en lugar de AM/PM, si acepta los códigos en inglés y
+  cómo se llama el formato General.
+
+**Corregido**
+
+- Los separadores de miles después de los decimales (`"0,0.."`) también
+  escalan. La primera versión solo los buscaba en la parte entera; lo cazó su
+  test.
+
 ### La configuración regional (2026-09-23)
 
 El Excel del usuario escribe `1,5` donde el motor escribía `1.5`. La cuarta
