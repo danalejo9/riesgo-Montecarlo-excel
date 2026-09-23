@@ -11,6 +11,7 @@
  * para no mezclar la respuesta de un trabajo con la promesa de otro cuando
  * hay más bloques que workers.
  */
+import { REGIONAL_NEUTRA, type ConfiguracionRegional } from '../../engine/values/regional.ts';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 
@@ -33,6 +34,7 @@ export function crearPoolDeWorkers(
   entradasResueltas: readonly DefinicionEntrada[],
   seed: number,
   compresionTDigest: number,
+  regional: ConfiguracionRegional = REGIONAL_NEUTRA,
 ): PoolDeWorkers {
   const workers = Array.from(
     { length: numWorkers },
@@ -75,7 +77,11 @@ export function crearPoolDeWorkers(
 
           worker.on('message', alRecibirMensaje);
           worker.on('error', alFallar);
-          worker.postMessage({ grafo, plan, entradas: entradasResueltas, seed, bloque: trabajo, compresion: compresionTDigest });
+          // La configuración regional viaja con cada trabajo: el worker tiene
+          // su propia copia del ajuste y no ve la del hilo principal.
+          worker.postMessage({
+            grafo, plan, entradas: entradasResueltas, seed, bloque: trabajo, compresion: compresionTDigest, regional,
+          });
         };
 
         for (const worker of workers) asignarSiguiente(worker);

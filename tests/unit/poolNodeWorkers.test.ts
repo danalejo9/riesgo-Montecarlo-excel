@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { compilarPlan } from '../../engine/compiler/plan.ts';
 import { simularPorBloques, type DefinicionEntrada } from '../../engine/executor/index.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
+import { regionalDesdeIdioma } from '../../engine/values/regional.ts';
 import { crearPoolDeWorkers, type PoolDeWorkers } from '../helpers/poolNodeWorkers.ts';
 
 const H = 'Hoja1';
@@ -92,4 +93,38 @@ describe('pool de worker_threads (prueba de paralelismo real)', () => {
       expect(resultados[i]?.get(k('A1'))?.welford.n).toBe(100);
     }
   }, 30_000);
+
+  it('la configuración regional llega a los workers, que tienen su propia copia', async () => {
+    // `VALOR("1,5")` es 1,5 en español y un error en la configuración neutra.
+    // Si la configuración no viajara con el trabajo, cada worker calcularía
+    // con la neutra y todas las iteraciones saldrían sin valor, aunque el hilo
+    // principal estuviera en español. Es el coste de que sea un ajuste de
+    // módulo, y esta es la prueba de que se paga.
+    const g = grafoDe({ A1: 'X1*VALUE("1,5")' });
+    const compilado = compilarPlan(g, new Set([k('X1')]), [k('A1')]);
+    expect(compilado.ok).toBe(true);
+    if (!compilado.ok) return;
+
+    const def: DefinicionEntrada = {
+      tipo: 'distribucion',
+      clave: k('X1'),
+      id: 'x',
+      distribucion: { tipo: 'uniforme', min: 9, max: 11 },
+      metodo: 'monte-carlo',
+    };
+    const es = regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' });
+
+    poolActivo = crearPoolDeWorkers(2, g, compilado.plan, [def], SEED, 100, es);
+    const r = await simularPorBloques(g, compilado.plan, [def], SEED, 8_000, {
+      presupuestoBytesPorWorker: 1024 * 8,
+      ejecutor: poolActivo.ejecutor,
+      regional: es,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const s = r.porSalida.get(k('A1'))!;
+    expect(s.noNumericas).toBe(0);
+    // Media de la uniforme (10) por 1,5.
+    expect(s.welford.media).toBeCloseTo(15, 1);
+  });
 });

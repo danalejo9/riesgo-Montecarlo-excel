@@ -11,9 +11,10 @@
  * misma respuesta.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { leerAjustesGuardados } from '../excel/almacenModelo.ts';
+import { leerRegionalDeExcel, type RegionalLeida } from '../excel/regional.ts';
 import { analizarCompatibilidad, type InformeCompatibilidad } from '../excel/compatibilidad.ts';
 import { versionMaximaDisponible, type EntornoOffice } from '../excel/entorno.ts';
 import { leerLibro, type EstadisticasLectura } from '../excel/lectorLibro.ts';
@@ -27,6 +28,11 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
   const [progreso, setProgreso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [ajustes, setAjustes] = useState<Array<{ clave: string; valor: string }> | null>(null);
+  const [regional, setRegional] = useState<RegionalLeida | null>(null);
+
+  useEffect(() => {
+    leerRegionalDeExcel().then(setRegional, () => setRegional(null));
+  }, []);
 
   const alLeerSeleccion = useCallback(async () => {
     setOcupado(true);
@@ -84,6 +90,17 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
               <dt>Versión</dt><dd>{entorno.version}</dd>
               <dt>Idioma</dt><dd>{entorno.idioma}</dd>
               <dt>ExcelApi</dt><dd>hasta {versionMaximaDisponible(entorno)}</dd>
+              {regional && (
+                <>
+                  <dt>Separadores</dt>
+                  <dd>
+                    decimal «{regional.regional.decimal}» · miles «{regional.regional.miles === '\u00a0' ? 'espacio' : regional.regional.miles}»
+                    {regional.origen === 'deducida' && ' (deducidos del idioma: esta versión de Excel no los expone)'}
+                  </dd>
+                  <dt>Lógicos</dt>
+                  <dd>{regional.regional.verdadero} / {regional.regional.falso}</dd>
+                </>
+              )}
             </dl>
 
             <h3>Conjuntos de API disponibles</h3>

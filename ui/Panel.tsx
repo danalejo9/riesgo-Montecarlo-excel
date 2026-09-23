@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
 import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
+import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado } from '../excel/resaltado.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
@@ -72,9 +73,29 @@ export function Panel() {
     void (async () => {
       try {
         const lectura = await leerModelo();
-        if (lectura.estado === 'ok') setModelo(lectura.modelo);
-        else if (lectura.estado === 'vacio') setModelo(modeloVacio());
-        else setModeloInvalido({ errores: lectura.errores, crudo: lectura.crudo });
+        if (lectura.estado === 'invalido') {
+          setModeloInvalido({ errores: lectura.errores, crudo: lectura.crudo });
+          return;
+        }
+
+        const base = lectura.estado === 'ok' ? lectura.modelo : modeloVacio();
+
+        // La configuración regional se lee de Excel la primera vez y se guarda
+        // con el modelo: es parte de lo que el modelo significa (`VALOR("1,5")`
+        // vale 1,5 en un libro español y es un error en uno inglés). Un modelo
+        // que ya la trae la conserva, aunque se abra en otro Excel: el libro
+        // se escribió con esos separadores.
+        if (base.settings.locale) {
+          setModelo(base);
+        } else {
+          const { regional } = await leerRegionalDeExcel();
+          const conLocale = { ...base, settings: { ...base.settings, locale: aLocaleDelModelo(regional) } };
+          setModelo(conLocale);
+          // Un modelo vacío no se guarda solo por esto: no hay nada que
+          // conservar todavía, y escribir en un libro recién abierto sin que el
+          // usuario haya hecho nada lo marcaría como modificado.
+          if (lectura.estado === 'ok') void guardarModelo(conLocale);
+        }
       } catch (e) {
         setError(mensajeDe(e));
       }

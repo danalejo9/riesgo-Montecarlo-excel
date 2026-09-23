@@ -12,13 +12,16 @@
  * activan solos. Hasta entonces quedan en espera, no aprobados.
  */
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import {
   errorEn, numeroEn, textoEn, tipoEn, ERROR, LOGICO, NUMERO, TEXTO, type Columna,
 } from '../../engine/values/columna.ts';
+import {
+  establecerRegional, regionalDesdeIdioma, restablecerRegional,
+} from '../../engine/values/regional.ts';
 import { leerCasosFidelidad, type CasoFidelidad } from '../helpers/leerFidelidad.ts';
 
 const RUTA_FIXTURE = fileURLToPath(new URL('../fixtures/fidelidad-tanda4.xlsx', import.meta.url));
@@ -29,23 +32,11 @@ const CLAVE_FORMULA = claveDeReferencia(HOJA, 'E2');
  * Casos que no se pueden comparar todavía, por id y con el motivo. Nunca en
  * silencio.
  *
- * Los tres son los sondeos de configuración regional que se pusieron **a
- * propósito** en esta tanda, y el Excel es-ES del usuario confirmó los tres.
- * No se corrigen aquí: se corrigen con la configuración regional, que es la
- * siguiente etapa, y en cuanto exista estos tres tienen que salir de esta
- * lista y pasar en verde.
+ * Vacía. Los tres sondeos de configuración regional que se pusieron aquí a
+ * propósito (T4-013, T4-052, T4-072) estuvieron en esta lista hasta que el
+ * motor aprendió a calcular con los separadores del libro; ahora pasan.
  */
-const PENDIENTES: Record<string, string> = {
-  'T4-013':
-    'Configuración regional: `IZQUIERDA(1,5;3)` da "1,5" en el Excel es-ES del usuario y "1.5" ' +
-    'en el motor, que todavía convierte los números a texto con punto decimal. Mismo hueco que N1-049.',
-  'T4-052':
-    'Configuración regional: `VALOR("1234.5")` es #¡VALOR! en el Excel es-ES del usuario, porque ' +
-    'allí el punto no es separador decimal. El motor lo lee como 1234,5.',
-  'T4-072':
-    'Configuración regional: `MAYUSC(VERDADERO)` da "VERDADERO" en el Excel es-ES del usuario y ' +
-    '"TRUE" en el motor, que escribe los lógicos con su nombre en inglés.',
-};
+const PENDIENTES: Record<string, string> = {};
 
 /**
  * Los datos auxiliares, **idénticos a los del generador**. Los que son fórmulas
@@ -81,6 +72,15 @@ function construirModeloDeCaso(formula: string) {
 function sinCalcular(casos: CasoFidelidad[]): boolean {
   return casos.every((c) => !c.calculado);
 }
+
+/**
+ * El libro lo calculó el Excel **en español** del usuario, así que el motor
+ * tiene que calcular con la misma configuración regional para que la
+ * comparación sea justa. Sin esto, los casos que convierten números a texto o
+ * al revés compararían dos configuraciones distintas y no dos motores.
+ */
+beforeAll(() => establecerRegional(regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' })));
+afterAll(() => restablecerRegional());
 
 describe('libro de fidelidad, cuarta tanda (tests/fixtures/fidelidad-tanda4.xlsx)', () => {
   const casos = leerCasosFidelidad(RUTA_FIXTURE);

@@ -38,3 +38,11 @@ export {
   type TipoValor,
   type ValorEscalar,
 } from './columna.ts';
+export {
+  establecerRegional,
+  regionalActual,
+  regionalDesdeIdioma,
+  restablecerRegional,
+  REGIONAL_NEUTRA,
+  type ConfiguracionRegional,
+} from './regional.ts';

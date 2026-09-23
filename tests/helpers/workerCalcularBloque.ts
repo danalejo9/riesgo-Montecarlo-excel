@@ -21,6 +21,7 @@ import type { DefinicionEntrada } from '../../engine/executor/entradas.ts';
 import type { Bloque } from '../../engine/executor/bloques.ts';
 import type { Plan } from '../../engine/compiler/plan.ts';
 import type { Grafo } from '../../engine/graph/graph.ts';
+import { establecerRegional, type ConfiguracionRegional } from '../../engine/values/regional.ts';
 
 interface MensajeEntrante {
   grafo: Grafo;
@@ -29,11 +30,13 @@ interface MensajeEntrante {
   seed: number;
   bloque: Bloque;
   compresion: number;
+  regional?: ConfiguracionRegional;
 }
 
 if (!parentPort) throw new Error('workerCalcularBloque.ts debe ejecutarse como worker_thread');
 
 parentPort.on('message', (msg: MensajeEntrante) => {
+  if (msg.regional) establecerRegional(msg.regional);
   const resultado = calcularBloque(msg.grafo, msg.plan, msg.entradas, msg.seed, msg.bloque, msg.compresion);
   parentPort!.postMessage(resultado);
 });

@@ -48,11 +48,25 @@ export interface SalidaRiskModel {
   ref: string;
 }
 
+/**
+ * Cómo escribe los números el Excel donde se creó el modelo. Viaja con el
+ * libro porque es parte de lo que el modelo significa: `VALOR("1,5")` vale 1,5
+ * en un libro español y es un error en uno inglés. Opcional para que los
+ * modelos guardados antes de existir sigan siendo válidos; el panel lo rellena
+ * con lo que diga Excel la primera vez que los abre.
+ */
+export interface LocaleRiskModel {
+  decimalSeparator: string;
+  thousandsSeparator: string;
+  language: string;
+}
+
 export interface ConfiguracionRiskModel {
   iterations: number;
   seed: number;
   sampling: MetodoMuestreo;
   engine: MotorSimulacion;
+  locale?: LocaleRiskModel;
 }
 
 export interface ModeloRiesgo {
@@ -257,11 +271,31 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     ok = false;
   }
 
+  let locale: LocaleRiskModel | undefined;
+  if (s.locale !== undefined) {
+    const l = s.locale as Record<string, unknown>;
+    const valido =
+      typeof l === 'object' && l !== null &&
+      esTextoNoVacio(l.decimalSeparator) && esTextoNoVacio(l.thousandsSeparator) &&
+      typeof l.language === 'string' && l.decimalSeparator !== l.thousandsSeparator;
+    if (!valido) {
+      errores.push('settings.locale debe tener decimalSeparator, thousandsSeparator (distintos) y language.');
+      ok = false;
+    } else {
+      locale = {
+        decimalSeparator: l.decimalSeparator as string,
+        thousandsSeparator: l.thousandsSeparator as string,
+        language: l.language as string,
+      };
+    }
+  }
+
   if (!ok) return undefined;
   return {
     iterations: s.iterations as number,
     seed: s.seed as number,
     sampling: s.sampling as MetodoMuestreo,
     engine: s.engine as MotorSimulacion,
+    ...(locale ? { locale } : {}),
   };
 }

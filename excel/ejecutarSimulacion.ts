@@ -44,6 +44,7 @@ export type {
   ResultadoSimulacionPanel,
   SimulacionCompletada,
 } from './informe.ts';
+import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
 import { aValorCelda } from './valoresEstaticos.ts';
@@ -140,7 +141,12 @@ function porElRapido(
     );
   }
 
+  // La configuración regional del libro, si el modelo la trae. Sin ella se
+  // calcula con la neutra, que es como calculaba el motor antes de existir.
+  const locale = args.modelo.settings.locale;
+
   return simularPorBloques(grafo, compilado.plan, args.definiciones, semilla, n, {
+    regional: locale ? desdeLocaleDelModelo(locale) : undefined,
     debeCancelar,
     progreso: (completadas, totales) =>
       progreso?.({ fase: 'simulando', mensaje: 'Simulando…', completadas, totales }),

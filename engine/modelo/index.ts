@@ -34,6 +34,7 @@ export {
   type ConfiguracionRiskModel,
   type CorrelacionDeclarada,
   type EntradaRiskModel,
+  type LocaleRiskModel,
   type ModeloRiesgo,
   type MotorSimulacion,
   type ResultadoValidacion,

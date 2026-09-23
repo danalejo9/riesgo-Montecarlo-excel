@@ -24,14 +24,15 @@
  * libro en español, que es exactamente el caso del usuario. Entra con la
  * configuración regional, no antes.
  *
- * **La configuración regional también toca a `VALOR` y `VALOR.NUMERO`** cuando
- * no se le dan los separadores: aquí siguen la misma regla que ya usa todo el
- * motor para convertir texto en número (punto decimal), con el mismo hueco
- * documentado. `VALOR.NUMERO` con separadores explícitos no depende de nada.
+ * **`VALOR` y `VALOR.NUMERO` sin separadores siguen la configuración
+ * regional** (`engine/values/regional.ts`), igual que el resto del motor al
+ * convertir texto en número. `VALOR.NUMERO` con separadores explícitos no
+ * depende de nada, y por eso es la forma robusta de leer números importados.
  */
 
 import type { ErrorExcel } from '../parser/ast.ts';
 import { coercionNumerica, coercionTexto, numeroDeTexto } from '../values/coercion.ts';
+import { regionalActual } from '../values/regional.ts';
 import {
   crearConstructor,
   desdeEscalar,
@@ -592,9 +593,11 @@ export function NUMBERVALUE(args: Argumento[], n: number): Columna {
   return porIteracion([c, cDec, cMiles], n, (i) => {
     const s = leerTexto(c, i);
     if (esFallo(s)) return error(s.error);
-    const dec = cDec ? leerTexto(cDec, i) : '.';
+    // Sin separadores, los de la configuración regional: es lo que hace Excel.
+    const regional = regionalActual();
+    const dec = cDec ? leerTexto(cDec, i) : regional.decimal;
     if (esFallo(dec)) return error(dec.error);
-    const miles = cMiles ? leerTexto(cMiles, i) : ',';
+    const miles = cMiles ? leerTexto(cMiles, i) : regional.miles;
     if (esFallo(miles)) return error(miles.error);
 
     const sd = dec[0] ?? '.';

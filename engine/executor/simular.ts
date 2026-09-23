@@ -15,6 +15,7 @@ import type { Plan } from '../compiler/plan.ts';
 import type { Grafo } from '../graph/graph.ts';
 import { combinarTDigest, type TDigest } from '../stats/tdigest.ts';
 import { combinar, crearWelford, type EstadoWelford } from '../stats/welford.ts';
+import { establecerRegional, regionalActual, type ConfiguracionRegional } from '../values/regional.ts';
 import { particionarEnBloques, tamanoBloqueAdaptativo } from './bloques.ts';
 import { crearEjecutorSecuencial } from './ejecutorSecuencial.ts';
 import { resolverEntradas, type DefinicionEntrada } from './entradas.ts';
@@ -33,6 +34,14 @@ export interface OpcionesSimulacion {
   debeCancelar?: () => boolean;
   /** Se llama tras cada ronda con el progreso acumulado. */
   progreso?: (iteracionesCompletadas: number, iteracionesTotales: number) => void;
+  /**
+   * La configuración regional del libro: decide cómo se convierten números en
+   * texto y al revés. Se fija mientras dura la simulación y se restablece al
+   * terminar. **Un ejecutor que reparta bloques a otros hilos tiene que
+   * mandarla con el trabajo**: cada hilo tiene su propia copia del ajuste. Ver
+   * `engine/values/regional.ts`.
+   */
+  regional?: ConfiguracionRegional;
 }
 
 export interface SalidaSimulada {
@@ -91,6 +100,9 @@ export async function simularPorBloques(
   let completadas = 0;
   let cancelada = false;
 
+  const regionalPrevia = regionalActual();
+  if (opciones.regional) establecerRegional(opciones.regional);
+
   try {
     for (let i = 0; i < bloques.length; i += bloquesPorRonda) {
       if (opciones.debeCancelar?.()) {
@@ -117,6 +129,8 @@ export async function simularPorBloques(
   } catch (e) {
     if (e instanceof ErrorCalculoBloque) return { ok: false, error: { clave: e.clave, motivo: e.motivo } };
     throw e;
+  } finally {
+    establecerRegional(regionalPrevia);
   }
 
   const porSalida = new Map<string, SalidaSimulada>();

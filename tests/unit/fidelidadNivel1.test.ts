@@ -23,13 +23,16 @@
  * falta.
  */
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import {
   errorEn, numeroEn, textoEn, tipoEn, ERROR, LOGICO, NUMERO, TEXTO, type Columna,
 } from '../../engine/values/columna.ts';
+import {
+  establecerRegional, regionalDesdeIdioma, restablecerRegional,
+} from '../../engine/values/regional.ts';
 import { leerCasosFidelidad, type CasoFidelidad } from '../helpers/leerFidelidad.ts';
 
 const RUTA_FIXTURE = fileURLToPath(new URL('../fixtures/fidelidad-nivel1.xlsx', import.meta.url));
@@ -48,12 +51,6 @@ const PENDIENTES: Record<string, string> = {
     '`IFNA` a secas. Excel la tomó por una función definida por el usuario (la reescribió como ' +
     '`_xludf.IFNA`) y devolvió #¿NOMBRE?. Ya está corregido en el generador; se verificará en la ' +
     'siguiente tanda.',
-  'N1-049':
-    'Hallazgo real, no un fallo a corregir sin más: el Excel es-ES del usuario convierte 1,5 a ' +
-    'texto con **coma** ("1,5") y el motor produce "1.5", porque no recibe información de ' +
-    'configuración regional. Confirma con dato el hueco que ya estaba documentado. Arreglarlo ' +
-    'exige decidir de dónde sale la configuración regional (ver el handoff §9.14), así que no ' +
-    'se parchea aquí.',
 };
 
 /**
@@ -90,6 +87,15 @@ function construirModeloDeCaso(formula: string) {
 function sinCalcular(casos: CasoFidelidad[]): boolean {
   return casos.every((c) => !c.calculado);
 }
+
+/**
+ * El libro lo calculó el Excel **en español** del usuario, así que el motor
+ * tiene que calcular con la misma configuración regional para que la
+ * comparación sea justa. Sin esto, los casos que convierten números a texto o
+ * al revés compararían dos configuraciones distintas y no dos motores.
+ */
+beforeAll(() => establecerRegional(regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' })));
+afterAll(() => restablecerRegional());
 
 describe('libro de fidelidad, Nivel 1 (tests/fixtures/fidelidad-nivel1.xlsx)', () => {
   const casos = leerCasosFidelidad(RUTA_FIXTURE);

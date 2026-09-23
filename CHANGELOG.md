@@ -5,6 +5,33 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### La configuración regional (2026-09-23)
+
+El Excel del usuario escribe `1,5` donde el motor escribía `1.5`. La cuarta
+tanda del libro de fidelidad lo confirmó por tres sitios, y el caso N1-049
+llevaba pendiente desde la segunda. **Los cuatro pasan ahora contra los valores
+de su Excel**, sin que se rompa ningún otro caso.
+
+**Añadido**
+
+- `engine/values/regional.ts`: el separador decimal, el de miles y los nombres
+  de los lógicos. Lo usan las cuatro conversiones por las que pasa todo el
+  motor: número a texto (`1,5`), texto a número (`"1.234,5"` es 1234,5 y
+  `"1234.5"` es `#¡VALOR!`), lógico a texto (`VERDADERO`) y texto a lógico.
+  Los miles solo se aceptan **bien agrupados**: ser permisivo convertiría en
+  número lo que Excel rechaza, y un número equivocado no se ve.
+- Es un ajuste del módulo, no un argumento: la conversión ocurre en decenas de
+  sitios y es el mismo valor durante toda la simulación. El coste es que **no
+  cruza de un hilo a otro**, así que viaja con cada trabajo a los workers; hay
+  una prueba con `worker_threads` reales de que llega.
+- `excel/regional.ts` la lee de Excel (`application.cultureInfo`,
+  `decimalSeparator`, `useSystemSeparators`), no la adivina del idioma: un
+  Excel en español puede tener el punto como decimal. Se guarda con el modelo,
+  como se decidió, y el diagnóstico la enseña.
+- Los libros de fidelidad se evalúan ahora en español, que es como los calculó
+  el Excel del usuario: comparar con otra configuración era comparar dos
+  configuraciones, no dos motores.
+
 ### La cuarta tanda vuelve de Excel: el Nivel 2, verificado (2026-09-23)
 
 **87 de 90 coinciden, y los 3 que no son exactamente los tres sondeos de

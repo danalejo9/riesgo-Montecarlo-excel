@@ -37,6 +37,7 @@
  *   concatenar; no pretende reproducir el redondeo de presentación exacto.
  */
 
+import { regionalActual, type ConfiguracionRegional } from './regional.ts';
 import type { ErrorExcel } from '../parser/ast.ts';
 import {
   ERROR,
@@ -75,8 +76,18 @@ export function coercionNumerica(c: Columna, i: number): number | ErrorExcel {
 }
 
 /**
- * Convierte un texto a número siguiendo lo que Excel acepta en un operando.
- * `undefined` si no es convertible (Excel daría `#¡VALOR!`).
+ * Convierte un texto a número siguiendo lo que Excel acepta en un operando,
+ * **con los separadores de la configuración regional**. `undefined` si no es
+ * convertible (Excel daría `#¡VALOR!`).
+ *
+ * En español `"1,5"` es 1,5 y `"1.234,5"` es 1234,5; `"1234.5"` no es un
+ * número, porque el punto solo puede separar miles y ahí no agrupa tres
+ * cifras. Es lo que respondió el Excel del usuario en el caso T4-052.
+ *
+ * Los separadores de miles solo valen **bien agrupados** (de tres en tres, y
+ * solo en la parte entera). Ser más permisivo convertiría en número cosas que
+ * Excel rechaza, que es peor que al revés: un `#¡VALOR!` se ve; un número
+ * equivocado, no.
  */
 export function numeroDeTexto(s: string): number | undefined {
   const t = s.trim();
@@ -85,21 +96,60 @@ export function numeroDeTexto(s: string): number | undefined {
   const porcentaje = t.endsWith('%');
   const cuerpo = porcentaje ? t.slice(0, -1).trim() : t;
 
+  const normalizado = normalizarSeparadores(cuerpo, regionalActual());
+  if (normalizado === undefined) return undefined;
+
   // `Number` acepta cosas que Excel no ("0x10", "Infinity", ""), así que se
   // exige antes la forma decimal explícita.
-  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(cuerpo)) return undefined;
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(normalizado)) return undefined;
 
-  const n = Number(cuerpo);
+  const n = Number(normalizado);
   if (!Number.isFinite(n)) return undefined;
   return porcentaje ? n / 100 : n;
 }
 
-/** Representación textual de un número, aproximando el formato "General". */
+/**
+ * Lleva un número escrito con los separadores de `r` a la forma con punto
+ * decimal y sin miles que entiende `Number`. `undefined` si los separadores
+ * están mal puestos para esa configuración.
+ */
+function normalizarSeparadores(s: string, r: ConfiguracionRegional): string | undefined {
+  const posDecimal = s.indexOf(r.decimal);
+  if (posDecimal >= 0 && s.indexOf(r.decimal, posDecimal + 1) >= 0) return undefined;
+
+  const entera = posDecimal >= 0 ? s.slice(0, posDecimal) : s;
+  const fraccion = posDecimal >= 0 ? s.slice(posDecimal + 1) : '';
+
+  // Un separador de miles en la parte decimal nunca es válido.
+  if (fraccion.includes(r.miles)) return undefined;
+
+  let enteraLimpia = entera;
+  if (entera.includes(r.miles)) {
+    // "1.234.567" sí; "12.34" o "1.2345" no: los grupos van de tres en tres.
+    const signo = /^[+-]/.test(entera) ? (entera[0] as string) : '';
+    const grupos = entera.slice(signo.length).split(r.miles);
+    const primero = grupos[0] as string;
+    if (!/^\d{1,3}$/.test(primero) || grupos.slice(1).some((g) => !/^\d{3}$/.test(g))) return undefined;
+    enteraLimpia = signo + grupos.join('');
+  }
+
+  return posDecimal >= 0 ? `${enteraLimpia}.${fraccion}` : enteraLimpia;
+}
+
+/**
+ * Representación textual de un número, aproximando el formato "General", con
+ * el separador decimal de la configuración regional. `1,5` en español.
+ *
+ * El formato General **no** pone separador de miles: `1234,5`, no `1.234,5`.
+ */
 export function textoDeNumero(x: number): string {
-  if (Number.isInteger(x) && Math.abs(x) < 1e21) return String(x);
-  const s = x.toPrecision(11);
+  let s: string;
+  if (Number.isInteger(x) && Math.abs(x) < 1e21) s = String(x);
   // toPrecision deja ceros de relleno ("1.5000000000"); Number los quita.
-  return String(Number(s));
+  else s = String(Number(x.toPrecision(11)));
+
+  const { decimal } = regionalActual();
+  return decimal === '.' ? s : s.replace('.', decimal);
 }
 
 /**
@@ -112,10 +162,12 @@ export function coercionTexto(c: Columna, i: number): string {
       return textoEn(c, i) ?? '';
     case NUMERO:
       return textoDeNumero(numeroEn(c, i));
-    case LOGICO:
-      // Excel escribe el literal en el idioma de la interfaz; el motor no
-      // recibe esa información todavía, así que usa el nombre canónico.
-      return numeroEn(c, i) !== 0 ? 'TRUE' : 'FALSE';
+    case LOGICO: {
+      // Excel escribe el literal en el idioma de la interfaz: "VERDADERO" en
+      // español (caso T4-072 de la cuarta tanda).
+      const r = regionalActual();
+      return numeroEn(c, i) !== 0 ? r.verdadero : r.falso;
+    }
     case VACIO:
       return '';
     case ERROR:
@@ -139,9 +191,12 @@ export function coercionLogica(c: Columna, i: number): boolean | ErrorExcel {
     case ERROR:
       return errorEn(c, i) ?? '#VALUE!';
     case TEXTO: {
+      // Se aceptan los nombres del idioma configurado y, además, los
+      // canónicos en inglés y español, que es lo que ya aceptaba el motor.
       const t = (textoEn(c, i) ?? '').trim().toUpperCase();
-      if (t === 'TRUE' || t === 'VERDADERO') return true;
-      if (t === 'FALSE' || t === 'FALSO') return false;
+      const r = regionalActual();
+      if (t === 'TRUE' || t === 'VERDADERO' || t === r.verdadero.toUpperCase()) return true;
+      if (t === 'FALSE' || t === 'FALSO' || t === r.falso.toUpperCase()) return false;
       return '#VALUE!';
     }
   }

@@ -181,6 +181,15 @@ export function instalarExcelFalso(): void {
   const contexto = {
     workbook: {
       application: {
+        // El banco imita el Excel del usuario: español, con coma decimal.
+        decimalSeparator: ',',
+        thousandsSeparator: '.',
+        useSystemSeparators: true,
+        cultureInfo: {
+          name: 'es-ES',
+          load: () => {},
+          numberFormat: { numberDecimalSeparator: ',', numberGroupSeparator: '.', load: () => {} },
+        },
         calculationMode: 'Automatic',
         load: () => {},
         calculate: () => {

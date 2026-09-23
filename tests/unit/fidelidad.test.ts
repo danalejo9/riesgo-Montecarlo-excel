@@ -15,13 +15,16 @@
  * que aparezca.
  */
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import {
   errorEn, numeroEn, textoEn, tipoEn, ERROR, LOGICO, NUMERO, TEXTO, type Columna,
 } from '../../engine/values/columna.ts';
+import {
+  establecerRegional, regionalDesdeIdioma, restablecerRegional,
+} from '../../engine/values/regional.ts';
 import { leerCasosFidelidad } from '../helpers/leerFidelidad.ts';
 
 const RUTA_FIXTURE = fileURLToPath(new URL('../fixtures/fidelidad.xlsx', import.meta.url));
@@ -64,6 +67,15 @@ function construirModeloDeCaso(formula: string) {
   }
   return construirGrafo(celdas).grafo;
 }
+
+/**
+ * El libro lo calculó el Excel **en español** del usuario, así que el motor
+ * tiene que calcular con la misma configuración regional para que la
+ * comparación sea justa. Sin esto, los casos que convierten números a texto o
+ * al revés compararían dos configuraciones distintas y no dos motores.
+ */
+beforeAll(() => establecerRegional(regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' })));
+afterAll(() => restablecerRegional());
 
 describe('libro de fidelidad (tests/fixtures/fidelidad.xlsx)', () => {
   const casos = leerCasosFidelidad(RUTA_FIXTURE);
