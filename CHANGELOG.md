@@ -5,6 +5,31 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### La cuarta tanda vuelve de Excel: el Nivel 2, verificado (2026-09-23)
+
+**87 de 90 coinciden, y los 3 que no son exactamente los tres sondeos de
+configuración regional que se pusieron a propósito.** Ningún fallo del motor en
+el Nivel 2.
+
+Quedan verificados contra Excel: las 25 funciones de texto —incluidas las
+rarezas de `NOMPROPIO` tras un dígito, `ESPACIOS` con el espacio duro, `HALLAR`
+con comodines, `CARACTER(128)` en la página de Windows—, `CONCAT` recorriendo
+por filas, `SUBTOTALES` y `AGREGAR` **sin doble conteo**, la moda empatada, y
+el `DIAS` que quedaba de la tercera tanda.
+
+Los tres sondeos confirman el trabajo pendiente: en el Excel es-ES del usuario,
+un decimal se escribe `"1,5"`, `VALOR("1234.5")` es `#¡VALOR!` y un lógico es
+`"VERDADERO"`. Quedan documentados por id hasta que llegue la configuración
+regional.
+
+**Corregido**
+
+- **El lector del libro de fidelidad perdía los textos que empiezan o acaban
+  en espacio.** Excel los escribe como `<v xml:space="preserve">` y el lector
+  solo reconocía `<v>` a secas, así que `UNIRCADENAS` —que Excel y el motor
+  calcularon igual, `"a, , c, "`— aparecía como un fallo del motor. Es un
+  fallo del instrumento de medida, y se miró el XML antes de tocar el motor.
+
 ### Nivel 2: texto, SUBTOTALES y AGREGAR (2026-09-23)
 
 27 de las 41 funciones del Nivel 2. El motor pasa de 89 a **116 funciones**.

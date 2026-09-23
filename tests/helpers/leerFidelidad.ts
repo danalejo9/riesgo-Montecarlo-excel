@@ -74,7 +74,12 @@ function leerCeldasDeHoja(xml: string): Map<string, CeldaCruda> {
     const fm = /<f\b[^>]*?(?:\/>|>([\s\S]*?)<\/f>)/.exec(trozo);
     const formula = fm ? desescapar(fm[1] ?? '').trim() : undefined;
 
-    const vm = /<v>([\s\S]*?)<\/v>/.exec(trozo);
+    // `<v>` puede llevar atributos: cuando el texto empieza o acaba en
+    // espacio, Excel escribe `<v xml:space="preserve">`. La primera versión de
+    // este lector solo reconocía `<v>` a secas, y un `UNIRCADENAS` cuyo
+    // resultado acababa en espacio salía como texto vacío: un fallo del
+    // lector que parecía un fallo del motor (caso T4-024).
+    const vm = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(trozo);
     // Una celda de texto en línea (`t="inlineStr"`) guarda su contenido en
     // `<is><t>` y no tiene `<v>`. Excel siempre escribe cadenas compartidas,
     // pero un generador puede escribirlas en línea: el libro recién generado,

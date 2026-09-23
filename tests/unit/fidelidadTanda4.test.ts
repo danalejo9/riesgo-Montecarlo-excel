@@ -25,8 +25,27 @@ const RUTA_FIXTURE = fileURLToPath(new URL('../fixtures/fidelidad-tanda4.xlsx', 
 const HOJA = 'Fidelidad';
 const CLAVE_FORMULA = claveDeReferencia(HOJA, 'E2');
 
-/** Casos que no se pueden comparar todavía, por id y con el motivo. Nunca en silencio. */
-const PENDIENTES: Record<string, string> = {};
+/**
+ * Casos que no se pueden comparar todavía, por id y con el motivo. Nunca en
+ * silencio.
+ *
+ * Los tres son los sondeos de configuración regional que se pusieron **a
+ * propósito** en esta tanda, y el Excel es-ES del usuario confirmó los tres.
+ * No se corrigen aquí: se corrigen con la configuración regional, que es la
+ * siguiente etapa, y en cuanto exista estos tres tienen que salir de esta
+ * lista y pasar en verde.
+ */
+const PENDIENTES: Record<string, string> = {
+  'T4-013':
+    'Configuración regional: `IZQUIERDA(1,5;3)` da "1,5" en el Excel es-ES del usuario y "1.5" ' +
+    'en el motor, que todavía convierte los números a texto con punto decimal. Mismo hueco que N1-049.',
+  'T4-052':
+    'Configuración regional: `VALOR("1234.5")` es #¡VALOR! en el Excel es-ES del usuario, porque ' +
+    'allí el punto no es separador decimal. El motor lo lee como 1234,5.',
+  'T4-072':
+    'Configuración regional: `MAYUSC(VERDADERO)` da "VERDADERO" en el Excel es-ES del usuario y ' +
+    '"TRUE" en el motor, que escribe los lógicos con su nombre en inglés.',
+};
 
 /**
  * Los datos auxiliares, **idénticos a los del generador**. Los que son fórmulas
