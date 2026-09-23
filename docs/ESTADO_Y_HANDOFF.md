@@ -700,31 +700,57 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Hoy la cinta solo abre el panel. Exige tocar el manifiesto, añadir iconos y
     un comando por botón; está anotado a petición suya para más adelante.
 
+20. [~] **Correlaciones en el panel (2026-09-23)** — y el ciclo completo
+    verificado dentro de Excel.
+
+    **El libro de demostración corrió en el Excel del usuario**: motor rápido,
+    100.000 iteraciones en **394 ms**, el resaltado puesto, y un VAN de media
+    260.614 € con p5 -664.113 €. Prácticamente los mismos números que en la
+    nube; la diferencia son los identificadores aleatorios de cada entrada, no
+    el modelo. El producto funciona de punta a punta en Excel real.
+
+    **Las correlaciones dejan de ser inalcanzables.** Iman–Conover está desde
+    la Fase 2 y solo se podía usar editando el JSON a mano. Ahora hay un
+    deslizador y un número por pareja dentro de la ficha de cada entrada, con
+    la traducción a palabras debajo. La simetría **se escribe**: cada cambio
+    toca las dos entradas, de modo que la contradicción no se puede teclear.
+
+    Y dos fallos que aparecieron justo al hacer alcanzable la capacidad:
+    - Una matriz imposible (A con B, B con C, A al revés que C) reventaba a
+      mitad de la simulación con una excepción de Cholesky. Ahora
+      `agruparCorrelaciones` la rechaza antes de empezar, nombrando a los
+      implicados; el criterio lo comparte con Iman–Conover
+      (`esDefinidaPositiva`), así que no pueden discrepar.
+    - Quitar una entrada dejaba correlaciones apuntando a un identificador que
+      ya no existía, y el modelo dejaba de poder guardarse con un mensaje sobre
+      un id que el usuario nunca ha visto.
+
+    **Lo que sigue sin medirse**: el ritmo del modo compatible en una máquina
+    real. Es la última incógnita de la fase de pruebas y no se puede contestar
+    desde aquí.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **El libro de demostración, dentro de Excel.** Es la prueba end-to-end que
-   falta: marcar las cinco entradas y las tres salidas que dicen sus
-   instrucciones, simular por el rápido y comparar con los valores que la hoja
-   anuncia. Y después forzar el modo compatible para medir **cuántas
-   iteraciones por segundo** da una máquina real — el único número del que
-   depende cómo se ofrece ese modo, y que sigue siendo una suposición.
-2. **Las correlaciones en el panel.** El motor las aplica desde Fase 2 y hoy no
-   hay forma de declararlas sin editar JSON a mano: una capacidad entera que el
-   usuario no puede usar.
+1. **Medir el modo compatible** en la máquina del usuario: motor Compatible,
+   1.000 iteraciones sobre el libro de demostración, y anotar las iteraciones
+   por segundo que enseña el panel. De ese número depende con cuántas
+   iteraciones se ofrece ese modo, y hoy sigue siendo una suposición heredada
+   de la auditoría del motor viejo.
+2. **Volcar los resultados a una hoja**: hoy viven solo en el panel y se
+   pierden al cerrarlo, así que no se pueden guardar, imprimir ni enviar.
 3. **Botones en la cinta** (Modelo / Resultados / Diagnóstico), pedidos por el
    usuario. Manifiesto, iconos y un comando por botón.
 4. **La configuración regional** (punto 14). Decidida —de Office, guardada en
    el libro— y ya implementable.
-5. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.` (lo
-   único que quedó sin verificar de la tercera) y lo que traiga el Nivel 2 de
-   texto cuando se implemente.
+5. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.`, lo
+   único que quedó sin verificar de la tercera.
 6. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**, que siguen siendo
    lo único que impide el 100 % en ese libro.
 7. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
    `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
-8. **El escritor de resultados** (volcar la simulación a una hoja nueva) y el
-   histograma por bloques.
+8. **El histograma por bloques** que `engine/stats/resumen.ts` documenta como
+   hueco.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -755,7 +781,7 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   mentira, en `/banco/`: sirve para desarrollar la interfaz sin Excel y dice de
   sí mismo lo que no puede probar.
 - `ejemplos/` — el libro de demostración y su generador.
-- `tests/unit/` — Vitest. **656 tests en verde**, 2 saltados y documentados
+- `tests/unit/` — Vitest. **659 tests en verde**, 2 saltados y documentados
   por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es `tsc -b && vite build` desde E3.

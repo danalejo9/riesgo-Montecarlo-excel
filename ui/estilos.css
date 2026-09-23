@@ -260,3 +260,14 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 
 .botonera { display: flex; flex-wrap: wrap; gap: 8px; }
 .botonera button { margin-top: 8px; }
+
+/* --- Correlaciones ------------------------------------------------------- */
+
+.correlaciones { margin-top: 12px; border-top: 1px solid var(--borde); padding-top: 8px; }
+.correlaciones h4 { font-size: 12px; margin: 0 0 6px; color: var(--tenue); text-transform: uppercase; letter-spacing: .04em; }
+
+.correlacion { margin-bottom: 10px; }
+.correlacion .cabecera { display: grid; grid-template-columns: 1fr 64px auto; gap: 6px; align-items: center; }
+.correlacion .nombre { font-size: 13px; word-break: break-word; }
+.correlacion .coeficiente { text-align: right; }
+.correlacion input[type='range'] { width: 100%; margin: 4px 0 0; accent-color: var(--acento); }

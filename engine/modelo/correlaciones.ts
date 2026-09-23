@@ -9,6 +9,7 @@
  * independientes por definición. Cada grupo se resuelve por separado, y solo
  * las variables que de verdad participan en uno pagan el costo de reordenar.
  */
+import { esDefinidaPositiva } from '../sampling/correlate.ts';
 import type { EntradaRiskModel } from './riskModel.ts';
 
 export interface GrupoCorrelacionado {
@@ -79,6 +80,20 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
         (matriz[i] as number[])[j] = corr.coefficient;
         (matriz[j] as number[])[i] = corr.coefficient;
       }
+    }
+
+    // Una matriz simétrica con unos en la diagonal no describe siempre una
+    // correlación posible: "A y B van juntos, B y C van juntos, y A y C van al
+    // revés" no puede existir. Sin esta comprobación, la contradicción sale a
+    // mitad de la simulación como una excepción de Cholesky; aquí sale antes
+    // de empezar, nombrando a los implicados.
+    if (!esDefinidaPositiva(matriz)) {
+      errores.push(
+        `Las correlaciones entre ${ids.map((id) => `"${id}"`).join(', ')} no pueden darse a la vez: ` +
+          'son contradictorias entre sí. Revisa los coeficientes — por ejemplo, si A va con B y B va ' +
+          'con C, A y C no pueden ir al revés con la misma fuerza.',
+      );
+      continue;
     }
 
     grupos.push({ ids, matriz });

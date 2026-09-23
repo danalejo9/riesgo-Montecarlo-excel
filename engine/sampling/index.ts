@@ -4,7 +4,7 @@ import { muestrearLHS } from './lhs.ts';
 import { muestrearMonteCarlo } from './montecarlo.ts';
 import type { MetodoMuestreo } from './types.ts';
 
-export { correlacionarImanConover } from './correlate.ts';
+export { correlacionarImanConover, esDefinidaPositiva } from './correlate.ts';
 export { muestrearLHS } from './lhs.ts';
 export { muestrearMonteCarlo, muestrearMonteCarloBloque } from './montecarlo.ts';
 export type { MetodoMuestreo } from './types.ts';

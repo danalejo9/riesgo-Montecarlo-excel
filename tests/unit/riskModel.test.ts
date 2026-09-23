@@ -140,6 +140,38 @@ describe('agruparCorrelaciones', () => {
     const r = agruparCorrelaciones([a, b]);
     expect(r.ok).toBe(true);
   });
+
+  it('rechaza una matriz imposible antes de simular, nombrando a los implicados', () => {
+    // "A va con B, B va con C, y A va al revés que C" no describe ninguna
+    // realidad: no existen tres variables así. Sin esta comprobación, la
+    // contradicción salía a mitad de la simulación como una excepción de
+    // Cholesky, que para el usuario es un fallo del programa y no un error suyo.
+    const a = entrada('a', [{ with: 'b', coefficient: 0.9 }, { with: 'c', coefficient: -0.9 }]);
+    const b = entrada('b', [{ with: 'c', coefficient: 0.9 }]);
+    const c = entrada('c');
+
+    const r = agruparCorrelaciones([a, b, c]);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.errores[0]).toContain('"a"');
+    expect(r.errores[0]).toContain('contradictorias');
+  });
+
+  it('una correlación fuerte pero posible entre tres sí se acepta', () => {
+    const a = entrada('a', [{ with: 'b', coefficient: 0.9 }, { with: 'c', coefficient: 0.8 }]);
+    const b = entrada('b', [{ with: 'c', coefficient: 0.85 }]);
+    const r = agruparCorrelaciones([a, b, entrada('c')]);
+    expect(r.ok).toBe(true);
+  });
+
+  it('el límite: dos variables idénticas (r = 1) no son definidas positivas', () => {
+    // Un coeficiente de exactamente 1 dice "son la misma variable", y entonces
+    // la matriz es singular. Excel y cualquier otra herramienta lo rechazan
+    // igual; el panel acota a [-1, 1] pero puede llegar el 1 exacto.
+    const a = entrada('a', [{ with: 'b', coefficient: 1 }]);
+    const r = agruparCorrelaciones([a, entrada('b')]);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe('prepararEntradas', () => {

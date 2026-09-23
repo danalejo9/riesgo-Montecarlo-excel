@@ -106,6 +106,29 @@ function puntuacionesVanDerWaerden(n: number, seed: number, stream: number): Flo
 }
 
 /**
+ * Si una matriz de correlación es aplicable, es decir, definida positiva.
+ *
+ * No toda matriz simétrica con unos en la diagonal describe una correlación
+ * posible. Declarar que A y B van juntos (0,9), que B y C van juntos (0,9) y
+ * que A y C van al revés (-0,9) es una contradicción geométrica: no existen
+ * tres variables así. Es un error fácil de cometer en cuanto hay tres
+ * variables correlacionadas, y sin esta comprobación se manifiesta como una
+ * excepción a mitad de la simulación en vez de como un aviso antes de
+ * empezar.
+ *
+ * Comparte el criterio con `correlacionarImanConover` porque usa exactamente
+ * el mismo Cholesky: si esto dice que sí, aquello no puede fallar.
+ */
+export function esDefinidaPositiva(matriz: readonly (readonly number[])[]): boolean {
+  try {
+    choleskyInferior(matriz);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Factorización de Cholesky `L` (triangular inferior) tal que `L·Lᵀ = m`.
  * `m` debe ser simétrica definida positiva; si no lo es, el algoritmo lo
  * delata con una raíz de negativo, reportada como error explícito en vez de

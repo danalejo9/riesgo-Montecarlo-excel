@@ -5,6 +5,44 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Las correlaciones, por fin alcanzables (2026-09-23)
+
+El motor las aplica desde la Fase 2 (Iman–Conover, con sus grupos y su matriz)
+y hasta hoy solo se podían declarar editando a mano el JSON del modelo: una
+capacidad entera, construida y probada, que el usuario no podía usar.
+
+No es un adorno estadístico. Simular el precio y las unidades como
+independientes supone que las unidades pueden caer mientras el precio sube,
+igual de a menudo que cualquier otra combinación. Rara vez es cierto, y el
+error va **siempre en la misma dirección**: la independencia diluye el riesgo,
+porque los malos escenarios de una variable se compensan con los buenos de la
+otra. El p5 sale mejor de lo que es, y el p5 es justo el número en el que
+alguien se apoya para decidir.
+
+**Añadido**
+
+- `ui/EditorCorrelaciones.tsx`: un deslizador y un número por pareja, dentro de
+  la ficha de cada entrada. El deslizador porque un coeficiente es una
+  intuición ("van bastante juntos"); el número porque quien venga de un estudio
+  con un 0,62 tiene que poder escribirlo. Debajo, lo que significa en palabras.
+- **La simetría se escribe, no se pide**: cada cambio actualiza las dos
+  entradas a la vez, así que la contradicción "0,6 en una y 0,3 en la otra" no
+  se puede ni teclear.
+
+**Corregido**
+
+- **Una matriz de correlación imposible ya no revienta a mitad de la
+  simulación.** "A va con B, B va con C, y A va al revés que C" no describe
+  ninguna realidad, y hasta ahora salía como una excepción de Cholesky —para el
+  usuario, un fallo del programa—. Ahora se detecta antes de empezar y se dice
+  con los nombres de los implicados.
+- **Quitar una entrada se lleva las correlaciones que la nombraban.** Si no,
+  quedaban apuntando a un identificador inexistente y el modelo dejaba de poder
+  guardarse, con un mensaje sobre un id que el usuario nunca ha visto.
+- La distribución sugerida al marcar una celda ya no enseña
+  `0,11000000000000001`: la basura binaria de multiplicar por 1,1 se limpia
+  antes de proponerla.
+
 ### Resaltado en la hoja, libro de demostración, y el hueco más viejo cerrado (2026-09-22)
 
 **Añadido**

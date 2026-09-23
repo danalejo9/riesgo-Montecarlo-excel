@@ -28,6 +28,7 @@ import {
   type ModeloRiesgo,
   type SalidaRiskModel,
 } from '../engine/modelo/index.ts';
+import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
 
@@ -53,7 +54,17 @@ const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangula
 function distribucionInicial(valor: number | undefined): DistributionSpec {
   if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
   const margen = Math.abs(valor) * 0.1;
-  return { type: 'triangular', min: valor - margen, mode: valor, max: valor + margen };
+  return { type: 'triangular', min: limpiar(valor - margen), mode: valor, max: limpiar(valor + margen) };
+}
+
+/**
+ * Quita la basura binaria de una multiplicación: `0,1 × 1,1` da
+ * `0,11000000000000001` en coma flotante, y ese número aparecería tal cual en
+ * el campo y en el resumen de la entrada. No cambia nada del cálculo; cambia
+ * que el panel no parezca roto nada más marcar una celda.
+ */
+function limpiar(v: number): number {
+  return Number(v.toPrecision(12));
 }
 
 export function Modelo({
@@ -115,6 +126,20 @@ export function Modelo({
   const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
     alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === id ? { ...e, ...cambio } : e)) });
 
+  /**
+   * Quitar una entrada se lleva también las correlaciones que la nombraban.
+   * Si no, quedarían apuntando a algo que ya no existe: `validarRiskModel` lo
+   * rechazaría y el modelo dejaría de poder guardarse, con un mensaje sobre un
+   * identificador que el usuario nunca ha visto.
+   */
+  const quitarEntrada = (id: string) =>
+    alCambiar({
+      ...modelo,
+      inputs: modelo.inputs
+        .filter((e) => e.id !== id)
+        .map((e) => ({ ...e, correlations: e.correlations.filter((c) => c.with !== id) })),
+    });
+
   const listo = modelo.inputs.length > 0 && modelo.outputs.length > 0;
 
   return (
@@ -145,7 +170,7 @@ export function Modelo({
                   type="button"
                   className="plano borrar"
                   title="Quitar del modelo"
-                  onClick={() => alCambiar({ ...modelo, inputs: modelo.inputs.filter((e) => e.id !== entrada.id) })}
+                  onClick={() => quitarEntrada(entrada.id)}
                 >
                   ✕
                 </button>
@@ -166,6 +191,7 @@ export function Modelo({
                     spec={entrada.dist}
                     alCambiar={(dist) => cambiarEntrada(entrada.id, { dist })}
                   />
+                  <EditorCorrelaciones modelo={modelo} entrada={entrada} alCambiar={alCambiar} />
                 </div>
               )}
             </li>
