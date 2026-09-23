@@ -69,21 +69,48 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 
 ## 2. Vista general
 
-| Etapa | Nombre | Esfuerzo | Hito |
+> **Estado al 23/09/2026.** Actualizado con lo que de verdad está hecho y
+> verificado en Excel, no con lo que el plan preveía. Las etapas no se han
+> recorrido en orden: E3 arrastró trozos de E5 y de E7 porque el escáner
+> encontró `TIR` en un libro real del usuario, y porque un panel que no enseña
+> resultados no es un MVP.
+
+| Etapa | Nombre | Esfuerzo | Estado |
 |---|---|---|---|
 | E0 | Fundaciones | 2–3 d | ✅ hecha |
-| E1 | Escáner de compatibilidad | 4–5 d | ✅ **v0.1** (falta pasarlo por libros reales) |
-| E2 | Motor Nivel 0 | 15–20 d | en curso (parser hecho) |
-| E3 | Integración Excel + UI mínima **+ modo compatible** | 11–14 d | **v0.5 — MVP: simula de verdad, siempre** |
-| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | |
-| E5 | Motor Nivel 1 (búsquedas, financieras, fechas) | 10–12 d | **v0.8** |
-| E6 | Escala D11 y rendimiento | 6–8 d | |
-| E7 | Análisis y visualización | 8–10 d | **v1.0 — funcionalmente completo** |
-| E9 | Mac, empaquetado y documentación | 4–5 d | |
-| **E10** | **Producto: hosting, i18n, licencia, privacidad** | **8–12 d** | |
-| **E11** | **Validación y publicación en AppSource** | **5–8 d** | **v1.0 pública** |
+| E1 | Escáner de compatibilidad | 4–5 d | ✅ **v0.1**, pasado por dos libros reales |
+| E2 | Motor Nivel 0 | 15–20 d | ✅ hecha — 57/57 funciones, fidelidad verificada contra Excel |
+| E3 | Integración Excel + UI **+ modo compatible** | 11–14 d | ✅ **v0.5 — el MVP simula de verdad en Excel** |
+| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | ⬜ no empezada |
+| E5 | Motor Nivel 1 | 10–12 d | 🟡 32/44 — búsquedas, financieras y fechas hechas y verificadas |
+| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 el ejecutor por bloques está; falta el histograma en *streaming* |
+| E7 | Análisis y visualización | 8–10 d | 🟡 estadísticos, percentiles, CDF y volcado a hoja hechos |
+| E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
+| E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
+| E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 
-Total aproximado: **78–105 días** de trabajo efectivo. El MVP utilizable (v0.5) está en torno al día 30–40.
+**Dónde estamos de verdad**: el ciclo completo funciona dentro de Excel —marcar
+entradas y salidas, distribuciones, correlaciones, simular por el motor rápido
+o con Excel en el bucle, ver resultados y volcarlos a una hoja—. Lo que queda
+para la v1.0 son, por este orden: **cobertura de funciones** (Nivel 2 entero
+sin empezar), **`RISK.*`** (E4), el **histograma en streaming** (E6), y todo el
+trabajo de producto (E9–E11), que no es técnico pero sin él esto no llega a
+nadie más que a su autor.
+
+**Cobertura de funciones, medida** (`npm test` la ata; no es una estimación):
+
+| Nivel | Qué es | Estado |
+|---|---|---|
+| Nivel 0 | Aritmética, agregación, lógica, redondeo, estadísticos de orden | **57 / 57** |
+| Nivel 1 | Criterios, fechas, financieras, búsquedas | **32 / 44** |
+| Nivel 2 | Texto, matriciales dinámicas, `SUBTOTALES`, `LET`/`LAMBDA` | **0 / 41** |
+
+Faltan de Nivel 1: `BUSCAR`, `DESREF`, `MAX.SI.CONJUNTO`, `MIN.SI.CONJUNTO`,
+`SI.CONJUNTO`, `CAMBIAR`, `DIAS360`, `SIFECHA`, `DIA.LAB`, `DIAS.LAB`,
+`FECHANUMERO`, `FRAC.AÑO`.
+
+Total aproximado: **78–105 días** de trabajo efectivo. El MVP utilizable (v0.5)
+se alcanzó.
 
 > **E8 (modo compatible) ya no es una etapa suelta**: se absorbe dentro de E3 por la
 > decisión 15. Se mantiene el número retirado para no romper las referencias de los
