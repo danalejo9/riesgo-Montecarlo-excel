@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### La sexta tanda vuelve de Excel: 69 de 69 a la primera (2026-09-23)
+
+Las once funciones nuevas del Nivel 1 coinciden con Excel en todos los casos,
+incluidos los bordes de calendario. Quedan verificados, entre otros:
+- `DIAS360` estadounidense **no** aplica la regla de "los dos fines de
+  febrero": del 29-feb-2024 al 28-feb-2025 son 358, no 360 (`FRAC.AÑO` base 0
+  sí la aplica y da 1).
+- `SIFECHA(...;"MD")` desde un 31 da −1: el fallo que Microsoft documenta.
+- `FECHANUMERO` en español entiende día/mes, años de dos cifras, `ago` y
+  `agosto`, e ignora la hora; un 31 de febrero es `#¡VALOR!`.
+- `DIA.LAB` con 0 días desde un sábado devuelve el propio sábado.
+- `CAMBIAR` no distingue mayúsculas; con la expresión en error, propaga el error.
+- `TEXTO(5;"0 kg")` es `#¡VALOR!`: confirma la regla de que una letra que no
+  es un código invalida el formato.
+
 ### El resto del Nivel 1: 11 funciones más, y la sexta tanda (2026-09-23)
 
 **Añadido**
@@ -18,8 +33,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   YD, MD, con el fallo conocido de MD), `DIA.LAB`, `DIAS.LAB` (con festivos) y
   `FECHANUMERO` (día/mes o mes/día según el idioma, meses con nombre).
 - Sexta tanda del libro de fidelidad (`tests/fixtures/fidelidad-tanda6.xlsx`,
-  69 casos), con el resultado del motor anotado en cada caso. Sin verificar
-  contra Excel todavía.
+  69 casos), con el resultado del motor anotado en cada caso.
 
 **Pendiente a propósito**
 - `DESREF`: referencia dinámica. Es lo único que falta del Nivel 1 (43/44).

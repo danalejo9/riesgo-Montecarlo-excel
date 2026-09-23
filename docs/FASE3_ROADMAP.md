@@ -108,7 +108,7 @@ nadie más que a su autor.
 Falta de Nivel 1 solo `DESREF`, a propósito: es una referencia dinámica (el
 rango depende de sus argumentos) y rompe el grafo fijo. Con desplazamientos
 constantes se podrá resolver al compilar; si no, modo compatible. Las once que
-entraron el 2026-09-23 esperan la sexta tanda de fidelidad.
+entraron el 2026-09-23 están verificadas contra Excel (sexta tanda, 69/69).
 
 Faltan de Nivel 2, en dos grupos que no se parecen entre sí (el texto está
 completo desde que llegó la configuración regional):

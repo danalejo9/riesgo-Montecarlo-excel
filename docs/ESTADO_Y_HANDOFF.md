@@ -823,21 +823,19 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     desplazamientos que cambian por iteración es trabajo del modo compatible.
     `catalogoVsRegistro.test.ts` lo deja como único pendiente del Nivel 1.
 
-    **Sexta tanda de fidelidad**, 69 casos, esperando volver de Excel. Casi la
+    **Sexta tanda de fidelidad: 69 de 69 contra Excel a la primera.** Casi la
     mitad son bordes de calendario (fin de febrero, días 31, bisiestos) y
-    sondeos de `FECHANUMERO` en español. Los 69 se pasaron por el motor y su
-    resultado va en la columna de notas.
+    sondeos de `FECHANUMERO` en español. Confirmó también la regla de las
+    letras de `TEXTO` que la quinta tanda dedujo de un solo caso.
 
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **La sexta tanda de vuelta de Excel.** Las convenciones de calendario no se
-   pueden dar por buenas sin ella.
-2. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
+1. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
    diagnóstico de ajustes guardados.
-3. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
-4. **`LET`**, y los **botones en la cinta**.
-5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
-6. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
+2. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
+3. **`LET`**, y los **botones en la cinta**.
+4. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
+5. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
