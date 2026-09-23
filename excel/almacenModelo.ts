@@ -61,23 +61,70 @@ export async function leerModelo(): Promise<LecturaModelo> {
   });
 }
 
+export type Guardado =
+  | { ok: true; verificado: boolean }
+  | { ok: false; errores: string[] };
+
 /**
- * Guarda el modelo en el libro.
+ * Guarda el modelo en el libro y **comprueba que quedó escrito**.
  *
- * Se valida **antes** de escribir, no después de leer. Guardar algo inválido
- * y descubrirlo en la siguiente sesión convierte un error de un momento en un
+ * Se valida antes de escribir, no después de leer: guardar algo inválido y
+ * descubrirlo en la siguiente sesión convierte un error de un momento en un
  * modelo perdido.
+ *
+ * Y después de escribir se vuelve a leer, en el mismo viaje. Parece paranoia y
+ * no lo es: el usuario reportó que tras guardar el libro, cerrarlo y
+ * reabrirlo, el modelo no estaba. Un `settings.add` que no llega a persistir
+ * es indistinguible de uno que sí, salvo que alguien mire. `verificado: false`
+ * significa "Excel aceptó la escritura pero no me la devuelve", que es
+ * información para enseñar, no para tragarse.
+ *
+ * Ojo con lo que **no** puede comprobar: que el usuario guarde el archivo
+ * después. Los ajustes viajan dentro del `.xlsx`, así que si se cierra sin
+ * guardar se pierden igual que cualquier otro cambio. Eso no es un fallo del
+ * complemento y el panel lo dice con esas palabras.
  */
-export async function guardarModelo(modelo: ModeloRiesgo): Promise<{ ok: true } | { ok: false; errores: string[] }> {
+export async function guardarModelo(modelo: ModeloRiesgo): Promise<Guardado> {
   const r = validarRiskModel(modelo);
   if (!r.ok) return { ok: false, errores: r.errores };
 
-  await Excel.run(async (context) => {
-    context.workbook.settings.add(CLAVE_MODELO, JSON.stringify(r.modelo));
-    await context.sync();
-  });
+  const esperado = JSON.stringify(r.modelo);
 
-  return { ok: true };
+  return Excel.run(async (context) => {
+    context.workbook.settings.add(CLAVE_MODELO, esperado);
+    await context.sync();
+
+    const comprobacion = context.workbook.settings.getItemOrNullObject(CLAVE_MODELO);
+    comprobacion.load(['value', 'isNullObject']);
+    await context.sync();
+
+    return {
+      ok: true as const,
+      verificado: !comprobacion.isNullObject && comprobacion.value === esperado,
+    };
+  });
+}
+
+/**
+ * Todo lo que este complemento tiene guardado en el libro, en crudo.
+ *
+ * Es material de diagnóstico: cuando alguien dice "no se guardó nada", esto
+ * convierte la conversación en un dato. Se filtra por el prefijo para no
+ * enseñar los ajustes de otros complementos, que no son asunto nuestro.
+ */
+export async function leerAjustesGuardados(): Promise<Array<{ clave: string; valor: string }>> {
+  return Excel.run(async (context) => {
+    const ajustes = context.workbook.settings;
+    ajustes.load('items/key,items/value');
+    await context.sync();
+
+    return ajustes.items
+      .filter((a) => a.key.startsWith('riesgoMontecarlo.'))
+      .map((a) => ({
+        clave: a.key,
+        valor: typeof a.value === 'string' ? a.value : JSON.stringify(a.value),
+      }));
+  });
 }
 
 /**

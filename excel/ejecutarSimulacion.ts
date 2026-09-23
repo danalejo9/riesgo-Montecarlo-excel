@@ -32,62 +32,21 @@ import {
   type EleccionMotor,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
-import { curvaCDF, resumenEstadistico, type PuntoCDF, type ResumenEstadistico } from '../engine/stats/index.ts';
-import { leerLibro, type EstadisticasLectura } from './lectorLibro.ts';
+import { curvaCDF, resumenEstadistico } from '../engine/stats/index.ts';
+import type { AvanceSimulacion, FalloSimulacion, ResultadoSimulacionPanel } from './informe.ts';
+import { leerLibro } from './lectorLibro.ts';
+import type { EstadisticasLectura } from './tiposLectura.ts';
+
+export type {
+  AvanceSimulacion,
+  FalloSimulacion,
+  ResultadoSalida,
+  ResultadoSimulacionPanel,
+  SimulacionCompletada,
+} from './informe.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
 import { aValorCelda } from './valoresEstaticos.ts';
-
-export interface AvanceSimulacion {
-  fase: 'resolviendo' | 'leyendo' | 'analizando' | 'simulando';
-  /** Lo que se le enseña al usuario en esa fase. */
-  mensaje: string;
-  /** Solo en la fase de simulación. */
-  completadas?: number;
-  totales?: number;
-  /** Ritmo medido; solo lo tiene el modo compatible, donde hace falta decirlo. */
-  iteracionesPorSegundo?: number;
-}
-
-export interface ResultadoSalida {
-  id: string;
-  nombre: string;
-  ref: string;
-  resumen: ResumenEstadistico;
-  cdf: PuntoCDF[];
-  /**
-   * Iteraciones en las que esta salida no dio un número: una `TIR` sin raíz,
-   * una división por cero. Excluidas de las estadísticas y contadas aparte,
-   * en los dos motores.
-   */
-  noNumericas: number;
-}
-
-export interface SimulacionCompletada {
-  ok: true;
-  motor: 'fast' | 'compatible';
-  /**
-   * Ritmo medido, solo en el modo compatible. Es el dato que permite decirle
-   * al usuario **la próxima vez** cuánto va a tardar antes de que se
-   * comprometa, así que sube hasta aquí para poder guardarlo.
-   */
-  iteracionesPorSegundo?: number;
-  eleccion: EleccionMotor;
-  salidas: ResultadoSalida[];
-  iteracionesCompletadas: number;
-  cancelada: boolean;
-  milisegundos: number;
-  lectura: EstadisticasLectura;
-}
-
-export type FalloSimulacion =
-  | { ok: false; tipo: 'modelo'; mensaje: string; detalles: string[] }
-  | { ok: false; tipo: 'referencias'; mensaje: string; detalles: string[] }
-  | { ok: false; tipo: 'celdas'; mensaje: string; detalles: string[] }
-  | { ok: false; tipo: 'compilacion'; mensaje: string; detalles: string[] }
-  | { ok: false; tipo: 'calculo'; mensaje: string; detalles: string[] };
-
-export type ResultadoSimulacionPanel = SimulacionCompletada | FalloSimulacion;
 
 export interface PeticionSimulacion {
   modelo: ModeloRiesgo;

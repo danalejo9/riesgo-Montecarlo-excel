@@ -11,9 +11,13 @@ import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { CELDAS, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
+import { CELDAS, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
 
 instalarExcelFalso();
+
+// Para poder inspeccionar desde fuera qué escribió el volcado: el banco no
+// dibuja una cuadrícula, así que esta es la única forma de comprobarlo.
+(globalThis as unknown as Record<string, unknown>).__hojaVolcada = hojaVolcada;
 
 function Banco() {
   const [celda, setCelda] = useState(seleccion.ref);

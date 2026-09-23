@@ -48,6 +48,9 @@ export function Panel() {
   const [error, setError] = useState<string | null>(null);
   const [simulando, setSimulando] = useState(false);
   const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
+  const [guardado, setGuardado] = useState<EstadoGuardado>({ estado: 'sin-cambios' });
+  /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
+  const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
 
   useEffect(() => {
@@ -79,19 +82,32 @@ export function Panel() {
   }, []);
 
   const cambiarModelo = useCallback((m: ModeloRiesgo) => {
-    setModelo((anterior) => {
-      // El resaltado solo se rehace cuando cambian **las celdas**, no en cada
-      // pulsación al renombrar una entrada: pintar la hoja es un viaje a Excel
-      // y hacerlo por cada tecla se nota.
-      if (anterior === null || refsDe(anterior) !== refsDe(m)) {
-        void aplicarResaltado(m).catch((e: unknown) => setError(mensajeDe(e)));
-      }
-      return m;
-    });
+    setModelo(m);
 
-    void guardarModelo(m).then((r) => {
-      if (!r.ok) setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
-    });
+    // El resaltado solo se rehace cuando cambian **las celdas**, no en cada
+    // pulsación al renombrar una entrada: pintar la hoja es un viaje a Excel y
+    // hacerlo por cada tecla se nota. La comparación va en una `ref` y no
+    // dentro del actualizador de estado porque React puede invocar ese
+    // actualizador dos veces (lo hace en modo estricto), y entonces el efecto
+    // se ejecutaría por duplicado.
+    const refs = refsDe(m);
+    if (refsPintadas.current !== refs) {
+      refsPintadas.current = refs;
+      void aplicarResaltado(m).catch((e: unknown) => setError(mensajeDe(e)));
+    }
+
+    setGuardado({ estado: 'guardando' });
+    void guardarModelo(m).then(
+      (r) => {
+        if (!r.ok) {
+          setGuardado({ estado: 'fallo', detalle: r.errores.join('\n') });
+          setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
+        } else {
+          setGuardado({ estado: r.verificado ? 'guardado' : 'sin-verificar', cuando: new Date() });
+        }
+      },
+      (e: unknown) => setGuardado({ estado: 'fallo', detalle: mensajeDe(e) }),
+    );
   }, []);
 
   const simular = useCallback(async () => {
@@ -194,6 +210,8 @@ export function Panel() {
         </section>
       )}
 
+      {modelo && <Guardado estado={guardado} />}
+
       {pestana === 'modelo' &&
         (modelo ? (
           <Modelo
@@ -208,7 +226,9 @@ export function Panel() {
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
         ))}
 
-      {pestana === 'resultados' && resultado?.ok === true && <Resultados resultado={resultado} />}
+      {pestana === 'resultados' && resultado?.ok === true && modelo && (
+        <Resultados modelo={modelo} resultado={resultado} />
+      )}
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}
     </main>
@@ -244,6 +264,52 @@ function Progreso({ avance, alCancelar }: { avance: AvanceSimulacion; alCancelar
         Cancelar
       </button>
     </section>
+  );
+}
+
+type EstadoGuardado =
+  | { estado: 'sin-cambios' }
+  | { estado: 'guardando' }
+  | { estado: 'guardado'; cuando: Date }
+  | { estado: 'sin-verificar'; cuando: Date }
+  | { estado: 'fallo'; detalle: string };
+
+/**
+ * Que el modelo está guardado **en el libro**, y qué falta para que sobreviva.
+ *
+ * El usuario reportó que tras simular, guardar el libro y reabrirlo tuvo que
+ * volver a marcarlo todo. El modelo vive en `workbook.settings`, que viaja
+ * dentro del `.xlsx`, así que hay dos pasos y solo uno es nuestro: el
+ * complemento escribe el ajuste, y **Excel lo persiste cuando el usuario
+ * guarda el archivo**. Sin decir esto en voz alta, los dos pasos parecen uno
+ * y su fallo es indistinguible.
+ *
+ * Por eso aquí se enseña lo que sabemos con certeza —el ajuste se escribió y
+ * se pudo releer— y se recuerda lo que no depende de nosotros.
+ */
+function Guardado({ estado }: { estado: EstadoGuardado }) {
+  if (estado.estado === 'sin-cambios') return null;
+
+  if (estado.estado === 'guardando') return <p className="tenue guardado">Guardando en el libro…</p>;
+
+  if (estado.estado === 'fallo') {
+    return <p className="aviso-linea">No se pudo guardar el modelo en el libro: {estado.detalle}</p>;
+  }
+
+  if (estado.estado === 'sin-verificar') {
+    return (
+      <p className="aviso-linea">
+        El modelo se escribió pero Excel no lo devolvió al releerlo. Cuéntamelo:
+        es justo el fallo que haría que se perdiera al cerrar el libro.
+      </p>
+    );
+  }
+
+  return (
+    <p className="tenue guardado">
+      ✓ Modelo guardado en el libro a las {estado.cuando.toLocaleTimeString('es-ES')} ·{' '}
+      <strong>guarda el archivo</strong> (Ctrl+S) para que sobreviva al cerrarlo.
+    </p>
   );
 }
 

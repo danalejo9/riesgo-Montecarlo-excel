@@ -254,6 +254,8 @@ export function Modelo({
         <h2>Entradas inciertas</h2>
         <p className="tenue">
           Las celdas cuyo valor no conoces. Selecciona una en la hoja y añádela.
+          {modelo.inputs.length >= 2 &&
+            ' Despliega una (▸) para cambiarle la distribución o declarar que se mueve junto a otra.'}
         </p>
 
         {modelo.inputs.length === 0 && <p className="tenue">Todavía no hay ninguna.</p>}
@@ -269,7 +271,11 @@ export function Modelo({
                 >
                   {abierta === entrada.id ? '▾' : '▸'} {entrada.name}
                 </button>
-                <span className="tenue">{resumirDistribucion(entrada.dist)}</span>
+                <span className="tenue">
+                  {resumirDistribucion(entrada.dist)}
+                  {entrada.correlations.length > 0 &&
+                    ` · ${entrada.correlations.length} correlación(es)`}
+                </span>
                 <button
                   type="button"
                   className="plano borrar"

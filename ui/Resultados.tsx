@@ -21,15 +21,55 @@
 
 import { useState } from 'react';
 
+import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import { volcarResultados } from '../excel/volcarResultados.ts';
+
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import { duracion, miles, numero } from './formato.ts';
 
-export function Resultados({ resultado }: { resultado: SimulacionCompletada }) {
+export function Resultados({
+  modelo,
+  resultado,
+}: {
+  modelo: ModeloRiesgo;
+  resultado: SimulacionCompletada;
+}) {
   const motivos = motivosLegibles(resultado.eleccion);
+  const [volcando, setVolcando] = useState(false);
+  const [volcado, setVolcado] = useState<string | null>(null);
+  const [falloVolcado, setFalloVolcado] = useState<string | null>(null);
+
+  const volcar = async () => {
+    setVolcando(true);
+    setFalloVolcado(null);
+    try {
+      const hecho = await volcarResultados(modelo, resultado);
+      setVolcado(`Escritos en la hoja «${hecho.hoja}».`);
+    } catch (e) {
+      setFalloVolcado(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVolcando(false);
+    }
+  };
 
   return (
     <>
+      <section>
+        <h2>Guardar en el libro</h2>
+        <p className="tenue">
+          Escribe el informe en una hoja: el modelo que se usó, los
+          estadísticos, los percentiles y los puntos de la curva, con un
+          gráfico de Excel encima de ellos. Así se puede guardar, imprimir y
+          enviar. La hoja se rehace en cada volcado.
+        </p>
+        <button type="button" onClick={() => void volcar()} disabled={volcando}>
+          {volcando ? 'Escribiendo…' : 'Volcar a una hoja'}
+        </button>
+        {volcado && <p className="tenue">{volcado}</p>}
+        {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
+      </section>
+
       <section>
         <h2>Cómo se calculó</h2>
         <dl>

@@ -5,6 +5,46 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Los resultados se pueden guardar (2026-09-23)
+
+**Añadido**
+
+- **Volcado a una hoja del libro** (`excel/volcarResultados.ts`). Hasta ahora
+  una simulación vivía solo en el panel y se perdía al cerrarlo: en modo
+  compatible, tirar cinco minutos de espera; en cualquier modo, un análisis
+  terminado que no se puede guardar, imprimir ni enviar. La hoja lleva el
+  modelo entero —distribuciones y correlaciones incluidas—, la semilla, el
+  motor, los estadísticos, los percentiles y **los puntos de la curva como
+  datos**, con un gráfico **nativo de Excel** encima. No una imagen: así se
+  puede reformatear, copiar a otra parte o rehacer. Quien abra el libro dentro
+  de un año tiene que poder saber de dónde salieron esos números.
+- **El panel dice si el modelo quedó guardado**, con la hora, y recuerda que
+  hay que guardar el archivo para que sobreviva al cerrarlo. Son dos pasos y
+  solo uno es nuestro: el complemento escribe el ajuste, y Excel lo mete en el
+  `.xlsx` cuando el usuario guarda. Sin decirlo, los dos parecen uno.
+- **`guardarModelo` relee lo que acaba de escribir** y avisa si Excel no se lo
+  devuelve. Un `settings.add` que no persiste es indistinguible de uno que sí,
+  salvo que alguien mire.
+- **Diagnóstico → «Lo que hay guardado en este libro»**: enseña en crudo los
+  ajustes del complemento. Cuando alguien dice "no se guardó nada", esto
+  convierte la conversación en un dato.
+- Las correlaciones se ven desde la ficha plegada (`· 1 correlación(es)`) y se
+  menciona cómo llegar a ellas. Estaban a dos clics de profundidad y el usuario
+  las buscó sin encontrarlas.
+
+**Corregido**
+
+- El resaltado de la hoja podía pintarse **dos veces por cambio**: el efecto
+  estaba dentro del actualizador de estado de React, que puede invocarse dos
+  veces. Ahora la comparación va en una referencia, fuera.
+
+**Estructura**
+
+- `excel/informe.ts` y `excel/tiposLectura.ts` separan de la capa de Office lo
+  que son datos puros. Es la misma regla que ya separó `direcciones.ts` de
+  `rangos.ts`: en cuanto un archivo nombra un tipo del espacio `Excel`, ningún
+  test puede importar nada que dependa de él ni de lejos.
+
 ### El modo compatible, medido: 33 iteraciones por segundo (2026-09-23)
 
 El último número que faltaba de la fase de pruebas, y no se podía obtener sin

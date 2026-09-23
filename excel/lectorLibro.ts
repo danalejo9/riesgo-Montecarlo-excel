@@ -41,50 +41,15 @@
  */
 
 import type { FormulaCelda } from '../engine/graph/index.ts';
+import type { LibroLeido, OpcionesLectura, ValorEstatico } from './tiposLectura.ts';
+
+export type { EstadisticasLectura, LibroLeido, OpcionesLectura, ValorEstatico } from './tiposLectura.ts';
 
 /**
  * Cuántas hojas se piden antes de cada sincronización. Nueve viajes para 132
  * hojas, sin tener las 132 matrices vivas a la vez.
  */
 const HOJAS_POR_LOTE = 16;
-
-/** Qué se ha encontrado en una celda que no es una fórmula. */
-export interface ValorEstatico {
-  hoja: string;
-  col: number;
-  fila: number;
-  /** El tipo tal como lo clasifica Excel, ya traducido. */
-  tipo: 'numero' | 'texto' | 'logico' | 'error';
-  numero?: number;
-  texto?: string;
-}
-
-export interface LibroLeido {
-  /** Las celdas con fórmula, listas para `construirGrafo`. */
-  formulas: FormulaCelda[];
-  /** Las celdas con valor pero sin fórmula: las constantes del modelo. */
-  valores: ValorEstatico[];
-  estadisticas: EstadisticasLectura;
-}
-
-export interface EstadisticasLectura {
-  hojas: number;
-  hojasVisibles: number;
-  /** Celdas recorridas, incluidas las vacías dentro del rango usado. */
-  celdasRecorridas: number;
-  celdasConContenido: number;
-  formulas: number;
-  /** Cuántas veces se ha ido y vuelto al proceso de Excel. */
-  sincronizaciones: number;
-  milisegundos: number;
-}
-
-export interface OpcionesLectura {
-  /** Incluir las hojas ocultas. Por omisión no: rara vez son parte del modelo. */
-  incluirOcultas?: boolean;
-  /** Se llama tras cada lote, para poder enseñar progreso en un libro grande. */
-  progreso?: (hojasLeidas: number, hojasTotales: number) => void;
-}
 
 /** Traduce el tipo de valor de Excel al vocabulario del motor. */
 function traducirTipo(tipo: string): ValorEstatico['tipo'] | 'vacio' {

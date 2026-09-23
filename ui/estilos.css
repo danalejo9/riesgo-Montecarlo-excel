@@ -271,3 +271,5 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .correlacion .nombre { font-size: 13px; word-break: break-word; }
 .correlacion .coeficiente { text-align: right; }
 .correlacion input[type='range'] { width: 100%; margin: 4px 0 0; accent-color: var(--acento); }
+
+.guardado { margin: 8px 0 0; }

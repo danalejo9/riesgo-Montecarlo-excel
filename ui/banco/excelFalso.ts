@@ -195,6 +195,10 @@ export function instalarExcelFalso(): void {
         },
       },
       settings: {
+        get items() {
+          return [...ajustes].map(([key, value]) => ({ key, value }));
+        },
+        load: () => {},
         getItemOrNullObject: (clave: string) => ({
           isNullObject: !ajustes.has(clave),
           value: ajustes.get(clave),
@@ -216,6 +220,15 @@ export function instalarExcelFalso(): void {
         load: () => {},
         getItem: () => hojaFalsa,
         getActiveWorksheet: () => hojaFalsa,
+        getItemOrNullObject: () => ({ isNullObject: true, load: () => {}, delete: () => {} }),
+        // El volcado crea una hoja nueva. El banco no dibuja cuadrícula, así
+        // que la recoge en `hojaVolcada` para poder comprobar qué se escribió.
+        add: (nombre: string) => {
+          hojaVolcada.nombre = nombre;
+          hojaVolcada.filas = [];
+          hojaVolcada.graficos = 0;
+          return hojaVolcada.objeto;
+        },
       },
       getSelectedRange: () => rangoFalso(seleccion.ref),
     },
@@ -226,6 +239,8 @@ export function instalarExcelFalso(): void {
 
   g.Excel = {
     run: <T>(fn: (c: typeof contexto) => Promise<T>) => fn(contexto),
+    ChartType: { line: 'Line' },
+    ChartSeriesBy: { columns: 'Columns' },
     CalculationType: { recalculate: 'Recalculate', full: 'Full' },
     RangeValueType: { double: 'Double', integer: 'Integer', boolean: 'Boolean', string: 'String', error: 'Error', empty: 'Empty' },
     SheetVisibility: { visible: 'Visible' },
@@ -240,6 +255,39 @@ export function instalarExcelFalso(): void {
     },
   };
 }
+
+/**
+ * Lo que el volcado de resultados escribió. El banco no dibuja una
+ * cuadrícula, así que esta es la forma de comprobar que la hoja se creó con
+ * las filas y los gráficos esperados.
+ */
+export const hojaVolcada: {
+  nombre: string;
+  filas: unknown[][];
+  graficos: number;
+  objeto: Record<string, unknown>;
+} = {
+  nombre: '',
+  filas: [],
+  graficos: 0,
+  objeto: {
+    getRangeByIndexes: (fila: number, col: number, filas: number, cols: number) => ({
+      set values(v: unknown[][]) {
+        hojaVolcada.filas = v;
+      },
+      format: { font: {}, autofitColumns: () => {} },
+      _dims: [fila, col, filas, cols],
+    }),
+    getUsedRange: () => ({ format: { autofitColumns: () => {} } }),
+    charts: {
+      add: () => {
+        hojaVolcada.graficos += 1;
+        return { title: {}, legend: {}, setPosition: () => {} };
+      },
+    },
+    activate: () => {},
+  },
+};
 
 /** Las celdas del libro falso, para el desplegable de selección. */
 export const CELDAS = Object.keys(LIBRO).filter((r) => r.startsWith('B'));

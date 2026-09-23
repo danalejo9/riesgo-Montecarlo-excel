@@ -13,6 +13,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { leerAjustesGuardados } from '../excel/almacenModelo.ts';
 import { analizarCompatibilidad, type InformeCompatibilidad } from '../excel/compatibilidad.ts';
 import { versionMaximaDisponible, type EntornoOffice } from '../excel/entorno.ts';
 import { leerLibro, type EstadisticasLectura } from '../excel/lectorLibro.ts';
@@ -25,6 +26,7 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
   const [informe, setInforme] = useState<InformeCompatibilidad | null>(null);
   const [progreso, setProgreso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [ajustes, setAjustes] = useState<Array<{ clave: string; valor: string }> | null>(null);
 
   const alLeerSeleccion = useCallback(async () => {
     setOcupado(true);
@@ -53,6 +55,17 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
       alFallar(e);
     } finally {
       setProgreso(null);
+      setOcupado(false);
+    }
+  }, [alFallar]);
+
+  const alLeerAjustes = useCallback(async () => {
+    setOcupado(true);
+    try {
+      setAjustes(await leerAjustesGuardados());
+    } catch (e) {
+      alFallar(e);
+    } finally {
       setOcupado(false);
     }
   }, [alFallar]);
@@ -100,6 +113,31 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
             <dt>Tamaño</dt><dd>{seleccion.filas} × {seleccion.columnas}</dd>
             <dt>Con fórmula</dt><dd>{seleccion.celdasConFormula}</dd>
           </dl>
+        )}
+      </section>
+
+      <section>
+        <h2>Lo que hay guardado en este libro</h2>
+        <p className="tenue">
+          El modelo, el resaltado y el ritmo medido viven dentro del archivo, en
+          los ajustes del complemento. Si algo se pierde al cerrar y reabrir, lo
+          primero es mirar si de verdad está aquí.
+        </p>
+        <button type="button" onClick={() => void alLeerAjustes()} disabled={ocupado}>
+          Ver los ajustes guardados
+        </button>
+
+        {ajustes !== null && (
+          ajustes.length === 0 ? (
+            <p className="aviso-linea">
+              No hay nada guardado en este libro. Si acabas de definir un modelo,
+              esto es el fallo: cuéntamelo.
+            </p>
+          ) : (
+            <pre className="ejemplos">
+              {ajustes.map((a) => `${a.clave}\n${a.valor}\n`).join('\n')}
+            </pre>
+          )
         )}
       </section>
 
