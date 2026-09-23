@@ -66,6 +66,12 @@ export interface ResultadoSalida {
 export interface SimulacionCompletada {
   ok: true;
   motor: 'fast' | 'compatible';
+  /**
+   * Ritmo medido, solo en el modo compatible. Es el dato que permite decirle
+   * al usuario **la próxima vez** cuánto va a tardar antes de que se
+   * comprometa, así que sube hasta aquí para poder guardarlo.
+   */
+  iteracionesPorSegundo?: number;
   eleccion: EleccionMotor;
   salidas: ResultadoSalida[];
   iteracionesCompletadas: number;
@@ -250,6 +256,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     lectura: args.lectura,
     iteracionesCompletadas: r.iteracionesCompletadas,
     cancelada: r.cancelada,
+    iteracionesPorSegundo: r.iteracionesPorSegundo,
     milisegundos: performance.now() - args.arranque,
     salidas: args.modelo.outputs.map((salida, i) => {
       const s = r.porSalida.get(clavesSalida[i] as string);

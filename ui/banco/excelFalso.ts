@@ -183,7 +183,16 @@ export function instalarExcelFalso(): void {
       application: {
         calculationMode: 'Automatic',
         load: () => {},
-        calculate: () => recalcular(),
+        calculate: () => {
+          recalcular();
+          // Excel de verdad tarda milisegundos por iteración (33 por segundo
+          // medidos en una máquina real). Aquí se imita con una espera
+          // ocupada de 1 ms: sin ella el banco daría un ritmo de cientos de
+          // miles por segundo y el aviso de "esto va a tardar" no se podría
+          // ni ver, que es justo lo que hay que poder probar.
+          const hasta = performance.now() + 1;
+          while (performance.now() < hasta) { /* esperar */ }
+        },
       },
       settings: {
         getItemOrNullObject: (clave: string) => ({

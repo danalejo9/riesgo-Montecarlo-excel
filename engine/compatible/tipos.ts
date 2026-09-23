@@ -10,7 +10,9 @@
  * Aquí se invierte el trato: se escriben las entradas en las celdas, se le
  * pide a Excel que recalcule y se leen las salidas, una iteración cada vez.
  * Funciona con **cualquier** libro —lo calcula Excel, no nosotros— y es
- * lentísimo. La auditoría midió ~3 horas para un millón de iteraciones.
+ * lentísimo: **33 iteraciones por segundo** medidas en una máquina real, o sea
+ * 5 minutos para 10.000 iteraciones y 8,4 horas para un millón. (La auditoría
+ * del motor heredado suponía ~93 y era casi tres veces optimista.)
  *
  * Por eso el modo compatible no es "el mismo producto más lento": es otro
  * trato con el usuario, y la interfaz tiene que reflejarlo. Se mide el ritmo

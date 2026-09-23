@@ -729,27 +729,52 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     real. Es la última incógnita de la fase de pruebas y no se puede contestar
     desde aquí.
 
+21. [x] **El modo compatible, medido (2026-09-23)** — se cierra la última
+    incógnita de la fase de pruebas.
+
+    **33 iteraciones por segundo**: 10.000 iteraciones en 5 min 4 s, Excel de
+    escritorio en Windows, modelo de 63 celdas. La auditoría del motor heredado
+    suponía ~93 y era casi tres veces optimista. Las otras dos preguntas
+    abiertas del modo quedan contestadas de paso: **Excel recalcula de verdad
+    antes del `sync`** (si no, los resultados no variarían) y **el cambio a
+    cálculo manual funciona** sin permisos extra. Las tres se documentaron como
+    riesgos al construir el modo; ninguna se ha materializado.
+
+    | iteraciones | motor rápido | compatible |
+    |------------:|-------------:|-----------:|
+    |      10.000 |        40 ms |      5 min |
+    |     100.000 |       400 ms |     51 min |
+    |   1.000.000 |         ~4 s |      8,4 h |
+
+    **Lo que obligó a cambiar.** Un millón de iteraciones en modo compatible es
+    una jornada entera de espera, y hasta ahora el panel ofrecía el mismo
+    desplegable en los dos motores sin decir nada. Ahora, al elegir el motor
+    compatible, se enseña **antes de simular** el ritmo medido y lo que va a
+    tardar, con un aviso explícito si pasa de media hora. Si el libro no se ha
+    medido, un botón lo mide en segundos corriendo unas pocas iteraciones de
+    verdad, y el resultado se guarda en el libro (`excel/ritmo.ts`): es una
+    propiedad de este modelo en esta máquina.
+
+    `medirRitmoEnExcel` existía desde que se construyó el modo compatible y no
+    estaba conectado a nada. Esta era su razón de ser.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Medir el modo compatible** en la máquina del usuario: motor Compatible,
-   1.000 iteraciones sobre el libro de demostración, y anotar las iteraciones
-   por segundo que enseña el panel. De ese número depende con cuántas
-   iteraciones se ofrece ese modo, y hoy sigue siendo una suposición heredada
-   de la auditoría del motor viejo.
-2. **Volcar los resultados a una hoja**: hoy viven solo en el panel y se
-   pierden al cerrarlo, así que no se pueden guardar, imprimir ni enviar.
-3. **Botones en la cinta** (Modelo / Resultados / Diagnóstico), pedidos por el
+1. **Volcar los resultados a una hoja.** Hoy viven solo en el panel y se
+   pierden al cerrarlo: no se pueden guardar, imprimir ni enviar, que es
+   justo lo que se hace con un análisis de riesgo terminado.
+2. **Botones en la cinta** (Modelo / Resultados / Diagnóstico), pedidos por el
    usuario. Manifiesto, iconos y un comando por botón.
-4. **La configuración regional** (punto 14). Decidida —de Office, guardada en
+3. **La configuración regional** (punto 14). Decidida —de Office, guardada en
    el libro— y ya implementable.
-5. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.`, lo
+4. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.`, lo
    único que quedó sin verificar de la tercera.
-6. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**, que siguen siendo
+5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**, que siguen siendo
    lo único que impide el 100 % en ese libro.
-7. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
+6. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
    `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
-8. **El histograma por bloques** que `engine/stats/resumen.ts` documenta como
+7. **El histograma por bloques** que `engine/stats/resumen.ts` documenta como
    hueco.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3

@@ -3,9 +3,22 @@
  *
  * Es lógica de producto, no de presentación, y por eso está en el motor y no
  * en el panel: con Excel dentro del bucle **se dice el tiempo, siempre**, y se
- * dice a partir de una medición real sobre su libro. La auditoría midió ~3
- * horas para un millón de iteraciones; un usuario que lo descubre a los veinte
- * minutos se siente engañado, y con razón.
+ * dice a partir de una medición real sobre su libro.
+ *
+ * **Medido en una máquina real** (2026-09-23, Excel de escritorio en Windows,
+ * modelo de 63 celdas): 10.000 iteraciones en 5 min 4 s, o sea **33
+ * iteraciones por segundo**. La auditoría del motor heredado suponía ~93 y era
+ * casi tres veces optimista. Con 33:
+ *
+ * |  iteraciones |  tiempo |
+ * |-------------:|--------:|
+ * |        1.000 |    30 s |
+ * |       10.000 |   5 min |
+ * |      100.000 |  51 min |
+ * |    1.000.000 |   8,4 h |
+ *
+ * Un millón de iteraciones es una jornada entera. Un usuario que lo descubre a
+ * los veinte minutos se siente engañado, y con razón.
  */
 
 /**

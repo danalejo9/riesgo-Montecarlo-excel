@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
 import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
 import { aplicarResaltado } from '../excel/resaltado.ts';
+import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
   type AvanceSimulacion,
@@ -46,6 +47,7 @@ export function Panel() {
   const [avance, setAvance] = useState<AvanceSimulacion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [simulando, setSimulando] = useState(false);
+  const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
   const cancelado = useRef(false);
 
   useEffect(() => {
@@ -54,6 +56,15 @@ export function Panel() {
     } catch (e) {
       setError(mensajeDe(e));
     }
+
+    void (async () => {
+      try {
+        setRitmo((await leerRitmo()) ?? null);
+      } catch {
+        // Sin ritmo guardado se sigue igual: solo significa que todavía no se
+        // puede estimar el tiempo del modo compatible.
+      }
+    })();
 
     void (async () => {
       try {
@@ -99,6 +110,18 @@ export function Panel() {
       });
       setResultado(r);
       if (r.ok) setPestana('resultados');
+
+      // Un ritmo medido de verdad vale más que cualquier estimación, y es lo
+      // que permite avisar **antes** la próxima vez.
+      if (r.ok && r.motor === 'compatible' && r.iteracionesPorSegundo !== undefined && r.iteracionesPorSegundo > 0) {
+        const medido: RitmoGuardado = {
+          iteracionesPorSegundo: r.iteracionesPorSegundo,
+          medidoEn: new Date().toISOString(),
+          celdas: r.eleccion.celdasNecesarias,
+        };
+        setRitmo(medido);
+        void guardarRitmo(medido);
+      }
     } catch (e) {
       setError(mensajeDe(e));
     } finally {
@@ -173,7 +196,14 @@ export function Panel() {
 
       {pestana === 'modelo' &&
         (modelo ? (
-          <Modelo modelo={modelo} alCambiar={cambiarModelo} alSimular={() => void simular()} ocupado={simulando} />
+          <Modelo
+            modelo={modelo}
+            alCambiar={cambiarModelo}
+            alSimular={() => void simular()}
+            ocupado={simulando}
+            ritmo={ritmo}
+            alMedirRitmo={setRitmo}
+          />
         ) : (
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
         ))}

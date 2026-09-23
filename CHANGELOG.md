@@ -5,6 +5,34 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### El modo compatible, medido: 33 iteraciones por segundo (2026-09-23)
+
+El último número que faltaba de la fase de pruebas, y no se podía obtener sin
+Excel delante: **10.000 iteraciones en 5 min 4 s** en una máquina real
+(Windows, modelo de 63 celdas). La auditoría del motor heredado suponía ~93
+it/s; era casi tres veces optimista. De paso quedan confirmadas las otras dos
+incógnitas del modo: Excel recalcula de verdad antes del `sync`, y el cambio a
+cálculo manual funciona sin permisos extra.
+
+Lo que implica, y por qué obliga a cambiar la interfaz:
+
+|  iteraciones |  motor rápido |  compatible |
+|-------------:|--------------:|------------:|
+|       10.000 |         40 ms |       5 min |
+|      100.000 |        400 ms |      51 min |
+|    1.000.000 |          ~4 s |       8,4 h |
+
+**Añadido**
+
+- Al elegir el motor compatible, el panel enseña **antes de simular** el ritmo
+  medido y lo que va a tardar, y avisa si pasa de media hora. Si el libro no se
+  ha medido todavía, hay un botón que lo mide en unos segundos corriendo unas
+  pocas iteraciones de verdad. El ritmo se guarda en el libro: es una propiedad
+  de este modelo en esta máquina, y no hay que volver a medirlo.
+- `medirRitmoEnExcel` existía desde que se construyó el modo compatible y no
+  estaba conectado a nada. Ahora lo usa el panel, que era su razón de ser: sin
+  esto, el usuario pulsa Simular y descubre la espera a los cinco minutos.
+
 ### Las correlaciones, por fin alcanzables (2026-09-23)
 
 El motor las aplica desde la Fase 2 (Iman–Conover, con sus grupos y su matriz)

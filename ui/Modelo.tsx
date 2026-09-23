@@ -28,6 +28,9 @@ import {
   type ModeloRiesgo,
   type SalidaRiskModel,
 } from '../engine/modelo/index.ts';
+import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
+import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
+import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
 import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
@@ -51,6 +54,102 @@ const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangula
  * Con un cero o con una celda que no sea un número no hay magnitud de la que
  * partir, así que se deja la genérica en vez de inventar una.
  */
+/**
+ * Lo que tarda el modo compatible, **antes** de pulsar Simular.
+ *
+ * Esto no es una cortesía: medido en un libro real, el modo compatible da
+ * **33 iteraciones por segundo**, así que el millón de iteraciones que el
+ * motor rápido resuelve en 400 ms son aquí **ocho horas y media**. Ofrecer el
+ * mismo desplegable en los dos modos, sin decir nada, es dejar que alguien se
+ * comprometa a una jornada de espera con un clic.
+ *
+ * El ritmo se mide corriendo unas pocas iteraciones de verdad sobre el libro
+ * del usuario, porque el coste lo pone su modelo y su máquina; no hay forma
+ * honesta de estimarlo sin hacerlo. Una vez medido se guarda en el libro y no
+ * hace falta repetirlo.
+ */
+function AvisoCompatible({
+  modelo,
+  ritmo,
+  ocupado,
+  alMedirRitmo,
+  alFallar,
+}: {
+  modelo: ModeloRiesgo;
+  ritmo: RitmoGuardado | null;
+  ocupado: boolean;
+  alMedirRitmo: (r: RitmoGuardado) => void;
+  alFallar: (mensaje: string) => void;
+}) {
+  const [midiendo, setMidiendo] = useState(false);
+  const n = modelo.settings.iterations;
+
+  const medir = async () => {
+    setMidiendo(true);
+    try {
+      const entradas = modelo.inputs.map((e) => ({ direccion: e.ref, muestras: new Float64Array([0]) }));
+      const salidas = modelo.outputs.map((s) => s.ref);
+      const r = await medirRitmoEnExcel(entradas, salidas);
+      if (!r.ok) {
+        alFallar(r.motivo);
+        return;
+      }
+      const medido: RitmoGuardado = {
+        iteracionesPorSegundo: r.iteracionesPorSegundo,
+        medidoEn: new Date().toISOString(),
+        celdas: 0,
+      };
+      alMedirRitmo(medido);
+      await guardarRitmo(medido);
+    } catch (e) {
+      alFallar(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMidiendo(false);
+    }
+  };
+
+  return (
+    <section>
+      <h2>Con Excel en el bucle</h2>
+      <p className="tenue">
+        Este modo escribe cada iteración en tus celdas y deja que Excel
+        recalcule. Funciona con cualquier libro y es lentísimo: no es el mismo
+        producto más despacio, es otro trato.
+      </p>
+
+      {ritmo === null ? (
+        <>
+          <p className="tenue">
+            Todavía no se ha medido el ritmo en este libro, así que no se puede
+            decir cuánto va a tardar. Medirlo cuesta unos segundos.
+          </p>
+          <button type="button" onClick={() => void medir()} disabled={ocupado || midiendo || modelo.inputs.length === 0}>
+            {midiendo ? 'Midiendo…' : 'Medir el ritmo'}
+          </button>
+        </>
+      ) : (
+        <>
+          <dl>
+            <dt>Ritmo medido</dt>
+            <dd>{miles(ritmo.iteracionesPorSegundo)} iteraciones por segundo</dd>
+            <dt>{miles(n)} iteraciones</dt>
+            <dd>≈ {tiempoEstimado(ritmo.iteracionesPorSegundo, n)}</dd>
+          </dl>
+
+          {convieneAvisar(ritmo.iteracionesPorSegundo, n) && (
+            <p className="aviso-linea">
+              Es una espera muy larga. Con el motor rápido el mismo modelo tarda
+              menos de un segundo; el compatible solo hace falta si tu libro usa
+              funciones que el rápido no conoce. Baja las iteraciones o cambia
+              de motor.
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function distribucionInicial(valor: number | undefined): DistributionSpec {
   if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
   const margen = Math.abs(valor) * 0.1;
@@ -72,11 +171,16 @@ export function Modelo({
   alCambiar,
   alSimular,
   ocupado,
+  ritmo,
+  alMedirRitmo,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
   alSimular: () => void;
   ocupado: boolean;
+  /** El último ritmo medido del modo compatible en este libro, si lo hay. */
+  ritmo: RitmoGuardado | null;
+  alMedirRitmo: (r: RitmoGuardado) => void;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -331,6 +435,16 @@ export function Modelo({
           </label>
         </div>
       </section>
+
+      {modelo.settings.engine === 'compatible' && (
+        <AvisoCompatible
+          modelo={modelo}
+          ritmo={ritmo}
+          ocupado={ocupado}
+          alMedirRitmo={alMedirRitmo}
+          alFallar={setAviso}
+        />
+      )}
 
       <section>
         <button type="button" className="principal" onClick={alSimular} disabled={ocupado || !listo}>
