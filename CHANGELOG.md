@@ -5,6 +5,51 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Nivel 2: texto, SUBTOTALES y AGREGAR (2026-09-23)
+
+27 de las 41 funciones del Nivel 2. El motor pasa de 89 a **116 funciones**.
+
+**Añadido**
+
+- **Texto** (`engine/functions/texto.ts`): `LARGO`, `IZQUIERDA`, `DERECHA`,
+  `EXTRAE`, `MAYUSC`, `MINUSC`, `NOMPROPIO`, `ESPACIOS`, `CONCATENAR`,
+  `CONCAT`, `UNIRCADENAS`, `ENCONTRAR`, `HALLAR`, `SUSTITUIR`, `REEMPLAZAR`,
+  `REPETIR`, `CARACTER`, `CODIGO`, `IGUAL`, `VALOR`, `VALOR.NUMERO`, `TIPO`,
+  `N`, `T` e `HIPERVINCULO`. Rara vez están entre una entrada y una salida,
+  pero basta una para mandar la simulación al modo compatible: 33 iteraciones
+  por segundo en vez de 250.000. Si todos sus argumentos son invariantes —lo
+  normal con texto—, se calculan una vez y se difunden.
+- **`SUBTOTALES` y `AGREGAR` sin doble conteo** (`engine/functions/subtotales.ts`).
+  Existen para que un total general sobre una columna con subtotales por
+  capítulo no los cuente dos veces. Implementarlas sin eso sería peor que no
+  implementarlas: el total saldría el doble, sin avisar. Cada columna que
+  producen se apunta en un `WeakSet` y al leer un rango se salta; el ejecutor
+  hereda la marca al difundir una constante, que era el sitio exacto donde
+  podía perderse. `AGREGAR` además sabe ignorar errores y tiene sus 19
+  funciones.
+- **Cuarta tanda del libro de fidelidad** (`tests/fixtures/generar-tanda4.py`),
+  90 casos, a la espera de volver calculada por Excel. Incluye tres sondeos de
+  configuración regional a propósito y el `DIAS` pendiente de la tercera.
+
+**Fuera, a propósito**
+
+- **`TEXTO`**: su resultado depende de la configuración regional por cuatro
+  sitios (decimal, miles, nombres de meses y días, y los separadores de la
+  propia cadena de formato). En inglés daría un resultado distinto al de Excel
+  en cada libro en español. Entra con la configuración regional.
+- **Matriciales dinámicas** (`FILTRAR`, `ORDENAR`, `UNICOS`, `SECUENCIA`…):
+  devuelven varias celdas, y el motor modela una celda por valor. Necesitan
+  otro modelo, no otra función.
+- **`LET` y `LAMBDA`**, que necesitan ámbitos en el evaluador; `IMPORTARDATOSDINAMICOS`
+  y `FORMULATEXTO`, que dependen de estructuras que el motor no lee.
+
+**Corregido**
+
+- El escáner trataba cualquier función de Nivel 2 como bloqueante por su
+  categoría, sin preguntar si estaba implementada.
+- La moda de `AGREGAR` devolvía, en caso de empate, la primera en **alcanzar**
+  el máximo al recorrer, no la primera en **aparecer**. Lo cazó su test.
+
 ### Los resultados se pueden guardar (2026-09-23)
 
 **Añadido**

@@ -758,24 +758,51 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `medirRitmoEnExcel` existía desde que se construyó el modo compatible y no
     estaba conectado a nada. Esta era su razón de ser.
 
+22. [~] **Resultados guardables, y Nivel 2 (2026-09-23)**
+
+    **Volcado a una hoja** (`excel/volcarResultados.ts`): el informe entero con
+    el modelo, la semilla, el motor, los estadísticos, los percentiles y los
+    puntos de la curva como datos, con un gráfico nativo de Excel encima. La
+    parte pura (`excel/informe.ts`) se prueba en Node.
+
+    **El modelo que no sobrevivió a cerrar y reabrir** sigue sin causa
+    conocida. Son dos pasos y solo uno es nuestro: el complemento escribe el
+    ajuste, y Excel lo mete en el `.xlsx` cuando el usuario guarda. Para
+    convertir la próxima vez en un dato: el panel dice "guardado a las hh:mm",
+    `guardarModelo` relee lo escrito y avisa si no vuelve, y Diagnóstico enseña
+    en crudo los ajustes del libro.
+
+    **Nivel 2: 27 de 41.** Texto (25), `SUBTOTALES` y `AGREGAR`. La trampa de
+    estas dos es el doble conteo de los subtotales intermedios; se resuelve con
+    una marca en un `WeakSet` que el ejecutor hereda al difundir constantes.
+    Fuera a propósito: `TEXTO` (configuración regional), las matriciales
+    dinámicas (otro modelo de celda), `LET`/`LAMBDA` (ámbitos en el
+    evaluador), y dos que dependen de estructuras que no se leen.
+
+    **Cuarta tanda de fidelidad**, 90 casos, esperando volver de Excel. Los 90
+    se pasaron por el motor antes de enviarla y coinciden con sus notas.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Volcar los resultados a una hoja.** Hoy viven solo en el panel y se
-   pierden al cerrarlo: no se pueden guardar, imprimir ni enviar, que es
-   justo lo que se hace con un análisis de riesgo terminado.
-2. **Botones en la cinta** (Modelo / Resultados / Diagnóstico), pedidos por el
-   usuario. Manifiesto, iconos y un comando por botón.
-3. **La configuración regional** (punto 14). Decidida —de Office, guardada en
-   el libro— y ya implementable.
-4. **Cuarta tanda de fidelidad**, corta: `DIAS` con su prefijo `_xlfn.`, lo
-   único que quedó sin verificar de la tercera.
-5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**, que siguen siendo
-   lo único que impide el 100 % en ese libro.
-6. **Resto de Nivel 1 y Nivel 2**: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
+1. **La cuarta tanda de fidelidad, de vuelta de Excel.** Es lo único que dice
+   si el Nivel 2 está bien. Tres casos (T4-013, T4-052, T4-072) sondean la
+   configuración regional y se espera que fallen: eso mide el trabajo del
+   punto 3.
+2. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir.** Con el
+   diagnóstico nuevo, el usuario puede decir si el ajuste está en el libro o no.
+3. **La configuración regional.** Ya no es opcional: desbloquea `TEXTO`,
+   arregla `VALOR` con coma decimal y cierra N1-049 y los sondeos de la cuarta
+   tanda. Decidida —de Office, guardada en el libro—.
+4. **El resto del Nivel 1** (12), que es más usado en modelos que lo que queda
+   del Nivel 2: `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
    `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
-   `DIA.LAB`, `DIAS.LAB`, y las funciones de texto.
-7. **El histograma por bloques** que `engine/stats/resumen.ts` documenta como
-   hueco.
+   `DIA.LAB`, `DIAS.LAB`, `FECHANUMERO`.
+5. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza de
+   cada salida. Convierte "aquí está la distribución" en "aquí está dónde
+   actuar".
+6. **`LET`**: es la más usada de lo que queda del Nivel 2 en libros modernos.
+7. **Botones en la cinta**, pedidos por el usuario.
+8. **Las tres fórmulas matriciales de `Caso_practico.xlsx`.**
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
@@ -806,7 +833,7 @@ Vienen de sus instrucciones maestras y siguen vigentes:
   mentira, en `/banco/`: sirve para desarrollar la interfaz sin Excel y dice de
   sí mismo lo que no puede probar.
 - `ejemplos/` — el libro de demostración y su generador.
-- `tests/unit/` — Vitest. **659 tests en verde**, 2 saltados y documentados
+- `tests/unit/` — Vitest. **725 tests en verde**, 2 saltados y documentados
   por id (`PENDIENTES` de la segunda tanda de fidelidad), ninguno oculto.
 - `legacy/` — código heredado congelado, **fuera de build, lint y tests**. Ver `legacy/README.md`.
 - `npm run build` es `tsc -b && vite build` desde E3.
