@@ -98,16 +98,28 @@ describe('TEXTO en español: la cadena y el resultado con coma decimal', () => {
     expect(texto('TEXT(0.00012,"0,0E+00")')).toBe('1,2E-04');
   });
 
-  it('fechas con códigos en español: el año es aaaa', () => {
+  it('aaaa es el nombre del día, no el año, y aa se escribe tal cual (T5-024, T5-025)', () => {
     establecerRegional(ES);
-    // 46288 es el 23 de septiembre de 2026, miércoles.
-    expect(texto('TEXT(46288,"dd/mm/aaaa")')).toBe('23/09/2026');
-    expect(texto('TEXT(46288,"d-m-aa")')).toBe('23-9-26');
+    // 46288 es el 23 de septiembre de 2026, miércoles. Este test afirmaba que
+    // aaaa era el año en español; el Excel del usuario dijo que no.
+    expect(texto('TEXT(46288,"dd/mm/aaaa")')).toBe('23/09/miércoles');
+    expect(texto('TEXT(46288,"aaa")')).toBe('mié');
+    expect(texto('TEXT(46288,"d-m-aa")')).toBe('23-9-aa');
     expect(texto('TEXT(46288,"dddd d \\d\\e mmmm")')).toBe('miércoles 23 de septiembre');
     expect(texto('TEXT(46288,"mmm")')).toBe('sep');
   });
 
-  it('los códigos en inglés también se entienden en un libro español', () => {
+  it('una letra que no es un código invalida el formato (T5-023)', () => {
+    establecerRegional(ES);
+    const c = evaluar('TEXT(1.5,"Estándar")');
+    expect(tipoEn(c, 0)).toBe(ERROR);
+    expect(errorEn(c, 0)).toBe('#VALUE!');
+    // Ojo: la regla "letra suelta = error" se dedujo de este único caso. Si
+    // Excel acepta alguna letra sin comillas en un formato numérico
+    // (`"0 kg"`), esto está mal: va en la próxima tanda de fidelidad.
+  });
+
+  it('el año se escribe con y también en español', () => {
     establecerRegional(ES);
     expect(texto('TEXT(46288,"yyyy-mm-dd")')).toBe('2026-09-23');
   });
@@ -117,7 +129,8 @@ describe('TEXTO en español: la cadena y el resultado con coma decimal', () => {
     // 0,75 del día son las 18:00.
     expect(texto('TEXT(46288.75,"hh:mm")')).toBe('18:00');
     expect(texto('TEXT(46288.5104166667,"h:mm:ss")')).toBe('12:15:00');
-    expect(texto('TEXT(46288.75,"h AM/PM")')).toBe('6 PM');
+    // En español, "p. m." con un espacio duro en medio (T5-034).
+    expect(texto('TEXT(46288.75,"h AM/PM")')).toBe('6 p.\u00a0m.');
   });
 
   it('un texto pasa tal cual, salvo que haya cuarta sección', () => {
@@ -131,5 +144,6 @@ describe('TEXTO en inglés', () => {
   it('la misma cantidad, con los separadores al revés', () => {
     expect(texto('TEXT(1234.5,"#,##0.00")')).toBe('1,234.50');
     expect(texto('TEXT(46288,"dddd, mmmm d, yyyy")')).toBe('Wednesday, September 23, 2026');
+    expect(texto('TEXT(46288.75,"h AM/PM")')).toBe('6 PM');
   });
 });

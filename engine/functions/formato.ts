@@ -10,9 +10,15 @@
  *    `"#.##0,00"` es "miles con punto, dos decimales con coma", y en uno inglés
  *    la misma cadena es otra cosa. Aquí se interpreta con `regionalActual()`.
  * 2. **El resultado sale con esos mismos separadores**: `1.234,50`.
- * 3. **Los códigos de fecha están traducidos**: en español el año es `aaaa`,
- *    no `yyyy`. Se aceptan los dos, porque un libro puede traer cualquiera.
- * 4. **Los nombres de meses y días** son del idioma: `enero`, `lunes`.
+ * 3. **Los nombres de meses y días, y el AM/PM, son del idioma**: `enero`,
+ *    `lunes`, y `p. m.` (con un espacio duro en medio) en vez de `PM`.
+ * 4. **Qué letras son códigos**, que no es lo que parece. La quinta tanda del
+ *    libro de fidelidad lo aclaró con el Excel es-ES del usuario: el año se
+ *    escribe con `y` también en español (`yyyy-mm-dd` funciona); `aaa` y
+ *    `aaaa` son **el nombre del día** (`miércoles`), no el año; `a` y `aa`
+ *    sueltas se escriben tal cual; y una letra que no es ningún código
+ *    invalida el formato entero (`"Estándar"` es `#¡VALOR!`). La primera
+ *    versión suponía lo contrario en los cuatro puntos.
  *
  * ---
  *
@@ -62,6 +68,17 @@ const MESES: Record<string, string[]> = {
 const DIAS: Record<string, string[]> = {
   es: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
   en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+};
+
+/**
+ * Lo que escribe Excel en lugar de AM/PM. En español es `a. m.` / `p. m.`, con
+ * un **espacio duro** (U+00A0) entre las dos partes: así lo grabó el Excel del
+ * usuario en el caso T5-034. Un espacio normal daría un texto que se ve igual
+ * y no es igual.
+ */
+const MERIDIANO: Record<string, [string, string]> = {
+  es: ['a.\u00a0m.', 'p.\u00a0m.'],
+  en: ['AM', 'PM'],
 };
 
 function lengua(r: ConfiguracionRegional): 'es' | 'en' {
@@ -262,7 +279,9 @@ function formatearNumero(x: number, piezas: readonly Pieza[], r: ConfiguracionRe
       out += '%';
       continue;
     }
-    // Cualquier otro carácter suelto se escribe tal cual: `€`, `-`, `(`, espacio…
+    // Una letra que no es el exponente invalida el formato (T5-023). El resto
+    // de caracteres sueltos se escribe tal cual: `€`, `-`, `(`, espacio…
+    if (/\p{L}/u.test(p.texto)) return undefined;
     out += p.texto;
   }
   return out;
@@ -310,10 +329,18 @@ function formatearFecha(serie: number, piezas: readonly Pieza[], r: Configuracio
     if ('dmayhs'.includes(bajo)) {
       let j = i;
       while (j < texto.length && (texto[j] as string).toLowerCase() === bajo) j++;
-      fichas.push({ tipo: 'codigo', texto: bajo.repeat(j - i) });
+      const largo = j - i;
+      // `a` y `aa` no son ningún código: se escriben tal cual, con su
+      // mayúscula. Solo `aaa` y `aaaa` son el día de la semana.
+      if (bajo === 'a' && largo < 3) fichas.push({ tipo: 'literal', texto: texto.slice(i, j) });
+      else fichas.push({ tipo: 'codigo', texto: bajo.repeat(largo) });
       i = j;
       continue;
     }
+    // Una letra que no es ningún código invalida el formato entero, como
+    // `"Estándar"` en el caso T5-023. Escribirla tal cual daría un texto que
+    // parece bueno.
+    if (/\p{L}/u.test(ch)) return undefined;
     fichas.push({ tipo: 'literal', texto: ch });
     i++;
   }
@@ -351,7 +378,12 @@ function formatearFecha(serie: number, piezas: readonly Pieza[], r: Configuracio
         out += c.length === 1 ? String(p.dia) : c.length === 2 ? dos(p.dia) : c.length === 3 ? nombre.slice(0, 3) : nombre;
         return;
       }
-      case 'a':
+      case 'a': {
+        // Solo llegan aquí `aaa` y `aaaa`: el nombre del día, corto o entero.
+        const nombre = (DIAS[idioma] as string[])[diaSemana] as string;
+        out += c.length === 3 ? nombre.slice(0, 3) : nombre;
+        return;
+      }
       case 'y':
         out += c.length <= 2 ? dos(p.anio % 100) : String(p.anio);
         return;
@@ -363,9 +395,11 @@ function formatearFecha(serie: number, piezas: readonly Pieza[], r: Configuracio
       case 's':
         out += c.length === 1 ? String(segundos) : dos(segundos);
         return;
-      case 'A':
-        out += c === 'AM/PM' ? (horas < 12 ? 'AM' : 'PM') : horas < 12 ? 'A' : 'P';
+      case 'A': {
+        const [am, pm] = MERIDIANO[idioma] as [string, string];
+        out += c === 'AM/PM' ? (horas < 12 ? am : pm) : horas < 12 ? 'A' : 'P';
         return;
+      }
     }
   });
   return out;
@@ -383,7 +417,9 @@ function darFormato(valor: ValorEscalar, formato: string, r: ConfiguracionRegion
   }
 
   const x = valor.tipo === NUMERO || valor.tipo === LOGICO ? valor.numero : 0;
-  if (formato === '' || /^general$/i.test(formato) || /^est[aá]ndar$/i.test(formato)) {
+  // Solo "General": "Estándar", que es como se llama en el menú en español,
+  // es #¡VALOR! dentro de TEXTO (caso T5-023).
+  if (formato === '' || /^general$/i.test(formato)) {
     return { tipo: TEXTO, texto: coercionTexto({ forma: 'constante', n: 1, valor: { tipo: NUMERO, numero: x } }, 0) };
   }
 

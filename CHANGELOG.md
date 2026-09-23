@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### La quinta tanda vuelve de Excel: TEXTO, corregido en tres puntos (2026-09-23)
+
+32 de 36 coincidieron a la primera. Las cuatro diferencias eran tres
+suposiciones mías sobre el Excel en español, y las tres estaban al revés:
+
+- **`aaaa` es el nombre del día, no el año.** `TEXTO(fecha;"dd/mm/aaaa")` da
+  `23/09/miércoles`. `aaa` y `aaaa` son los códigos de día de la semana de
+  Excel; `a` y `aa` sueltas se escriben tal cual; y el año se escribe con `y`
+  también en español.
+- **Una letra que no es un código invalida el formato**: `"Estándar"` es
+  `#¡VALOR!`. Yo la escribía tal cual. (La regla se dedujo de un solo caso;
+  queda anotado para la próxima tanda.)
+- **AM/PM en español es `p. m.`, con un espacio duro** (U+00A0) entre las dos
+  partes. Un espacio normal daría un texto que se ve igual y no es igual; se
+  miró el XML para saberlo.
+
+Los 36 pasan ahora. Verificados de paso: el redondeo del 1,005 (la trampa
+binaria), el separador de miles como escala, las abreviaturas `sep` y `mié`,
+y que un libro en español acepta los códigos en inglés.
+
 ### TEXTO, y el Nivel 2 de texto completo (2026-09-23)
 
 **Añadido**
