@@ -1,6 +1,6 @@
 /**
  * Funciones de búsqueda: `BUSCARV`, `BUSCARH`, `INDICE`, `COINCIDIR`,
- * `BUSCARX`, `COINCIDIRX`, `ELEGIR`.
+ * `BUSCARX`, `COINCIDIRX`, `BUSCAR`, `ELEGIR`.
  *
  * Son el mayor hueco de generalidad que tenía el motor. Ninguno de los dos
  * libros reales que se usaron para priorizar las usa, y eso es **suerte, no
@@ -39,7 +39,8 @@
 import type { ErrorExcel } from '../parser/ast.ts';
 import { coercionNumerica, compararEn } from '../values/coercion.ts';
 import {
-  crearConstructor, esInvariante, numeroEn, tipoEn, valorEn, NUMERO, VACIO, type Columna,
+  crearConstructor, errorEn, esInvariante, numeroEn, tipoEn, valorEn, ERROR, NUMERO, VACIO,
+  type Columna,
 } from '../values/columna.ts';
 import { compilarCriterio, cumple } from './criterios.ts';
 import { celdaEn, type Argumento } from './types.ts';
@@ -512,6 +513,76 @@ export function XMATCH(args: Argumento[], n: number): Columna {
 
     if (k < 0) salida.ponerError(i, '#N/A');
     else salida.ponerNumero(i, (alReves ? largo - 1 - k : k) + 1);
+  }
+  return salida.terminar();
+}
+
+/**
+ * `BUSCAR(buscado; vector_busqueda; [vector_resultado])` y su forma matricial
+ * `BUSCAR(buscado; matriz)`.
+ *
+ * Es la búsqueda más antigua de Excel y **siempre aproximada**: el mayor valor
+ * que no supera al buscado, dando por hecho que la lista está ordenada. No
+ * tiene modo exacto; con una lista desordenada devuelve un resultado
+ * equivocado sin avisar, igual que `BUSCARV` sin cuarto argumento.
+ *
+ * - **Forma vectorial**: busca en un vector (una fila o una columna) y
+ *   devuelve la misma posición del vector de resultado, que puede estar
+ *   orientado al revés. Sin vector de resultado, devuelve del propio vector de
+ *   búsqueda.
+ * - **Forma matricial** (un solo rango de más de una fila y más de una
+ *   columna): si la matriz tiene más columnas que filas, busca en la primera
+ *   fila y devuelve de la última; si no, busca en la primera columna y
+ *   devuelve de la última. Es la regla documentada por Microsoft.
+ *
+ * **Límite conocido**: si el vector de resultado es más corto que el de
+ * búsqueda, Excel lo prolonga por la hoja; aquí se responde `#REF!` en vez de
+ * leer celdas que el usuario no escribió.
+ */
+export function LOOKUP(args: Argumento[], n: number): Columna {
+  const buscado = args[0]?.columnas[0];
+  const busqueda = args[1];
+  if (!buscado || !busqueda) return todoError('#VALUE!', n);
+
+  const resultado = args[2];
+  const forma = busqueda.forma ?? { filas: busqueda.columnas.length, cols: 1 };
+  const esMatriz = !resultado && forma.filas > 1 && forma.cols > 1;
+
+  let largo: number;
+  let celdaClave: (k: number) => Columna | undefined;
+  let celdaResultado: (k: number) => Columna | undefined;
+
+  if (esMatriz) {
+    const porFila = forma.cols > forma.filas;
+    largo = porFila ? forma.cols : forma.filas;
+    celdaClave = porFila ? (k) => celdaEn(busqueda, 0, k) : (k) => celdaEn(busqueda, k, 0);
+    celdaResultado = porFila
+      ? (k) => celdaEn(busqueda, forma.filas - 1, k)
+      : (k) => celdaEn(busqueda, k, forma.cols - 1);
+  } else {
+    // Un vector se recorre en orden igual sea fila o columna: el aplanado por
+    // columnas de una sola fila o de una sola columna es la propia lista.
+    largo = busqueda.columnas.length;
+    celdaClave = (k) => busqueda.columnas[k];
+    const destino = resultado ?? busqueda;
+    celdaResultado = (k) => destino.columnas[k];
+  }
+
+  const indiceFijo = construirIndice(largo, celdaClave);
+  const salida = crearConstructor(n);
+  for (let i = 0; i < n; i++) {
+    if (tipoEn(buscado, i) === ERROR) {
+      salida.ponerError(i, errorEn(buscado, i) ?? '#VALUE!');
+      continue;
+    }
+    const k = buscarPosicion(buscado, i, largo, celdaClave, indiceFijo, true);
+    if (k < 0) {
+      salida.ponerError(i, '#N/A');
+      continue;
+    }
+    const destino = celdaResultado(k);
+    if (!destino) salida.ponerError(i, '#REF!');
+    else salida.ponerValor(i, valorEn(destino, i));
   }
   return salida.terminar();
 }

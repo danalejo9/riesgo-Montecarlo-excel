@@ -802,18 +802,42 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     **`TEXTO`**, que dependía de ella. Con él el Nivel 2 de texto está completo.
     Quinta tanda de fidelidad (36 casos) esperando a Excel.
 
+24. [x] **Quinta tanda verificada y resto del Nivel 1 (2026-09-23)**
+
+    **La quinta tanda (`TEXTO`) volvió con 32 de 36**; las cuatro diferencias
+    eran tres suposiciones sobre el Excel en español (`aaaa` es el día de la
+    semana, una letra que no es código da `#¡VALOR!`, AM/PM es `p. m.` con
+    espacio duro). Corregidas: 36/36.
+
+    **Resto del Nivel 1: 11 de las 12 que faltaban.** `MAX.SI.CONJUNTO` y
+    `MIN.SI.CONJUNTO` (`condicionales.ts`), `SI.CONJUNTO` y `CAMBIAR`
+    (`logic.ts`), `BUSCAR` en sus dos formas (`busquedas.ts`) y las de
+    calendario en un módulo propio, `calendario.ts`: `DIAS360` (método
+    estadounidense y europeo), `FRAC.AÑO` (bases 0–4), `SIFECHA` (con el fallo
+    de `"MD"` reproducido), `DIA.LAB`, `DIAS.LAB` y `FECHANUMERO` (orden
+    día/mes según el idioma, nombres de meses en español e inglés).
+
+    **`DESREF` se queda fuera a propósito**: devuelve una referencia que
+    depende de sus argumentos, así que el grafo de dependencias deja de ser
+    fijo. Con desplazamientos constantes se podría resolver al compilar; con
+    desplazamientos que cambian por iteración es trabajo del modo compatible.
+    `catalogoVsRegistro.test.ts` lo deja como único pendiente del Nivel 1.
+
+    **Sexta tanda de fidelidad**, 69 casos, esperando volver de Excel. Casi la
+    mitad son bordes de calendario (fin de febrero, días 31, bisiestos) y
+    sondeos de `FECHANUMERO` en español. Los 69 se pasaron por el motor y su
+    resultado va en la columna de notas.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **La quinta tanda (`TEXTO`) de vuelta de Excel.** Las abreviaturas de meses
-   y días y el AM/PM en español no se pueden saber sin él.
+1. **La sexta tanda de vuelta de Excel.** Las convenciones de calendario no se
+   pueden dar por buenas sin ella.
 2. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
    diagnóstico de ajustes guardados.
-3. **El resto del Nivel 1** (12): `SI.CONJUNTO`, `CAMBIAR`, `MAX.SI.CONJUNTO`,
-   `MIN.SI.CONJUNTO`, `BUSCAR`, `DESREF`, `SIFECHA`, `FRAC.AÑO`, `DIAS360`,
-   `DIA.LAB`, `DIAS.LAB`, `FECHANUMERO`.
-4. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
-5. **`LET`**, y los **botones en la cinta**.
-6. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
+3. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
+4. **`LET`**, y los **botones en la cinta**.
+5. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
+6. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

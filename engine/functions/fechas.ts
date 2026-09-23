@@ -25,12 +25,10 @@
  * uno de los dos tramos. Ningún presupuesto usa fechas de enero de 1900, pero
  * equivocarlo sería un error silencioso, y son cuatro líneas hacerlo bien.
  *
- * **Lo que no está y por qué.** `FRAC.AÑO`, `SIFECHA`, `DIAS360`,
- * `DIA.LAB` y `DIAS.LAB` se dejan fuera a propósito: todas tienen variantes de
- * convención (cinco bases de cálculo en `FRAC.AÑO`, la europea y la
- * estadounidense en `DIAS360`, calendarios de festivos en las laborables) que
- * no se pueden implementar de memoria sin arriesgar números plausibles y
- * equivocados. Cuando hagan falta, primero al libro de fidelidad.
+ * **Las de convención** (`FRAC.AÑO`, `SIFECHA`, `DIAS360`, `DIA.LAB`,
+ * `DIAS.LAB`, `FECHANUMERO`) viven aparte, en `calendario.ts`: cada una tiene
+ * variantes (bases de cálculo, regla europea o estadounidense, festivos) que
+ * se verifican una a una contra el libro de fidelidad.
  */
 
 import type { ErrorExcel } from '../parser/ast.ts';

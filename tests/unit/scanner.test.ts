@@ -115,7 +115,7 @@ describe('cobertura', () => {
         nombre: 'H',
         celdas: [
           { ref: 'A1', formula: 'SUM(B1:B9)' },
-          { ref: 'A2', formula: 'YEARFRAC(C1,C2)' },
+          { ref: 'A2', formula: 'OFFSET(C1,C2)' },
           { ref: 'A3', formula: 'SUM(D1:D9)' },
           { ref: 'A4', formula: 'SUM(E1:E9)' },
         ],
@@ -130,7 +130,7 @@ describe('cobertura', () => {
     // tranquilizadora y falsa que este escáner existe para evitar: pasó de
     // verdad con `Caso_practico.xlsx`, que usaba FIN.MES, MES, AÑO y TIR.
     expect(veredicto(inf)).toBe('pendiente');
-    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['YEARFRAC']);
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['OFFSET']);
     expect(inf.bloqueantes).toEqual([]); // no es un bloqueo: es trabajo pendiente
   });
 
@@ -140,13 +140,13 @@ describe('cobertura', () => {
         nombre: 'H',
         celdas: [
           { ref: 'A1', formula: 'SUM(B1:B9)' },        // implementada
-          { ref: 'A2', formula: 'YEARFRAC(C1,C2)' },     // Nivel 1, sin implementar
+          { ref: 'A2', formula: 'OFFSET(C1,C2)' },     // Nivel 1, sin implementar
           { ref: 'A3', formula: 'INDIRECT("A"&1)' },    // no soportada por diseño
         ],
       }],
     });
 
-    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['YEARFRAC']);
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['OFFSET']);
     expect(inf.bloqueantes.map((f) => f.nombre)).toEqual(['INDIRECT']);
     // Un bloqueante pesa más que un pendiente: no basta con esperar.
     expect(veredicto(inf)).not.toBe('pendiente');

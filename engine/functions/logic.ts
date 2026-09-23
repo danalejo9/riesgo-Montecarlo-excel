@@ -14,10 +14,11 @@
  */
 
 import type { ErrorExcel } from '../parser/ast.ts';
-import { coercionLogica } from '../values/coercion.ts';
+import { coercionLogica, compararEn } from '../values/coercion.ts';
 import {
   comoVectorNumerico,
   crearConstructor,
+  errorConstante,
   errorEn,
   logicoConstante,
   numeroEn,
@@ -219,4 +220,80 @@ export function TRUE(_args: Argumento[], n: number): Columna {
 
 export function FALSE(_args: Argumento[], n: number): Columna {
   return logicoConstante(false, n);
+}
+
+/**
+ * `SI.CONJUNTO(condición1; valor1; condición2; valor2; …)`: el valor de la
+ * primera condición que se cumpla. Es la forma de escribir un `SI` anidado
+ * sin anidarlo.
+ *
+ * Si ninguna se cumple, `#N/A` —no FALSO, que es lo que daría un `SI` sin
+ * rama falsa—. Una condición que da error propaga ese error, aunque una
+ * posterior se cumpliera: Excel evalúa en orden y se para ahí.
+ */
+export function IFS(args: Argumento[], n: number): Columna {
+  const columnas = args.map((a) => a.columnas[0]);
+  if (columnas.length < 2 || columnas.length % 2 !== 0 || columnas.some((c) => !c)) {
+    return errorConstante('#VALUE!', n);
+  }
+
+  const salida = crearConstructor(n);
+  for (let i = 0; i < n; i++) {
+    let resuelto = false;
+    for (let k = 0; k < columnas.length; k += 2) {
+      const c = coercionLogica(columnas[k] as Columna, i);
+      if (typeof c === 'string') {
+        salida.ponerError(i, c);
+        resuelto = true;
+        break;
+      }
+      if (c) {
+        salida.ponerValor(i, valorEn(columnas[k + 1] as Columna, i));
+        resuelto = true;
+        break;
+      }
+    }
+    if (!resuelto) salida.ponerError(i, '#N/A');
+  }
+  return salida.terminar();
+}
+
+/**
+ * `CAMBIAR(expresión; valor1; resultado1; …; [por_defecto])`: compara la
+ * expresión con cada valor, con la misma igualdad que el operador `=` (el texto
+ * no distingue mayúsculas), y devuelve el resultado del primero que coincida.
+ *
+ * Tras la expresión van parejas; si sobra uno al final, es el valor por
+ * defecto. Sin coincidencia ni valor por defecto, `#N/A`.
+ */
+export function SWITCH(args: Argumento[], n: number): Columna {
+  const expresion = args[0]?.columnas[0];
+  const resto = args.slice(1).map((a) => a.columnas[0]);
+  if (!expresion || resto.length < 2 || resto.some((c) => !c)) return errorConstante('#VALUE!', n);
+
+  const hayDefecto = resto.length % 2 === 1;
+  const parejas = hayDefecto ? resto.length - 1 : resto.length;
+  const defecto = hayDefecto ? (resto[resto.length - 1] as Columna) : undefined;
+
+  const salida = crearConstructor(n);
+  for (let i = 0; i < n; i++) {
+    if (tipoEn(expresion, i) === ERROR) {
+      salida.ponerError(i, errorEn(expresion, i) ?? '#VALUE!');
+      continue;
+    }
+    let resuelto = false;
+    for (let k = 0; k < parejas; k += 2) {
+      const orden = compararEn(expresion, resto[k] as Columna, i);
+      if (typeof orden === 'string') continue; // un valor con error no coincide con nada
+      if (orden === 0) {
+        salida.ponerValor(i, valorEn(resto[k + 1] as Columna, i));
+        resuelto = true;
+        break;
+      }
+    }
+    if (resuelto) continue;
+    if (defecto) salida.ponerValor(i, valorEn(defecto, i));
+    else salida.ponerError(i, '#N/A');
+  }
+  return salida.terminar();
 }

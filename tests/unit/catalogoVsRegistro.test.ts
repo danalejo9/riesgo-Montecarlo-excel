@@ -43,11 +43,16 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
     expect(implementadasN1).toEqual([
       // Criterio: 3.183 usos en el libro real del usuario.
       'AVERAGEIF', 'AVERAGEIFS', 'COUNTIF', 'COUNTIFS', 'SUMIF', 'SUMIFS',
+      'MAXIFS', 'MINIFS',
+      // Condicionales sin anidar.
+      'IFS', 'SWITCH',
       // Fecha: 900 usos en Caso_practico.xlsx.
       'DATE', 'DAY', 'DAYS', 'EDATE', 'EOMONTH', 'MONTH', 'WEEKDAY', 'YEAR',
+      // Fecha con convenciones (bases, regla NASD, festivos), en calendario.ts.
+      'DATEDIF', 'DATEVALUE', 'DAYS360', 'NETWORKDAYS', 'WORKDAY', 'YEARFRAC',
       // Búsquedas: no las pidió ningún libro concreto. Entraron porque están
       // en casi todos los modelos ajenos, que es el objetivo del producto.
-      'CHOOSE', 'HLOOKUP', 'INDEX', 'MATCH', 'VLOOKUP', 'XLOOKUP', 'XMATCH',
+      'CHOOSE', 'HLOOKUP', 'INDEX', 'LOOKUP', 'MATCH', 'VLOOKUP', 'XLOOKUP', 'XMATCH',
       // Financieras, incluidas las de amortización y las de flujos fechados.
       'FV', 'IPMT', 'IRR', 'NPER', 'NPV', 'PMT', 'PPMT', 'PV', 'RATE', 'XIRR', 'XNPV',
     ].sort());
@@ -55,10 +60,11 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
 
   it('lo que queda de Nivel 1 es lo que el escáner debe seguir marcando pendiente', () => {
     const pendientes = [...NIVEL_1].filter((f) => !implementadas.has(f)).sort();
-    expect(pendientes).toEqual([
-      'DATEDIF', 'DATEVALUE', 'DAYS360', 'IFS', 'LOOKUP', 'MAXIFS', 'MINIFS',
-      'NETWORKDAYS', 'OFFSET', 'SWITCH', 'WORKDAY', 'YEARFRAC',
-    ]);
+    // DESREF es una referencia dinámica: devuelve un rango que depende de sus
+    // argumentos. Con desplazamientos constantes se podría resolver al compilar;
+    // con desplazamientos que cambian por iteración el grafo de dependencias ya
+    // no es fijo, y eso es trabajo del modo compatible, no del motor rápido.
+    expect(pendientes).toEqual(['OFFSET']);
   });
 
   it('el Nivel 2 implementado es exactamente el que se ha ido construyendo', () => {

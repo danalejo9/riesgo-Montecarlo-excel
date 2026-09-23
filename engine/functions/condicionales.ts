@@ -52,7 +52,7 @@ interface Par {
   criterio: Columna | undefined;
 }
 
-type Modo = 'suma' | 'cuenta' | 'promedio';
+type Modo = 'suma' | 'cuenta' | 'promedio' | 'maximo' | 'minimo';
 
 /** Una columna constante vale lo mismo en todas las iteraciones. */
 function esInvariante(c: Columna | undefined): boolean {
@@ -102,6 +102,7 @@ function agregarCondicional(
 
     let acumulado = 0;
     let cuenta = 0;
+    let extremo = modo === 'maximo' ? -Infinity : Infinity;
     let error: ErrorExcel | undefined;
 
     for (const k of coincidencias) {
@@ -113,12 +114,18 @@ function agregarCondicional(
       }
       // Como en SUMA sobre un rango: solo los números participan.
       if (tipo !== NUMERO) continue;
-      acumulado += numeroEn(c, i);
+      const x = numeroEn(c, i);
+      acumulado += x;
       cuenta++;
+      if (modo === 'maximo' ? x > extremo : x < extremo) extremo = x;
     }
 
     if (error) salida.ponerError(i, error);
-    else if (modo === 'promedio') {
+    else if (modo === 'maximo' || modo === 'minimo') {
+      // Sin ninguna coincidencia, 0 y no un error: es lo que hace Excel con
+      // MAX.SI.CONJUNTO, igual que MAX de un rango sin números.
+      salida.ponerNumero(i, cuenta === 0 ? 0 : extremo);
+    } else if (modo === 'promedio') {
       if (cuenta === 0) salida.ponerError(i, '#DIV/0!');
       else salida.ponerNumero(i, acumulado / cuenta);
     } else {
@@ -195,4 +202,20 @@ export function AVERAGEIF(args: Argumento[], n: number): Columna {
 export function AVERAGEIFS(args: Argumento[], n: number): Columna {
   const objetivo = args[0]?.columnas ?? [];
   return agregarCondicional(n, paresDesde(args, 1), objetivo, 'promedio');
+}
+
+/**
+ * `MAX.SI.CONJUNTO(rango_max; rango1; criterio1; …)`: el mayor de los valores
+ * cuyas filas cumplen todos los criterios. Mismo orden de argumentos que
+ * `SUMAR.SI.CONJUNTO`: el rango del que se toma el valor va primero.
+ */
+export function MAXIFS(args: Argumento[], n: number): Columna {
+  const objetivo = args[0]?.columnas ?? [];
+  return agregarCondicional(n, paresDesde(args, 1), objetivo, 'maximo');
+}
+
+/** `MIN.SI.CONJUNTO(rango_min; rango1; criterio1; …)`. */
+export function MINIFS(args: Argumento[], n: number): Columna {
+  const objetivo = args[0]?.columnas ?? [];
+  return agregarCondicional(n, paresDesde(args, 1), objetivo, 'minimo');
 }

@@ -5,6 +5,25 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### El resto del Nivel 1: 11 funciones más, y la sexta tanda (2026-09-23)
+
+**Añadido**
+- `MAX.SI.CONJUNTO` y `MIN.SI.CONJUNTO`: sin coincidencias devuelven 0.
+- `SI.CONJUNTO` (ninguna cierta → `#N/A`) y `CAMBIAR` (valor por defecto si
+  sobra un argumento; comparación como el operador `=`).
+- `BUSCAR`, en forma vectorial y matricial (más ancha que alta: busca en la
+  primera fila; si no, en la primera columna).
+- Funciones de calendario en `engine/functions/calendario.ts`: `DIAS360`
+  (estadounidense y europeo), `FRAC.AÑO` (bases 0–4), `SIFECHA` (Y, M, D, YM,
+  YD, MD, con el fallo conocido de MD), `DIA.LAB`, `DIAS.LAB` (con festivos) y
+  `FECHANUMERO` (día/mes o mes/día según el idioma, meses con nombre).
+- Sexta tanda del libro de fidelidad (`tests/fixtures/fidelidad-tanda6.xlsx`,
+  69 casos), con el resultado del motor anotado en cada caso. Sin verificar
+  contra Excel todavía.
+
+**Pendiente a propósito**
+- `DESREF`: referencia dinámica. Es lo único que falta del Nivel 1 (43/44).
+
 ### La quinta tanda vuelve de Excel: TEXTO, corregido en tres puntos (2026-09-23)
 
 32 de 36 coincidieron a la primera. Las cuatro diferencias eran tres

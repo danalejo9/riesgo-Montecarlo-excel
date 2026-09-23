@@ -12,19 +12,22 @@ import {
   QUARTILE, ROUND, ROUNDDOWN, ROUNDUP, SIGN, SMALL, SQRT, STDEV_P, STDEV_S, SUM,
   SUMPRODUCT, SUMSQ, TRUNC, VAR_P, VAR_S,
 } from './math.ts';
-import { AND, FALSE, IF, IFERROR, IFNA, NOT, OR, TRUE, XOR } from './logic.ts';
+import { AND, FALSE, IF, IFERROR, IFNA, IFS, NOT, OR, SWITCH, TRUE, XOR } from './logic.ts';
 import {
-  AVERAGEIF, AVERAGEIFS, COUNTIF, COUNTIFS, SUMIF, SUMIFS,
+  AVERAGEIF, AVERAGEIFS, COUNTIF, COUNTIFS, MAXIFS, MINIFS, SUMIF, SUMIFS,
 } from './condicionales.ts';
 import {
   ISBLANK, ISERR, ISERROR, ISLOGICAL, ISNA, ISNONTEXT, ISNUMBER, ISTEXT, NA,
 } from './info.ts';
 import { DATE, DAY, DAYS, EDATE, EOMONTH, MONTH, WEEKDAY, YEAR } from './fechas.ts';
 import {
+  DATEDIF, DATEVALUE, DAYS360, NETWORKDAYS, WORKDAY, YEARFRAC,
+} from './calendario.ts';
+import {
   FV, IPMT, IRR, NPER, NPV, PMT, PPMT, PV, RATE, XIRR, XNPV,
 } from './financieras.ts';
 import {
-  CHOOSE, HLOOKUP, INDEX, MATCH, VLOOKUP, XLOOKUP, XMATCH,
+  CHOOSE, HLOOKUP, INDEX, LOOKUP, MATCH, VLOOKUP, XLOOKUP, XMATCH,
 } from './busquedas.ts';
 import { TEXT } from './formato.ts';
 import { AGGREGATE, SUBTOTAL } from './subtotales.ts';
@@ -46,12 +49,14 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   IF, IFERROR, IFNA, AND, OR, NOT, XOR, TRUE, FALSE,
   ISBLANK, ISNUMBER, ISTEXT, ISNONTEXT, ISLOGICAL, ISERROR, ISERR, ISNA, NA,
   // Nivel 1 (Fase 2 §4.2): criterio, fecha y financieras.
-  SUMIF, SUMIFS, COUNTIF, COUNTIFS, AVERAGEIF, AVERAGEIFS,
+  SUMIF, SUMIFS, COUNTIF, COUNTIFS, AVERAGEIF, AVERAGEIFS, MAXIFS, MINIFS,
+  IFS, SWITCH,
   DATE, YEAR, MONTH, DAY, EOMONTH, EDATE, DAYS, WEEKDAY,
+  DAYS360, YEARFRAC, DATEDIF, WORKDAY, NETWORKDAYS, DATEVALUE,
   NPV, IRR, XNPV, XIRR,
   PMT, PV, FV, NPER, RATE, IPMT, PPMT,
   // Búsquedas: el mayor hueco de generalidad que tenía el motor.
-  VLOOKUP, HLOOKUP, INDEX, MATCH, XLOOKUP, XMATCH, CHOOSE,
+  VLOOKUP, HLOOKUP, INDEX, MATCH, XLOOKUP, XMATCH, LOOKUP, CHOOSE,
   // Nivel 2: texto. Rara vez están entre una entrada y una salida, pero basta
   // una para mandar la simulación entera al modo compatible.
   LEN, LEFT, RIGHT, MID, UPPER, LOWER, PROPER, TRIM,

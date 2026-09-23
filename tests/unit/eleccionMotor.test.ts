@@ -51,11 +51,11 @@ describe('elegirMotor — cuando el motor rápido sirve', () => {
 
 describe('elegirMotor — las cinco cosas que el evaluador rechaza', () => {
   it('una función que el motor no conoce', () => {
-    const g = grafoDe({ B1: 'YEARFRAC(A1,A1)' });
+    const g = grafoDe({ B1: 'OFFSET(A1,A1)' });
     const e = elegirMotor(g, [k('A1')], [k('B1')]);
 
     expect(e.motor).toBe('compatible');
-    expect(e.motivos).toEqual([{ tipo: 'funcion', clave: k('B1'), nombre: 'YEARFRAC' }]);
+    expect(e.motivos).toEqual([{ tipo: 'funcion', clave: k('B1'), nombre: 'OFFSET' }]);
     expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(false);
   });
 
@@ -99,19 +99,19 @@ describe('elegirMotor — las cinco cosas que el evaluador rechaza', () => {
 describe('elegirMotor — lo que mira y lo que avisa', () => {
   it('una función que falta en una celda constante bloquea igual', () => {
     // C1 no depende de A1, pero hay que evaluarla una vez para tener B1.
-    const g = grafoDe({ B1: 'A1+C1', C1: 'YEARFRAC("2026-01-01","2026-06-01")' });
+    const g = grafoDe({ B1: 'A1+C1', C1: 'OFFSET(A1,1,0)' });
     const e = elegirMotor(g, [k('A1')], [k('B1')]);
 
     expect(e.motor).toBe('compatible');
-    expect(e.motivos[0]).toMatchObject({ tipo: 'funcion', nombre: 'YEARFRAC' });
+    expect(e.motivos[0]).toMatchObject({ tipo: 'funcion', nombre: 'OFFSET' });
   });
 
   it('la misma función en mil celdas es un motivo, con la primera celda', () => {
-    const g = grafoDe({ B1: 'YEARFRAC(A1,A1)', B2: 'YEARFRAC(A1,A1)', B3: 'B1+B2' });
+    const g = grafoDe({ B1: 'OFFSET(A1,A1)', B2: 'OFFSET(A1,A1)', B3: 'B1+B2' });
     const e = elegirMotor(g, [k('A1')], [k('B3')]);
 
     expect(e.motivos).toHaveLength(1);
-    expect(e.motivos[0]).toMatchObject({ tipo: 'funcion', nombre: 'YEARFRAC' });
+    expect(e.motivos[0]).toMatchObject({ tipo: 'funcion', nombre: 'OFFSET' });
   });
 
   it('avisa de una salida que no depende de ninguna entrada', () => {
@@ -140,7 +140,7 @@ describe('elegirMotor — la preferencia del usuario manda, pero no oculta nada'
   });
 
   it('forzar el rápido con un modelo que no puede devuelve los motivos igual', () => {
-    const g = grafoDe({ B1: 'YEARFRAC(A1,A1)' });
+    const g = grafoDe({ B1: 'OFFSET(A1,A1)' });
     const e = elegirMotor(g, [k('A1')], [k('B1')], 'fast');
 
     expect(e.motor).toBe('fast');
@@ -150,8 +150,8 @@ describe('elegirMotor — la preferencia del usuario manda, pero no oculta nada'
 
 describe('describirMotivo', () => {
   it('dice la celda y la causa, en palabras del usuario', () => {
-    expect(describirMotivo({ tipo: 'funcion', clave: 'Flujo!D12', nombre: 'YEARFRAC' })).toBe(
-      'Flujo!D12 usa YEARFRAC, que el motor rápido no conoce todavía.',
+    expect(describirMotivo({ tipo: 'funcion', clave: 'Flujo!D12', nombre: 'OFFSET' })).toBe(
+      'Flujo!D12 usa OFFSET, que el motor rápido no conoce todavía.',
     );
     expect(describirMotivo({ tipo: 'matricial', clave: 'Con Refi!E47' })).toContain('rangos enteros');
   });
