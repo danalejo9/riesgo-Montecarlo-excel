@@ -37,6 +37,7 @@ import {
   vectorNumerico,
   type Columna,
 } from '../values/columna.ts';
+import { heredarMarcaSubtotal } from '../functions/subtotales.ts';
 import { evaluarNodo } from './evaluate.ts';
 import type { ErrorPlan, Plan } from './plan.ts';
 
@@ -105,7 +106,11 @@ export function ejecutarPlan(
     }
 
     if (constante && necesitaDifundirse(grafo, clave, plan, enPlan, salidasSet)) {
-      columna = desdeEscalar(valorEn(columna, 0), n);
+      const difundida = desdeEscalar(valorEn(columna, 0), n);
+      // Un subtotal constante difundido sigue siendo un subtotal: si no, el
+      // total general que lo lea lo contaría dos veces. Ver `subtotales.ts`.
+      heredarMarcaSubtotal(columna, difundida);
+      columna = difundida;
     }
 
     valores.set(clave, columna);

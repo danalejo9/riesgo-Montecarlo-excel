@@ -177,7 +177,7 @@ describe('cobertura', () => {
       hojas: [{
         nombre: 'Presupuesto',
         celdas: [
-          { ref: 'H42', formula: 'SUBTOTAL(9,H5:H41)' },
+          { ref: 'H42', formula: 'TEXT(H5,"0.00")' },
           { ref: 'J17', formula: 'INDIRECT("A"&B1)' },
           { ref: 'C8', formula: 'MiMacroVBA(B8)' },
           { ref: 'A1', formula: 'SUM(B1:B2)' },
@@ -186,11 +186,11 @@ describe('cobertura', () => {
     });
 
     const nombres = inf.bloqueantes.map((b) => b.nombre).sort();
-    expect(nombres).toEqual(['INDIRECT', 'MIMACROVBA', 'SUBTOTAL']);
+    expect(nombres).toEqual(['INDIRECT', 'MIMACROVBA', 'TEXT']);
 
-    const subtotal = inf.bloqueantes.find((b) => b.nombre === 'SUBTOTAL');
-    expect(subtotal?.ejemplo).toBe('Presupuesto!H42');
-    expect(subtotal?.nivel).toBe('n2');
+    const deTexto = inf.bloqueantes.find((b) => b.nombre === 'TEXT');
+    expect(deTexto?.ejemplo).toBe('Presupuesto!H42');
+    expect(deTexto?.nivel).toBe('n2');
     expect(inf.bloqueantes.find((b) => b.nombre === 'INDIRECT')?.nivel).toBe('no-soportada');
     expect(inf.bloqueantes.find((b) => b.nombre === 'MIMACROVBA')?.nivel).toBe('desconocida');
 
@@ -229,18 +229,32 @@ describe('cobertura', () => {
     expect(inf.celdasVolatiles).toBe(2);
   });
 
+  it('una función de Nivel 2 ya implementada no bloquea', () => {
+    // El nivel del catálogo dice qué clase de función es; lo que decide si
+    // bloquea es si el motor la sabe evaluar. Antes, `IZQUIERDA` habría
+    // seguido saliendo como bloqueante el día después de implementarla.
+    const inf = escanear({
+      hojas: [{ nombre: 'H', celdas: [
+        { ref: 'A1', formula: 'LEFT(B1,3)' },
+        { ref: 'A2', formula: 'SUBTOTAL(9,C1:C9)' },
+      ] }],
+    });
+    expect(inf.bloqueantes).toEqual([]);
+    expect(veredicto(inf)).toBe('compatible');
+  });
+
   it('no declara compatible un libro con una sola celda bloqueante', () => {
     // Regresión: con un umbral por porcentaje, 1 bloqueante entre 1.000
     // fórmulas daba "99,9 % compatible", que es tranquilizador y falso. Basta
     // una celda en el camino entrada->salida para tumbar el motor rápido.
-    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'SUBTOTAL(9,A1:A2)' }];
+    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'TEXT(A1,"0.00")' }];
     for (let f = 1; f <= 1000; f++) celdas.push({ ref: `A${f}`, formula: `B${f}*2` });
 
     const inf = escanear({ hojas: [{ nombre: 'H', celdas }] });
 
     expect(inf.coberturaN0N1).toBeGreaterThan(99);
     expect(veredicto(inf)).not.toBe('compatible');
-    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['SUBTOTAL']);
+    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['TEXT']);
   });
 
   it('un libro sin fórmulas no rompe los porcentajes', () => {

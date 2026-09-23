@@ -123,7 +123,14 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
       }
 
       if (esVolatil(nombre)) volatil = true;
-      peor = peorNivel(peor, propia ? 'propia' : nivel);
+      // El nivel del catálogo dice **qué clase de función es**; lo que decide
+      // si una fórmula bloquea es si el motor sabe evaluarla. Una función de
+      // Nivel 2 ya implementada cuenta como cubierta, igual que una de Nivel
+      // 1: si no, el escáner seguiría llamando bloqueante a `IZQUIERDA` el día
+      // después de implementarla, que es la clase de mentira optimista al
+      // revés que este archivo existe para evitar.
+      const efectivo = nivel === 'n2' && funcionSoportada(nombre) ? 'n1' : nivel;
+      peor = peorNivel(peor, propia ? 'propia' : efectivo);
     }
 
     if (lectura.funciones.length === 0) peor = 'n0';
@@ -190,7 +197,7 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
     coberturaN0N1: porcentaje(cubiertasN0N1, total),
     funciones,
     bloqueantes: funciones.filter(
-      (f) => f.nivel === 'n2' || f.nivel === 'no-soportada' || f.nivel === 'desconocida',
+      (f) => !f.implementada && (f.nivel === 'n2' || f.nivel === 'no-soportada' || f.nivel === 'desconocida'),
     ),
     // Previstas por el catálogo pero todavía sin implementar: el libro correrá
     // en el motor rápido en cuanto existan, pero hoy no.

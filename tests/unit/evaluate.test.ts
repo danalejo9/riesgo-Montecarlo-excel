@@ -141,12 +141,12 @@ describe('evaluarModelo — errores', () => {
   });
 
   it('reporta una función no soportada con el nombre y la celda exactos', () => {
-    const g = grafoDe({ A1: 'SUBTOTAL(9,B1:B2)', B1: '1', B2: '2' });
+    const g = grafoDe({ A1: 'TEXT(B1,"0.00")', B1: '1', B2: '2' });
     const r = evaluarModelo(g, new Map(), [k('A1')], 1);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.clave).toBe(k('A1'));
-      expect(r.error.motivo).toMatch(/SUBTOTAL/);
+      expect(r.error.motivo).toMatch(/TEXT/);
     }
   });
 

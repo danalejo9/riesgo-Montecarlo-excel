@@ -26,6 +26,12 @@ import {
 import {
   CHOOSE, HLOOKUP, INDEX, MATCH, VLOOKUP, XLOOKUP, XMATCH,
 } from './busquedas.ts';
+import { AGGREGATE, SUBTOTAL } from './subtotales.ts';
+import {
+  CHAR, CODE, CONCAT, CONCATENATE, EXACT, FIND, HYPERLINK, LEFT, LEN, LOWER, MID, N,
+  NUMBERVALUE, PROPER, REPLACE, REPT, RIGHT, SEARCH, SUBSTITUTE, T, TEXTJOIN, TRIM, TYPE,
+  UPPER, VALUE,
+} from './texto.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -45,6 +51,13 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   PMT, PV, FV, NPER, RATE, IPMT, PPMT,
   // Búsquedas: el mayor hueco de generalidad que tenía el motor.
   VLOOKUP, HLOOKUP, INDEX, MATCH, XLOOKUP, XMATCH, CHOOSE,
+  // Nivel 2: texto. Rara vez están entre una entrada y una salida, pero basta
+  // una para mandar la simulación entera al modo compatible.
+  LEN, LEFT, RIGHT, MID, UPPER, LOWER, PROPER, TRIM,
+  CONCATENATE, CONCAT, TEXTJOIN, FIND, SEARCH, SUBSTITUTE, REPLACE, REPT,
+  CHAR, CODE, EXACT, VALUE, NUMBERVALUE, TYPE, N, T, HYPERLINK,
+  // Nivel 2: agregados que no cuentan dos veces los subtotales intermedios.
+  SUBTOTAL, AGGREGATE,
 };
 
 /**

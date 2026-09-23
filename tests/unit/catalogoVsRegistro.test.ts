@@ -61,10 +61,38 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
     ]);
   });
 
-  it('nada clasificado como Nivel 2 o no soportado está implementado a escondidas', () => {
-    // Si una función de Nivel 2 se implementa, hay que subirla de nivel para
-    // que el escáner deje de contarla como bloqueante.
-    expect([...NIVEL_2].filter((f) => implementadas.has(f))).toEqual([]);
+  it('el Nivel 2 implementado es exactamente el que se ha ido construyendo', () => {
+    // El nivel del catálogo dice qué clase de función es, no si está hecha: el
+    // escáner decide si bloquea preguntándole al registro. Esta lista, como la
+    // del Nivel 1, crece a mano para que añadir una función se vea en el diff.
+    const implementadasN2 = [...NIVEL_2].filter((f) => implementadas.has(f)).sort();
+    expect(implementadasN2).toEqual([
+      // Texto.
+      'CHAR', 'CODE', 'CONCAT', 'CONCATENATE', 'EXACT', 'FIND', 'HYPERLINK', 'LEFT', 'LEN',
+      'LOWER', 'MID', 'N', 'NUMBERVALUE', 'PROPER', 'REPLACE', 'REPT', 'RIGHT', 'SEARCH',
+      'SUBSTITUTE', 'T', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
+      // Agregados que excluyen los subtotales intermedios.
+      'AGGREGATE', 'SUBTOTAL',
+    ].sort());
+  });
+
+  it('lo que queda de Nivel 2 es lo que el escáner debe seguir marcando bloqueante', () => {
+    const pendientes = [...NIVEL_2].filter((f) => !implementadas.has(f)).sort();
+    expect(pendientes).toEqual([
+      // Depende de la configuración regional por cuatro sitios; entra con ella.
+      'TEXT',
+      // Matriciales dinámicas: devuelven varias celdas ("derraman") y el motor
+      // modela una celda por valor. Necesitan otro modelo, no otra función.
+      'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TEXTSPLIT', 'TRANSPOSE', 'UNIQUE',
+      // Nombres locales y funciones anónimas: necesitan ámbitos en el evaluador.
+      'LAMBDA', 'LET',
+      // Dependen de estructuras que el motor no lee: tablas dinámicas y el
+      // texto de las fórmulas.
+      'FORMULATEXT', 'GETPIVOTDATA',
+    ].sort());
+  });
+
+  it('nada no soportado por diseño está implementado a escondidas', () => {
     expect([...NO_SOPORTADAS].filter((f) => implementadas.has(f))).toEqual([]);
   });
 
