@@ -887,19 +887,32 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (`siguienteTanda`: lo que falta +10 %, mínimo ×1,5, tope, máx. 5 tandas);
     no se aplica con el motor compatible.
 
+29. [x] **Araña, contribución a la varianza, informe PDF, funciones RIESGO,
+    matrices y guía de pruebas (2026-09-24)**
+
+    - Araña (`aranaDeSensibilidad`) y contribución a la varianza por
+      regresión sobre rangos (Pratt) con R², en `engine/stats/sensibilidad.ts`.
+    - Informe PDF: `ui/informe.html` abierto con `openBrowserWindow`; datos
+      comprimidos en el fragmento (`excel/informeImprimible.ts`).
+    - Funciones `RIESGO.*` (`engine/modelo/funcionesRiesgo.ts`, `ui/funciones.ts`,
+      `vite.funciones.config.ts`, manifiesto 0.4.0.0); al simular se suman a
+      las entradas (`excel/entradasRiesgo.ts`). El motor deja de recorrer el
+      interior de las entradas (`clausuraDependencias(…, detenerEn)`).
+    - **Corregido**: el guardián del modo compatible restauraba solo valores y
+      borraba la fórmula de las entradas; ahora guarda `originalFormulas`.
+    - Matrices dentro de funciones: `engine/functions/matriciales.ts` y la
+      regla común `compiler/usoMatricial.ts`; lo que derrama sigue en el
+      compatible. Nivel 2: 37/41.
+    - Tandas de fidelidad 7 (LET) y 8 (matrices) pendientes de Excel.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar en Excel**: Configuración (núcleos, tandas), tornado, histograma, umbral, botones de la cinta con
-   el panel abierto, hilos (¿"3 hilos" en Cómo se calculó?) y resultados tras
-   cerrar y reabrir (recargar el manifiesto: `npm run stop` y `npm start`).
-2. **Las tres fórmulas matriciales de `Caso_practico.xlsx`** (el usuario las
-   manda) y **la séptima tanda (`LET`)** de vuelta de Excel. `LET` ya está
-   hecho (sustitución al parsear, `engine/parser/let.ts`).
-3. E7 completa: convergencia (`engine/stats/convergencia.ts`), escenarios
-   (`excel/comparacion.ts`) y ajuste a datos (`engine/modelo/ajuste.ts`,
-   `ui/AjusteDatos.tsx`). Siguiente bloque grande: funciones `RISK.*` en
-   celdas (E4) o matriciales dinámicas (N2).
-4. **`DESREF` con desplazamientos constantes**.
+1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.
+   Arreglar lo que falle, empezando por B4 (cinta con el panel abierto) y C2
+   (informe en el navegador), que no se pueden probar fuera de Excel.
+2. Tandas 7 y 8 de vuelta de Excel, y las 3 fórmulas de `Caso_practico.xlsx`.
+3. Después: botones de la cinta que actúan sin abrir el panel (marcar
+   entrada/salida, simular), Mac, empaquetado.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

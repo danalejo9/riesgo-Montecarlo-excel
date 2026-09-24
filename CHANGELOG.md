@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Guía de pruebas en Excel y hoja «Pruebas» (2026-09-24)
+
+**Añadido**
+- `docs/GUIA_PRUEBAS_EXCEL.md`: el paso a paso para probar todo en Excel con
+  el libro de demostración, con un código por prueba (A1…I3) y el resultado
+  esperado de cada una.
+- El libro de demostración trae una hoja **«Pruebas»** para lo nuevo:
+  funciones `RIESGO.*`, `LET`, matrices, derrame, entrada con fórmula en el
+  modo compatible y 40 precios históricos para el ajuste a datos. Lo que la
+  guía da como esperado está medido con el motor
+  (`tests/unit/hojaPruebasDemo.test.ts`).
+
 ### Matrices en el motor rápido (2026-09-24)
 
 **Añadido**

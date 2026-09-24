@@ -269,6 +269,90 @@ m.column_dimensions["B"].width = 34
 for a in range(0, ANIOS + 1):
     m.column_dimensions[col(a)].width = 14
 
+# =========================================================================
+# Hoja 3: pruebas de lo nuevo (funciones RIESGO, LET, matrices, entradas con
+# fórmula, ajuste a datos). Hay celdas preparadas y celdas VACÍAS donde el
+# usuario escribe la fórmula siguiendo docs/GUIA_PRUEBAS_EXCEL.md: así se
+# prueba además que su Excel en español acepta los nombres traducidos.
+# =========================================================================
+p = wb.create_sheet("Pruebas")
+p["B2"] = "Hoja de pruebas — funciones nuevas"
+p["B2"].font = TITULO
+p["B3"] = "Las celdas en amarillo claro están vacías a propósito: escribe en ellas la fórmula que indica la guía."
+p["B3"].font = Font(italic=True, color="666666")
+PARA_ESCRIBIR = PatternFill("solid", fgColor="FFF9E6")
+
+def etiqueta(fila, texto, negrita=False):
+    c = p.cell(fila, 2, texto)
+    if negrita:
+        c.font = AZUL
+
+# 1. Funciones RIESGO
+etiqueta(4, "1. FUNCIONES RIESGO (prueba E)", True)
+etiqueta(5, "Demanda — escribe =RIESGO.NORMAL(1000;150)")
+etiqueta(6, "Precio — escribe =RIESGO.TRIANGULAR(8;10;14)")
+etiqueta(7, "Ingresos = Demanda × Precio")
+for f in (5, 6):
+    p.cell(f, 3).fill = PARA_ESCRIBIR
+p["C7"] = "=C5*C6"
+p["C7"].number_format = '#,##0.00'
+
+# 2. LET
+etiqueta(9, "2. LET (prueba F)", True)
+etiqueta(10, "Margen = ingresos − coste (60 %), con LET")
+p["C10"] = "=_xlfn.LET(_xlpm.coste,C7*0.6,C7-_xlpm.coste)"
+p["C10"].number_format = '#,##0.00'
+
+# 3. Matrices: ventas por zona, proporcionales a la demanda de C5
+etiqueta(12, "3. MATRICES (prueba G) — umbral de ventas:", True)
+p["C12"] = 100
+p["E12"] = "Zona"
+p["F12"] = "Ventas"
+p["E12"].font = TOTAL
+p["F12"].font = TOTAL
+for i, (zona, base) in enumerate([("Norte", 120), ("Sur", 80), ("Este", 150), ("Oeste", 60), ("Centro", 200)]):
+    p.cell(13 + i, 5, zona)
+    c = p.cell(13 + i, 6, f"={base}*$C$5/1000")
+    c.number_format = '#,##0.0'
+etiqueta(13, "Ventas por encima del umbral — =SUMA(FILTRAR(F13:F17;F13:F17>C12;0))")
+etiqueta(14, "Lo mismo — =SUMAPRODUCTO((F13:F17>C12)*F13:F17)")
+etiqueta(15, "La mayor — =INDICE(ORDENAR(F13:F17;1;-1);1)")
+for f in (13, 14, 15):
+    p.cell(f, 3).fill = PARA_ESCRIBIR
+p["H12"] = "Derrame — escribe en H13: =FILTRAR(E13:E17;F13:F17>C12)"
+p["H12"].font = TOTAL
+p["H13"].fill = PARA_ESCRIBIR
+
+# 4. Entrada con fórmula (modo compatible)
+etiqueta(20, "4. ENTRADA CON FÓRMULA (prueba H)", True)
+etiqueta(21, "Coste unitario (es una fórmula: =7+1)")
+p["C21"] = "=7+1"
+etiqueta(22, "Coste total = coste unitario × demanda")
+p["C22"] = "=C21*C5"
+p["C22"].number_format = '#,##0.00'
+
+# 5. Datos históricos para "Ajustar a datos" (prueba D): 40 precios con cola
+#    a la derecha (lognormal de media ~120), deterministas.
+p["K4"] = "5. PRECIOS HISTÓRICOS (prueba D)"
+p["K4"].font = AZUL
+import math
+estado = 12345
+for i in range(40):
+    estado = (estado * 16807) % 2147483647
+    u1 = estado / 2147483647
+    estado = (estado * 16807) % 2147483647
+    u2 = estado / 2147483647
+    z = math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)
+    p.cell(5 + i, 11, round(118 * math.exp(0.12 * z), 2)).number_format = '#,##0.00'
+
+p.column_dimensions["A"].width = 3
+p.column_dimensions["B"].width = 58
+p.column_dimensions["C"].width = 14
+p.column_dimensions["E"].width = 10
+p.column_dimensions["F"].width = 10
+p.column_dimensions["H"].width = 14
+p.column_dimensions["K"].width = 12
+
 wb.calculation.fullCalcOnLoad = True
 
 destino = "ejemplos/demo-proyecto-aurora.xlsx"
