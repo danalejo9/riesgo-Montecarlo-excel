@@ -46,6 +46,18 @@ export interface SalidaRiskModel {
   id: string;
   name: string;
   ref: string;
+  /**
+   * El umbral que el usuario quiere vigilar en esta salida ("¿qué probabilidad
+   * hay de que el VAN quede por debajo de 0?"). Opcional: los modelos
+   * anteriores no lo traen y siguen siendo válidos.
+   */
+  threshold?: UmbralRiskModel;
+}
+
+export interface UmbralRiskModel {
+  value: number;
+  /** `below`: P(salida < value). `above`: P(salida > value). */
+  direction: 'below' | 'above';
 }
 
 /**
@@ -242,8 +254,25 @@ function validarSalida(v: unknown, ctx: string, errores: string[]): SalidaRiskMo
   if (!esTextoNoVacio(s.id)) { errores.push(`${ctx}.id debe ser un texto no vacío.`); ok = false; }
   if (!esTextoNoVacio(s.name)) { errores.push(`${ctx}.name debe ser un texto no vacío.`); ok = false; }
   if (!esTextoNoVacio(s.ref)) { errores.push(`${ctx}.ref debe ser un texto no vacío.`); ok = false; }
+  let threshold: UmbralRiskModel | undefined;
+  if (s.threshold !== undefined) {
+    const t = s.threshold as Record<string, unknown> | null;
+    if (
+      typeof t !== 'object' || t === null ||
+      typeof t.value !== 'number' || !Number.isFinite(t.value) ||
+      (t.direction !== 'below' && t.direction !== 'above')
+    ) {
+      errores.push(`${ctx}.threshold debe ser { value: número, direction: "below" | "above" }.`);
+      ok = false;
+    } else {
+      threshold = { value: t.value, direction: t.direction };
+    }
+  }
   if (!ok) return undefined;
-  return { id: s.id as string, name: s.name as string, ref: s.ref as string };
+  return {
+    id: s.id as string, name: s.name as string, ref: s.ref as string,
+    ...(threshold ? { threshold } : {}),
+  };
 }
 
 function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskModel | undefined {

@@ -32,3 +32,4 @@ export {
   type EntradaSensibilidad,
   type FilaSensibilidad,
 } from './sensibilidad.ts';
+export { histogramaDeMuestra, ordenarUtiles, probabilidadUmbral } from './muestra.ts';

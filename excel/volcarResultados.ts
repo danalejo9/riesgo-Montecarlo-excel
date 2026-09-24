@@ -102,6 +102,17 @@ export async function volcarResultados(
       grafico.legend.visible = false;
     }
 
+    for (const h of bloques.histogramas) {
+      const datos = hoja.getRangeByIndexes(h.filaInicio, 2, h.barras, 2);
+      const grafico = hoja.charts.add(Excel.ChartType.columnClustered, datos, Excel.ChartSeriesBy.columns);
+      grafico.title.text = `${h.nombre} — histograma`;
+      grafico.setPosition(
+        hoja.getRangeByIndexes(h.filaInicio, 5, 1, 1),
+        hoja.getRangeByIndexes(h.filaInicio + 15, 12, 1, 1),
+      );
+      grafico.legend.visible = false;
+    }
+
     hoja.getUsedRange().format.autofitColumns();
     hoja.activate();
     await context.sync();

@@ -66,3 +66,28 @@ export function porcentaje(hechas: number, totales: number): number {
   if (!(totales > 0)) return 0;
   return Math.min(100, Math.max(0, (hechas / totales) * 100));
 }
+
+/**
+ * Lee un número escrito por el usuario: "0", "-1.500.000", "2,5", "71.153".
+ *
+ * Con coma decimal (español, lo predeterminado), un punto que agrupa de tres
+ * en tres es de miles —"71.153" es setenta y un mil, como lo escribe el panel—
+ * y solo un punto que no agrupa bien ("2.5") se toma por decimal. Con punto
+ * decimal, las comas son de miles. `null` si no es un número.
+ */
+export function leerNumero(texto: string, decimal: string = ','): number | null {
+  let t = texto.trim().replace(/\s/g, '').replace('\u2212', '-');
+  if (t === '' || t === '-') return null;
+  if (decimal === ',') {
+    const partes = t.split(',');
+    if (partes.length > 2) return null;
+    const [entera = '', fraccion] = partes;
+    const miles = /^-?\d{1,3}(\.\d{3})+$/.test(entera);
+    if (fraccion !== undefined || miles) t = `${entera.replace(/\./g, '')}${fraccion !== undefined ? `.${fraccion}` : ''}`;
+  } else {
+    t = t.replace(/,/g, '');
+  }
+  if (!/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(t)) return null;
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}

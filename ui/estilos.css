@@ -300,3 +300,14 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .tornado-barra.baja { right: 50%; background: var(--baja); border-radius: 4px 0 0 4px; }
 .tornado-valor { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
 .tornado button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }
+
+/* --- Histograma y umbral --- */
+.histo-barra { fill: var(--acento); }
+.histo-barra.apagada { fill: color-mix(in srgb, var(--tenue) 35%, var(--fondo)); }
+.histo-barra.activa { opacity: 0.75; }
+.umbral { margin: 8px 0; padding: 8px; border: 1px solid var(--borde); border-radius: 4px; }
+.umbral-pregunta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+.umbral-pregunta input { width: 8em; }
+.umbral-pregunta input[aria-invalid='true'] { border-color: var(--error-borde); }
+.umbral-respuesta { margin: 6px 0 0; }
+.umbral-respuesta strong { font-size: 20px; }

@@ -34,7 +34,7 @@ import {
 } from '../engine/modelo/index.ts';
 import { curvaCDF, resumenEstadistico, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
 import {
-  sensibilidadDeSalida,
+  analisisDeMuestra,
   type AvanceSimulacion,
   type FalloSimulacion,
   type ResultadoSimulacionPanel,
@@ -191,9 +191,7 @@ function porElRapido(
           ),
           cdf: s ? curvaCDF(s.digest) : [],
           noNumericas: s?.noNumericas ?? 0,
-          ...(s?.muestra
-            ? { sensibilidad: sensibilidadDeSalida(args.modelo, clavesEntrada, muestrasEntrada, s.muestra) }
-            : {}),
+          ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
         };
       }),
     };
@@ -261,9 +259,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         ),
         cdf: s ? curvaCDF(s.digest) : [],
         noNumericas: s?.noNumericas ?? 0,
-        ...(s?.muestra
-          ? { sensibilidad: sensibilidadDeSalida(args.modelo, clavesEntrada, muestrasEntrada, s.muestra) }
-          : {}),
+        ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
       };
     }),
   };

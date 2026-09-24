@@ -14,6 +14,10 @@ import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.t
 import type { EleccionMotor } from '../engine/modelo/index.ts';
 import {
   analizarSensibilidad,
+  histogramaDeMuestra,
+  ordenarUtiles,
+  probabilidadUmbral,
+  type BinHistograma,
   type PuntoCDF,
   type ResumenEstadistico,
 } from '../engine/stats/index.ts';
@@ -47,6 +51,14 @@ export interface ResultadoSalida {
    * la simulación no retuvo muestra (por ejemplo, cancelada antes de empezar).
    */
   sensibilidad?: FilaSensibilidadPanel[];
+  /**
+   * Los valores numéricos de la muestra retenida, ordenados. Es lo que permite
+   * contestar al instante "¿qué probabilidad hay de quedar por debajo de X?"
+   * mientras el usuario escribe X. Vive solo en memoria: no se guarda.
+   */
+  muestraOrdenada?: Float64Array;
+  /** Histograma de la muestra retenida. */
+  histograma?: BinHistograma[];
 }
 
 /** Una barra del tornado: una entrada del modelo y cuánto mueve una salida. */
@@ -82,6 +94,31 @@ export function sensibilidadDeSalida(
     const e = porId.get(f.id);
     return { ...f, nombre: e?.name ?? f.id, ref: e?.ref ?? '' };
   });
+}
+
+/**
+ * Todo lo que sale de la muestra retenida de una salida: la sensibilidad, la
+ * muestra ordenada (para los umbrales) y el histograma. Se calcula una vez al
+ * terminar la simulación, fuera de la interfaz.
+ */
+export function analisisDeMuestra(
+  modelo: ModeloRiesgo,
+  clavesEntrada: readonly string[],
+  muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
+  muestraSalida: ArrayLike<number> | undefined,
+): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma'> {
+  if (!muestraSalida || muestraSalida.length === 0) return {};
+  const muestraOrdenada = ordenarUtiles(muestraSalida);
+  return {
+    sensibilidad: sensibilidadDeSalida(modelo, clavesEntrada, muestrasPorClave, muestraSalida),
+    muestraOrdenada,
+    histograma: histogramaDeMuestra(muestraOrdenada),
+  };
+}
+
+/** Texto de un umbral: "P(VAN < 0)". */
+export function describirUmbral(nombre: string, valor: number, sentido: 'below' | 'above'): string {
+  return `P(${nombre} ${sentido === 'below' ? '<' : '>'} ${valor})`;
 }
 
 export interface SimulacionCompletada {
@@ -122,6 +159,13 @@ interface Informe {
   /** Índices de las filas de texto secundario. */
   tenues: number[];
   curvas: { nombre: string; filaInicio: number; puntos: number }[];
+  /** Tablas de histograma: la cabecera está en `filaInicio`; columnas 2 y 3. */
+  histogramas: { nombre: string; filaInicio: number; barras: number }[];
+}
+
+/** Cuatro cifras significativas, para las etiquetas de los tramos. */
+function redondear(x: number): string {
+  return Number(x.toPrecision(4)).toLocaleString('es-ES');
 }
 
 /**
@@ -133,6 +177,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   const titulos: number[] = [];
   const tenues: number[] = [];
   const curvas: Informe['curvas'] = [];
+  const histogramas: Informe['histogramas'] = [];
 
   const añadir = (...f: Fila[]) => filas.push(...f);
   const titulo = (texto: string) => {
@@ -197,6 +242,12 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
 
   for (const s of resultado.salidas) {
     detallarSalida(s, { añadir, titulo, tenue });
+    const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;
+    if (umbral && s.muestraOrdenada && s.muestraOrdenada.length > 0) {
+      const p = probabilidadUmbral(s.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima');
+      añadir([describirUmbral(s.nombre, umbral.value, umbral.direction), p]);
+      añadir([]);
+    }
     if (s.sensibilidad && s.sensibilidad.length > 0) {
       añadir(['Sensibilidad: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ² normalizado)']);
       for (const f of s.sensibilidad) añadir([f.nombre, f.ref, f.spearman, f.peso]);
@@ -214,9 +265,21 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     for (const p of s.cdf) añadir([p.x, p.p]);
     curvas.push({ nombre: s.nombre, filaInicio, puntos: s.cdf.length + 1 });
     añadir([]);
+
+    if (s.histograma && s.histograma.length > 0) {
+      // El tramo como texto va justo antes del conteo para que el gráfico de
+      // columnas tome las dos columnas contiguas: etiqueta y altura.
+      añadir(['Histograma: desde', 'Hasta', 'Tramo', 'Iteraciones']);
+      const filaInicio = filas.length - 1;
+      for (const b of s.histograma) {
+        añadir([b.x0, b.x1, `${redondear(b.x0)} a ${redondear(b.x1)}`, b.count]);
+      }
+      histogramas.push({ nombre: s.nombre, filaInicio, barras: s.histograma.length + 1 });
+      añadir([]);
+    }
   }
 
-  return { filas, titulos, tenues, curvas };
+  return { filas, titulos, tenues, curvas, histogramas };
 }
 
 function detallarSalida(

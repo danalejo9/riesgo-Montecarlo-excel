@@ -248,7 +248,7 @@ export function Panel() {
         ))}
 
       {pestana === 'resultados' && resultado?.ok === true && modelo && (
-        <Resultados modelo={modelo} resultado={resultado} />
+        <Resultados modelo={modelo} resultado={resultado} alCambiarModelo={cambiarModelo} />
       )}
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}

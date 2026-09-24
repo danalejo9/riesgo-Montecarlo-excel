@@ -14,6 +14,11 @@
  * diferencia es de decimales, pero decir "p95" a secas cuando es aproximado es
  * mentir en un informe que alguien va a firmar (Fase 2 §3.3 lo exige).
  *
+ * **El umbral primero, luego las formas.** "¿Qué probabilidad hay de que el
+ * VAN salga negativo?" es la pregunta por la que la gente abre un análisis de
+ * riesgo; se contesta con un número, y ese número va arriba. El histograma
+ * pinta la misma respuesta como área: las barras del lado contado, en color.
+ *
  * **El tornado va debajo de cada salida**, no en una pestaña aparte: "qué la
  * mueve" es una propiedad de esa salida, y la siguiente pregunta natural tras
  * mirar su curva.
@@ -30,15 +35,21 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
-import type { FilaSensibilidadPanel } from '../excel/informe.ts';
-import { duracion, miles, numero } from './formato.ts';
+import type { FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
+import type { BinHistograma } from '../engine/stats/index.ts';
+import { probabilidadUmbral } from '../engine/stats/index.ts';
+import type { UmbralRiskModel } from '../engine/modelo/index.ts';
+import { duracion, leerNumero, miles, numero } from './formato.ts';
 
 export function Resultados({
   modelo,
   resultado,
+  alCambiarModelo,
 }: {
   modelo: ModeloRiesgo;
   resultado: SimulacionCompletada;
+  /** Para guardar el umbral de cada salida en el modelo del libro. */
+  alCambiarModelo?: (m: ModeloRiesgo) => void;
 }) {
   const motivos = motivosLegibles(resultado.eleccion);
   const [volcando, setVolcando] = useState(false);
@@ -136,6 +147,37 @@ export function Resultados({
               </li>
             ))}
           </ul>
+
+          {salida.muestraOrdenada && salida.muestraOrdenada.length > 0 && (
+            <Umbral
+              salida={salida}
+              umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold}
+              exacto={(resultado.muestraSensibilidad ?? 0) >= resultado.iteracionesCompletadas}
+              decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+              alCambiar={(u) =>
+                alCambiarModelo?.({
+                  ...modelo,
+                  outputs: modelo.outputs.map((o) => {
+                    if (o.id !== salida.id) return o;
+                    if (u) return { ...o, threshold: u };
+                    const copia = { ...o };
+                    delete copia.threshold;
+                    return copia;
+                  }),
+                })
+              }
+            />
+          )}
+
+          {salida.histograma && salida.histograma.length > 0 && (
+            <>
+              <h3>Histograma</h3>
+              <Histograma
+                barras={salida.histograma}
+                umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold}
+              />
+            </>
+          )}
 
           <h3>Probabilidad acumulada</h3>
           <CurvaAcumulada puntos={salida.cdf} />
@@ -302,6 +344,150 @@ function Tornado({ filas, muestra }: { filas: readonly FilaSensibilidadPanel[]; 
           ? describir(cerca)
           : `Correlación de rangos (Spearman) sobre ${muestra ? miles(muestra) : 'las'} iteraciones. ` +
             'Pasa el ratón por una barra para leerla.'}
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * "¿Qué probabilidad hay de quedar por debajo (o por encima) de X?"
+ *
+ * El usuario escribe X y la respuesta sale al momento: es una búsqueda binaria
+ * sobre la muestra ya ordenada, no un cálculo nuevo. El umbral se guarda en el
+ * modelo al salir del campo, así que el siguiente que abra el libro ve la
+ * misma pregunta —y el informe volcado la incluye—.
+ */
+function Umbral({
+  salida,
+  umbral,
+  exacto,
+  decimal,
+  alCambiar,
+}: {
+  salida: ResultadoSalida;
+  decimal: string;
+  umbral: UmbralRiskModel | undefined;
+  exacto: boolean;
+  alCambiar: (u: UmbralRiskModel | null) => void;
+}) {
+  const [texto, setTexto] = useState(umbral ? String(umbral.value).replace('.', decimal) : '');
+  const [sentido, setSentido] = useState<UmbralRiskModel['direction']>(umbral?.direction ?? 'below');
+  const valor = leerNumero(texto, decimal);
+  const ordenada = salida.muestraOrdenada as Float64Array;
+  const p = valor === null ? null : probabilidadUmbral(ordenada, valor, sentido === 'below' ? 'debajo' : 'encima');
+
+  const guardar = (s: UmbralRiskModel['direction'] = sentido) => {
+    if (valor === null) {
+      if (texto.trim() === '' && umbral) alCambiar(null);
+      return;
+    }
+    if (umbral?.value !== valor || umbral.direction !== s) alCambiar({ value: valor, direction: s });
+  };
+
+  return (
+    <div className="umbral">
+      <label className="umbral-pregunta">
+        <span>Probabilidad de quedar</span>
+        <select
+          value={sentido}
+          onChange={(e) => {
+            const s = e.target.value as UmbralRiskModel['direction'];
+            setSentido(s);
+            guardar(s);
+          }}
+        >
+          <option value="below">por debajo de</option>
+          <option value="above">por encima de</option>
+        </select>
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder="p. ej. 0"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={() => guardar()}
+          onKeyDown={(e) => e.key === 'Enter' && guardar()}
+          aria-invalid={texto.trim() !== '' && valor === null}
+        />
+      </label>
+      {p !== null && Number.isFinite(p) ? (
+        <p className="umbral-respuesta">
+          <strong>{(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</strong>
+          <span className="tenue">
+            {' '}{miles(Math.round(p * ordenada.length))} de {miles(ordenada.length)} iteraciones
+            {exacto ? '' : ' (las primeras; margen ±0,3 puntos)'}
+          </span>
+        </p>
+      ) : texto.trim() !== '' ? (
+        <p className="aviso-linea">Escribe un número, por ejemplo 0 o -1.500.000.</p>
+      ) : null}
+    </div>
+  );
+}
+
+const ALTO_H = 120;
+const MARGEN_H = { arriba: 6, derecha: 8, abajo: 20, izquierda: 8 };
+
+/**
+ * El histograma: cuántas iteraciones cayeron en cada tramo.
+ *
+ * Una sola tinta, porque la altura ya dice cuántas. Si hay umbral, las barras
+ * del lado que cuenta la probabilidad van en color y el resto apagadas: el
+ * área coloreada **es** la respuesta de arriba, y se ve de un vistazo si la
+ * cola que preocupa es fina o gruesa.
+ */
+function Histograma({ barras, umbral }: { barras: readonly BinHistograma[]; umbral?: UmbralRiskModel }) {
+  const [cerca, setCerca] = useState<number | null>(null);
+  const min = (barras[0] as BinHistograma).x0;
+  const max = (barras[barras.length - 1] as BinHistograma).x1;
+  const rango = max - min || 1;
+  const total = barras.reduce((s, b) => s + b.count, 0);
+  const mayor = Math.max(...barras.map((b) => b.count), 1);
+  const ancho = ANCHO - MARGEN_H.izquierda - MARGEN_H.derecha;
+  const aX = (x: number) => MARGEN_H.izquierda + ((x - min) / rango) * ancho;
+  const alto = ALTO_H - MARGEN_H.arriba - MARGEN_H.abajo;
+
+  const contada = (b: BinHistograma) => {
+    if (!umbral) return true;
+    const medio = (b.x0 + b.x1) / 2;
+    return umbral.direction === 'below' ? medio < umbral.value : medio > umbral.value;
+  };
+
+  const b = cerca === null ? null : barras[cerca];
+
+  return (
+    <figure className="grafico">
+      <svg viewBox={`0 0 ${ANCHO} ${ALTO_H}`} role="img" aria-label="Histograma de la salida" onMouseLeave={() => setCerca(null)}>
+        <line className="rejilla" x1={MARGEN_H.izquierda} y1={ALTO_H - MARGEN_H.abajo} x2={ANCHO - MARGEN_H.derecha} y2={ALTO_H - MARGEN_H.abajo} />
+        {barras.map((bin, i) => {
+          const x = aX(bin.x0);
+          const w = Math.max(0.5, aX(bin.x1) - x - 1); // 1 unidad de separación entre barras
+          const h = (bin.count / mayor) * alto;
+          return (
+            <g key={i} onMouseEnter={() => setCerca(i)}>
+              {/* Zona sensible a toda la altura: más fácil de señalar que una barra baja. */}
+              <rect x={x} y={MARGEN_H.arriba} width={w + 1} height={alto} fill="transparent" />
+              <rect
+                className={`histo-barra${contada(bin) ? '' : ' apagada'}${cerca === i ? ' activa' : ''}`}
+                x={x}
+                y={ALTO_H - MARGEN_H.abajo - h}
+                width={w}
+                height={h}
+                rx={Math.min(2, w / 2)}
+              />
+            </g>
+          );
+        })}
+        {umbral && umbral.value > min && umbral.value < max && (
+          <line className="cursor" x1={aX(umbral.value)} y1={MARGEN_H.arriba} x2={aX(umbral.value)} y2={ALTO_H - MARGEN_H.abajo} />
+        )}
+        <text className="eje" x={MARGEN_H.izquierda} y={ALTO_H - 6}>{numero(min)}</text>
+        <text className="eje" x={ANCHO - MARGEN_H.derecha} y={ALTO_H - 6} textAnchor="end">{numero(max)}</text>
+      </svg>
+      <figcaption className="tenue">
+        {b
+          ? `Entre ${numero(b.x0)} y ${numero(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)`
+          : 'Pasa el ratón por una barra para leerla.'}
       </figcaption>
     </figure>
   );

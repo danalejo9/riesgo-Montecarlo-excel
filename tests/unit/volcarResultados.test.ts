@@ -161,4 +161,22 @@ describe('construirInforme', () => {
   it('sin sensibilidad no escribe una tabla vacía', () => {
     expect(comoTexto()).not.toContain('Sensibilidad');
   });
+
+  it('escribe el histograma y el umbral guardado en el modelo', () => {
+    const modelo = { ...MODELO, outputs: MODELO.outputs.map((o) => ({ ...o, threshold: { value: 0, direction: 'below' as const } })) };
+    const resultado: SimulacionCompletada = {
+      ...RESULTADO,
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        muestraOrdenada: Float64Array.from([-2, -1, 1, 2]),
+        histograma: [{ x0: -2, x1: 0, count: 2 }, { x0: 0, x1: 2, count: 2 }],
+      })),
+    };
+    const informe = construirInforme(modelo, resultado);
+    const texto = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(texto).toContain('P(VAN < 0)\t0.5');
+    expect(texto).toContain('Histograma: desde\tHasta\tTramo\tIteraciones');
+    expect(texto).toContain('-2\t0\t-2 a 0\t2');
+    expect(informe.histogramas).toEqual([{ nombre: 'VAN', filaInicio: expect.any(Number), barras: 3 }]);
+  });
 });

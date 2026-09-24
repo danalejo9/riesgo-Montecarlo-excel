@@ -39,4 +39,5 @@ export {
   type MotorSimulacion,
   type ResultadoValidacion,
   type SalidaRiskModel,
+  type UmbralRiskModel,
 } from './riskModel.ts';
