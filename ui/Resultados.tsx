@@ -35,7 +35,7 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
-import type { FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
+import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import {
   compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada,
@@ -260,7 +260,14 @@ export function Resultados({
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
             <>
               <h3>Qué la mueve más</h3>
-              <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} />
+              <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} r2={salida.r2} />
+            </>
+          )}
+
+          {salida.arana && salida.arana.length > 0 && (
+            <>
+              <h3>Qué pasa si cada entrada se mueve</h3>
+              <Arana curvas={salida.arana} />
             </>
           )}
         </section>
@@ -392,13 +399,16 @@ function rho(v: number): string {
  * estrecho: una rejilla recorta con puntos suspensivos y el nombre completo
  * sigue en la línea de lectura de abajo.
  */
-function Tornado({ filas, muestra }: { filas: readonly FilaSensibilidadPanel[]; muestra?: number }) {
+function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilidadPanel[]; muestra?: number; r2?: number }) {
   const [todas, setTodas] = useState(false);
   const [cerca, setCerca] = useState<FilaSensibilidadPanel | null>(null);
   const visibles = todas ? filas : filas.slice(0, VISIBLES_TORNADO);
 
   const describir = (f: FilaSensibilidadPanel) =>
-    `${f.nombre === f.ref ? f.nombre : `${f.nombre} (${f.ref})`}: ρ = ${rho(f.spearman)} · ${Math.round(f.peso * 100)} % del efecto. ` +
+    `${f.nombre === f.ref ? f.nombre : `${f.nombre} (${f.ref})`}: ρ = ${rho(f.spearman)} · ` +
+    (f.contribucion !== undefined
+      ? `${Math.round(Math.max(0, f.contribucion) * 100)} % de la varianza explicada. `
+      : `${Math.round(f.peso * 100)} % del efecto. `) +
     (f.spearman >= 0 ? 'Cuando sube, la salida tiende a subir.' : 'Cuando sube, la salida tiende a bajar.');
 
   return (
@@ -426,6 +436,9 @@ function Tornado({ filas, muestra }: { filas: readonly FilaSensibilidadPanel[]; 
               <span className={`tornado-barra ${lado}`} style={{ width: `${Math.abs(f.spearman) * 50}%` }} />
             </span>
             <span className="tornado-valor">{rho(f.spearman)}</span>
+            <span className="tornado-contribucion tenue">
+              {f.contribucion !== undefined ? `${Math.round(Math.max(0, f.contribucion) * 100)} %` : ''}
+            </span>
           </div>
         );
       })}
@@ -439,7 +452,11 @@ function Tornado({ filas, muestra }: { filas: readonly FilaSensibilidadPanel[]; 
       <figcaption className="tenue">
         {cerca
           ? describir(cerca)
-          : `Correlación de rangos (Spearman) sobre ${muestra ? miles(muestra) : 'las'} iteraciones. ` +
+          : `Correlación de rangos (Spearman) sobre ${muestra ? miles(muestra) : 'las'} iteraciones; ` +
+            'a la derecha, el % de la varianza que explica cada entrada (regresión). ' +
+            (r2 !== undefined
+              ? `Entre todas explican el ${Math.round(r2 * 100)} % de la variación${r2 < 0.6 ? ': el resto son interacciones o efectos no monótonos, que el tornado no ve' : ''}. `
+              : '') +
             'Pasa el ratón por una barra para leerla.'}
       </figcaption>
     </figure>
@@ -720,5 +737,80 @@ function TablaComparacion({ etiqueta, filas }: { etiqueta: string; filas: readon
         </tbody>
       </table>
     </>
+  );
+}
+
+const SERIES_ARANA = 4;
+
+/**
+ * El gráfico de araña: la media de la salida en cada décimo de cada entrada.
+ *
+ * Una línea por entrada (las cuatro de más efecto, con leyenda y color fijo
+ * por orden), el eje horizontal es el décimo de la entrada (del 10 % más bajo
+ * al 10 % más alto) y el vertical, la salida en sus unidades. Una línea
+ * plana es una entrada que no importa; una empinada, una que manda; una que
+ * se tuerce, un efecto que se satura o tiene umbral.
+ */
+function Arana({ curvas }: { curvas: readonly CurvaAranaPanel[] }) {
+  const [cerca, setCerca] = useState<{ c: number; d: number } | null>(null);
+  const visibles = curvas.slice(0, SERIES_ARANA);
+  const todas = visibles.flatMap((c) => c.medias);
+  const min = Math.min(...todas);
+  const max = Math.max(...todas);
+  const rango = max - min || 1;
+  const IZQ = 44;
+  const aX = (d: number) => IZQ + (d / 9) * (ANCHO - IZQ - 8);
+  const aY = (v: number) => 6 + (1 - (v - min) / rango) * (ALTO - 6 - 22);
+
+  const alMover = (e: React.MouseEvent<SVGSVGElement>) => {
+    const caja = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - caja.left) / caja.width) * ANCHO;
+    const y = ((e.clientY - caja.top) / caja.height) * ALTO;
+    const d = Math.max(0, Math.min(9, Math.round(((x - IZQ) / (ANCHO - IZQ - 8)) * 9)));
+    let mejor = 0;
+    visibles.forEach((c, i) => {
+      if (Math.abs(aY(c.medias[d] as number) - y) < Math.abs(aY((visibles[mejor] as CurvaAranaPanel).medias[d] as number) - y)) mejor = i;
+    });
+    setCerca({ c: mejor, d });
+  };
+
+  const seleccion = cerca ? visibles[cerca.c] : null;
+
+  return (
+    <figure className="grafico">
+      <svg viewBox={`0 0 ${ANCHO} ${ALTO}`} role="img" aria-label="Gráfico de araña" onMouseMove={alMover} onMouseLeave={() => setCerca(null)}>
+        {[min, (min + max) / 2, max].map((v) => (
+          <g key={v}>
+            <line className="rejilla" x1={IZQ} y1={aY(v)} x2={ANCHO - 8} y2={aY(v)} />
+            <text className="eje" x={IZQ - 4} y={aY(v) + 3} textAnchor="end">{numero(v, 3)}</text>
+          </g>
+        ))}
+        {visibles.map((c, i) => (
+          <polyline
+            key={c.id}
+            className={`serie serie-${i + 1}${cerca && cerca.c !== i ? ' atenuada' : ''}`}
+            points={c.medias.map((m, d) => `${aX(d).toFixed(1)},${aY(m).toFixed(1)}`).join(' ')}
+          />
+        ))}
+        {cerca && seleccion && (
+          <circle className={`punto-serie serie-${cerca.c + 1}`} cx={aX(cerca.d)} cy={aY(seleccion.medias[cerca.d] as number)} r={4} />
+        )}
+        <text className="eje" x={IZQ} y={ALTO - 6}>10 % más bajo</text>
+        <text className="eje" x={ANCHO - 8} y={ALTO - 6} textAnchor="end">10 % más alto</text>
+      </svg>
+      <p className="leyenda-curvas leyenda-series">
+        {visibles.map((c, i) => (
+          <span key={c.id}>
+            <span className={`muestra-linea serie-${i + 1}`} />
+            {c.nombre} <span className="tenue">(±{numero(c.rango / 2, 3)})</span>
+          </span>
+        ))}
+      </p>
+      <figcaption className="tenue">
+        {cerca && seleccion
+          ? `Con ${seleccion.nombre} en su décimo ${cerca.d + 1} de 10, la salida vale de media ${numero(seleccion.medias[cerca.d] as number)}.`
+          : `Media de la salida según en qué décimo cae cada entrada${curvas.length > SERIES_ARANA ? ` (las ${SERIES_ARANA} de más efecto de ${curvas.length})` : ''}. Entre paréntesis, la mitad del recorrido: cuánto sube o baja la media de la salida.`}
+      </figcaption>
+    </figure>
   );
 }

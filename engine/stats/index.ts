@@ -26,6 +26,9 @@ export {
 } from './welford.ts';
 export {
   analizarSensibilidad,
+  aranaDeSensibilidad,
+  r2Sensibilidad,
+  type CurvaArana,
   rangos,
   spearman,
   LIMITE_MUESTRA_SENSIBILIDAD,

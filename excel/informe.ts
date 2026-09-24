@@ -14,7 +14,9 @@ import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.t
 import type { EleccionMotor } from '../engine/modelo/index.ts';
 import {
   analizarSensibilidad,
+  aranaDeSensibilidad,
   histogramaDeMuestra,
+  r2Sensibilidad,
   ordenarUtiles,
   precisionDeSimulacion,
   type Precision,
@@ -67,6 +69,10 @@ export interface ResultadoSalida {
    * no se pueden contar iteraciones.
    */
   muestraReducida?: boolean;
+  /** Gráfico de araña: media de la salida por décimo de cada entrada, de mayor a menor efecto. */
+  arana?: CurvaAranaPanel[];
+  /** Qué parte de la variación explican las entradas juntas (regresión sobre rangos, 0..1). */
+  r2?: number;
   /** ¿Bastan las iteraciones? Margen de la media y de p5/p95 al 95 %. */
   precision?: Precision;
 }
@@ -80,6 +86,19 @@ export interface FilaSensibilidadPanel {
   spearman: number;
   /** ρ² normalizado entre todas las entradas, 0..1. */
   peso: number;
+  /** Contribución a la varianza explicada (regresión, medida de Pratt), si se pudo calcular. */
+  contribucion?: number;
+}
+
+/** Una línea del gráfico de araña, con los nombres del modelo. */
+export interface CurvaAranaPanel {
+  id: string;
+  nombre: string;
+  ref: string;
+  /** Media de la salida en cada décimo de la entrada, de menor a mayor. */
+  medias: number[];
+  /** Mayor menos menor de esas medias, en unidades de la salida. */
+  rango: number;
 }
 
 /**
@@ -95,10 +114,7 @@ export function sensibilidadDeSalida(
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
   muestraSalida: ArrayLike<number>,
 ): FilaSensibilidadPanel[] {
-  const entradas = modelo.inputs.flatMap((e, i) => {
-    const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
-    return muestras ? [{ id: e.id, muestras }] : [];
-  });
+  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
   const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
   return analizarSensibilidad(entradas, muestraSalida).map((f) => {
     const e = porId.get(f.id);
@@ -136,14 +152,33 @@ export function analisisDeMuestra(
   clavesEntrada: readonly string[],
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
   muestraSalida: ArrayLike<number> | undefined,
-): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma'> {
+): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2'> {
   if (!muestraSalida || muestraSalida.length === 0) return {};
   const muestraOrdenada = ordenarUtiles(muestraSalida);
+  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
+  const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
+  const arana = aranaDeSensibilidad(entradas, muestraSalida).map((c) => ({
+    ...c, nombre: porId.get(c.id)?.name ?? c.id, ref: porId.get(c.id)?.ref ?? '',
+  }));
+  const r2 = r2Sensibilidad(entradas, muestraSalida);
   return {
     sensibilidad: sensibilidadDeSalida(modelo, clavesEntrada, muestrasPorClave, muestraSalida),
     muestraOrdenada,
     histograma: histogramaDeMuestra(muestraOrdenada),
+    ...(arana.length > 0 ? { arana } : {}),
+    ...(r2 !== null ? { r2 } : {}),
   };
+}
+
+function entradasDeSensibilidad(
+  modelo: ModeloRiesgo,
+  clavesEntrada: readonly string[],
+  muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
+) {
+  return modelo.inputs.flatMap((e, i) => {
+    const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
+    return muestras ? [{ id: e.id, muestras }] : [];
+  });
 }
 
 /** Texto de un umbral: "P(VAN < 0)". */
@@ -306,8 +341,9 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
       añadir([]);
     }
     if (s.sensibilidad && s.sensibilidad.length > 0) {
-      añadir(['Sensibilidad: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ² normalizado)']);
-      for (const f of s.sensibilidad) añadir([f.nombre, f.ref, f.spearman, f.peso]);
+      añadir(['Sensibilidad: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ² normalizado)', 'Contribución a la varianza']);
+      for (const f of s.sensibilidad) añadir([f.nombre, f.ref, f.spearman, f.peso, f.contribucion ?? '']);
+      if (s.r2 !== undefined) añadir(['Varianza explicada por las entradas (R², rangos)', s.r2]);
       tenue(
         `Correlación de rangos sobre ${resultado.muestraSensibilidad ?? resultado.iteracionesCompletadas} ` +
           'iteraciones. ρ > 0: la salida sube con la entrada; ρ < 0: baja. El peso es aproximado si las entradas están correlacionadas.',
@@ -322,6 +358,12 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     for (const p of s.cdf) añadir([p.x, p.p]);
     curvas.push({ nombre: s.nombre, filaInicio, puntos: s.cdf.length + 1 });
     añadir([]);
+
+    if (s.arana && s.arana.length > 0) {
+      añadir(['Araña: media de la salida por decil de la entrada', ...Array.from({ length: 10 }, (_, i) => `D${i + 1}`), 'Rango']);
+      for (const c of s.arana) añadir([c.nombre, ...c.medias, c.rango]);
+      añadir([]);
+    }
 
     if (s.histograma && s.histograma.length > 0) {
       // El tramo como texto va justo antes del conteo para que el gráfico de

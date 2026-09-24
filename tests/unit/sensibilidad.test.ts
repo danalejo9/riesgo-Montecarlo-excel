@@ -9,7 +9,7 @@ import { compilarPlan } from '../../engine/compiler/plan.ts';
 import { generarTramoDeEntrada, simularPorBloques, type DefinicionEntrada } from '../../engine/executor/index.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import { modeloVacio } from '../../engine/modelo/index.ts';
-import { analizarSensibilidad, rangos, spearman } from '../../engine/stats/index.ts';
+import { analizarSensibilidad, aranaDeSensibilidad, r2Sensibilidad, rangos, spearman } from '../../engine/stats/index.ts';
 import { sensibilidadDeSalida } from '../../excel/informe.ts';
 
 const H = 'Hoja1';
@@ -146,5 +146,67 @@ describe('sensibilidadDeSalida', () => {
     expect(filas[0]?.spearman).toBeCloseTo(1, 12);
     expect(filas[1]).toMatchObject({ id: 'c', nombre: 'Coste' });
     expect(filas[1]?.spearman).toBeLessThan(0);
+  });
+});
+
+describe('contribución a la varianza (regresión sobre rangos)', () => {
+  // Uniformes independientes y reproducibles.
+  const n = 5000;
+  const u = (semilla: number) => Float64Array.from({ length: n }, (_, i) => {
+    const x = Math.sin((i + 1) * semilla) * 43758.5453;
+    return x - Math.floor(x);
+  });
+  const a = u(12.9898);
+  const b = u(78.233);
+
+  it('reparte según el efecto de cada entrada y suma 1', () => {
+    const y = Float64Array.from({ length: n }, (_, i) => 2 * (a[i] as number) + (b[i] as number));
+    const filas = analizarSensibilidad([{ id: 'a', muestras: a }, { id: 'b', muestras: b }], y);
+    const ca = filas.find((f) => f.id === 'a')?.contribucion as number;
+    const cb = filas.find((f) => f.id === 'b')?.contribucion as number;
+    expect(ca + cb).toBeCloseTo(1, 10);
+    expect(ca).toBeGreaterThan(0.7); // varianzas 4 : 1 → ~0,8 / 0,2
+    expect(cb).toBeLessThan(0.3);
+  });
+
+  it('con dos entradas casi iguales, el mérito va a la que de verdad actúa', () => {
+    // c es a con un poco de ruido; la salida solo depende de a.
+    const c = Float64Array.from({ length: n }, (_, i) => (a[i] as number) + 0.2 * ((b[i] as number) - 0.5));
+    const filas = analizarSensibilidad([{ id: 'a', muestras: a }, { id: 'c', muestras: c }], a);
+    const fa = filas.find((f) => f.id === 'a');
+    const fc = filas.find((f) => f.id === 'c');
+    // Spearman ve las dos muy correlacionadas, y el peso las reparte...
+    expect(fc?.spearman).toBeGreaterThan(0.9);
+    expect(fc?.peso).toBeGreaterThan(0.4);
+    // ...la regresión no se deja engañar.
+    expect(fa?.contribucion).toBeGreaterThan(0.95);
+    expect(Math.abs(fc?.contribucion as number)).toBeLessThan(0.05);
+  });
+
+  it('R² bajo cuando la relación no es monótona', () => {
+    const y = Float64Array.from({ length: n }, (_, i) => ((a[i] as number) - 0.5) ** 2);
+    expect(r2Sensibilidad([{ id: 'a', muestras: a }], y)).toBeLessThan(0.05);
+  });
+});
+
+describe('aranaDeSensibilidad', () => {
+  const n = 5000;
+  const a = Float64Array.from({ length: n }, (_, i) => (i * 7919) % n);
+  const b = Float64Array.from({ length: n }, (_, i) => (i * 104729) % n);
+
+  it('diez medias crecientes para una entrada que sube la salida, y el rango en unidades de la salida', () => {
+    const y = Float64Array.from({ length: n }, (_, i) => 10 * (a[i] as number) + (b[i] as number) * 0.01);
+    const [primera, segunda] = aranaDeSensibilidad([{ id: 'b', muestras: b }, { id: 'a', muestras: a }], y);
+    expect(primera?.id).toBe('a'); // ordenadas por rango
+    expect(primera?.medias).toHaveLength(10);
+    const m = primera?.medias as number[];
+    for (let i = 1; i < 10; i++) expect(m[i]).toBeGreaterThan(m[i - 1] as number);
+    // Deciles de 0..4999 ×10: del ~2.500 al ~47.500.
+    expect(primera?.rango).toBeGreaterThan(40_000);
+    expect(segunda?.rango).toBeLessThan(primera?.rango as number);
+  });
+
+  it('con muy pocas iteraciones no dibuja nada', () => {
+    expect(aranaDeSensibilidad([{ id: 'a', muestras: [1, 2, 3] }], [1, 2, 3])).toEqual([]);
   });
 });

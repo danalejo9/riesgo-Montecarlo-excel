@@ -22,6 +22,11 @@
   /* Polaridad del tornado: validados contra el fondo (CVD ΔE ≥ 19). */
   --sube: #2a78d6;
   --baja: #e34948;
+  /* Series categóricas (orden fijo, validado para daltonismo). */
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,6 +40,10 @@
     --error-borde: #f1707b;
     --sube: #3987e5;
     --baja: #e66767;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
   }
 }
 
@@ -285,7 +294,7 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .tornado-leyenda .marca { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0 4px; vertical-align: middle; }
 .tornado-fila {
   display: grid;
-  grid-template-columns: minmax(0, 38%) 1fr 3.2em;
+  grid-template-columns: minmax(0, 34%) 1fr 3.2em 2.6em;
   align-items: center;
   gap: 6px;
   padding: 2px 0; /* separación entre barras */
@@ -347,3 +356,14 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .presets button { padding: 2px 8px; font-size: 12px; }
 .presets button.activo { background: var(--acento); color: var(--fondo); border-color: var(--acento); }
 .campo.casilla { flex-direction: row; align-items: center; gap: 6px; }
+
+/* --- Araña --- */
+.serie { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.serie.atenuada { opacity: 0.3; }
+.serie-1 { stroke: var(--serie-1); border-color: var(--serie-1) !important; }
+.serie-2 { stroke: var(--serie-2); border-color: var(--serie-2) !important; }
+.serie-3 { stroke: var(--serie-3); border-color: var(--serie-3) !important; }
+.serie-4 { stroke: var(--serie-4); border-color: var(--serie-4) !important; }
+.punto-serie { fill: var(--fondo); stroke-width: 2; }
+.leyenda-series { flex-wrap: wrap; row-gap: 2px; }
+.tornado-contribucion { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }

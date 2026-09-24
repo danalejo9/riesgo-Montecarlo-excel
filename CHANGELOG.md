@@ -5,6 +5,20 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Gráfico de araña y contribución a la varianza (2026-09-24)
+
+**Añadido**
+- **"Qué pasa si cada entrada se mueve"** (gráfico de araña): la media de la
+  salida en cada décimo de cada entrada, en unidades de la salida, con las
+  cuatro entradas de más efecto y su recorrido (±). Sale de la muestra ya
+  simulada: no hace falta simular más.
+- **Contribución a la varianza** en el tornado, por regresión sobre rangos
+  (medida de Pratt): reparte bien el mérito entre entradas correlacionadas,
+  donde el peso ρ² se equivoca. Y el **R²**: qué parte de la variación
+  explican las entradas juntas; si es bajo, el panel avisa de interacciones o
+  efectos no monótonos.
+- Los dos van también al informe volcado.
+
 ### Panel de Configuración (2026-09-24)
 
 **Añadido**
