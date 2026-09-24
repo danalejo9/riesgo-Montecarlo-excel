@@ -69,12 +69,17 @@ export function datosDelInforme(
       tiempoMs: resultado.milisegundos,
       ...(resultado.convergencia && !resultado.convergencia.noDisponible ? { tandas: resultado.convergencia.tandas } : {}),
     },
-    entradas: modelo.inputs.map((e) => ({
-      nombre: e.name,
-      ref: e.ref,
-      distribucion: resumirDistribucion(e.dist),
-      correlaciones: e.correlations.map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`).join('; '),
-    })),
+    entradas: [
+      ...modelo.inputs.map((e) => ({
+        nombre: e.name,
+        ref: e.ref,
+        distribucion: resumirDistribucion(e.dist),
+        correlaciones: e.correlations.map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`).join('; '),
+      })),
+      ...(resultado.entradasDeFunciones ?? []).map((e) => ({
+        nombre: `${e.ref} (RIESGO)`, ref: e.ref, distribucion: e.distribucion, correlaciones: '',
+      })),
+    ],
     ...(ref ? { referencia: ref.etiqueta } : {}),
     salidas: resultado.salidas.map(({ muestraOrdenada, ...s }) => {
       const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;

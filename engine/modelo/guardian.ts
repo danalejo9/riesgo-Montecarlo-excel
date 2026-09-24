@@ -27,6 +27,13 @@ export interface RecoveryRecord {
   calculationMode: string;
   /** ref (rango con nombre) -> valor que tenía antes de simular. */
   originalValues: Record<string, number>;
+  /**
+   * ref -> fórmula que tenía antes de simular, para las entradas que tenían
+   * fórmula (una `=RIESGO.NORMAL(…)`, un `=B2*1,1`). Restaurar solo el valor
+   * las dejaba convertidas en un número fijo: el libro perdía la fórmula.
+   * Opcional para leer registros de versiones anteriores.
+   */
+  originalFormulas?: Record<string, string>;
 }
 
 export interface AlmacenGuardian {
@@ -37,6 +44,9 @@ export interface AlmacenGuardian {
   setCalculationMode(mode: string): void;
   readValue(ref: string): number;
   writeValue(ref: string, value: number): void;
+  /** La fórmula de la celda si la tiene (empieza por "="), o `undefined`. */
+  readFormula?(ref: string): string | undefined;
+  writeFormula?(ref: string, formula: string): void;
 }
 
 export type ResultadoProteccion = { ok: true } | { ok: false; error: string };
@@ -62,13 +72,19 @@ export function iniciarProteccion(
   }
 
   const originalValues: Record<string, number> = {};
-  for (const ref of refs) originalValues[ref] = store.readValue(ref);
+  const originalFormulas: Record<string, string> = {};
+  for (const ref of refs) {
+    originalValues[ref] = store.readValue(ref);
+    const f = store.readFormula?.(ref);
+    if (f !== undefined) originalFormulas[ref] = f;
+  }
 
   const record: RecoveryRecord = {
     schema: VERSION_ESQUEMA_RECOVERY,
     startedAt: ahora(),
     calculationMode: store.readCalculationMode(),
     originalValues,
+    ...(Object.keys(originalFormulas).length > 0 ? { originalFormulas } : {}),
   };
 
   store.writeRecovery(record);
@@ -98,7 +114,12 @@ export function hayRecuperacionPendiente(store: AlmacenGuardian): RecoveryRecord
 export function restaurarDesdeRecuperacion(store: AlmacenGuardian): void {
   const record = store.readRecovery();
   if (!record) return;
-  for (const [ref, valor] of Object.entries(record.originalValues)) store.writeValue(ref, valor);
+  for (const [ref, valor] of Object.entries(record.originalValues)) {
+    const formula = record.originalFormulas?.[ref];
+    // Una entrada que tenía fórmula vuelve a tenerla, no su último valor.
+    if (formula !== undefined && store.writeFormula) store.writeFormula(ref, formula);
+    else store.writeValue(ref, valor);
+  }
   store.setCalculationMode(record.calculationMode);
   store.clearRecovery();
 }

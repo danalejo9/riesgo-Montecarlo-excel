@@ -247,7 +247,9 @@ export function Modelo({
         .map((e) => ({ ...e, correlations: e.correlations.filter((c) => c.with !== id) })),
     });
 
-  const listo = modelo.inputs.length > 0 && modelo.outputs.length > 0;
+  // Las entradas pueden venir también de funciones RIESGO.* escritas en el
+  // libro, que solo se descubren al simular: basta con tener una salida.
+  const listo = modelo.outputs.length > 0;
 
   return (
     <>
@@ -411,7 +413,10 @@ export function Modelo({
           {ocupado ? 'Simulando…' : 'Simular'}
         </button>
         {!listo && (
-          <p className="tenue">Hace falta al menos una entrada y una salida.</p>
+          <p className="tenue">
+            Hace falta al menos una salida. Las entradas pueden ser celdas marcadas aquí o celdas
+            con una función como =RIESGO.NORMAL(100; 15).
+          </p>
         )}
       </section>
     </>

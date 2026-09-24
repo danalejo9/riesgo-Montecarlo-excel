@@ -210,6 +210,10 @@ export interface SimulacionCompletada {
    * actual tiene otra, estos resultados ya no le corresponden.
    */
   huellaModelo?: string;
+  /** Entradas declaradas en el libro con funciones RIESGO.*, además de las del panel. */
+  entradasDeFunciones?: { ref: string; distribucion: string }[];
+  /** Celdas con RIESGO.* que también están en el panel: se usó lo del panel. */
+  funcionesIgnoradas?: string[];
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
   /**
@@ -300,6 +304,9 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
       .map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`)
       .join('; ');
     añadir([e.name, e.ref, resumirDistribucion(e.dist), correlaciones]);
+  }
+  for (const e of resultado.entradasDeFunciones ?? []) {
+    añadir([`${e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
   }
   añadir([]);
 

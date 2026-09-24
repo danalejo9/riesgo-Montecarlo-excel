@@ -5,6 +5,35 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Funciones RIESGO.* en las celdas (2026-09-24)
+
+**Añadido**
+- **`=RIESGO.NORMAL(100; 15)`** y otras once (LOGNORMAL, UNIFORME, TRIANGULAR,
+  PERT, BETA, GAMMA, EXPON, WEIBULL, BERNOULLI, BINOMIAL, POISSON) escritas
+  directamente en una celda la declaran entrada incierta, sin pasar por el
+  panel, como en @RISK. Fuera de la simulación la celda muestra la **media**
+  de su distribución, así que el libro calcula con normalidad.
+- Se registran como funciones personalizadas de Excel (manifiesto 0.4.0.0):
+  script de un solo archivo (`funciones.js`), página y metadatos
+  (`funciones.json`) **generados del catálogo del motor**, para que no pueda
+  haber en Excel una función que el motor no sepa simular.
+- Al simular, las celdas `RIESGO.*` de las que depende alguna salida se suman
+  a las entradas del panel (si una está en los dos, manda el panel y se
+  avisa), salen en "Cómo se calculó", en el tornado, en el informe y en el
+  volcado. Basta con tener una salida para simular.
+- Solo argumentos numéricos escritos y la función como fórmula entera; lo
+  demás (`=RIESGO.NORMAL(B2; 15)`, `=1+RIESGO.…`) se rechaza con la celda y el
+  motivo. También se aceptan los nombres `RISK.*`.
+
+**Corregido**
+- **El modo compatible perdía la fórmula de las entradas que tenían una**:
+  el guardián guardaba y restauraba solo el valor, así que una entrada con
+  `=B2*1,1` quedaba convertida en un número tras simular. Ahora guarda la
+  fórmula y la restaura.
+- El motor ya no recorre lo que hay dentro de una celda de entrada (su
+  fórmula y sus precedentes no se usan): una entrada con una función que el
+  motor no conoce ya no manda la simulación al modo compatible.
+
 ### Informe PDF (2026-09-24)
 
 **Añadido**

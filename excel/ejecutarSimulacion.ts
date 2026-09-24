@@ -29,6 +29,7 @@ import {
   describirMotivo,
   elegirMotor,
   prepararEntradas,
+  resumirDistribucion,
   OBJETIVO_PRECISION_POR_DEFECTO,
   type EleccionMotor,
   type ModeloRiesgo,
@@ -51,6 +52,7 @@ export type {
   ResultadoSimulacionPanel,
   SimulacionCompletada,
 } from './informe.ts';
+import { entradasDeFunciones } from './entradasRiesgo.ts';
 import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
@@ -78,14 +80,11 @@ const BLOQUES_MINIMOS = 16;
 const COMPRESION_TDIGEST = 100;
 
 export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<ResultadoSimulacionPanel> {
-  const { modelo, progreso, debeCancelar, crearPool } = peticion;
+  const { progreso, debeCancelar, crearPool } = peticion;
+  // `let`: se amplía con las entradas que el libro declara con RIESGO.*.
+  let modelo = peticion.modelo;
   const arranque = performance.now();
 
-  if (modelo.inputs.length === 0) {
-    return fallo('modelo', 'El modelo no tiene ninguna entrada.', [
-      'Marca al menos una celda como entrada incierta y dale una distribución.',
-    ]);
-  }
   if (modelo.outputs.length === 0) {
     return fallo('modelo', 'El modelo no tiene ninguna salida.', [
       'Marca al menos una celda como salida: es lo que se va a medir.',
@@ -114,6 +113,22 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       progreso?.({ fase: 'leyendo', mensaje: `Leyendo hojas… ${hechas} de ${total}` }),
   });
   const { grafo } = construirGrafo(libro.formulas, libro.valores.map(aValorCelda));
+
+  // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
+  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida);
+  if (deFunciones.errores.length > 0) {
+    return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
+  }
+  if (deFunciones.entradas.length > 0) {
+    modelo = { ...modelo, inputs: [...modelo.inputs, ...deFunciones.entradas] };
+    clavesEntrada.push(...deFunciones.claves);
+  }
+  if (modelo.inputs.length === 0) {
+    return fallo('modelo', 'El modelo no tiene ninguna entrada.', [
+      'Marca al menos una celda como entrada incierta y dale una distribución,',
+      'o escribe en ella una función como =RIESGO.NORMAL(100; 15).',
+    ]);
+  }
 
   // 3. ¿Qué motor puede con esto?
   progreso?.({ fase: 'analizando', mensaje: 'Analizando el modelo…' });
@@ -145,7 +160,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     if (r.ok && conv?.untilConverged) {
       r.convergencia = { objetivo, tandas: [n], alcanzada: r.salidas.every((s) => s.precision?.suficiente !== false), tope: conv.maxIterations, noDisponible: true };
     }
-    return r;
+    return conEntradasDeFunciones(r, deFunciones);
   }
 
   // Motor rápido: iteraciones fijas, o por tandas hasta la precisión pedida.
@@ -179,7 +194,20 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       alcanzada: final.salidas.every((s) => s.precision?.suficiente !== false),
     };
   }
-  return final;
+  return conEntradasDeFunciones(final, deFunciones);
+}
+
+/** Anota en el resultado qué entradas vinieron de funciones RIESGO.* del libro. */
+function conEntradasDeFunciones(
+  r: ResultadoSimulacionPanel,
+  d: ReturnType<typeof entradasDeFunciones>,
+): ResultadoSimulacionPanel {
+  if (!r.ok || (d.entradas.length === 0 && d.duplicadas.length === 0)) return r;
+  return {
+    ...r,
+    entradasDeFunciones: d.entradas.map((e) => ({ ref: e.ref, distribucion: resumirDistribucion(e.dist) })),
+    ...(d.duplicadas.length > 0 ? { funcionesIgnoradas: d.duplicadas } : {}),
+  };
 }
 
 /** Tandas como máximo en "simular hasta alcanzar la precisión". */

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { build, defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import * as fs from 'fs';
@@ -31,10 +31,47 @@ const httpsOptions = hayCertificados
  * `publicDir` apunta a la carpeta `public/` del repositorio, que está fuera de
  * la raíz: ahí viven los iconos que el manifiesto pide por URL absoluta.
  */
+/**
+ * Las funciones `RIESGO.*`: sus metadatos (`funciones.json`) se generan del
+ * catálogo del motor y su script (`funciones.js`) se empaqueta aparte en un
+ * solo archivo (ver `vite.funciones.config.ts`). En desarrollo, el servidor
+ * los sirve al vuelo; en la construcción, se escriben en `dist/`.
+ */
+function funcionesRiesgo(): Plugin {
+  const metadatos = async () => {
+    const { metadatosFunciones } = await import('./engine/modelo/metadatosFunciones.ts');
+    return JSON.stringify(metadatosFunciones(), null, 2);
+  };
+  return {
+    name: 'funciones-riesgo',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url === '/funciones.json') {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(await metadatos());
+          return;
+        }
+        if (req.url === '/funciones.js') {
+          const salida = await build({ configFile: resolve(__dirname, 'vite.funciones.config.ts'), build: { write: false }, logLevel: 'warn' });
+          const trozos = (Array.isArray(salida) ? salida : [salida]) as { output: { fileName: string; code?: string }[] }[];
+          const js = trozos.flatMap((t) => t.output).find((o) => o.fileName === 'funciones.js')?.code ?? '';
+          res.setHeader('Content-Type', 'text/javascript');
+          res.end(js);
+          return;
+        }
+        next();
+      });
+    },
+    async generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'funciones.json', source: await metadatos() });
+    },
+  };
+}
+
 export default defineConfig({
   root: 'ui',
   publicDir: resolve(__dirname, 'public'),
-  plugins: [react()],
+  plugins: [react(), funcionesRiesgo()],
   build: {
     outDir: resolve(__dirname, 'dist'),
     emptyOutDir: true,

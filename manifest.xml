@@ -12,11 +12,11 @@
     3. `Functions.Script.Url` apuntaba a un archivo que solo registraba un
        stub, no a las funciones reales.
 
-  **Aquí no se declara ninguna función personalizada todavía**, y es
-  deliberado: declarar `RISK.*` apuntando a un `functions.js` que aún no
-  existe reproduciría el defecto 3 en otra forma. Las funciones entran cuando
-  estén escritas, con su `ExtensionPoint` en `<AllFormFactors>` y sus
-  `<Requirements>` de `CustomFunctionsRuntime`. Por ahora, solo el panel.
+  **Funciones personalizadas `RIESGO.*`** (desde la versión 0.4): declaradas
+  en `<AllFormFactors>`, como pide Excel para Windows, con su script de un
+  solo archivo (`funciones.js`), su página (`funciones.html`) y sus metadatos
+  (`funciones.json`, generados del catálogo del motor). Ver
+  `engine/modelo/funcionesRiesgo.ts`.
 
   El Id es nuevo a propósito: el del heredado puede estar en la caché de
   Office de la máquina del usuario, y reutilizarlo mezclaría los dos
@@ -30,7 +30,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.3.0.0</Version>
+  <Version>0.4.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -69,6 +69,20 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Hosts>
       <Host xsi:type="Workbook">
+        <AllFormFactors>
+          <ExtensionPoint xsi:type="CustomFunctions">
+            <Script>
+              <SourceLocation resid="Funciones.Script.Url" />
+            </Script>
+            <Page>
+              <SourceLocation resid="Funciones.Page.Url" />
+            </Page>
+            <Metadata>
+              <SourceLocation resid="Funciones.Metadata.Url" />
+            </Metadata>
+            <Namespace resid="Funciones.Namespace" />
+          </ExtensionPoint>
+        </AllFormFactors>
         <DesktopFormFactor>
           <GetStarted>
             <Title resid="GetStarted.Title" />
@@ -188,10 +202,14 @@
         <bt:Url id="PanelConfiguracion.Url" DefaultValue="https://localhost:9090/taskpane.html#configuracion" />
         <bt:Url id="PanelDiagnostico.Url" DefaultValue="https://localhost:9090/taskpane.html#diagnostico" />
         <bt:Url id="Comandos.Url" DefaultValue="https://localhost:9090/commands.html" />
+        <bt:Url id="Funciones.Script.Url" DefaultValue="https://localhost:9090/funciones.js" />
+        <bt:Url id="Funciones.Page.Url" DefaultValue="https://localhost:9090/funciones.html" />
+        <bt:Url id="Funciones.Metadata.Url" DefaultValue="https://localhost:9090/funciones.json" />
         <bt:Url id="Soporte.Url" DefaultValue="https://github.com/danalejo9/riesgo-Montecarlo-excel" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="PestanaRiesgo.Label" DefaultValue="Riesgo" />
+        <bt:String id="Funciones.Namespace" DefaultValue="RIESGO" />
         <bt:String id="GrupoPrincipal.Label" DefaultValue="Monte Carlo" />
         <bt:String id="btnModelo.Label" DefaultValue="Modelo" />
         <bt:String id="btnResultados.Label" DefaultValue="Resultados" />

@@ -44,3 +44,12 @@ export {
   type UmbralRiskModel,
 } from './riskModel.ts';
 export { ajustarDistribuciones, leerDatos, type AjusteCandidato, type ResultadoAjuste } from './ajuste.ts';
+export {
+  FUNCIONES_RIESGO,
+  idDeFuncionRiesgo,
+  leerFuncionRiesgo,
+  mediaDeFuncionRiesgo,
+  mencionaRiesgo,
+  type FuncionRiesgo,
+  type LecturaFuncionRiesgo,
+} from './funcionesRiesgo.ts';

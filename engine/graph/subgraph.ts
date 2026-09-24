@@ -28,9 +28,20 @@
 
 import type { Grafo } from './graph.ts';
 
-/** Clausura hacia atrás: todo lo que hace falta conocer para calcular `raices`. */
-export function clausuraDependencias(grafo: Grafo, raices: Iterable<string>): Set<string> {
-  return alcanzables(grafo.dependencias, raices);
+/**
+ * Clausura hacia atrás: todo lo que hace falta conocer para calcular `raices`.
+ *
+ * `detenerEn` son celdas que se incluyen pero **por las que no se sigue
+ * bajando**: las entradas inciertas. Su valor lo pone la simulación, así que
+ * lo que hubiera en su fórmula —una `RIESGO.NORMAL(…)`, o cualquier otra
+ * cosa— y las celdas de las que depende no hacen falta para nada.
+ */
+export function clausuraDependencias(
+  grafo: Grafo,
+  raices: Iterable<string>,
+  detenerEn?: ReadonlySet<string>,
+): Set<string> {
+  return alcanzables(grafo.dependencias, raices, detenerEn);
 }
 
 /** Clausura hacia adelante: todo lo que depende, directa o indirectamente, de `raices`. */
@@ -58,13 +69,14 @@ export function subgrafoRelevante(
   // clausura incluye trivialmente su propia raíz, así que una entrada que
   // sea a la vez una salida (camino de longitud cero) ya queda cubierta sin
   // caso especial.
-  const afectadoPorEntradas = clausuraDependientes(grafo, entradas);
+  const listaEntradas = [...entradas];
+  const afectadoPorEntradas = clausuraDependientes(grafo, listaEntradas);
 
   // Lo que hace falta para calcular las salidas (hacia atrás). Por la misma
   // razón, una salida que no dependa de ninguna entrada no debe forzarse a
   // entrar: si no aparece en la intersección, es que es constante frente a
   // esas entradas, y eso es justo lo que se le quiere poder decir al usuario.
-  const necesarioParaSalidas = clausuraDependencias(grafo, salidas);
+  const necesarioParaSalidas = clausuraDependencias(grafo, salidas, new Set(listaEntradas));
 
   const relevante = new Set<string>();
   for (const clave of necesarioParaSalidas) {
@@ -74,7 +86,11 @@ export function subgrafoRelevante(
   return relevante;
 }
 
-function alcanzables(adyacencia: Map<string, Set<string>>, raices: Iterable<string>): Set<string> {
+function alcanzables(
+  adyacencia: Map<string, Set<string>>,
+  raices: Iterable<string>,
+  detenerEn?: ReadonlySet<string>,
+): Set<string> {
   const visto = new Set<string>();
   const pila: string[] = [...raices];
 
@@ -82,6 +98,7 @@ function alcanzables(adyacencia: Map<string, Set<string>>, raices: Iterable<stri
     const actual = pila.pop() as string;
     if (visto.has(actual)) continue;
     visto.add(actual);
+    if (detenerEn?.has(actual)) continue;
     for (const vecino of adyacencia.get(actual) ?? []) {
       if (!visto.has(vecino)) pila.push(vecino);
     }

@@ -64,7 +64,7 @@ export async function cargarAlmacenGuardian(
   const rangos = new Map<string, Excel.Range>();
   for (const ref of refs) {
     const rango = rangoDesdeDireccion(context, ref);
-    rango.load('values');
+    rango.load(['values', 'formulas']);
     rangos.set(ref, rango);
   }
 
@@ -78,9 +78,12 @@ export async function cargarAlmacenGuardian(
   let modo = app.calculationMode as string;
 
   const valores = new Map<string, number>();
+  const formulas = new Map<string, string>();
   for (const [ref, rango] of rangos) {
     const crudo = (rango.values as unknown[][])?.[0]?.[0];
     valores.set(ref, typeof crudo === 'number' ? crudo : NaN);
+    const f = (rango.formulas as unknown[][])?.[0]?.[0];
+    if (typeof f === 'string' && f.startsWith('=')) formulas.set(ref, f);
   }
 
   return {
@@ -121,6 +124,14 @@ export async function cargarAlmacenGuardian(
       const rango = rangos.get(ref) ?? rangoDesdeDireccion(context, ref);
       rangos.set(ref, rango);
       rango.values = [[value]];
+    },
+
+    readFormula: (ref) => formulas.get(ref),
+
+    writeFormula(ref, formula) {
+      const rango = rangos.get(ref) ?? rangoDesdeDireccion(context, ref);
+      rangos.set(ref, rango);
+      rango.formulas = [[formula]];
     },
 
     async aplicar() {

@@ -169,6 +169,21 @@ export function Resultados({
           <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
         </dl>
 
+        {resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0 && (
+          <>
+            <h3>Entradas con funciones RIESGO del libro</h3>
+            <ul className="motivos">
+              {resultado.entradasDeFunciones.map((e) => <li key={e.ref}>{e.ref}: {e.distribucion}</li>)}
+            </ul>
+          </>
+        )}
+        {resultado.funcionesIgnoradas && resultado.funcionesIgnoradas.length > 0 && (
+          <p className="tenue">
+            Estas celdas tienen una función RIESGO y también están en el panel; se usó la distribución
+            del panel: {resultado.funcionesIgnoradas.join(', ')}.
+          </p>
+        )}
+
         {resultado.convergencia && (
           <p className={resultado.convergencia.alcanzada ? 'tenue' : 'aviso-linea'}>
             {resultado.convergencia.noDisponible

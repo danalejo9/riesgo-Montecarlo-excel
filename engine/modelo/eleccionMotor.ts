@@ -70,12 +70,16 @@ export function elegirMotor(
 ): EleccionMotor {
   const celdasDesconocidas = [...entradas, ...salidas].filter((c) => !grafo.nodos.has(c));
 
-  const necesarias = clausuraDependencias(grafo, salidas);
+  // Las entradas inciertas cortan el recorrido: lo que haya en su fórmula (una
+  // `RIESGO.NORMAL(…)` del propio complemento, por ejemplo) no se evalúa nunca.
+  const conjuntoEntradas = new Set(entradas);
+  const necesarias = clausuraDependencias(grafo, salidas, conjuntoEntradas);
   const relevante = subgrafoRelevante(grafo, entradas, salidas);
   const salidasConstantes = salidas.filter((s) => grafo.nodos.has(s) && !relevante.has(s));
 
   const motivos: MotivoIncompatible[] = [];
   for (const clave of necesarias) {
+    if (conjuntoEntradas.has(clave)) continue;
     const nodo = grafo.nodos.get(clave);
     if (!nodo) continue;
 
