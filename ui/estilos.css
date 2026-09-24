@@ -340,3 +340,10 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .ajuste-tabla th[scope='row'] { color: var(--texto); }
 .parametros-ajuste { display: block; font-size: 11px; }
 .insignia { display: inline-block; font-size: 10px; padding: 0 4px; margin-right: 4px; border-radius: 3px; background: var(--acento); color: var(--fondo); }
+
+/* --- Configuración --- */
+.pestanas .engranaje { margin-left: auto; min-width: 2.2em; font-size: 15px; }
+.presets { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+.presets button { padding: 2px 8px; font-size: 12px; }
+.presets button.activo { background: var(--acento); color: var(--fondo); border-color: var(--acento); }
+.campo.casilla { flex-direction: row; align-items: center; gap: 6px; }

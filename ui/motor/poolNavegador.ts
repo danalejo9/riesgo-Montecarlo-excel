@@ -6,23 +6,24 @@
  * ni el botón de cancelar responden— y solo se usa un núcleo del equipo. Con
  * hilos, el panel sigue vivo y el cálculo se reparte.
  *
- * Se deja **un núcleo libre** para Excel y el propio panel, y se limita a
- * ocho: más allá, en un portátil, el calor frena más de lo que suma.
+ * Cuántos hilos: lo que el usuario elija en Configuración (`preferencias.ts`),
+ * o, en automático, **un núcleo libre** para Excel y el propio panel y un
+ * máximo de ocho: más allá, en un portátil, el calor frena más de lo que suma.
  *
  * Si el entorno no deja crear workers (un Excel muy antiguo, una política de
  * seguridad), se devuelve `null` y el motor calcula en el hilo del panel,
  * como antes. Nunca se queda nadie sin simulación por esto.
  */
 import { crearPool, type CanalHilo, type ContextoHilo, type Pool } from '../../engine/executor/pool.ts';
+import { hilosAutomaticos } from './preferencias.ts';
 
-export function hilosDisponibles(): number {
-  const nucleos = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 2 : 2;
-  return Math.max(1, Math.min(8, nucleos - 1));
-}
-
-export function crearPoolNavegador(contexto: ContextoHilo): Pool | null {
+/**
+ * `hilos` es cuántos crear; sin él, los automáticos. Con uno solo también se
+ * usa un worker: el cálculo no gana velocidad, pero el panel sigue vivo.
+ */
+export function crearPoolNavegador(contexto: ContextoHilo, hilos: number = hilosAutomaticos()): Pool | null {
   if (typeof Worker === 'undefined') return null;
-  const n = hilosDisponibles();
+  const n = Math.max(1, Math.floor(hilos));
   const canales: CanalHilo[] = [];
   try {
     for (let i = 0; i < n; i++) {

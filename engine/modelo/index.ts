@@ -32,6 +32,8 @@ export {
   validarRiskModel,
   VERSION_ESQUEMA_RISK_MODEL,
   type ConfiguracionRiskModel,
+  type ConvergenciaRiskModel,
+  OBJETIVO_PRECISION_POR_DEFECTO,
   type CorrelacionDeclarada,
   type EntradaRiskModel,
   type LocaleRiskModel,

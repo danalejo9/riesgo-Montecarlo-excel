@@ -150,6 +150,16 @@ export function Resultados({
           <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
         </dl>
 
+        {resultado.convergencia && (
+          <p className={resultado.convergencia.alcanzada ? 'tenue' : 'aviso-linea'}>
+            {resultado.convergencia.noDisponible
+              ? `«Simular hasta alcanzar la precisión» no se aplica con Excel en el bucle: se simularon las ${miles(resultado.iteracionesCompletadas)} iteraciones fijadas.`
+              : resultado.convergencia.alcanzada
+                ? `Simulado hasta ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} % de precisión: ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones.`
+                : `No se alcanzó el ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} % sin pasar del tope (${miles(resultado.convergencia.tope)}): ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones. Sube el tope o relaja el margen en Configuración.`}
+          </p>
+        )}
+
         {motivos.length > 0 && (
           <>
             <h3>Por qué no pudo el motor rápido</h3>
@@ -614,7 +624,7 @@ function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) 
           ? <>Iteraciones suficientes: la media se conoce con ±{numero(margenMedia)} ({pct(margenRelativo)}).</>
           : <>
               Con {miles(n)} iteraciones la media tiene un margen de ±{numero(margenMedia)} ({pct(margenRelativo)}).
-              Para bajarlo al 1 % harían falta unas {miles(iteracionesParaObjetivo)}.
+              Para bajarlo al {pct(precision.objetivo)} harían falta unas {miles(iteracionesParaObjetivo)}.
             </>}
       </p>
       {percentiles.length > 0 && (

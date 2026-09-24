@@ -29,10 +29,11 @@ import {
   describirMotivo,
   elegirMotor,
   prepararEntradas,
+  OBJETIVO_PRECISION_POR_DEFECTO,
   type EleccionMotor,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
-import { curvaCDF, resumenEstadistico, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
+import { curvaCDF, resumenEstadistico, siguienteTanda, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
 import {
   analisisDeMuestra,
   conPrecision,
@@ -126,27 +127,74 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
 
   const n = modelo.settings.iterations;
   const semilla = modelo.settings.seed;
-
-  const preparadas = prepararEntradas(modelo, resolucion.resolver, semilla);
-  if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
+  const conv = modelo.settings.convergence;
+  const objetivo = conv?.target ?? OBJETIVO_PRECISION_POR_DEFECTO;
 
   // 4. Simular.
-  const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque };
-  return eleccion.motor === 'compatible'
-    ? await porElCompatible({
-        ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
-      })
-    : porElRapido({
-        ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
-        crearPool,
-      });
+  const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
+
+  if (eleccion.motor === 'compatible') {
+    const preparadas = prepararEntradas(modelo, resolucion.resolver, semilla);
+    if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
+    const r = await porElCompatible({
+      ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
+    });
+    // Con Excel en el bucle, repetir tandas costaría minutos cada una: se
+    // simulan las iteraciones fijadas y se dice que el modo automático no se
+    // aplicó.
+    if (r.ok && conv?.untilConverged) {
+      r.convergencia = { objetivo, tandas: [n], alcanzada: r.salidas.every((s) => s.precision?.suficiente !== false), tope: conv.maxIterations, noDisponible: true };
+    }
+    return r;
+  }
+
+  // Motor rápido: iteraciones fijas, o por tandas hasta la precisión pedida.
+  // Cada tanda es una simulación completa con la misma semilla, así que el
+  // resultado final es idéntico al de haber pedido de entrada esas
+  // iteraciones: las tandas previas solo sirven para saber cuántas hacen falta.
+  const tandas: number[] = [];
+  let nTanda = conv?.untilConverged ? Math.min(n, conv.maxIterations) : n;
+  let r: ResultadoSimulacionPanel | null = null;
+  for (let ronda = 0; ronda < MAX_TANDAS; ronda++) {
+    const deTanda = nTanda === n ? modelo : { ...modelo, settings: { ...modelo.settings, iterations: nTanda } };
+    const preparadas = prepararEntradas(deTanda, resolucion.resolver, semilla);
+    if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
+    tandas.push(nTanda);
+    r = await porElRapido({
+      ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n: nTanda, semilla, debeCancelar,
+      crearPool,
+      progreso: conv?.untilConverged && progreso
+        ? (a) => progreso({ ...a, mensaje: `Tanda ${ronda + 1}: ${miles(nTanda)} iteraciones…` })
+        : progreso,
+    });
+    if (!r.ok || !conv?.untilConverged || r.cancelada) break;
+    const siguiente = siguienteTanda(nTanda, r.salidas.map((s) => s.precision?.iteracionesParaObjetivo ?? 0), conv.maxIterations);
+    if (siguiente === null) break;
+    nTanda = siguiente;
+  }
+  const final = r as ResultadoSimulacionPanel;
+  if (final.ok && conv?.untilConverged) {
+    final.convergencia = {
+      objetivo, tandas, tope: conv.maxIterations,
+      alcanzada: final.salidas.every((s) => s.precision?.suficiente !== false),
+    };
+  }
+  return final;
 }
+
+/** Tandas como máximo en "simular hasta alcanzar la precisión". */
+const MAX_TANDAS = 5;
+
+/** Un contador con puntos de miles, para los mensajes de progreso. */
+const miles = (x: number) => x.toLocaleString('es-ES');
 
 interface Comun {
   modelo: ModeloRiesgo;
   eleccion: EleccionMotor;
   lectura: EstadisticasLectura;
   arranque: number;
+  /** Margen objetivo de la precisión (fracción). */
+  objetivo: number;
   definiciones: DefinicionEntrada[];
   clavesEntrada: string[];
   clavesSalida: string[];
@@ -250,7 +298,7 @@ function porElRapido(
           noNumericas: s?.noNumericas ?? 0,
           ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
         };
-      }).map(conPrecision),
+      }).map(conPrecision(args.objetivo)),
     };
   });
 }
@@ -318,7 +366,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         noNumericas: s?.noNumericas ?? 0,
         ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
       };
-    }).map(conPrecision),
+    }).map(conPrecision(args.objetivo)),
   };
 }
 

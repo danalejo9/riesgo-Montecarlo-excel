@@ -5,6 +5,31 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Panel de Configuración (2026-09-24)
+
+**Añadido**
+- **Configuración** con un botón ⚙ junto a las pestañas y un botón nuevo en la
+  cinta (cuatro en total; manifiesto 0.3.0.0). Tres bloques:
+  - **Rendimiento** (de este equipo, en el navegador): cuántos núcleos usar,
+    "Automático (3 de 4)" o de 1 al total. No cambia ningún resultado.
+  - **Simulación** (del modelo, en el libro): iteraciones con accesos
+    rápidos (1 mil, 10 mil, 100 mil, 1 M) y cualquier otra cantidad entre 100
+    y 10 millones; semilla, muestreo y motor. Salen de la pestaña Modelo, que
+    queda con un resumen y un enlace.
+  - **Precisión** (del modelo): margen objetivo ±0,5 / 1 / 2 / 5 %, y **simular
+    hasta alcanzarlo**: por tandas (hasta 5) sin pasar de un tope. Cada tanda
+    es una simulación completa con la misma semilla, así que el resultado
+    final es el mismo que pidiendo esas iteraciones de entrada. Solo con el
+    motor rápido; con Excel en el bucle se simulan las iteraciones fijadas y
+    se dice.
+- "Cómo se calculó" cuenta las tandas ("1.000 → 390.000 iteraciones") o
+  avisa si no se alcanzó el margen con el tope.
+- Con un solo núcleo elegido también se calcula en un hilo aparte, para que el
+  panel no se congele.
+
+**Medido** (Chromium, modelo de ejemplo con una lognormal muy dispersa,
+±1 %): 1.000 → 390.000 iteraciones en 482 ms con 3 hilos.
+
 ### Ajustar una distribución a datos (2026-09-24)
 
 **Añadido**

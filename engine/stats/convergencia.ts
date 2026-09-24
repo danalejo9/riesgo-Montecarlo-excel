@@ -82,3 +82,20 @@ export function precisionDeSimulacion(
     percentiles,
   };
 }
+
+/**
+ * Cuántas iteraciones pedir en la siguiente tanda de "simular hasta alcanzar
+ * la precisión", o `null` si ya no hace falta otra (todas las salidas cumplen,
+ * o ya se llegó al tope).
+ *
+ * Se pide un 10 % más de lo que dice la fórmula —la desviación de la próxima
+ * tanda no será exactamente la de esta— redondeado a dos cifras, y al menos
+ * vez y media lo actual, para no gastar una tanda en un paso ridículo.
+ */
+export function siguienteTanda(actual: number, necesarias: readonly number[], maximo: number): number | null {
+  const falta = Math.max(0, ...necesarias.filter(Number.isFinite));
+  if (falta <= actual || actual >= maximo) return null;
+  const objetivo = Math.max(falta * 1.1, actual * 1.5);
+  const cifras = 10 ** Math.max(0, Math.floor(Math.log10(objetivo)) - 1);
+  return Math.min(maximo, Math.ceil(objetivo / cifras) * cifras);
+}

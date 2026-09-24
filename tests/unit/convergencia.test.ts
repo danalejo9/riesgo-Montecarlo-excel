@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { intervaloPercentil, precisionDeSimulacion } from '../../engine/stats/index.ts';
+import { intervaloPercentil, precisionDeSimulacion, siguienteTanda } from '../../engine/stats/index.ts';
 
 describe('precisionDeSimulacion', () => {
   it('margen de la media = 1,96·σ/√n', () => {
@@ -40,5 +40,31 @@ describe('intervaloPercentil', () => {
 
   it('con menos de 20 valores no inventa un intervalo', () => {
     expect(intervaloPercentil(Float64Array.from([1, 2, 3]), 0.5)).toBeNull();
+  });
+});
+
+describe('siguienteTanda', () => {
+  it('pide lo que falta más un 10 %, redondeado a dos cifras', () => {
+    expect(siguienteTanda(10_000, [36_000, 12_000], 1_000_000)).toBe(40_000); // 39.600 → 40.000
+  });
+
+  it('al menos vez y media lo actual, para no dar pasos ridículos', () => {
+    expect(siguienteTanda(10_000, [10_500], 1_000_000)).toBe(15_000);
+  });
+
+  it('sin pasar del tope', () => {
+    expect(siguienteTanda(10_000, [5_000_000], 200_000)).toBe(200_000);
+  });
+
+  it('null si ya basta o si ya se está en el tope', () => {
+    expect(siguienteTanda(10_000, [8_000, 9_999], 1_000_000)).toBeNull();
+    expect(siguienteTanda(200_000, [5_000_000], 200_000)).toBeNull();
+  });
+});
+
+describe('precisión con otro margen objetivo', () => {
+  it('con ±5 % basta lo que con ±1 % no basta', () => {
+    expect(precisionDeSimulacion(1000, 100, 50, undefined, 0.01)?.suficiente).toBe(false);
+    expect(precisionDeSimulacion(1000, 100, 50, undefined, 0.05)?.suficiente).toBe(true);
   });
 });

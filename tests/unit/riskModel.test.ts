@@ -36,6 +36,20 @@ describe('generarId', () => {
 });
 
 describe('validarRiskModel', () => {
+  it('acepta y conserva la configuración de precisión', () => {
+    const m = modeloBase();
+    const conv = { target: 0.02, untilConverged: true, maxIterations: 500_000 };
+    const r = validarRiskModel({ ...m, settings: { ...m.settings, convergence: conv } });
+    expect(r.ok && r.modelo.settings.convergence).toEqual(conv);
+  });
+
+  it('rechaza una precisión imposible con su motivo', () => {
+    const m = modeloBase();
+    const r = validarRiskModel({ ...m, settings: { ...m.settings, convergence: { target: 2, untilConverged: true, maxIterations: 10 } } });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errores.join(' ')).toContain('convergence');
+  });
+
   it('acepta un modelo bien formado', () => {
     const r = validarRiskModel(modeloBase());
     expect(r.ok).toBe(true);

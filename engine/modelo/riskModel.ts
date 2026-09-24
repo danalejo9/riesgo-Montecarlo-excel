@@ -79,7 +79,27 @@ export interface ConfiguracionRiskModel {
   sampling: MetodoMuestreo;
   engine: MotorSimulacion;
   locale?: LocaleRiskModel;
+  /**
+   * Criterio de precisión y, opcionalmente, "simular hasta alcanzarlo".
+   * Opcional: sin él, margen del 1 % e iteraciones fijas (`iterations`).
+   */
+  convergence?: ConvergenciaRiskModel;
 }
+
+export interface ConvergenciaRiskModel {
+  /** Margen objetivo de la media al 95 %, como fracción: 0,01 = 1 %. */
+  target: number;
+  /**
+   * Si es `true`, se simula por tandas hasta que todas las salidas cumplen
+   * `target`, sin pasar de `maxIterations`. `iterations` pasa a ser la tanda
+   * inicial.
+   */
+  untilConverged: boolean;
+  maxIterations: number;
+}
+
+/** Margen objetivo si el modelo no dice otro. */
+export const OBJETIVO_PRECISION_POR_DEFECTO = 0.01;
 
 export interface ModeloRiesgo {
   schema: 1;
@@ -319,6 +339,26 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     }
   }
 
+  let convergence: ConvergenciaRiskModel | undefined;
+  if (s.convergence !== undefined) {
+    const c = s.convergence as Record<string, unknown> | null;
+    const valido =
+      typeof c === 'object' && c !== null &&
+      typeof c.target === 'number' && c.target > 0 && c.target < 1 &&
+      typeof c.untilConverged === 'boolean' &&
+      typeof c.maxIterations === 'number' && Number.isInteger(c.maxIterations) && c.maxIterations > 0;
+    if (!valido) {
+      errores.push('settings.convergence debe ser { target: 0..1, untilConverged: sí/no, maxIterations: entero positivo }.');
+      ok = false;
+    } else {
+      convergence = {
+        target: c.target as number,
+        untilConverged: c.untilConverged as boolean,
+        maxIterations: c.maxIterations as number,
+      };
+    }
+  }
+
   if (!ok) return undefined;
   return {
     iterations: s.iterations as number,
@@ -326,5 +366,6 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     sampling: s.sampling as MetodoMuestreo,
     engine: s.engine as MotorSimulacion,
     ...(locale ? { locale } : {}),
+    ...(convergence ? { convergence } : {}),
   };
 }

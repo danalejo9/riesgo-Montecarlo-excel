@@ -879,9 +879,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     huella FNV-1a del modelo (sin umbrales) para marcar resultados
     desactualizados. `riesgoMontecarlo.results` en `workbook.settings`.
 
+28. [x] **Panel de Configuración (2026-09-24)**, pedido por el usuario:
+    núcleos por equipo (`ui/motor/preferencias.ts`, `localStorage`),
+    iteraciones libres, y precisión en el modelo (`settings.convergence`:
+    `target`, `untilConverged`, `maxIterations`). "Hasta alcanzar la
+    precisión" repite la simulación completa con más iteraciones
+    (`siguienteTanda`: lo que falta +10 %, mínimo ×1,5, tope, máx. 5 tandas);
+    no se aplica con el motor compatible.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar en Excel**: tornado, histograma, umbral, botones de la cinta con
+1. **Probar en Excel**: Configuración (núcleos, tandas), tornado, histograma, umbral, botones de la cinta con
    el panel abierto, hilos (¿"3 hilos" en Cómo se calculó?) y resultados tras
    cerrar y reabrir (recargar el manifiesto: `npm run stop` y `npm start`).
 2. **Las tres fórmulas matriciales de `Caso_practico.xlsx`** (el usuario las

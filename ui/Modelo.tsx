@@ -174,6 +174,7 @@ export function Modelo({
   ocupado,
   ritmo,
   alMedirRitmo,
+  alAbrirConfiguracion,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
@@ -182,6 +183,7 @@ export function Modelo({
   /** El último ritmo medido del modo compatible en este libro, si lo hay. */
   ritmo: RitmoGuardado | null;
   alMedirRitmo: (r: RitmoGuardado) => void;
+  alAbrirConfiguracion?: () => void;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -379,72 +381,19 @@ export function Modelo({
 
       <section>
         <h2>Ajustes</h2>
-        <div className="parametros">
-          <label className="campo">
-            <span className="tenue">Iteraciones</span>
-            <select
-              value={modelo.settings.iterations}
-              onChange={(e) =>
-                alCambiar({ ...modelo, settings: { ...modelo.settings, iterations: Number(e.target.value) } })
-              }
-            >
-              {[1_000, 10_000, 100_000, 1_000_000].map((n) => (
-                <option key={n} value={n}>
-                  {miles(n)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Semilla</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              defaultValue={String(modelo.settings.seed)}
-              onBlur={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n)) {
-                  alCambiar({ ...modelo, settings: { ...modelo.settings, seed: Math.trunc(n) } });
-                }
-              }}
-            />
-            <span className="tenue ayuda">La misma semilla da el mismo resultado.</span>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Muestreo</span>
-            <select
-              value={modelo.settings.sampling}
-              onChange={(e) =>
-                alCambiar({
-                  ...modelo,
-                  settings: { ...modelo.settings, sampling: e.target.value as ModeloRiesgo['settings']['sampling'] },
-                })
-              }
-            >
-              <option value="monte-carlo">Monte Carlo</option>
-              <option value="lhs">Hipercubo latino</option>
-            </select>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Motor</span>
-            <select
-              value={modelo.settings.engine}
-              onChange={(e) =>
-                alCambiar({
-                  ...modelo,
-                  settings: { ...modelo.settings, engine: e.target.value as ModeloRiesgo['settings']['engine'] },
-                })
-              }
-            >
-              <option value="auto">Automático</option>
-              <option value="fast">Rápido</option>
-              <option value="compatible">Compatible (Excel en el bucle)</option>
-            </select>
-          </label>
-        </div>
+        <p className="tenue">
+          {modelo.settings.convergence?.untilConverged
+            ? `Hasta ±${(modelo.settings.convergence.target * 100).toLocaleString('es-ES')} % de precisión (tope ${miles(modelo.settings.convergence.maxIterations)})`
+            : `${miles(modelo.settings.iterations)} iteraciones`}
+          {' · '}semilla {modelo.settings.seed}
+          {' · '}{modelo.settings.sampling === 'lhs' ? 'hipercubo latino' : 'Monte Carlo'}
+          {' · '}motor {modelo.settings.engine === 'auto' ? 'automático' : modelo.settings.engine === 'fast' ? 'rápido' : 'compatible'}
+        </p>
+        {alAbrirConfiguracion && (
+          <button type="button" className="plano" onClick={alAbrirConfiguracion}>
+            ⚙ Cambiar en Configuración
+          </button>
+        )}
       </section>
 
       {modelo.settings.engine === 'compatible' && (

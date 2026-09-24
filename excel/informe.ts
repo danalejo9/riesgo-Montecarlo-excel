@@ -112,16 +112,23 @@ export function sensibilidadDeSalida(
  * terminar la simulación, fuera de la interfaz.
  */
 /** La precisión de una salida: con todas sus iteraciones para la media, y la muestra para los percentiles. */
-export function precisionDeSalida(resumen: ResumenEstadistico, muestraOrdenada?: Float64Array): Precision | undefined {
+export function precisionDeSalida(
+  resumen: ResumenEstadistico,
+  muestraOrdenada?: Float64Array,
+  objetivo?: number,
+): Precision | undefined {
   // Los intervalos de percentil con la muestra retenida valen para esa
   // muestra; si hay más iteraciones, son algo conservadores. Mejor eso que
   // prometer una precisión que no se ha medido.
-  return precisionDeSimulacion(resumen.n, resumen.media, resumen.desviacion, muestraOrdenada) ?? undefined;
+  return precisionDeSimulacion(resumen.n, resumen.media, resumen.desviacion, muestraOrdenada, objetivo) ?? undefined;
 }
 
-export function conPrecision(s: ResultadoSalida): ResultadoSalida {
-  const precision = precisionDeSalida(s.resumen, s.muestraOrdenada);
-  return precision ? { ...s, precision } : s;
+/** Añade la precisión a una salida, medida contra el margen objetivo del modelo. */
+export function conPrecision(objetivo?: number): (s: ResultadoSalida) => ResultadoSalida {
+  return (s) => {
+    const precision = precisionDeSalida(s.resumen, s.muestraOrdenada, objetivo);
+    return precision ? { ...s, precision } : s;
+  };
 }
 
 export function analisisDeMuestra(
@@ -170,6 +177,11 @@ export interface SimulacionCompletada {
   huellaModelo?: string;
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
+  /**
+   * Si se simuló "hasta alcanzar la precisión": las iteraciones de cada tanda
+   * (la última es la que cuenta), si se alcanzó y con qué tope.
+   */
+  convergencia?: { objetivo: number; tandas: number[]; alcanzada: boolean; tope: number; noDisponible?: boolean };
   /** Cuántas iteraciones entraron en el análisis de sensibilidad. */
   muestraSensibilidad?: number;
 }
@@ -286,7 +298,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     if (s.precision) {
       añadir(
         ['Margen de la media (95 %)', s.precision.margenMedia],
-        ['Iteraciones para un margen del 1 %', s.precision.iteracionesParaObjetivo],
+        [`Iteraciones para un margen del ${s.precision.objetivo * 100} %`, s.precision.iteracionesParaObjetivo],
       );
       for (const iv of s.precision.percentiles) {
         añadir([`p${Math.round(iv.p * 100)} (intervalo 95 %)`, iv.inferior, iv.superior]);

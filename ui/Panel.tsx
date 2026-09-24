@@ -37,12 +37,14 @@ import {
 } from '../excel/ejecutarSimulacion.ts';
 import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
+import { Configuracion } from './Configuracion.tsx';
 import { crearPoolNavegador } from './motor/poolNavegador.ts';
+import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
 
-type Pestana = 'modelo' | 'resultados' | 'diagnostico';
+type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
 
 /**
  * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
@@ -51,7 +53,7 @@ type Pestana = 'modelo' | 'resultados' | 'diagnostico';
  */
 export function pestanaDeFragmento(hash: string): Pestana {
   const h = hash.replace(/^#/, '').toLowerCase();
-  return h === 'resultados' || h === 'diagnostico' ? h : 'modelo';
+  return h === 'resultados' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
 }
 
 export function Panel() {
@@ -195,7 +197,7 @@ export function Panel() {
         modelo,
         progreso: setAvance,
         debeCancelar: () => cancelado.current,
-        crearPool: crearPoolNavegador,
+        crearPool: (contexto) => crearPoolNavegador(contexto, hilosEfectivos(leerPreferenciaHilos())),
       });
       const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo), idSimulacion: new Date().toISOString() } : r;
       setResultado(conHuella);
@@ -241,6 +243,15 @@ export function Panel() {
               {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
             </button>
           ))}
+          <button
+            type="button"
+            className={`engranaje${pestana === 'configuracion' ? ' activa' : ''}`}
+            onClick={() => setPestana('configuracion')}
+            aria-label="Configuración"
+            title="Configuración"
+          >
+            ⚙
+          </button>
         </nav>
       </header>
 
@@ -300,6 +311,7 @@ export function Panel() {
             ocupado={simulando}
             ritmo={ritmo}
             alMedirRitmo={setRitmo}
+            alAbrirConfiguracion={() => setPestana('configuracion')}
           />
         ) : (
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
@@ -334,6 +346,14 @@ export function Panel() {
             setReferencia(null);
             void guardarReferencia(null).catch((e: unknown) => setError(mensajeDe(e)));
           }}
+        />
+      )}
+
+      {pestana === 'configuracion' && modelo && (
+        <Configuracion
+          modelo={modelo}
+          alCambiar={cambiarModelo}
+          hilosUltimaSimulacion={resultado?.ok ? resultado.hilos : undefined}
         />
       )}
 
