@@ -26,6 +26,31 @@ import { validarRiskModel, type ModeloRiesgo } from '../engine/modelo/index.ts';
  */
 export const CLAVE_MODELO = 'riesgoMontecarlo.model';
 
+/** Clave de los resultados de la última simulación (ver `resultadosGuardados.ts`). */
+export const CLAVE_RESULTADOS = 'riesgoMontecarlo.results';
+
+/** Los resultados guardados, en crudo, o `null` si no hay. */
+export async function leerResultadosGuardados(): Promise<string | null> {
+  return Excel.run(async (context) => {
+    const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_RESULTADOS);
+    ajuste.load(['value', 'isNullObject']);
+    await context.sync();
+    if (ajuste.isNullObject) return null;
+    return typeof ajuste.value === 'string' ? ajuste.value : JSON.stringify(ajuste.value);
+  });
+}
+
+/**
+ * Guarda los resultados. Como el modelo, viajan dentro del `.xlsx`: hay que
+ * guardar el archivo para que sobrevivan a cerrarlo.
+ */
+export async function guardarResultados(texto: string): Promise<void> {
+  await Excel.run(async (context) => {
+    context.workbook.settings.add(CLAVE_RESULTADOS, texto);
+    await context.sync();
+  });
+}
+
 export type LecturaModelo =
   | { estado: 'vacio' }
   | { estado: 'ok'; modelo: ModeloRiesgo }

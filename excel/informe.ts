@@ -59,6 +59,12 @@ export interface ResultadoSalida {
   muestraOrdenada?: Float64Array;
   /** Histograma de la muestra retenida. */
   histograma?: BinHistograma[];
+  /**
+   * `true` si `muestraOrdenada` no es la muestra sino sus cuantiles guardados
+   * en el libro (resultados restaurados): las probabilidades son aproximadas y
+   * no se pueden contar iteraciones.
+   */
+  muestraReducida?: boolean;
 }
 
 /** Una barra del tornado: una entrada del modelo y cuánto mueve una salida. */
@@ -136,6 +142,13 @@ export interface SimulacionCompletada {
   cancelada: boolean;
   milisegundos: number;
   lectura: EstadisticasLectura;
+  /** Si vienen del libro y no de una simulación de esta sesión. */
+  restaurado?: { guardadoEn: string };
+  /**
+   * Huella del modelo que se simuló (`resultadosGuardados.ts`). Si el modelo
+   * actual tiene otra, estos resultados ya no le corresponden.
+   */
+  huellaModelo?: string;
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
   /** Cuántas iteraciones entraron en el análisis de sensibilidad. */

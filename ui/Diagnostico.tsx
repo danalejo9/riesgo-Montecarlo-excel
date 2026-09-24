@@ -152,7 +152,9 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
             </p>
           ) : (
             <pre className="ejemplos">
-              {ajustes.map((a) => `${a.clave}\n${a.valor}\n`).join('\n')}
+              {ajustes
+                .map((a) => `${a.clave}\n${a.valor.length > 1500 ? `${a.valor.slice(0, 1500)}… (${miles(a.valor.length)} caracteres en total)` : a.valor}\n`)
+                .join('\n')}
             </pre>
           )
         )}

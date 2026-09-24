@@ -5,6 +5,25 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Los resultados se guardan en el libro (2026-09-24)
+
+**Añadido**
+- **Al reabrir el libro, la última simulación sigue ahí**: resumen,
+  percentiles, curva, histograma, sensibilidad, motor, hilos y tiempo. Se
+  guarda en `workbook.settings` (`riesgoMontecarlo.results`) al terminar cada
+  simulación; como el modelo, sobrevive si se guarda el archivo.
+- En lugar de las hasta 100.000 iteraciones por salida se guardan **1.001
+  cuantiles** (unos 25 kB por salida): los umbrales se siguen calculando al
+  escribir, con ±0,1 puntos, y el panel dice que son aproximados.
+- **Aviso de resultados desactualizados** cuando el modelo cambia después de
+  simular (distribuciones, celdas, iteraciones, semilla), tanto al reabrir
+  como en la misma sesión. Cambiar solo un umbral no cuenta.
+- El diagnóstico recorta los ajustes largos al enseñarlos.
+
+**Corregido**
+- Los ids de variables nuevas tienen 10 caracteres en vez de 6: la prueba de
+  colisión fallaba una vez de cada ~170 ejecuciones.
+
 ### El motor rápido calcula en varios hilos (2026-09-24)
 
 **Añadido**

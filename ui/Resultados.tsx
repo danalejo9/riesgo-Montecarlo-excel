@@ -36,6 +36,7 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
+import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import type { BinHistograma } from '../engine/stats/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
@@ -69,8 +70,28 @@ export function Resultados({
     }
   };
 
+  const desactualizados = resultadosDesactualizados(resultado, modelo);
+
   return (
     <>
+      {(resultado.restaurado || desactualizados) && (
+        <section>
+          {resultado.restaurado && (
+            <p className="tenue">
+              Resultados guardados en el libro el {fecha(resultado.restaurado.guardadoEn)}. Las
+              probabilidades de los umbrales son aproximadas (±0,1 puntos): se guardan
+              1.001 cuantiles, no todas las iteraciones.
+            </p>
+          )}
+          {desactualizados && (
+            <p className="aviso-linea">
+              El modelo ha cambiado desde esta simulación: estos resultados ya no le
+              corresponden. Vuelve a simular para actualizarlos.
+            </p>
+          )}
+        </section>
+      )}
+
       <section>
         <h2>Guardar en el libro</h2>
         <p className="tenue">
@@ -418,8 +439,12 @@ function Umbral({
         <p className="umbral-respuesta">
           <strong>{(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</strong>
           <span className="tenue">
-            {' '}{miles(Math.round(p * ordenada.length))} de {miles(ordenada.length)} iteraciones
-            {exacto ? '' : ' (las primeras; margen ±0,3 puntos)'}
+            {salida.muestraReducida
+              ? ' aproximada, de los resultados guardados'
+              : <>
+                  {' '}{miles(Math.round(p * ordenada.length))} de {miles(ordenada.length)} iteraciones
+                  {exacto ? '' : ' (las primeras; margen ±0,3 puntos)'}
+                </>}
           </span>
         </p>
       ) : texto.trim() !== '' ? (
@@ -495,4 +520,12 @@ function Histograma({ barras, umbral }: { barras: readonly BinHistograma[]; umbr
       </figcaption>
     </figure>
   );
+}
+
+/** "24/09/2026, 18:40" a partir de una fecha ISO; el texto tal cual si no se entiende. */
+function fecha(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
 }

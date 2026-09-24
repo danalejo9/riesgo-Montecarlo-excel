@@ -83,7 +83,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E3 | Integración Excel + UI **+ modo compatible** | 11–14 d | ✅ **v0.5 — el MVP simula de verdad en Excel** |
 | E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | ⬜ no empezada |
 | E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 43/44, N2 28/41 — Nivel 1 completo salvo `DESREF`; texto completo |
-| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 el ejecutor por bloques está; falta el histograma en *streaming* |
+| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 ejecutor por bloques y **pool de Web Workers** hechos; histograma sobre la muestra retenida |
 | E7 | Análisis y visualización | 8–10 d | 🟡 estadísticos, CDF, histograma, umbrales, tornado y volcado hechos; faltan escenarios y ajuste |
 | E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |

@@ -22,7 +22,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
-import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
+import { guardarModelo, guardarResultados, leerModelo, leerResultadosGuardados } from '../excel/almacenModelo.ts';
+import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado } from '../excel/resaltado.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
@@ -106,6 +107,20 @@ export function Panel() {
 
         const base = lectura.estado === 'ok' ? lectura.modelo : modeloVacio();
 
+        // Los resultados de la última simulación, si el libro los trae.
+        if (lectura.estado === 'ok') {
+          void leerResultadosGuardados()
+            .then((texto) => {
+              if (!texto) return;
+              const r = restaurarResultados(texto);
+              // Solo si no se ha simulado ya en esta sesión mientras se leía.
+              if (r.ok) setResultado((actual) => actual ?? r.resultado);
+            })
+            .catch(() => {
+              // Sin resultados guardados legibles se abre como un libro sin simular.
+            });
+        }
+
         // La configuración regional se lee de Excel la primera vez y se guarda
         // con el modelo: es parte de lo que el modelo significa (`VALOR("1,5")`
         // vale 1,5 en un libro español y es un error en uno inglés). Un modelo
@@ -172,8 +187,15 @@ export function Panel() {
         debeCancelar: () => cancelado.current,
         crearPool: crearPoolNavegador,
       });
-      setResultado(r);
-      if (r.ok) setPestana('resultados');
+      const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo) } : r;
+      setResultado(conHuella);
+      if (conHuella.ok) {
+        setPestana('resultados');
+        // Guardarlos no puede estropear la simulación: si falla, se dice y ya.
+        void guardarResultados(serializarResultados(modelo, conHuella)).catch((e: unknown) =>
+          setError(`Los resultados no se pudieron guardar en el libro: ${mensajeDe(e)}`),
+        );
+      }
 
       // Un ritmo medido de verdad vale más que cualquier estimación, y es lo
       // que permite avisar **antes** la próxima vez.

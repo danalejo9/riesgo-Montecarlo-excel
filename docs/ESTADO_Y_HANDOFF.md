@@ -863,13 +863,31 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     solo sirve para abrirlo; la alternativa es un runtime compartido
     (`Office.addin.showAsTaskpane`), más pesado.
 
+27. [x] **Varios hilos y resultados guardados (2026-09-24)**
+
+    **Hilos** (`engine/executor/pool.ts`, `ui/motor/`): protocolo propio del
+    motor —`iniciar` una vez por hilo con el modelo, luego solo rangos—, sin
+    nombrar ninguna API de hilos; el panel lo monta sobre Web Workers (núcleos
+    − 1, máximo 8) y `excel/ejecutarSimulacion.ts` lo recibe inyectado
+    (`crearPool`). Troceo fijo (`bloquesMinimos: 16`) para que el resultado no
+    dependa del número de núcleos; probado bit a bit contra el secuencial. Si
+    no hay hilos o uno no arranca, se repite en el hilo del panel. Medido en
+    Chromium (4 núcleos, modelo de 7 celdas, 1 M iteraciones): 969 → 715 ms.
+
+    **Resultados guardados** (`excel/resultadosGuardados.ts`, puro): todo lo
+    que enseña el panel más 1.001 cuantiles por salida en vez de la muestra;
+    huella FNV-1a del modelo (sin umbrales) para marcar resultados
+    desactualizados. `riesgoMontecarlo.results` en `workbook.settings`.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar en Excel** el tornado, el histograma, el umbral y los botones de
-   la cinta (recargar el manifiesto: `npm run stop` y `npm start`).
-2. **`LET`** y **las tres fórmulas matriciales de `Caso_practico.xlsx`**.
-3. **Comparación de escenarios** (E7).
-4. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
+1. **Probar en Excel**: tornado, histograma, umbral, botones de la cinta con
+   el panel abierto, hilos (¿"3 hilos" en Cómo se calculó?) y resultados tras
+   cerrar y reabrir (recargar el manifiesto: `npm run stop` y `npm start`).
+2. **Las tres fórmulas matriciales de `Caso_practico.xlsx`** (el usuario las
+   manda) y **`LET`**.
+3. **Convergencia**, **comparación de escenarios**, **ajuste de distribuciones**.
+4. **`DESREF` con desplazamientos constantes**.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
