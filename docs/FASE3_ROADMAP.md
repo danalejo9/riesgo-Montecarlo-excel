@@ -69,7 +69,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 
 ## 2. Vista general
 
-> **Estado al 23/09/2026.** Actualizado con lo que de verdad está hecho y
+> **Estado al 24/09/2026.** Actualizado con lo que de verdad está hecho y
 > verificado en Excel, no con lo que el plan preveía. Las etapas no se han
 > recorrido en orden: E3 arrastró trozos de E5 y de E7 porque el escáner
 > encontró `TIR` en un libro real del usuario, y porque un panel que no enseña
@@ -81,21 +81,21 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E1 | Escáner de compatibilidad | 4–5 d | ✅ **v0.1**, pasado por dos libros reales |
 | E2 | Motor Nivel 0 | 15–20 d | ✅ hecha — 57/57 funciones, fidelidad verificada contra Excel |
 | E3 | Integración Excel + UI **+ modo compatible** | 11–14 d | ✅ **v0.5 — el MVP simula de verdad en Excel** |
-| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | ⬜ no empezada |
+| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | 🟡 12 funciones `RIESGO.*` hechas (muestran la media); faltan runtime compartido, modo determinístico/probabilístico y el resto de §2.1-B |
 | E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 43/44, N2 37/41 — Nivel 1 completo salvo `DESREF`; texto completo |
-| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 ejecutor por bloques y **pool de Web Workers** hechos; histograma sobre la muestra retenida |
-| E7 | Análisis y visualización | 8–10 d | ✅ estadísticos, CDF, histograma, umbrales, tornado, precisión, escenarios, ajuste a datos y volcado |
+| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 ejecutor por bloques, **pool de Web Workers** y núcleos configurables hechos; falta medir con libros grandes |
+| E7 | Análisis y visualización | 8–10 d | 🟡 hecho: estadísticos, CDF, histograma, umbrales, tornado + contribución, araña, precisión, escenarios, ajuste a datos, informe PDF y volcado. Pendiente: §2.1-C |
 | E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 
-**Dónde estamos de verdad**: el ciclo completo funciona dentro de Excel —marcar
-entradas y salidas, distribuciones, correlaciones, simular por el motor rápido
-o con Excel en el bucle, ver resultados y volcarlos a una hoja—. Lo que queda
-para la v1.0 son, por este orden: **cobertura de funciones** (Nivel 2 entero
-sin empezar), **`RISK.*`** (E4), el **histograma en streaming** (E6), y todo el
-trabajo de producto (E9–E11), que no es técnico pero sin él esto no llega a
-nadie más que a su autor.
+**Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
+salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el
+motor rápido (en varios hilos) o con Excel en el bucle, ver y guardar
+resultados, comparar escenarios, informe PDF y volcado a hoja—. **Casi todo lo
+de los días 23 y 24 está probado en el banco y en Node, no en el Excel del
+usuario**: la guía `docs/GUIA_PRUEBAS_EXCEL.md` es el siguiente paso
+obligatorio. Lo que queda está ordenado en §2.1.
 
 **Cobertura de funciones, medida** (`npm test` la ata; no es una estimación):
 
@@ -110,13 +110,10 @@ rango depende de sus argumentos) y rompe el grafo fijo. Con desplazamientos
 constantes se podrá resolver al compilar; si no, modo compatible. Las once que
 entraron el 2026-09-23 están verificadas contra Excel (sexta tanda, 69/69).
 
-Faltan de Nivel 2, en dos grupos que no se parecen entre sí (el texto está
-completo desde que llegó la configuración regional):
-- **Las matriciales dinámicas** (`FILTRAR`, `ORDENAR`, `ORDENARPOR`, `UNICOS`,
-  `SECUENCIA`, `DIVIDIRTEXTO`, `TRANSPONER`, `MMULT`, `MINVERSA`): devuelven
-  varias celdas, y el motor modela una celda por valor. Es otro modelo, no
-  otra función.
-- **`LET`, `LAMBDA`, `IMPORTARDATOSDINAMICOS`, `FORMULATEXTO`**.
+Faltan de Nivel 2: `LAMBDA`, `DIVIDIRTEXTO` (solo tiene sentido derramando),
+`FORMULATEXTO` e `IMPORTARDATOSDINAMICOS`. Las matriciales dinámicas y `LET`
+están hechas; las matriciales, **dentro de una función que las consuma** (lo
+que derramaría va al modo compatible, ver `compiler/usoMatricial.ts`).
 
 Total aproximado: **78–105 días** de trabajo efectivo. El MVP utilizable (v0.5)
 se alcanzó.
@@ -127,6 +124,105 @@ se alcanzó.
 >
 > **E10 y E11 son nuevas** y nacen del cambio de destino del proyecto (§1.1). No son
 > opcionales: sin ellas el complemento no puede llegar a un usuario que no seas tú.
+
+---
+
+## 2.1 Plan tras la revisión del 24/09/2026
+
+Revisión hecha con el usuario antes de seguir desarrollando. **Nada de esta
+sección está hecho.** Orden por bloques; dentro de cada bloque, por valor.
+Estimaciones en días de trabajo efectivo.
+
+### A. Probar lo que hay (bloqueante para todo lo demás)
+- **A1.** El usuario recorre `docs/GUIA_PRUEBAS_EXCEL.md` (30 pruebas) y se
+  arregla lo que falle. Las dos que no se pueden simular fuera de Excel: B4
+  (botones de la cinta con el panel abierto) y C2 (informe en el navegador).
+- **A2.** Tandas de fidelidad 7 (LET) y 8 (matrices); las 3 fórmulas
+  matriciales de `Caso_practico.xlsx`.
+
+### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
+- **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
+  el mismo proceso. Es la base de B2 y B3, y la solución segura de A1-B4.
+- **B2. Interruptor en la cinta «Determinístico / Probabilístico».**
+  Determinístico: cada `RIESGO.*` muestra un valor fijo, a elegir en
+  Configuración entre **media, moda, mediana o un percentil**. Probabilístico:
+  muestra un valor aleatorio y F9 remuestrea (funciones volátiles). El modo
+  del libro no cambia los resultados de la simulación, y se dice en la UI.
+- **B3. Cinta que actúa sin abrir el panel**: «Marcar como entrada», «Marcar
+  como salida», «Simular», «Quitar resaltado».
+- **B4. Más funciones, las que el motor ya sabe muestrear**:
+  `RIESGO.DISCRETA({valores};{pesos})`, truncado (`RIESGO.TRUNCAR` o argumento
+  opcional de mínimo/máximo), `RIESGO.LOGNORMAL2` (parámetros del logaritmo).
+- **B5. Distribuciones nuevas en el motor y como funciones**: t de Student,
+  logística, log-logística, Pareto, geométrica, binomial negativa,
+  hipergeométrica, uniforme entera, triangular por percentiles (Trigen),
+  general/histograma (a partir de puntos). Cada una con sus pruebas de
+  momentos y de Kolmogorov–Smirnov, como las actuales.
+- **B6. Funciones que no son distribuciones**: `RIESGO.SALIDA()` (marcar una
+  salida desde la fórmula); `RIESGO.MEDIA(celda)`, `RIESGO.PERCENTIL(celda;
+  p)`, `RIESGO.PROB(celda; umbral)`, `RIESGO.DESV(celda)` para traer a la hoja
+  los resultados de la última simulación; correlación declarada desde la
+  fórmula (`RIESGO.CORRELACION`, a diseñar).
+- **B7. Argumentos que son celdas**: `=RIESGO.NORMAL(B2;15)` cuando B2 no
+  depende de ninguna entrada (se resuelve una vez); y, en una segunda fase,
+  distribuciones cuyos parámetros dependen de otras entradas. Permitir la
+  función dentro de una operación (`=1+RIESGO.NORMAL(…)`).
+
+### C. Gráficas y exportación — 5–7 d
+- **C1. Hoja «Resumen de entradas y salidas»** al volcar: por cada entrada,
+  distribución, parámetros, **estadísticos de lo muestreado** (media,
+  desviación, mínimo, p5, p50, p95, máximo) y su lugar en el tornado; por cada
+  salida, los mismos estadísticos, el umbral y su probabilidad. Una tabla
+  pensada para pegar en un informe.
+- **C2. Gráficos nativos de Excel que faltan en el volcado**: tornado (barras
+  horizontales), araña (líneas), y los de comparación de escenarios (curvas
+  superpuestas). Hoy solo hay curva acumulada e histograma.
+- **C3. Datos de la simulación**: exportar las iteraciones (entradas y
+  salidas, hasta un tope) a una hoja, para que el usuario haga sus propios
+  análisis o gráficos.
+- **C4. Gráficas nuevas en el panel y el informe**:
+  - **dispersión** entrada × salida (se elige la pareja), que enseña la forma
+    de la relación que resume el tornado;
+  - **caja y bigotes** para comparar varias salidas o escenarios de un
+    vistazo;
+  - **abanico** para salidas que son una serie (flujo de caja por año: p5–p95
+    y mediana por periodo), muy de modelos financieros;
+  - **curvas de varias salidas superpuestas**.
+- **C5. Vista previa de la distribución** al editarla en el panel (su forma,
+  p5/p50/p95), para no elegir parámetros a ciegas. Es probablemente la mejora
+  de uso más barata con más efecto.
+- **C6. Percentiles configurables** (qué percentiles se enseñan y exportan).
+
+### D. Análisis que faltan — 3–5 d
+- **D1. Análisis de escenarios por cola** (el de @RISK): qué entradas están
+  más desplazadas cuando la salida cae en su peor 10 % (o mejor 10 %). Dice
+  *qué tiene que pasar* para que salga mal, que el tornado no dice.
+- **D2. Análisis de estrés / qué pasa si determinista**: fijar una entrada
+  en un percentil y ver el efecto en la salida sin simular el resto a mano.
+- **D3. Salidas que son un rango** (C28:H28 como una sola salida con
+  periodos), base del gráfico de abanico C4.
+
+### E. Uso del panel — 2–4 d
+- **E1. Vista de todas las entradas** en una tabla (nombre, celda,
+  distribución, correlaciones), incluidas las `RIESGO.*` del libro, con
+  edición rápida.
+- **E2. Matriz de correlaciones** visible y editable como tabla.
+- **E3. Deshacer** el último cambio del modelo.
+- **E4. Ayuda contextual**: qué es cada distribución, cada gráfico y cada
+  número, sin salir del panel.
+
+### F. Motor y cobertura — según lo que pidan los libros
+- **F1.** `DESREF` con desplazamientos constantes; `LAMBDA`.
+- **F2.** Medir con libros grandes (el de 132 hojas) el tiempo de lectura y de
+  simulación, y optimizar donde se vea.
+- **F3.** Modo compatible más rápido (lotes de iteraciones por sincronización).
+
+### G. Producto (E9–E11)
+Mac, instalación sin `npm start`, manifiesto de producción, licencias,
+interfaz en inglés, privacidad y AppSource: sin cambios respecto a lo
+descrito abajo.
+
+**Orden propuesto**: A → B1–B3 → C1, C2, C5 → B4, B6 → D1 → C3, C4 → resto.
 
 ---
 
@@ -214,6 +310,10 @@ La etapa crítica y la más larga. Es el corazón del producto.
 - Lectura de declaraciones desde las celdas hacia el modelo, y viceversa.
 - **Modo exploración (D9)**: conmutador en la cinta, funciones volátiles, F9 remuestrea, con las tres advertencias del §6.1 visibles en la UI.
 - Script de limpieza de la caché `Wef` para desarrollo.
+
+**Estado (24/09):** hechas 12 funciones `RIESGO.*` sin runtime compartido,
+que devuelven la media; el motor las reconoce como entradas. Lo pendiente
+está en §2.1-B.
 
 **Criterio de hecho:** `=RISK.NORMAL(1000;50)` escrita a mano en una celda de Excel **en Windows** devuelve 1000, el motor la reconoce como entrada, y al activar el modo exploración F9 la mueve. Verificado en Excel real, no en el validador.
 
