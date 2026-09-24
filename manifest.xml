@@ -30,7 +30,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.1.0.0</Version>
+  <Version>0.2.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -87,20 +87,60 @@
                   <bt:Image size="32" resid="Icono.32" />
                   <bt:Image size="80" resid="Icono.80" />
                 </Icon>
-                <Control xsi:type="Button" id="btnAbrirPanel">
-                  <Label resid="btnAbrirPanel.Label" />
+                <!--
+                  Tres botones, un solo panel: comparten TaskpaneId, así que
+                  abren el mismo panel y cada uno lo lleva a su pestaña por el
+                  fragmento de la URL (#modelo, #resultados, #diagnostico). El
+                  panel escucha "hashchange", de modo que si Office navega con
+                  el panel ya abierto cambia de pestaña sin recargar ni perder
+                  los resultados.
+                -->
+                <Control xsi:type="Button" id="btnModelo">
+                  <Label resid="btnModelo.Label" />
                   <Supertip>
-                    <Title resid="btnAbrirPanel.Label" />
-                    <Description resid="btnAbrirPanel.Tooltip" />
+                    <Title resid="btnModelo.Label" />
+                    <Description resid="btnModelo.Tooltip" />
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="Icono.16" />
-                    <bt:Image size="32" resid="Icono.32" />
-                    <bt:Image size="80" resid="Icono.80" />
+                    <bt:Image size="16" resid="IconoModelo.16" />
+                    <bt:Image size="32" resid="IconoModelo.32" />
+                    <bt:Image size="80" resid="IconoModelo.80" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>PanelRiesgo</TaskpaneId>
-                    <SourceLocation resid="Panel.Url" />
+                    <SourceLocation resid="PanelModelo.Url" />
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnResultados">
+                  <Label resid="btnResultados.Label" />
+                  <Supertip>
+                    <Title resid="btnResultados.Label" />
+                    <Description resid="btnResultados.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoResultados.16" />
+                    <bt:Image size="32" resid="IconoResultados.32" />
+                    <bt:Image size="80" resid="IconoResultados.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PanelRiesgo</TaskpaneId>
+                    <SourceLocation resid="PanelResultados.Url" />
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnDiagnostico">
+                  <Label resid="btnDiagnostico.Label" />
+                  <Supertip>
+                    <Title resid="btnDiagnostico.Label" />
+                    <Description resid="btnDiagnostico.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoDiagnostico.16" />
+                    <bt:Image size="32" resid="IconoDiagnostico.32" />
+                    <bt:Image size="80" resid="IconoDiagnostico.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PanelRiesgo</TaskpaneId>
+                    <SourceLocation resid="PanelDiagnostico.Url" />
                   </Action>
                 </Control>
               </Group>
@@ -116,20 +156,35 @@
         <bt:Image id="Icono.16" DefaultValue="https://localhost:9090/icon-16.png" />
         <bt:Image id="Icono.32" DefaultValue="https://localhost:9090/icon-32.png" />
         <bt:Image id="Icono.80" DefaultValue="https://localhost:9090/icon-80.png" />
+        <bt:Image id="IconoModelo.16" DefaultValue="https://localhost:9090/icon-config-16.png" />
+        <bt:Image id="IconoModelo.32" DefaultValue="https://localhost:9090/icon-config-32.png" />
+        <bt:Image id="IconoModelo.80" DefaultValue="https://localhost:9090/icon-config-80.png" />
+        <bt:Image id="IconoResultados.16" DefaultValue="https://localhost:9090/icon-results-16.png" />
+        <bt:Image id="IconoResultados.32" DefaultValue="https://localhost:9090/icon-results-32.png" />
+        <bt:Image id="IconoResultados.80" DefaultValue="https://localhost:9090/icon-results-80.png" />
+        <bt:Image id="IconoDiagnostico.16" DefaultValue="https://localhost:9090/icon-settings-16.png" />
+        <bt:Image id="IconoDiagnostico.32" DefaultValue="https://localhost:9090/icon-settings-32.png" />
+        <bt:Image id="IconoDiagnostico.80" DefaultValue="https://localhost:9090/icon-settings-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
+        <bt:Url id="PanelModelo.Url" DefaultValue="https://localhost:9090/taskpane.html#modelo" />
+        <bt:Url id="PanelResultados.Url" DefaultValue="https://localhost:9090/taskpane.html#resultados" />
+        <bt:Url id="PanelDiagnostico.Url" DefaultValue="https://localhost:9090/taskpane.html#diagnostico" />
         <bt:Url id="Comandos.Url" DefaultValue="https://localhost:9090/commands.html" />
         <bt:Url id="Soporte.Url" DefaultValue="https://github.com/danalejo9/riesgo-Montecarlo-excel" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="PestanaRiesgo.Label" DefaultValue="Riesgo" />
         <bt:String id="GrupoPrincipal.Label" DefaultValue="Monte Carlo" />
-        <bt:String id="btnAbrirPanel.Label" DefaultValue="Abrir panel" />
+        <bt:String id="btnModelo.Label" DefaultValue="Modelo" />
+        <bt:String id="btnResultados.Label" DefaultValue="Resultados" />
+        <bt:String id="btnDiagnostico.Label" DefaultValue="Diagnóstico" />
         <bt:String id="GetStarted.Title" DefaultValue="Riesgo Monte Carlo" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="btnAbrirPanel.Tooltip" DefaultValue="Abre el panel de análisis de riesgo." />
+        <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
+        <bt:String id="btnResultados.Tooltip" DefaultValue="Resultados de la última simulación: probabilidades, histograma, curva acumulada y sensibilidad." />
+        <bt:String id="btnDiagnostico.Tooltip" DefaultValue="Estado del complemento, lo guardado en el libro y la configuración regional." />
         <bt:String id="GetStarted.Description" DefaultValue="Usa la pestaña Riesgo para abrir el panel y analizar tu modelo." />
       </bt:LongStrings>
     </Resources>

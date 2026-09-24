@@ -846,14 +846,30 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     correlacionadas entre sí; ρ sigue siendo correcto. La contribución a la
     varianza por regresión (la de @RISK) queda para después.
 
+26. [x] **Histograma, umbrales y botones en la cinta (2026-09-24)**
+
+    `engine/stats/muestra.ts`: la muestra retenida se ordena una vez; de ahí
+    salen el histograma (Freedman–Diaconis, 10–50 barras) y
+    `probabilidadUmbral` (estricta en los dos sentidos: un VAN de 0 no es una
+    pérdida). El umbral vive en el modelo (`SalidaRiskModel.threshold`,
+    opcional y validado) y en el informe volcado, con su gráfico de columnas.
+
+    **Cinta**: tres botones `ShowTaskpane` con el mismo `TaskpaneId` y URL con
+    fragmento (`#modelo`, `#resultados`, `#diagnostico`). El panel lee el
+    fragmento al abrir, escucha `hashchange` y reescribe el fragmento con
+    `replaceState` al cambiar de pestaña a mano, para que el siguiente botón
+    siempre cambie la URL. **Sin verificar en Excel real**: si Office no
+    vuelve a navegar un panel ya abierto con el mismo `TaskpaneId`, el botón
+    solo sirve para abrirlo; la alternativa es un runtime compartido
+    (`Office.addin.showAsTaskpane`), más pesado.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Probar el tornado en Excel** con el libro de demostración (Aurora).
-2. **Histograma** a partir de la misma muestra retenida, y **probabilidad de
-   superar un umbral** escrito por el usuario (E7).
-3. **`LET`**, y los **botones en la cinta**.
-4. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
-5. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
+1. **Probar en Excel** el tornado, el histograma, el umbral y los botones de
+   la cinta (recargar el manifiesto: `npm run stop` y `npm start`).
+2. **`LET`** y **las tres fórmulas matriciales de `Caso_practico.xlsx`**.
+3. **Comparación de escenarios** (E7).
+4. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

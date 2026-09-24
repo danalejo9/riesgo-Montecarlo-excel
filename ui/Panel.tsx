@@ -39,9 +39,19 @@ import { duracion, miles, porcentaje } from './formato.ts';
 
 type Pestana = 'modelo' | 'resultados' | 'diagnostico';
 
+/**
+ * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
+ * fragmento (`taskpane.html#resultados`). Sin fragmento, o con uno que no es
+ * una pestaña, el modelo.
+ */
+export function pestanaDeFragmento(hash: string): Pestana {
+  const h = hash.replace(/^#/, '').toLowerCase();
+  return h === 'resultados' || h === 'diagnostico' ? h : 'modelo';
+}
+
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
-  const [pestana, setPestana] = useState<Pestana>('modelo');
+  const [pestana, setPestana] = useState<Pestana>(() => pestanaDeFragmento(window.location.hash));
   const [modelo, setModelo] = useState<ModeloRiesgo | null>(null);
   const [modeloInvalido, setModeloInvalido] = useState<{ errores: string[]; crudo: string } | null>(null);
   const [resultado, setResultado] = useState<ResultadoSimulacionPanel | null>(null);
@@ -53,6 +63,21 @@ export function Panel() {
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
+
+  // Si Office vuelve a navegar con el panel abierto (otro botón de la cinta),
+  // solo cambia el fragmento: no hay recarga, y los resultados siguen ahí.
+  useEffect(() => {
+    // La pestaña visible queda escrita en el fragmento, sin disparar
+    // "hashchange" (replaceState no lo hace). Así, pulsar en la cinta el botón
+    // de otra pestaña siempre cambia la URL y siempre se nota.
+    window.history.replaceState(null, '', `#${pestana}`);
+  }, [pestana]);
+
+  useEffect(() => {
+    const alCambiar = () => setPestana(pestanaDeFragmento(window.location.hash));
+    window.addEventListener('hashchange', alCambiar);
+    return () => window.removeEventListener('hashchange', alCambiar);
+  }, []);
 
   useEffect(() => {
     try {
@@ -178,7 +203,6 @@ export function Panel() {
               type="button"
               className={p === pestana ? 'activa' : ''}
               onClick={() => setPestana(p)}
-              disabled={p === 'resultados' && !(resultado?.ok === true)}
             >
               {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
             </button>
@@ -246,6 +270,18 @@ export function Panel() {
         ) : (
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
         ))}
+
+      {pestana === 'resultados' && !(resultado?.ok === true) && !simulando && (
+        <section>
+          <h2>Todavía no hay resultados</h2>
+          <p className="tenue">
+            Simula desde la pestaña Modelo y aparecerán aquí. Los resultados
+            viven mientras el panel está abierto: para conservarlos, vuélcalos a
+            una hoja del libro.
+          </p>
+          <button type="button" onClick={() => setPestana('modelo')}>Ir al modelo</button>
+        </section>
+      )}
 
       {pestana === 'resultados' && resultado?.ok === true && modelo && (
         <Resultados modelo={modelo} resultado={resultado} alCambiarModelo={cambiarModelo} />

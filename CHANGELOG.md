@@ -5,6 +5,27 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Histograma, umbrales y botones en la cinta (2026-09-24)
+
+**Añadido**
+- **Probabilidad de superar un umbral**, arriba de cada salida: "probabilidad
+  de quedar por debajo / por encima de X". Se contesta al escribir, se guarda
+  en el modelo del libro (`outputs[].threshold`) y va al informe volcado.
+- **Histograma** de cada salida (barras de Freedman–Diaconis, de 10 a 50). Con
+  umbral, las barras del lado contado van en color: el área es la probabilidad.
+  En el volcado, tabla y gráfico de columnas nativo.
+- Los dos salen de la muestra retenida (exactos hasta 100.000 iteraciones;
+  por encima, margen de ±0,3 puntos, y el panel lo dice).
+- **Tres botones en la cinta**, pestaña Riesgo: Modelo, Resultados y
+  Diagnóstico. Abren el panel en su pestaña; con el panel abierto, cambian de
+  pestaña sin recargar (fragmento de URL + `hashchange`). Sustituyen a "Abrir
+  panel". Versión del manifiesto: 0.2.0.0.
+- La pestaña Resultados ya no está desactivada sin resultados: explica cómo
+  obtenerlos.
+
+**Para verlo en Excel** hay que volver a cargar el manifiesto: `npm run stop`
+y `npm start`.
+
 ### Análisis de sensibilidad: el tornado (2026-09-24)
 
 **Añadido**
