@@ -20,10 +20,30 @@ import type { Informe } from './analyze.ts';
  *
  * El porcentaje sí sirve para medir *cuánto* falta, y por eso se muestra.
  */
-export function veredicto(inf: Informe): 'compatible' | 'casi' | 'incompatible' {
-  if (inf.bloqueantes.length === 0) return 'compatible';
-  if (inf.coberturaN0N1 >= 95) return 'casi';
-  return 'incompatible';
+export type Veredicto = 'compatible' | 'pendiente' | 'matricial' | 'casi' | 'incompatible';
+
+/**
+ * Hay dos formas distintas de que un libro no corra, y confundirlas fue un
+ * error real de este escáner:
+ *
+ * - **bloqueantes**: funciones fuera del catálogo previsto. No correrán sin
+ *   cambiar el roadmap.
+ * - **pendientes**: funciones que el catálogo promete y el motor todavía no
+ *   implementa. Correrán en cuanto se escriban, pero **hoy no corren**.
+ *
+ * El veredicto verde exige que no haya ni unas ni otras. Decir "compatible"
+ * porque el catálogo las contempla, cuando el motor se va a atragantar con
+ * ellas, es justo la respuesta tranquilizadora y falsa que este archivo dice
+ * en su cabecera querer evitar.
+ */
+export function veredicto(inf: Informe): Veredicto {
+  if (inf.bloqueantes.length > 0) return inf.coberturaN0N1 >= 95 ? 'casi' : 'incompatible';
+  if (inf.pendientes.length > 0) return 'pendiente';
+  // Una fórmula matricial usa semántica de matrices, que el motor no
+  // implementa, por muy soportadas que estén las funciones que contiene. No
+  // basta con listarla entre las "señales": impide el verde.
+  if (inf.formulasMatriciales > 0) return 'matricial';
+  return 'compatible';
 }
 
 export function formatearTexto(inf: Informe): string {
@@ -39,7 +59,21 @@ export function formatearTexto(inf: Informe): string {
 
   if (v === 'compatible') {
     l.push('  ✅  Compatible con el motor rápido');
-    l.push('      Ninguna fórmula queda fuera del catálogo Nivel 0 + Nivel 1.');
+    l.push('      El motor sabe evaluar todas las funciones de este libro.');
+  } else if (v === 'pendiente') {
+    const usosPendientes = inf.pendientes.reduce((n, f) => n + f.veces, 0);
+    l.push(`  🕓  Aún no — faltan ${inf.pendientes.length} función(es) por implementar`);
+    l.push('      Están todas dentro del catálogo previsto, así que el libro correrá en el');
+    l.push('      motor rápido en cuanto se escriban; hoy todavía no. No hay que reescribir');
+    l.push(`      nada del libro. Son ${miles(usosPendientes)} uso(s) en total.`);
+  } else if (v === 'matricial') {
+    l.push(`  ⚠️   Casi — ${miles(inf.formulasMatriciales)} fórmula(s) matriciales lo impiden`);
+    l.push('      Todas las funciones del libro están soportadas, pero una fórmula matricial');
+    l.push('      opera sobre rangos enteros a la vez (como {=SUMA(A1:A9*B1:B9)}), y el motor');
+    l.push('      no implementa esa semántica. Suelen poder reescribirse con SUMAPRODUCTO.');
+    if (inf.celdasMatriciales.length > 0) {
+      l.push(`      Están en: ${inf.celdasMatriciales.join(', ')}`);
+    }
   } else if (v === 'casi') {
     l.push(`  ⚠️   Casi compatible — ${miles(celdasBloqueadas)} fórmula(s) lo impiden`);
     l.push(`      Son pocas (${inf.coberturaN0N1} % del libro ya está cubierto): merece la pena`);
@@ -60,6 +94,20 @@ export function formatearTexto(inf: Informe): string {
   l.push(`    Profundidad de cadena ... ${inf.profundidad} (cota inferior)`);
   l.push('');
 
+  if (inf.pendientes.length > 0) {
+    l.push('  Funciones previstas que el motor todavía no implementa');
+    for (const f of inf.pendientes.slice(0, 25)) {
+      l.push(
+        `    ${f.nombre.padEnd(22)} ${usos(f.veces)}   ` +
+        `${etiqueta(f)}   p. ej. ${f.ejemplo}`,
+      );
+    }
+    if (inf.pendientes.length > 25) {
+      l.push(`    … y ${inf.pendientes.length - 25} más.`);
+    }
+    l.push('');
+  }
+
   if (inf.bloqueantes.length > 0) {
     l.push('  Funciones que impiden el motor rápido');
     for (const f of inf.bloqueantes.slice(0, 25)) {
@@ -79,7 +127,6 @@ export function formatearTexto(inf: Informe): string {
   if (inf.tienePowerQuery) señales.push('Power Query o conexiones externas');
   if (inf.enlacesExternos > 0) señales.push(`${inf.enlacesExternos} enlace(s) a otros libros`);
   if (inf.derrames > 0) señales.push(`${inf.derrames} referencia(s) de derrame (matrices dinámicas)`);
-  if (inf.formulasMatriciales > 0) señales.push(`${miles(inf.formulasMatriciales)} fórmula(s) matriciales`);
   if (inf.celdasVolatiles > 0) señales.push(`${miles(inf.celdasVolatiles)} celda(s) con funciones volátiles`);
   if (inf.referenciasExternas > 0) señales.push(`${miles(inf.referenciasExternas)} fórmula(s) con referencias externas`);
 

@@ -160,7 +160,12 @@ export function tokenizar(entrada: string): Token[] {
     }
 
     // --- Identificadores: funciones, referencias, nombres definidos ---
-    if (/[A-Za-z_\\$]/.test(c)) {
+    // Se admiten letras Unicode, no solo ASCII: un libro es-ES puede tener un
+    // nombre definido `Año` o una función localizada `FRAC.AÑO`. Rechazarlas
+    // aquí las convertiría en un error de sintaxis —que el informe de
+    // compatibilidad presenta como un fallo *del motor*— en vez de en lo que
+    // son: un nombre sin resolver o una función que no está.
+    if (/[\p{L}_\\$]/u.test(c)) {
       const palabra = leerPalabra(s, i);
       i += palabra.length;
 
@@ -230,7 +235,7 @@ export function tokenizar(entrada: string): Token[] {
 
 function leerPalabra(s: string, desde: number): string {
   let j = desde;
-  while (j < s.length && /[A-Za-z0-9_.$\\?]/.test(s[j] as string)) j++;
+  while (j < s.length && /[\p{L}\p{N}_.$\\?]/u.test(s[j] as string)) j++;
   return s.slice(desde, j);
 }
 

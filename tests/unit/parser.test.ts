@@ -146,6 +146,23 @@ describe('precedencia', () => {
   });
 });
 
+describe('identificadores con letras no ASCII', () => {
+  // Un libro es-ES trae nombres definidos como `Año` y, si alguien pega una
+  // fórmula localizada, funciones como `FRAC.AÑO`. Tratarlos como error de
+  // sintaxis sería acusar al motor de un fallo que no es suyo: son un nombre
+  // sin resolver y una función que no está, y el informe debe decir eso.
+  it('un nombre definido con tilde o eñe', () => {
+    expect(texto(ast('=Año*2'))).toBe('(@Año * 2)');
+    expect(texto(ast('=Precio_Año_1+1'))).toBe('(@Precio_Año_1 + 1)');
+  });
+
+  it('una función localizada se reconoce como función, no como sintaxis rota', () => {
+    const a = ast('=FRAC.AÑO(A1,A2)');
+    expect(a.tipo).toBe('funcion');
+    if (a.tipo === 'funcion') expect(a.nombre).toBe('FRAC.AÑO');
+  });
+});
+
 describe('funciones', () => {
   it('sin argumentos, con uno y con varios', () => {
     expect(texto(ast('=NOW()'))).toBe('NOW()');

@@ -1,0 +1,275 @@
+/*
+ * Estilos del panel.
+ *
+ * Sin librería de componentes y sin fuentes remotas, a propósito: el panel
+ * vive en un espacio estrecho dentro de Excel y tiene que parecerse a Excel,
+ * no traer su propio lenguaje visual. `Segoe UI` en Windows y `-apple-system`
+ * en Mac son las que ya usa Office, así que el panel se integra sin cargar
+ * nada de fuera (la Fase 2 eliminó Google Fonts justo por esto).
+ *
+ * Respeta el tema oscuro del sistema: Excel lo tiene y un panel siempre
+ * blanco canta.
+ */
+
+:root {
+  --fondo: #ffffff;
+  --texto: #1b1b1b;
+  --tenue: #616161;
+  --borde: #e1e1e1;
+  --acento: #217346; /* el verde de Excel */
+  --error-fondo: #fdf3f4;
+  --error-borde: #d13438;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #1f1f1f;
+    --texto: #f3f3f3;
+    --tenue: #a6a6a6;
+    --borde: #3d3d3d;
+    --acento: #4cc38a;
+    --error-fondo: #2d1b1d;
+    --error-borde: #f1707b;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+main { padding: 12px 16px 32px; }
+
+h1 { font-size: 16px; margin: 0; }
+h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--tenue); }
+h3 { font-size: 13px; margin: 16px 0 6px; }
+
+header { border-bottom: 1px solid var(--borde); padding-bottom: 10px; margin-bottom: 16px; }
+.version { margin: 2px 0 0; color: var(--tenue); font-size: 12px; }
+
+section + section { margin-top: 24px; }
+
+dl {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+dt { color: var(--tenue); }
+dd { margin: 0; word-break: break-word; }
+
+.tenue { color: var(--tenue); font-size: 12px; }
+
+.conjuntos { list-style: none; margin: 0; padding: 0; }
+.conjuntos li {
+  display: grid;
+  grid-template-columns: 16px minmax(96px, auto) 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 2px 0;
+}
+.conjuntos .marca { font-weight: 700; }
+.conjuntos .si .marca { color: var(--acento); }
+.conjuntos .no .marca { color: var(--tenue); }
+.conjuntos .no .nombre { color: var(--tenue); }
+
+button {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--acento);
+  border-radius: 3px;
+  background: var(--acento);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled { opacity: .6; cursor: default; }
+
+.error {
+  border: 1px solid var(--error-borde);
+  background: var(--error-fondo);
+  border-radius: 3px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+.error h2 { color: var(--error-borde); }
+.error pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+
+.aviso { max-width: 42ch; }
+
+.ejemplos {
+  margin: 6px 0 0;
+  padding: 8px;
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--texto) 4%, transparent);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+}
+
+code {
+  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--texto) 8%, transparent);
+}
+
+/* --- Pestañas ------------------------------------------------------------ */
+
+.pestanas { display: flex; gap: 2px; margin-top: 10px; }
+.pestanas button {
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  color: var(--tenue);
+  font-size: 12px;
+}
+.pestanas button.activa {
+  color: var(--texto);
+  border-bottom-color: transparent;
+  background: color-mix(in srgb, var(--texto) 5%, transparent);
+}
+.pestanas button:disabled { opacity: .45; }
+
+/* --- Formularios --------------------------------------------------------- */
+
+.parametros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px 10px;
+  margin-top: 8px;
+}
+.campo { display: flex; flex-direction: column; gap: 2px; }
+.campo.ancho { grid-column: 1 / -1; }
+.campo .ayuda { font-size: 11px; }
+
+input[type='text'], select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+  background: var(--fondo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+}
+input[type='text']:focus, select:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+
+label > span:first-child { display: block; font-size: 12px; }
+
+.distribucion { margin-top: 10px; }
+.distribucion > label { display: block; }
+
+/* --- Fichas de entradas y salidas ---------------------------------------- */
+
+.fichas { list-style: none; margin: 8px 0 0; padding: 0; }
+.fichas > li { border: 1px solid var(--borde); border-radius: 3px; padding: 6px 8px; margin-bottom: 6px; }
+.fichas .cabecera {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.fichas .detalle { margin-top: 8px; border-top: 1px solid var(--borde); padding-top: 8px; }
+.nombre-suelto { border-color: transparent; padding-left: 0; }
+.nombre-suelto:hover { border-color: var(--borde); }
+
+button.plano {
+  margin: 0;
+  padding: 2px 4px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--texto);
+  text-align: left;
+}
+button.plano:hover { color: var(--acento); }
+button.borrar:hover { color: var(--error-borde); }
+
+button.principal { width: 100%; padding: 8px; font-weight: 600; }
+
+/* --- Avisos, motivos, progreso ------------------------------------------- */
+
+.aviso-linea {
+  border-left: 3px solid var(--error-borde);
+  padding: 4px 8px;
+  margin: 8px 0;
+  background: var(--error-fondo);
+  font-size: 12px;
+}
+
+.motivos { margin: 6px 0 0; padding-left: 18px; font-size: 12px; }
+.motivos li { margin-bottom: 3px; }
+
+.progreso { border: 1px solid var(--borde); border-radius: 3px; padding: 10px 12px; margin-bottom: 16px; }
+.progreso p { margin: 0 0 6px; }
+.barra { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--texto) 10%, transparent); overflow: hidden; }
+.barra .relleno { height: 100%; background: var(--acento); transition: width .2s linear; }
+
+/* --- Resultados ---------------------------------------------------------- */
+
+.percentiles {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0 16px;
+}
+.percentiles li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.grafico { margin: 8px 0 0; }
+.grafico svg { width: 100%; height: auto; display: block; }
+.grafico figcaption { margin-top: 4px; }
+
+.rejilla { stroke: var(--borde); stroke-width: 1; }
+.eje { fill: var(--tenue); font-size: 9px; }
+.curva { fill: none; stroke: var(--acento); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cursor { stroke: var(--tenue); stroke-width: 1; stroke-dasharray: 2 2; }
+.punto { fill: var(--acento); stroke: var(--fondo); stroke-width: 2; }
+
+/* El banco de pruebas: siempre visible como tal, nunca confundible con el panel real. */
+.banco {
+  padding: 6px 12px;
+  background: #8a5a00;
+  color: #fff;
+  font-size: 12px;
+}
+.banco select { width: auto; display: inline-block; color: #1b1b1b; }
+
+/* El nombre de una salida lo escribe el usuario: se enseña tal cual, sin la
+   mayúscula forzada que llevan los títulos de sección del panel. */
+h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); letter-spacing: 0; }
+
+.botonera { display: flex; flex-wrap: wrap; gap: 8px; }
+.botonera button { margin-top: 8px; }
+
+/* --- Correlaciones ------------------------------------------------------- */
+
+.correlaciones { margin-top: 12px; border-top: 1px solid var(--borde); padding-top: 8px; }
+.correlaciones h4 { font-size: 12px; margin: 0 0 6px; color: var(--tenue); text-transform: uppercase; letter-spacing: .04em; }
+
+.correlacion { margin-bottom: 10px; }
+.correlacion .cabecera { display: grid; grid-template-columns: 1fr 64px auto; gap: 6px; align-items: center; }
+.correlacion .nombre { font-size: 13px; word-break: break-word; }
+.correlacion .coeficiente { text-align: right; }
+.correlacion input[type='range'] { width: 100%; margin: 4px 0 0; accent-color: var(--acento); }
+
+.guardado { margin: 8px 0 0; }

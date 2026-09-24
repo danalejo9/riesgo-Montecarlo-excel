@@ -115,7 +115,7 @@ describe('cobertura', () => {
         nombre: 'H',
         celdas: [
           { ref: 'A1', formula: 'SUM(B1:B9)' },
-          { ref: 'A2', formula: 'VLOOKUP(C1,Tarifas!A:B,2,FALSE)' },
+          { ref: 'A2', formula: 'OFFSET(C1,C2)' },
           { ref: 'A3', formula: 'SUM(D1:D9)' },
           { ref: 'A4', formula: 'SUM(E1:E9)' },
         ],
@@ -124,7 +124,52 @@ describe('cobertura', () => {
 
     expect(inf.coberturaN0).toBe(75);
     expect(inf.coberturaN0N1).toBe(100);
-    expect(veredicto(inf)).toBe('compatible');
+
+    // El catálogo cubre FRAC.AÑO, pero el motor todavía no la implementa, así
+    // que el libro NO corre hoy. Decir "compatible" aquí sería la respuesta
+    // tranquilizadora y falsa que este escáner existe para evitar: pasó de
+    // verdad con `Caso_practico.xlsx`, que usaba FIN.MES, MES, AÑO y TIR.
+    expect(veredicto(inf)).toBe('pendiente');
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['OFFSET']);
+    expect(inf.bloqueantes).toEqual([]); // no es un bloqueo: es trabajo pendiente
+  });
+
+  it('distingue lo pendiente de implementar de lo que no correrá nunca', () => {
+    const inf = escanear({
+      hojas: [{
+        nombre: 'H',
+        celdas: [
+          { ref: 'A1', formula: 'SUM(B1:B9)' },        // implementada
+          { ref: 'A2', formula: 'OFFSET(C1,C2)' },     // Nivel 1, sin implementar
+          { ref: 'A3', formula: 'INDIRECT("A"&1)' },    // no soportada por diseño
+        ],
+      }],
+    });
+
+    expect(inf.pendientes.map((f) => f.nombre)).toEqual(['OFFSET']);
+    expect(inf.bloqueantes.map((f) => f.nombre)).toEqual(['INDIRECT']);
+    // Un bloqueante pesa más que un pendiente: no basta con esperar.
+    expect(veredicto(inf)).not.toBe('pendiente');
+  });
+
+  it('una fórmula matricial impide el verde aunque sus funciones estén soportadas', () => {
+    // El motor no implementa semántica de matrices: `SUMA(A1:A2*B1:B2)` falla
+    // aunque SUMA esté soportada. Verificado contra el evaluador, no supuesto.
+    const inf = escanear({
+      hojas: [{
+        nombre: 'H',
+        celdas: [
+          { ref: 'A1', formula: 'SUM(B1:B9)' },
+          { ref: 'A2', formula: 'SUM(B1:B2*C1:C2)', matricial: true },
+        ],
+      }],
+    });
+
+    expect(inf.bloqueantes).toEqual([]);
+    expect(inf.pendientes).toEqual([]);
+    expect(inf.formulasMatriciales).toBe(1);
+    expect(veredicto(inf)).toBe('matricial');
+    expect(inf.celdasMatriciales).toEqual(['H!A2']);
   });
 
   it('señala la celda y la función exactas que bloquean', () => {
@@ -132,7 +177,7 @@ describe('cobertura', () => {
       hojas: [{
         nombre: 'Presupuesto',
         celdas: [
-          { ref: 'H42', formula: 'SUBTOTAL(9,H5:H41)' },
+          { ref: 'H42', formula: 'FILTER(H5:H9,H5:H9>0)' },
           { ref: 'J17', formula: 'INDIRECT("A"&B1)' },
           { ref: 'C8', formula: 'MiMacroVBA(B8)' },
           { ref: 'A1', formula: 'SUM(B1:B2)' },
@@ -141,11 +186,11 @@ describe('cobertura', () => {
     });
 
     const nombres = inf.bloqueantes.map((b) => b.nombre).sort();
-    expect(nombres).toEqual(['INDIRECT', 'MIMACROVBA', 'SUBTOTAL']);
+    expect(nombres).toEqual(['FILTER', 'INDIRECT', 'MIMACROVBA']);
 
-    const subtotal = inf.bloqueantes.find((b) => b.nombre === 'SUBTOTAL');
-    expect(subtotal?.ejemplo).toBe('Presupuesto!H42');
-    expect(subtotal?.nivel).toBe('n2');
+    const deTexto = inf.bloqueantes.find((b) => b.nombre === 'FILTER');
+    expect(deTexto?.ejemplo).toBe('Presupuesto!H42');
+    expect(deTexto?.nivel).toBe('n2');
     expect(inf.bloqueantes.find((b) => b.nombre === 'INDIRECT')?.nivel).toBe('no-soportada');
     expect(inf.bloqueantes.find((b) => b.nombre === 'MIMACROVBA')?.nivel).toBe('desconocida');
 
@@ -184,18 +229,32 @@ describe('cobertura', () => {
     expect(inf.celdasVolatiles).toBe(2);
   });
 
+  it('una función de Nivel 2 ya implementada no bloquea', () => {
+    // El nivel del catálogo dice qué clase de función es; lo que decide si
+    // bloquea es si el motor la sabe evaluar. Antes, `IZQUIERDA` habría
+    // seguido saliendo como bloqueante el día después de implementarla.
+    const inf = escanear({
+      hojas: [{ nombre: 'H', celdas: [
+        { ref: 'A1', formula: 'LEFT(B1,3)' },
+        { ref: 'A2', formula: 'SUBTOTAL(9,C1:C9)' },
+      ] }],
+    });
+    expect(inf.bloqueantes).toEqual([]);
+    expect(veredicto(inf)).toBe('compatible');
+  });
+
   it('no declara compatible un libro con una sola celda bloqueante', () => {
     // Regresión: con un umbral por porcentaje, 1 bloqueante entre 1.000
     // fórmulas daba "99,9 % compatible", que es tranquilizador y falso. Basta
     // una celda en el camino entrada->salida para tumbar el motor rápido.
-    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'SUBTOTAL(9,A1:A2)' }];
+    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'FILTER(A1:A2,A1:A2>0)' }];
     for (let f = 1; f <= 1000; f++) celdas.push({ ref: `A${f}`, formula: `B${f}*2` });
 
     const inf = escanear({ hojas: [{ nombre: 'H', celdas }] });
 
     expect(inf.coberturaN0N1).toBeGreaterThan(99);
     expect(veredicto(inf)).not.toBe('compatible');
-    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['SUBTOTAL']);
+    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['FILTER']);
   });
 
   it('un libro sin fórmulas no rompe los porcentajes', () => {

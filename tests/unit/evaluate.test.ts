@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
+import { num, nums } from '../helpers/valores.ts';
+import { errorEn, tipoEn, ERROR, type Columna } from '../../engine/values/columna.ts';
 
 const H = 'Hoja1';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -29,7 +31,7 @@ describe('evaluarModelo — aritmética básica', () => {
 
     const r = evaluarModelo(g, entradas, [k('A1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Array.from(r.valores.get(k('A1')) as Float64Array)).toEqual([20, 22, 24, 26]);
+    if (r.ok) expect(nums(r.valores.get(k('A1')))).toEqual([20, 22, 24, 26]);
   });
 
   it('respeta la precedencia ya resuelta en el AST', () => {
@@ -41,7 +43,7 @@ describe('evaluarModelo — aritmética básica', () => {
     ]);
     const r = evaluarModelo(g, entradas, [k('A1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.valores.get(k('A1'))?.[0]).toBe(14);
+    if (r.ok) expect(num(r.valores.get(k('A1')))).toBe(14);
   });
 
   it('una celda sin fórmula y sin entrada se trata como vacía (0)', () => {
@@ -49,10 +51,10 @@ describe('evaluarModelo — aritmética básica', () => {
     const n = 2;
     const r = evaluarModelo(g, new Map(), [k('B1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Array.from(r.valores.get(k('B1')) as Float64Array)).toEqual([5, 5]);
+    if (r.ok) expect(nums(r.valores.get(k('B1')))).toEqual([5, 5]);
   });
 
-  it('división por cero da NaN, no lanza', () => {
+  it('división por cero da el error #¡DIV/0! de Excel, no lanza', () => {
     const g = grafoDe({ A1: 'B1/C1' });
     const n = 1;
     const entradas = new Map([
@@ -61,7 +63,11 @@ describe('evaluarModelo — aritmética básica', () => {
     ]);
     const r = evaluarModelo(g, entradas, [k('A1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Number.isNaN(r.valores.get(k('A1'))?.[0])).toBe(true);
+    if (r.ok) {
+      const c = r.valores.get(k('A1')) as Columna;
+      expect(tipoEn(c, 0)).toBe(ERROR);
+      expect(errorEn(c, 0)).toBe('#DIV/0!');
+    }
   });
 });
 
@@ -71,7 +77,7 @@ describe('evaluarModelo — funciones y rangos', () => {
     const n = 1;
     const r = evaluarModelo(g, new Map(), [k('B1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.valores.get(k('B1'))?.[0]).toBe(12);
+    if (r.ok) expect(num(r.valores.get(k('B1')))).toBe(12);
   });
 
   it('IF selecciona rama por iteración usando una entrada como condición', () => {
@@ -80,7 +86,7 @@ describe('evaluarModelo — funciones y rangos', () => {
     const entradas = new Map([[k('B1'), Float64Array.from([1, 10, 5])]]);
     const r = evaluarModelo(g, entradas, [k('A1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Array.from(r.valores.get(k('A1')) as Float64Array)).toEqual([-100, 100, -100]);
+    if (r.ok) expect(nums(r.valores.get(k('A1')))).toEqual([-100, 100, -100]);
   });
 
   it('funciones anidadas con una cadena de dependencias real de presupuesto', () => {
@@ -98,7 +104,7 @@ describe('evaluarModelo — funciones y rangos', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       // 10*950=9500, iva=1805, total=11305 | 20*950=19000, iva=3610, total=22610
-      expect(Array.from(r.valores.get(k('E1')) as Float64Array)).toEqual([11305, 22610]);
+      expect(nums(r.valores.get(k('E1')))).toEqual([11305, 22610]);
     }
   });
 });
@@ -110,7 +116,7 @@ describe('evaluarModelo — comparaciones y lógica', () => {
     const entradas = new Map([[k('B1'), Float64Array.from([5, 10, 15])]]);
     const r = evaluarModelo(g, entradas, [k('A1')], n);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(Array.from(r.valores.get(k('A1')) as Float64Array)).toEqual([0, 1, 1]);
+    if (r.ok) expect(nums(r.valores.get(k('A1')))).toEqual([0, 1, 1]);
   });
 
   it('unario y porcentaje', () => {
@@ -120,8 +126,8 @@ describe('evaluarModelo — comparaciones y lógica', () => {
     const r = evaluarModelo(g, entradas, [k('A1'), k('C1')], n);
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.valores.get(k('A1'))?.[0]).toBe(-7);
-      expect(r.valores.get(k('C1'))?.[0]).toBe(0.5);
+      expect(num(r.valores.get(k('A1')))).toBe(-7);
+      expect(num(r.valores.get(k('C1')))).toBe(0.5);
     }
   });
 });
@@ -135,12 +141,12 @@ describe('evaluarModelo — errores', () => {
   });
 
   it('reporta una función no soportada con el nombre y la celda exactos', () => {
-    const g = grafoDe({ A1: 'SUBTOTAL(9,B1:B2)', B1: '1', B2: '2' });
+    const g = grafoDe({ A1: 'FORMULATEXT(B1)', B1: '1', B2: '2' });
     const r = evaluarModelo(g, new Map(), [k('A1')], 1);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.clave).toBe(k('A1'));
-      expect(r.error.motivo).toMatch(/SUBTOTAL/);
+      expect(r.error.motivo).toMatch(/FORMULATEXT/);
     }
   });
 

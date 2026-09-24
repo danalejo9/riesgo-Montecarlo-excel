@@ -1,0 +1,74 @@
+/**
+ * Convierte un `ModeloRiesgo` ya validado en las `DefinicionEntrada[]` que
+ * espera `engine/executor/`, aplicando la correlación declarada.
+ *
+ * No sabe nada de Excel: `resolverRef` traduce cada rango con nombre a la
+ * clave de celda concreta que usa el resto del motor — es responsabilidad
+ * del adaptador de Office.js (Fase 3, E3), inyectada aquí como una función
+ * para que este módulo siga siendo puro y testeable en Node.
+ *
+ * Los grupos correlacionados (`agruparCorrelaciones`) no pueden generarse
+ * perezosos por bloques: Iman–Conover necesita reordenar el buffer completo
+ * de cada variable del grupo, así que se materializan enteros aquí, igual
+ * que ya le pasa a LHS en `engine/executor/entradas.ts`. Las variables sin
+ * correlación declarada quedan como definiciones perezosas — el ejecutor por
+ * bloques decide si puede generarlas por tramos (Monte Carlo) o no (LHS).
+ */
+import { construirDesdeDescriptor } from '../distributions/index.ts';
+import type { DefinicionEntrada } from '../executor/entradas.ts';
+import { correlacionarImanConover, muestrearLHS, muestrearMonteCarlo } from '../sampling/index.ts';
+import { agruparCorrelaciones } from './correlaciones.ts';
+import { toDescriptor } from './distributionSchema.ts';
+import type { EntradaRiskModel, ModeloRiesgo } from './riskModel.ts';
+
+export type ResultadoPreparacion =
+  | { ok: true; entradas: DefinicionEntrada[] }
+  | { ok: false; errores: string[] };
+
+export function prepararEntradas(
+  modelo: ModeloRiesgo,
+  resolverRef: (ref: string) => string,
+  seed: number,
+): ResultadoPreparacion {
+  const agrupacion = agruparCorrelaciones(modelo.inputs);
+  if (!agrupacion.ok) return agrupacion;
+
+  const n = modelo.settings.iterations;
+  const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
+  const enGrupo = new Set(agrupacion.grupos.flatMap((g) => g.ids));
+  const definiciones: DefinicionEntrada[] = [];
+
+  for (const entrada of modelo.inputs) {
+    if (enGrupo.has(entrada.id)) continue;
+    definiciones.push({
+      tipo: 'distribucion',
+      clave: resolverRef(entrada.ref),
+      id: entrada.id,
+      distribucion: toDescriptor(entrada.dist),
+      metodo: modelo.settings.sampling,
+    });
+  }
+
+  for (const grupo of agrupacion.grupos) {
+    const buffers = grupo.ids.map((id) => {
+      const entrada = porId.get(id) as EntradaRiskModel;
+      const dist = construirDesdeDescriptor(toDescriptor(entrada.dist));
+      return modelo.settings.sampling === 'lhs'
+        ? muestrearLHS(dist, id, seed, n)
+        : muestrearMonteCarlo(dist, id, seed, n);
+    });
+
+    const correlacionados = correlacionarImanConover(buffers, grupo.matriz, seed, grupo.ids.join('|'));
+
+    grupo.ids.forEach((id, i) => {
+      const entrada = porId.get(id) as EntradaRiskModel;
+      definiciones.push({
+        tipo: 'buffer',
+        clave: resolverRef(entrada.ref),
+        buffer: correlacionados[i] as Float64Array,
+      });
+    });
+  }
+
+  return { ok: true, entradas: definiciones };
+}

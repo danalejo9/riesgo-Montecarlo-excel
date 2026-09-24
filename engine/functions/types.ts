@@ -1,59 +1,90 @@
 /**
- * Modelo de valores del motor vectorizado — subconjunto numérico (WIP).
+ * La interfaz entre el compilador y el registro de funciones.
  *
- * Cada celda del modelo, evaluada sobre las N iteraciones de la simulación, es
- * un `Buffer`: un `Float64Array` de longitud N. `Buffer[i]` es el valor de esa
- * celda en la iteración `i`. Esto es literalmente la vectorización descrita en
- * Fase 2 §3: en vez de recorrer las N iteraciones y calcular la celda en cada
- * una, se calculan sus N valores de una vez con un bucle plano sobre memoria
- * contigua.
+ * Un `Argumento` es lo que el evaluador le pasa a una función de Excel. Lleva
+ * una lista de columnas —una si es una celda o una expresión, varias si es un
+ * rango como `A1:A9`— y, **crucialmente**, si vino de un rango o no.
  *
- * Un argumento de función (`Arg`) es una lista de buffers, no uno solo, porque
- * un argumento puede ser una celda (una lista de un elemento) o un rango
- * (`A1:A9`, una lista de nueve). Esto es lo que hace que `SUM(A1:A9)` y
- * `SUM(A1,A2,...,A9)` compilen exactamente igual: al aplanar los argumentos no
- * hay diferencia entre "un rango de nueve celdas" y "nueve celdas sueltas".
+ * Esa bandera no es un detalle de implementación: cambia el resultado. Excel
+ * trata el mismo valor de forma distinta según cómo llegue:
  *
- * ---
+ * ```
+ * SUMA(VERDADERO)   -> 1     (argumento directo: el lógico cuenta)
+ * SUMA(A1:A2)       -> 0     (con A1=VERDADERO, A2 vacía: en un rango se ignora)
+ * SUMA("5")         -> 5     (texto numérico directo: se convierte)
+ * SUMA(A1:A2)       -> 0     (con A1="5": dentro de un rango, el texto se ignora)
+ * ```
  *
- * **Alcance deliberado de este archivo, y lo que falta (no descartado, aplazado):**
- *
- * Excel tiene cinco tipos de valor por celda: número, texto, booleano, error y
- * vacío. Esta primera versión del registro de funciones **solo modela
- * números**. No es un descuido: introducir el canal de texto/booleano/error/
- * vacío es una decisión de diseño con consecuencias en todo el motor (cada
- * función tiene que decidir qué hacer con un texto en un argumento numérico,
- * cómo se propaga un error, qué cuenta como "vacío" para COUNT vs COUNTA) y
- * merece su propio commit, no colarse aquí.
- *
- * Consecuencia práctica: ninguna función de este archivo debe declararse
- * "soportada" a efectos de la batería de fidelidad de Fase 2 §11.3 hasta que
- * ese canal exista y sus casos límite (texto en SUMA, argumento vacío,
- * división por cero) tengan su fila en el libro de referencia. Lo que hay
- * aquí es la base aritmética correcta; la fidelidad completa es un paso más.
+ * El modelo anterior aplanaba rangos y argumentos sueltos por igual, así que
+ * no podía reproducir esa diferencia. Ahora se conserva.
  */
 
-/** Un valor por iteración de simulación, para una única celda. */
-export type Buffer = Float64Array;
+import type { Columna } from '../values/columna.ts';
 
-/** Un argumento de función: una celda es un array de 1; un rango, de N. */
-export type Arg = Buffer[];
+/**
+ * Filas y columnas de un rango.
+ *
+ * Hace falta porque las funciones de búsqueda operan sobre la **rejilla**, no
+ * sobre una lista: `BUSCARV(x; A1:D9; 3)` necesita saber que la tabla tiene
+ * cuatro columnas para poder ir a la tercera. Los reductores (`SUMA`,
+ * `PROMEDIO`) no la usan: para ellos un rango sí es una lista.
+ */
+export interface FormaRango {
+  filas: number;
+  cols: number;
+}
 
-/** Firma común de toda función de Nivel 0. `n` es el número de iteraciones. */
-export type FuncionNivel0 = (args: Arg[], n: number) => Buffer;
+export interface Argumento {
+  /** Una columna si es celda o expresión; tantas como celdas si es un rango. */
+  columnas: Columna[];
+  /** Si vino de una referencia de rango. Ver el docstring del módulo. */
+  esRango: boolean;
+  /** Dimensiones, si vino de un rango. `columnas` va ordenado por columnas. */
+  forma?: FormaRango;
+  /**
+   * El hueco de `SUMA(A1;;B1)` o de `BUSCARX(x;a;b;;-1)`: un argumento que el
+   * usuario **no escribió**.
+   *
+   * Llega como el número 0, porque eso es lo que Excel hace con un hueco en
+   * casi todas partes. Pero en unas pocas funciones "no lo escribí" y "escribí
+   * 0" significan cosas distintas: el cuarto argumento de `BUSCARX` es el
+   * valor a devolver si no encuentra nada, y omitirlo pide un `#N/A`, no un
+   * cero. Sin esta marca las dos cosas son indistinguibles.
+   */
+  omitido?: boolean;
+}
 
-/** Aplana los argumentos en una única lista de buffers, en orden de aparición. */
-export function aplanar(args: Arg[]): Buffer[] {
-  const out: Buffer[] = [];
-  for (const arg of args) for (const b of arg) out.push(b);
+/**
+ * La celda `(fila, col)` de un rango, ambas empezando en 0.
+ *
+ * El aplanado es **por columnas** —así lo recorre el evaluador—, de modo que
+ * la celda de la fila `f` y la columna `c` está en la posición `c * filas + f`.
+ * Equivocar el orden da una tabla transpuesta y resultados plausibles pero
+ * falsos, que es la peor clase de error.
+ */
+export function celdaEn(arg: Argumento, fila: number, col: number): Columna | undefined {
+  const forma = arg.forma;
+  if (!forma) return undefined;
+  if (fila < 0 || col < 0 || fila >= forma.filas || col >= forma.cols) return undefined;
+  return arg.columnas[col * forma.filas + fila];
+}
+
+/** Firma común de toda función del registro. `n` es el número de iteraciones. */
+export type FuncionExcel = (args: Argumento[], n: number) => Columna;
+
+/** Envuelve una columna como argumento suelto (celda o expresión). */
+export function argValor(c: Columna, omitido = false): Argumento {
+  return omitido ? { columnas: [c], esRango: false, omitido } : { columnas: [c], esRango: false };
+}
+
+/** Envuelve las columnas de un rango como un único argumento. */
+export function argRango(columnas: Columna[], forma?: FormaRango): Argumento {
+  return { columnas, esRango: true, forma: forma ?? { filas: columnas.length, cols: 1 } };
+}
+
+/** Todas las columnas de todos los argumentos, en orden de aparición. */
+export function aplanar(args: Argumento[]): Columna[] {
+  const out: Columna[] = [];
+  for (const a of args) for (const c of a.columnas) out.push(c);
   return out;
-}
-
-export function nuevoBuffer(n: number): Buffer {
-  return new Float64Array(n);
-}
-
-/** Envuelve un único buffer como argumento (para tests y para constantes). */
-export function celda(b: Buffer): Arg {
-  return [b];
 }

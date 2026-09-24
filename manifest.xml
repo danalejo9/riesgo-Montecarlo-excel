@@ -1,370 +1,136 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Manifiesto del complemento — reescrito en E3.
+
+  Sustituye al heredado, que nunca llegó a funcionar por los tres defectos que
+  identificó la auditoría (§5 de FASE1_AUDITORIA_TECNICA.md):
+
+    1. El `ExtensionPoint` de funciones personalizadas estaba dentro de
+       `<DesktopFormFactor>`, donde Excel para Windows no lo lee.
+    2. Faltaba `<Requirements>`, así que Excel no podía decidir si el
+       complemento era compatible antes de cargarlo.
+    3. `Functions.Script.Url` apuntaba a un archivo que solo registraba un
+       stub, no a las funciones reales.
+
+  **Aquí no se declara ninguna función personalizada todavía**, y es
+  deliberado: declarar `RISK.*` apuntando a un `functions.js` que aún no
+  existe reproduciría el defecto 3 en otra forma. Las funciones entran cuando
+  estén escritas, con su `ExtensionPoint` en `<AllFormFactors>` y sus
+  `<Requirements>` de `CustomFunctionsRuntime`. Por ahora, solo el panel.
+
+  El Id es nuevo a propósito: el del heredado puede estar en la caché de
+  Office de la máquina del usuario, y reutilizarlo mezclaría los dos
+  complementos.
+-->
 <OfficeApp
           xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
           xsi:type="TaskPaneApp">
-  <Id>b5137d5a-4379-4060-a606-6bfe4772719c</Id>
-  <Version>1.0.0.9</Version>
-  <ProviderName>MonteCarloRisk</ProviderName>
+
+  <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
+  <Version>0.1.0.0</Version>
+  <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
-  <DisplayName DefaultValue="Simulación Monte Carlo (Riesgo)" />
-  <Description DefaultValue="Analiza el riesgo e incertidumbre en tus hojas de cálculo con simulaciones Monte Carlo interactivas." />
+  <DisplayName DefaultValue="Riesgo Monte Carlo" />
+  <Description DefaultValue="Análisis de sensibilidad, incertidumbre y riesgo sobre modelos de Excel. Todo el cálculo es local: los datos del libro no salen del equipo." />
+
   <IconUrl DefaultValue="https://localhost:9090/icon-32.png" />
   <HighResolutionIconUrl DefaultValue="https://localhost:9090/icon-80.png" />
-  <SupportUrl DefaultValue="https://github.com" />
+  <SupportUrl DefaultValue="https://github.com/danalejo9/riesgo-Montecarlo-excel" />
+
   <AppDomains>
     <AppDomain>https://localhost:9090</AppDomain>
   </AppDomains>
+
   <Hosts>
     <Host Name="Workbook" />
   </Hosts>
+
+  <!--
+    Defecto 2 de la auditoría. Sin esto Excel no sabe qué necesita el
+    complemento. ExcelApi 1.1 es el mínimo real del panel de diagnóstico; irá
+    subiendo conforme el panel use APIs más nuevas, y ese número es justo lo
+    que decide en qué versiones de Excel y de Mac puede instalarse.
+  -->
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="ExcelApi" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://localhost:9090/index.html" />
+    <SourceLocation DefaultValue="https://localhost:9090/taskpane.html" />
   </DefaultSettings>
+
   <Permissions>ReadWriteDocument</Permissions>
+
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Hosts>
       <Host xsi:type="Workbook">
         <DesktopFormFactor>
           <GetStarted>
-            <Title resid="GetStarted.Title"/>
-            <Description resid="GetStarted.Description"/>
-            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+            <Title resid="GetStarted.Title" />
+            <Description resid="GetStarted.Description" />
+            <LearnMoreUrl resid="Soporte.Url" />
           </GetStarted>
-          <FunctionFile resid="Commands.Url" />
-          <ExtensionPoint xsi:type="CustomFunctions">
-            <Script>
-              <SourceLocation resid="Functions.Script.Url"/>
-            </Script>
-            <Page>
-              <SourceLocation resid="Functions.Page.Url"/>
-            </Page>
-            <Metadata>
-              <SourceLocation resid="Functions.Metadata.Url"/>
-            </Metadata>
-            <Namespace resid="Functions.Namespace"/>
-          </ExtensionPoint>
+
+          <FunctionFile resid="Comandos.Url" />
+
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
-            <CustomTab id="RiskTab">
-
-
-              <Group id="MCGroupConfig">
-                <Label resid="MCGroupConfig.Label" />
+            <CustomTab id="PestanaRiesgo">
+              <Group id="GrupoPrincipal">
+                <Label resid="GrupoPrincipal.Label" />
                 <Icon>
-                  <bt:Image size="16" resid="IconConfig.16x16" />
-                  <bt:Image size="32" resid="IconConfig.32x32" />
-                  <bt:Image size="80" resid="IconConfig.80x80" />
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
                 </Icon>
-                <Control xsi:type="Button" id="btnConfig">
-                  <Label resid="btnConfig.Label" />
+                <Control xsi:type="Button" id="btnAbrirPanel">
+                  <Label resid="btnAbrirPanel.Label" />
                   <Supertip>
-                    <Title resid="btnConfig.Label" />
-                    <Description resid="btnConfig.Tooltip" />
+                    <Title resid="btnAbrirPanel.Label" />
+                    <Description resid="btnAbrirPanel.Tooltip" />
                   </Supertip>
                   <Icon>
-                    <bt:Image size="16" resid="IconConfig.16x16" />
-                    <bt:Image size="32" resid="IconConfig.32x32" />
-                    <bt:Image size="80" resid="IconConfig.80x80" />
+                    <bt:Image size="16" resid="Icono.16" />
+                    <bt:Image size="32" resid="Icono.32" />
+                    <bt:Image size="80" resid="Icono.80" />
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneConfig.Url" />
-                  </Action>
-                </Control>
-                
-                <Control xsi:type="Button" id="btnInputQuick">
-                  <Label resid="btnInputQuick.Label" />
-                  <Supertip>
-                    <Title resid="btnInputQuick.Label" />
-                    <Description resid="btnInputQuick.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconInput.16x16" />
-                    <bt:Image size="32" resid="IconInput.32x32" />
-                    <bt:Image size="80" resid="IconInput.80x80" />
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>addInputQuick</FunctionName>
-                  </Action>
-                </Control>
-                
-                <Control xsi:type="Button" id="btnOutputQuick">
-                  <Label resid="btnOutputQuick.Label" />
-                  <Supertip>
-                    <Title resid="btnOutputQuick.Label" />
-                    <Description resid="btnOutputQuick.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconOutput.16x16" />
-                    <bt:Image size="32" resid="IconOutput.32x32" />
-                    <bt:Image size="80" resid="IconOutput.80x80" />
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>addOutputQuick</FunctionName>
+                    <TaskpaneId>PanelRiesgo</TaskpaneId>
+                    <SourceLocation resid="Panel.Url" />
                   </Action>
                 </Control>
               </Group>
-
-              <Group id="MCGroupSimulate">
-                <Label resid="MCGroupSimulate.Label" />
-                <Icon>
-                  <bt:Image size="16" resid="IconSimulate.16x16" />
-                  <bt:Image size="32" resid="IconSimulate.32x32" />
-                  <bt:Image size="80" resid="IconSimulate.80x80" />
-                </Icon>
-                <Control xsi:type="Button" id="btnSimulate">
-                  <Label resid="btnSimulate.Label" />
-                  <Supertip>
-                    <Title resid="btnSimulate.Label" />
-                    <Description resid="btnSimulate.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconSimulate.16x16" />
-                    <bt:Image size="32" resid="IconSimulate.32x32" />
-                    <bt:Image size="80" resid="IconSimulate.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneSimulate.Url" />
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="btnSettings">
-                  <Label resid="btnSettings.Label" />
-                  <Supertip>
-                    <Title resid="btnSettings.Label" />
-                    <Description resid="btnSettings.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconSettings.16x16" />
-                    <bt:Image size="32" resid="IconSettings.32x32" />
-                    <bt:Image size="80" resid="IconSettings.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneSettings.Url" />
-                  </Action>
-                </Control>
-              </Group>
-
-              <Group id="MCGroupResults">
-                <Label resid="MCGroupResults.Label" />
-                <Icon>
-                  <bt:Image size="16" resid="IconResults.16x16" />
-                  <bt:Image size="32" resid="IconResults.32x32" />
-                  <bt:Image size="80" resid="IconResults.80x80" />
-                </Icon>
-                <Control xsi:type="Button" id="btnResults">
-                  <Label resid="btnResults.Label" />
-                  <Supertip>
-                    <Title resid="btnResults.Label" />
-                    <Description resid="btnResults.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconResults.16x16" />
-                    <bt:Image size="32" resid="IconResults.32x32" />
-                    <bt:Image size="80" resid="IconResults.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneResults.Url" />
-                  </Action>
-                </Control>
-              </Group>
-
-              <Group id="MCGroupFitting">
-                <Label resid="MCGroupFitting.Label" />
-                <Icon>
-                  <bt:Image size="16" resid="IconSettings.16x16" />
-                  <bt:Image size="32" resid="IconSettings.32x32" />
-                  <bt:Image size="80" resid="IconSettings.80x80" />
-                </Icon>
-                <Control xsi:type="Button" id="btnNewFit">
-                  <Label resid="btnNewFit.Label" />
-                  <Supertip>
-                    <Title resid="btnNewFit.Label" />
-                    <Description resid="btnNewFit.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconConfig.16x16" />
-                    <bt:Image size="32" resid="IconConfig.32x32" />
-                    <bt:Image size="80" resid="IconConfig.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneFitting.Url" />
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="btnHighlight">
-                  <Label resid="btnHighlight.Label" />
-                  <Supertip>
-                    <Title resid="btnHighlight.Label" />
-                    <Description resid="btnHighlight.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconSimulate.16x16" />
-                    <bt:Image size="32" resid="IconSimulate.32x32" />
-                    <bt:Image size="80" resid="IconSimulate.80x80" />
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>highlightAllCells</FunctionName>
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="btnReportInputs">
-                  <Label resid="btnReportInputs.Label" />
-                  <Supertip>
-                    <Title resid="btnReportInputs.Label" />
-                    <Description resid="btnReportInputs.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconInput.16x16" />
-                    <bt:Image size="32" resid="IconInput.32x32" />
-                    <bt:Image size="80" resid="IconInput.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneReportInputs.Url" />
-                  </Action>
-                </Control>
-                <Control xsi:type="Button" id="btnReportOutputs">
-                  <Label resid="btnReportOutputs.Label" />
-                  <Supertip>
-                    <Title resid="btnReportOutputs.Label" />
-                    <Description resid="btnReportOutputs.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconOutput.16x16" />
-                    <bt:Image size="32" resid="IconOutput.32x32" />
-                    <bt:Image size="80" resid="IconOutput.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneReportOutputs.Url" />
-                  </Action>
-                </Control>
-              </Group>
-
-              <Group id="MCGroupHelp">
-                <Label resid="MCGroupHelp.Label" />
-                <Icon>
-                  <bt:Image size="16" resid="IconSettings.16x16" />
-                  <bt:Image size="32" resid="IconSettings.32x32" />
-                  <bt:Image size="80" resid="IconSettings.80x80" />
-                </Icon>
-                <Control xsi:type="Button" id="btnHelp">
-                  <Label resid="btnHelp.Label" />
-                  <Supertip>
-                    <Title resid="btnHelp.Label" />
-                    <Description resid="btnHelp.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconSimulate.16x16" />
-                    <bt:Image size="32" resid="IconSimulate.32x32" />
-                    <bt:Image size="80" resid="IconSimulate.80x80" />
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>MCTaskpane</TaskpaneId>
-                    <SourceLocation resid="TaskpaneHelp.Url" />
-                  </Action>
-                </Control>
-              </Group>
-
-              <Label resid="RiskTab.Label" />
+              <Label resid="PestanaRiesgo.Label" />
             </CustomTab>
           </ExtensionPoint>
         </DesktopFormFactor>
       </Host>
     </Hosts>
+
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:9090/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:9090/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:9090/icon-80.png"/>
-        
-        <bt:Image id="IconInput.16x16" DefaultValue="https://localhost:9090/icon-input.png"/>
-        <bt:Image id="IconInput.32x32" DefaultValue="https://localhost:9090/icon-input.png"/>
-        <bt:Image id="IconInput.80x80" DefaultValue="https://localhost:9090/icon-input.png"/>
-        
-        <bt:Image id="IconOutput.16x16" DefaultValue="https://localhost:9090/icon-output.png"/>
-        <bt:Image id="IconOutput.32x32" DefaultValue="https://localhost:9090/icon-output.png"/>
-        <bt:Image id="IconOutput.80x80" DefaultValue="https://localhost:9090/icon-output.png"/>
-        
-        <bt:Image id="IconConfig.16x16" DefaultValue="https://localhost:9090/icon-config-16.png"/>
-        <bt:Image id="IconConfig.32x32" DefaultValue="https://localhost:9090/icon-config-32.png"/>
-        <bt:Image id="IconConfig.80x80" DefaultValue="https://localhost:9090/icon-config-80.png"/>
-        
-        <bt:Image id="IconSimulate.16x16" DefaultValue="https://localhost:9090/icon-simulate-16.png"/>
-        <bt:Image id="IconSimulate.32x32" DefaultValue="https://localhost:9090/icon-simulate-32.png"/>
-        <bt:Image id="IconSimulate.80x80" DefaultValue="https://localhost:9090/icon-simulate-80.png"/>
-        
-        <bt:Image id="IconSettings.16x16" DefaultValue="https://localhost:9090/icon-settings-16.png"/>
-        <bt:Image id="IconSettings.32x32" DefaultValue="https://localhost:9090/icon-settings-32.png"/>
-        <bt:Image id="IconSettings.80x80" DefaultValue="https://localhost:9090/icon-settings-80.png"/>
-        
-        <bt:Image id="IconResults.16x16" DefaultValue="https://localhost:9090/icon-results-16.png"/>
-        <bt:Image id="IconResults.32x32" DefaultValue="https://localhost:9090/icon-results-32.png"/>
-        <bt:Image id="IconResults.80x80" DefaultValue="https://localhost:9090/icon-results-80.png"/>
+        <bt:Image id="Icono.16" DefaultValue="https://localhost:9090/icon-16.png" />
+        <bt:Image id="Icono.32" DefaultValue="https://localhost:9090/icon-32.png" />
+        <bt:Image id="Icono.80" DefaultValue="https://localhost:9090/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com" />
-        <bt:Url id="Commands.Url" DefaultValue="https://localhost:9090/commands.html" />
-        <bt:Url id="TaskpaneConfig.Url" DefaultValue="https://localhost:9090/index.html?tab=config" />
-        <bt:Url id="TaskpaneSimulate.Url" DefaultValue="https://localhost:9090/index.html?tab=simulate" />
-        <bt:Url id="TaskpaneResults.Url" DefaultValue="https://localhost:9090/index.html?tab=results" />
-        <bt:Url id="TaskpaneSettings.Url" DefaultValue="https://localhost:9090/index.html?tab=settings" />
-        <bt:Url id="TaskpaneHelp.Url" DefaultValue="https://localhost:9090/index.html?tab=help" />
-        <bt:Url id="TaskpaneFitting.Url" DefaultValue="https://localhost:9090/index.html?tab=fitting" />
-        <bt:Url id="TaskpaneReportInputs.Url" DefaultValue="https://localhost:9090/index.html?tab=reportInputs" />
-        <bt:Url id="TaskpaneReportOutputs.Url" DefaultValue="https://localhost:9090/index.html?tab=reportOutputs" />
-        <bt:Url id="Functions.Script.Url" DefaultValue="https://localhost:9090/functions.js" />
-        <bt:Url id="Functions.Page.Url" DefaultValue="https://localhost:9090/functions.html" />
-        <bt:Url id="Functions.Metadata.Url" DefaultValue="https://localhost:9090/functions.json" />
+        <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
+        <bt:Url id="Comandos.Url" DefaultValue="https://localhost:9090/commands.html" />
+        <bt:Url id="Soporte.Url" DefaultValue="https://github.com/danalejo9/riesgo-Montecarlo-excel" />
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="Functions.Namespace" DefaultValue="RIESGO" />
-        <bt:String id="GetStarted.Title" DefaultValue="Análisis de Riesgo" />
-        <bt:String id="RiskTab.Label" DefaultValue="Riesgo Monte Carlo" />
-        
-        <bt:String id="MCGroupQuick.Label" DefaultValue="Inyección Rápida" />
-        <bt:String id="btnInputQuick.Label" DefaultValue="Definir Entrada" />
-        <bt:String id="btnOutputQuick.Label" DefaultValue="Definir Salida" />
-
-        <bt:String id="MCGroupConfig.Label" DefaultValue="Modelo" />
-        <bt:String id="btnConfig.Label" DefaultValue="Variables" />
-        
-        <bt:String id="MCGroupSimulate.Label" DefaultValue="Simulación" />
-        <bt:String id="btnSimulate.Label" DefaultValue="¡Simular!" />
-        <bt:String id="btnSettings.Label" DefaultValue="Ajustes Globales" />
-        
-        <bt:String id="MCGroupResults.Label" DefaultValue="Análisis" />
-        <bt:String id="btnResults.Label" DefaultValue="Resultados" />
-        
-        <bt:String id="MCGroupFitting.Label" DefaultValue="Herramientas" />
-        <bt:String id="menuFitting.Label" DefaultValue="Ajuste y Datos" />
-        <bt:String id="btnNewFit.Label" DefaultValue="Nuevo Ajuste de Datos" />
-        <bt:String id="btnHighlight.Label" DefaultValue="Resaltar Entradas/Salidas" />
-        <bt:String id="btnReportInputs.Label" DefaultValue="Ver Entradas" />
-        <bt:String id="btnReportOutputs.Label" DefaultValue="Ver Salidas" />
-        
-        <bt:String id="MCGroupHelp.Label" DefaultValue="Ayuda" />
-        <bt:String id="btnHelp.Label" DefaultValue="Ver Ayuda" />
+        <bt:String id="PestanaRiesgo.Label" DefaultValue="Riesgo" />
+        <bt:String id="GrupoPrincipal.Label" DefaultValue="Monte Carlo" />
+        <bt:String id="btnAbrirPanel.Label" DefaultValue="Abrir panel" />
+        <bt:String id="GetStarted.Title" DefaultValue="Riesgo Monte Carlo" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Navega por la pestaña Riesgo Monte Carlo para usar el complemento." />
-        <bt:String id="btnInputQuick.Tooltip" DefaultValue="Configura la distribución en la celda activa sin abrir el panel." />
-        <bt:String id="btnOutputQuick.Tooltip" DefaultValue="Marca la celda activa como salida de la simulación al instante." />
-        <bt:String id="btnConfig.Tooltip" DefaultValue="Define variables de entrada y salida" />
-        <bt:String id="btnSimulate.Tooltip" DefaultValue="Abre el panel para ejecutar la simulación" />
-        <bt:String id="btnSettings.Tooltip" DefaultValue="Configura iteraciones y otros ajustes" />
-        <bt:String id="btnResults.Tooltip" DefaultValue="Visualiza los gráficos y percentiles" />
-        
-        <bt:String id="menuFitting.Tooltip" DefaultValue="Herramientas para ajustar datos históricos y gestionar celdas de entrada/salida." />
-        <bt:String id="btnNewFit.Tooltip" DefaultValue="Abre la herramienta para analizar un set de datos e inferir su distribución." />
-        <bt:String id="btnHighlight.Tooltip" DefaultValue="Colorea temporalmente las celdas de entrada y salida para identificarlas visualmente." />
-        <bt:String id="btnReportInputs.Tooltip" DefaultValue="Abre el panel mostrando todas las variables de entrada." />
-        <bt:String id="btnReportOutputs.Tooltip" DefaultValue="Abre el panel mostrando todas las variables de salida." />
-        <bt:String id="btnHelp.Tooltip" DefaultValue="Abre la documentación y listado de funciones disponibles." />
+        <bt:String id="btnAbrirPanel.Tooltip" DefaultValue="Abre el panel de análisis de riesgo." />
+        <bt:String id="GetStarted.Description" DefaultValue="Usa la pestaña Riesgo para abrir el panel y analizar tu modelo." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

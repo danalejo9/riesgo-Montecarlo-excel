@@ -21,6 +21,10 @@ export const NIVEL_0 = new Set([
   'SUMPRODUCT', 'SUMSQ', 'MEDIAN', 'STDEV', 'STDEV.S', 'STDEV.P', 'VAR.S', 'VAR.P',
   'PERCENTILE', 'PERCENTILE.INC', 'QUARTILE', 'QUARTILE.INC', 'LARGE', 'SMALL',
   'TRUE', 'FALSE', 'NA',
+  // Funciones de tipo: dependen del canal de valores, que ya existe. Estaban
+  // en el Nivel 2 mientras el motor solo sabía de números y no podía
+  // distinguir una celda vacía de un cero.
+  'ISBLANK', 'ISERROR', 'ISERR', 'ISNA', 'ISNUMBER', 'ISTEXT', 'ISNONTEXT', 'ISLOGICAL',
 ]);
 
 /** Nivel 1 — necesario para presupuestos reales. Búsquedas, financieras, fechas. */
@@ -41,7 +45,7 @@ export const NIVEL_2 = new Set([
   'SUBTOTAL', 'AGGREGATE', 'GETPIVOTDATA',
   'FILTER', 'UNIQUE', 'SORT', 'SORTBY', 'SEQUENCE', 'TEXTSPLIT', 'LET', 'LAMBDA',
   'TRANSPOSE', 'MMULT', 'MINVERSE',
-  'ISBLANK', 'ISERROR', 'ISNUMBER', 'ISTEXT', 'ISNA', 'TYPE', 'N', 'T',
+  'TYPE', 'N', 'T',
   'HYPERLINK', 'FORMULATEXT',
 ]);
 

@@ -7,6 +7,7 @@
  *   3. ¿De qué tamaño es el problema? (para dimensionar el motor, D11)
  */
 
+import { funcionSoportada } from '../engine/functions/registry.ts';
 import {
   clasificar,
   esFuncionPropia,
@@ -27,6 +28,14 @@ export interface UsoFuncion {
   ejemplo: string;
   /** Es una funcion del propio complemento (`RISK.*`): declara una entrada. */
   propia: boolean;
+  /**
+   * Si el motor la sabe evaluar **hoy**, consultado al registro de verdad.
+   *
+   * No es lo mismo que estar en el catálogo: el catálogo es el plan (§4.2 de
+   * Fase 2) y el registro es la implementación. Confundirlos hace que el
+   * informe prometa velocidad sobre un libro que el motor no puede correr.
+   */
+  implementada: boolean;
 }
 
 export interface Informe {
@@ -45,7 +54,13 @@ export interface Informe {
   coberturaN0N1: number;
 
   funciones: UsoFuncion[];
+  /** Fuera del catálogo previsto: no correrán sin cambiar el roadmap. */
   bloqueantes: UsoFuncion[];
+  /** Dentro del catálogo pero aún sin implementar: correrán cuando se hagan. */
+  pendientes: UsoFuncion[];
+
+  /** Dónde están las fórmulas matriciales, para poder nombrarlas en el informe. */
+  celdasMatriciales: string[];
 
   celdasVolatiles: number;
   referenciasExternas: number;
@@ -94,10 +109,28 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
 
       const previo = usos.get(nombre);
       if (previo) previo.veces++;
-      else usos.set(nombre, { nombre, nivel: propia ? 'n0' : nivel, veces: 1, ejemplo: origen, propia });
+      else {
+        usos.set(nombre, {
+          nombre,
+          nivel: propia ? 'n0' : nivel,
+          veces: 1,
+          ejemplo: origen,
+          propia,
+          // Una función propia (`RISK.*`) declara una entrada; no la evalúa el
+          // registro, así que no tiene sentido preguntarle si la implementa.
+          implementada: propia || funcionSoportada(nombre),
+        });
+      }
 
       if (esVolatil(nombre)) volatil = true;
-      peor = peorNivel(peor, propia ? 'propia' : nivel);
+      // El nivel del catálogo dice **qué clase de función es**; lo que decide
+      // si una fórmula bloquea es si el motor sabe evaluarla. Una función de
+      // Nivel 2 ya implementada cuenta como cubierta, igual que una de Nivel
+      // 1: si no, el escáner seguiría llamando bloqueante a `IZQUIERDA` el día
+      // después de implementarla, que es la clase de mentira optimista al
+      // revés que este archivo existe para evitar.
+      const efectivo = nivel === 'n2' && funcionSoportada(nombre) ? 'n1' : nivel;
+      peor = peorNivel(peor, propia ? 'propia' : efectivo);
     }
 
     if (lectura.funciones.length === 0) peor = 'n0';
@@ -155,12 +188,21 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
     formulas: total,
     formulasCompartidas: libro.formulas.filter((f) => f.compartida).length,
     formulasMatriciales: libro.formulas.filter((f) => f.matricial).length,
+    celdasMatriciales: libro.formulas
+      .filter((f) => f.matricial)
+      .slice(0, 25)
+      .map((f) => `${f.hoja}!${f.ref}`),
     formulasPorNivel,
     coberturaN0: porcentaje(cubiertasN0, total),
     coberturaN0N1: porcentaje(cubiertasN0N1, total),
     funciones,
     bloqueantes: funciones.filter(
-      (f) => f.nivel === 'n2' || f.nivel === 'no-soportada' || f.nivel === 'desconocida',
+      (f) => !f.implementada && (f.nivel === 'n2' || f.nivel === 'no-soportada' || f.nivel === 'desconocida'),
+    ),
+    // Previstas por el catálogo pero todavía sin implementar: el libro correrá
+    // en el motor rápido en cuanto existan, pero hoy no.
+    pendientes: funciones.filter(
+      (f) => !f.implementada && (f.nivel === 'n0' || f.nivel === 'n1'),
     ),
     celdasVolatiles,
     referenciasExternas,

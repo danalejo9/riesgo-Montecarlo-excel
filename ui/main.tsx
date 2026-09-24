@@ -1,0 +1,43 @@
+/**
+ * Arranque del panel.
+ *
+ * `Office.onReady` es obligatorio antes de tocar nada de Office.js, y hay que
+ * esperarlo **antes** de montar React: si un componente llama a
+ * `Office.context` mientras Office todavía no ha terminado de inicializarse,
+ * falla con un error que no dice nada útil.
+ *
+ * Si el panel se abriera fuera de Office —el navegador, un test— `Office`
+ * sencillamente no existe. En vez de quedarse en blanco, se avisa: durante el
+ * desarrollo es fácil abrir `https://localhost:9090/taskpane.html` a mano y
+ * perder un rato preguntándose por qué no funciona.
+ */
+
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import { Panel } from './Panel.tsx';
+import './estilos.css';
+
+const raiz = document.getElementById('raiz');
+
+function montar(contenido: React.ReactNode): void {
+  if (!raiz) throw new Error('Falta el elemento #raiz en taskpane.html');
+  createRoot(raiz).render(<StrictMode>{contenido}</StrictMode>);
+}
+
+if (typeof Office === 'undefined') {
+  montar(
+    <main className="aviso">
+      <h1>Fuera de Excel</h1>
+      <p>
+        Esta página es el panel de un complemento de Excel y necesita
+        ejecutarse dentro de Excel para funcionar. Abierta directamente en el
+        navegador no tiene con quién hablar.
+      </p>
+    </main>,
+  );
+} else {
+  void Office.onReady(() => {
+    montar(<Panel />);
+  });
+}
