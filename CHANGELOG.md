@@ -5,6 +5,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### LET (2026-09-24)
+
+**Añadido**
+- **`LET`** en el motor rápido, resuelto al parsear sustituyendo cada nombre
+  por su expresión (`engine/parser/let.ts`): ni el grafo, ni la elección de
+  motor, ni los evaluadores necesitan conocerlo. Ámbitos como en Excel (cada
+  nombre ve los anteriores, un `LET` anidado redefine dentro), mayúsculas
+  indiferentes, y la forma del XML (`_xlfn.LET`, `_xlpm.x`).
+- Tope de 20.000 nodos al expandir: una cadena que crece exponencialmente va
+  al modo compatible con su motivo en vez de colgar el panel.
+- Séptima tanda de fidelidad (`fidelidad-tanda7.xlsx`, 14 casos de `LET`),
+  con el resultado del motor anotado. Pendiente de calcular en Excel.
+
+**Nivel 2**: 29/41 (queda `LAMBDA`, las matriciales dinámicas y dos que
+dependen de estructuras que no se leen).
+
 ### Los resultados se guardan en el libro (2026-09-24)
 
 **Añadido**

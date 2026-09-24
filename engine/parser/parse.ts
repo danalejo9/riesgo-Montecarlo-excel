@@ -22,6 +22,7 @@ import {
   type RefCelda,
   type RefRango,
 } from './ast.ts';
+import { expandirLet } from './let.ts';
 import { tokenizar, type Token } from './lexer.ts';
 
 export interface ErrorSintaxis {
@@ -59,7 +60,8 @@ export function parsear(formula: string): ResultadoParseo {
     const p = new Parser(tokenizar(formula));
     const ast = p.expresion(0);
     p.esperarFin();
-    return { ok: true, ast };
+    // LET se resuelve aquí, antes de que nadie vea el árbol: ver `let.ts`.
+    return { ok: true, ast: expandirLet(ast) };
   } catch (e) {
     if (e instanceof Fallo) return { ok: false, error: { mensaje: e.message, pos: e.pos } };
     throw e;

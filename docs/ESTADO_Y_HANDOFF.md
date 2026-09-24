@@ -885,7 +885,8 @@ Vienen de sus instrucciones maestras y siguen vigentes:
    el panel abierto, hilos (¿"3 hilos" en Cómo se calculó?) y resultados tras
    cerrar y reabrir (recargar el manifiesto: `npm run stop` y `npm start`).
 2. **Las tres fórmulas matriciales de `Caso_practico.xlsx`** (el usuario las
-   manda) y **`LET`**.
+   manda) y **la séptima tanda (`LET`)** de vuelta de Excel. `LET` ya está
+   hecho (sustitución al parsear, `engine/parser/let.ts`).
 3. **Convergencia**, **comparación de escenarios**, **ajuste de distribuciones**.
 4. **`DESREF` con desplazamientos constantes**.
 

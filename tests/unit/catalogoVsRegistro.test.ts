@@ -15,10 +15,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { REGISTRO } from '../../engine/functions/registry.ts';
+import { FORMAS_ESPECIALES, REGISTRO } from '../../engine/functions/registry.ts';
 import { NIVEL_0, NIVEL_1, NIVEL_2, NO_SOPORTADAS } from '../../scanner/catalog.ts';
 
-const implementadas = new Set(Object.keys(REGISTRO));
+const implementadas = new Set([...Object.keys(REGISTRO), ...FORMAS_ESPECIALES]);
 
 /**
  * Funciones que el catálogo promete y el motor todavía no tiene, con el
@@ -79,6 +79,8 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       'SUBSTITUTE', 'T', 'TEXT', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
       // Agregados que excluyen los subtotales intermedios.
       'AGGREGATE', 'SUBTOTAL',
+      // Nombres locales: se resuelven al parsear (engine/parser/let.ts).
+      'LET',
     ].sort());
   });
 
@@ -88,8 +90,9 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       // Matriciales dinámicas: devuelven varias celdas ("derraman") y el motor
       // modela una celda por valor. Necesitan otro modelo, no otra función.
       'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TEXTSPLIT', 'TRANSPOSE', 'UNIQUE',
-      // Nombres locales y funciones anónimas: necesitan ámbitos en el evaluador.
-      'LAMBDA', 'LET',
+      // Funciones anónimas: necesitan ámbitos de verdad en el evaluador (LET no,
+      // porque sin efectos secundarios se puede resolver sustituyendo).
+      'LAMBDA',
       // Dependen de estructuras que el motor no lee: tablas dinámicas y el
       // texto de las fórmulas.
       'FORMULATEXT', 'GETPIVOTDATA',

@@ -83,8 +83,16 @@ function normalizar(nombre: string): string {
   return nombre.replace(/^_xlfn\./i, '').replace(/^_xlws\./i, '').toUpperCase();
 }
 
+/**
+ * Construcciones que el motor soporta sin ser una función del registro: se
+ * resuelven al parsear y nunca llegan a evaluarse como llamada. `LET` es la
+ * única (ver `engine/parser/let.ts`). Cuentan como soportadas para el escáner.
+ */
+export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET']);
+
 export function funcionSoportada(nombre: string): boolean {
-  return Object.prototype.hasOwnProperty.call(REGISTRO, normalizar(nombre));
+  const n = normalizar(nombre);
+  return Object.prototype.hasOwnProperty.call(REGISTRO, n) || FORMAS_ESPECIALES.has(n);
 }
 
 export function obtenerFuncion(nombre: string): FuncionExcel | undefined {
