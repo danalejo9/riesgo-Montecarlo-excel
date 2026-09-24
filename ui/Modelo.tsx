@@ -31,6 +31,7 @@ import {
 import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
 import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
+import { AjusteDatos } from './AjusteDatos.tsx';
 import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
@@ -300,6 +301,10 @@ export function Modelo({
                   <EditorDistribucion
                     spec={entrada.dist}
                     alCambiar={(dist) => cambiarEntrada(entrada.id, { dist })}
+                  />
+                  <AjusteDatos
+                    decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+                    alUsar={(dist) => cambiarEntrada(entrada.id, { dist })}
                   />
                   <EditorCorrelaciones modelo={modelo} entrada={entrada} alCambiar={alCambiar} />
                 </div>

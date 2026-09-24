@@ -330,3 +330,13 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .comparacion thead th { font-weight: 600; }
 .fila-botones { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .fila-botones input { flex: 1 1 8em; min-width: 0; }
+
+/* --- Ajuste a datos --- */
+.ajuste { margin: 8px 0; padding: 8px; border: 1px solid var(--borde); border-radius: 4px; }
+.ajuste h4 { margin: 0 0 4px; font-size: 13px; }
+.ajuste textarea { width: 100%; font: inherit; font-size: 12px; background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); border-radius: 3px; padding: 4px; }
+.ajuste-tabla tr { cursor: pointer; }
+.ajuste-tabla tr.elegida { background: color-mix(in srgb, var(--acento) 10%, transparent); }
+.ajuste-tabla th[scope='row'] { color: var(--texto); }
+.parametros-ajuste { display: block; font-size: 11px; }
+.insignia { display: inline-block; font-size: 10px; padding: 0 4px; margin-right: 4px; border-radius: 3px; background: var(--acento); color: var(--fondo); }

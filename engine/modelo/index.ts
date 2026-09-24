@@ -41,3 +41,4 @@ export {
   type SalidaRiskModel,
   type UmbralRiskModel,
 } from './riskModel.ts';
+export { ajustarDistribuciones, leerDatos, type AjusteCandidato, type ResultadoAjuste } from './ajuste.ts';

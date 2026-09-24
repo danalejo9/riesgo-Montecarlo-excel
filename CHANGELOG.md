@@ -5,6 +5,23 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Ajustar una distribución a datos (2026-09-24)
+
+**Añadido**
+- En cada entrada, **"Ajustar a datos históricos…"**: se pegan los datos (una
+  columna copiada de Excel, con coma decimal) o se leen de la selección, y se
+  proponen las distribuciones que mejor los describen, de mejor a peor, con
+  un botón **Usar**.
+- Candidatas y estimación (`engine/modelo/ajuste.ts`): normal, lognormal y
+  exponencial por máxima verosimilitud; gamma (Minka); Weibull (Newton);
+  uniforme, triangular y PERT con extremos ampliados sin sesgo; beta por
+  momentos si los datos están entre 0 y 1. Solo se proponen las que admiten
+  los datos (nada positivo con datos negativos).
+- Ordenadas por **Anderson–Darling** (pesa las colas) con K–S al lado, y la
+  curva de la elegida sobre la escalera de los datos. Se dice que es una
+  ordenación, no una prueba de aceptación.
+- Parámetros redondeados a seis cifras significativas.
+
 ### Comparar escenarios (2026-09-24)
 
 **Añadido**

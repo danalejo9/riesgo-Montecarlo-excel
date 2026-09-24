@@ -887,9 +887,10 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 2. **Las tres fórmulas matriciales de `Caso_practico.xlsx`** (el usuario las
    manda) y **la séptima tanda (`LET`)** de vuelta de Excel. `LET` ya está
    hecho (sustitución al parsear, `engine/parser/let.ts`).
-3. **Ajuste de distribuciones a datos** (E7). Convergencia (`engine/stats/
-   convergencia.ts`), `LET` y comparación de escenarios (`excel/comparacion.ts`)
-   ya están.
+3. E7 completa: convergencia (`engine/stats/convergencia.ts`), escenarios
+   (`excel/comparacion.ts`) y ajuste a datos (`engine/modelo/ajuste.ts`,
+   `ui/AjusteDatos.tsx`). Siguiente bloque grande: funciones `RISK.*` en
+   celdas (E4) o matriciales dinámicas (N2).
 4. **`DESREF` con desplazamientos constantes**.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
