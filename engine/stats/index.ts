@@ -33,3 +33,4 @@ export {
   type FilaSensibilidad,
 } from './sensibilidad.ts';
 export { histogramaDeMuestra, ordenarUtiles, probabilidadUmbral } from './muestra.ts';
+export { intervaloPercentil, precisionDeSimulacion, type IntervaloPercentil, type Precision } from './convergencia.ts';

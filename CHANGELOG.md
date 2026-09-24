@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### ¿Bastan las iteraciones? (2026-09-24)
+
+**Añadido**
+- Debajo de las estadísticas de cada salida: el **margen de la media al 95 %**
+  (1,96·σ/√n), si es suficiente con un listón del 1 % y, si no, **cuántas
+  iteraciones harían falta**. Con la media cerca de cero se mide contra la
+  desviación.
+- **Intervalos al 95 % de p5 y p95**, por la binomial, sin suponer forma.
+- También en el informe volcado y en los resultados guardados.
+
 ### LET (2026-09-24)
 
 **Añadido**

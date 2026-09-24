@@ -40,6 +40,7 @@ import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import type { BinHistograma } from '../engine/stats/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
+import type { Precision } from '../engine/stats/index.ts';
 import { duracion, leerNumero, miles, numero } from './formato.ts';
 
 export function Resultados({
@@ -155,6 +156,8 @@ export function Resultados({
             <dt>Mínimo</dt><dd>{numero(salida.resumen.min)}</dd>
             <dt>Máximo</dt><dd>{numero(salida.resumen.max)}</dd>
           </dl>
+
+          {salida.precision && <PrecisionSalida precision={salida.precision} n={salida.resumen.n} />}
 
           {salida.noNumericas !== undefined && salida.noNumericas > 0 && (
             <p className="aviso-linea">
@@ -528,4 +531,34 @@ function fecha(iso: string): string {
   return Number.isNaN(d.getTime())
     ? iso
     : d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+const pct = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`;
+
+/**
+ * ¿Bastan las iteraciones? Con un símbolo y palabras, no solo color: "✓
+ * suficientes" o "! pocas, harían falta unas N". El criterio (un 1 %) se dice,
+ * para que quien tenga otro listón pueda aplicarlo con el número de al lado.
+ */
+function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) {
+  const { margenMedia, margenRelativo, iteracionesParaObjetivo, suficiente, percentiles } = precision;
+  return (
+    <div className={`precision ${suficiente ? 'bien' : 'mejorable'}`}>
+      <p>
+        <span className="precision-icono" aria-hidden="true">{suficiente ? '✓' : '!'}</span>
+        {suficiente
+          ? <>Iteraciones suficientes: la media se conoce con ±{numero(margenMedia)} ({pct(margenRelativo)}).</>
+          : <>
+              Con {miles(n)} iteraciones la media tiene un margen de ±{numero(margenMedia)} ({pct(margenRelativo)}).
+              Para bajarlo al 1 % harían falta unas {miles(iteracionesParaObjetivo)}.
+            </>}
+      </p>
+      {percentiles.length > 0 && (
+        <p className="tenue">
+          {percentiles.map((iv) => `p${Math.round(iv.p * 100)} entre ${numero(iv.inferior)} y ${numero(iv.superior)}`).join(' · ')}
+          {' '}(intervalos al 95 %)
+        </p>
+      )}
+    </div>
+  );
 }

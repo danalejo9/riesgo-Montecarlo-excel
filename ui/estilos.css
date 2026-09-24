@@ -311,3 +311,10 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .umbral-pregunta input[aria-invalid='true'] { border-color: var(--error-borde); }
 .umbral-respuesta { margin: 6px 0 0; }
 .umbral-respuesta strong { font-size: 20px; }
+
+/* --- Precisión (¿bastan las iteraciones?) --- */
+.precision { margin: 8px 0; padding: 6px 8px; border-left: 3px solid var(--acento); font-size: 12px; }
+.precision p { margin: 2px 0; }
+.precision.mejorable { border-left-color: #fab219; }
+.precision-icono { display: inline-block; width: 1.2em; font-weight: 700; }
+.precision.bien .precision-icono { color: var(--acento); }

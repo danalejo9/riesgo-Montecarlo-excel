@@ -16,6 +16,8 @@ import {
   analizarSensibilidad,
   histogramaDeMuestra,
   ordenarUtiles,
+  precisionDeSimulacion,
+  type Precision,
   probabilidadUmbral,
   type BinHistograma,
   type PuntoCDF,
@@ -65,6 +67,8 @@ export interface ResultadoSalida {
    * no se pueden contar iteraciones.
    */
   muestraReducida?: boolean;
+  /** ¿Bastan las iteraciones? Margen de la media y de p5/p95 al 95 %. */
+  precision?: Precision;
 }
 
 /** Una barra del tornado: una entrada del modelo y cuánto mueve una salida. */
@@ -107,6 +111,19 @@ export function sensibilidadDeSalida(
  * muestra ordenada (para los umbrales) y el histograma. Se calcula una vez al
  * terminar la simulación, fuera de la interfaz.
  */
+/** La precisión de una salida: con todas sus iteraciones para la media, y la muestra para los percentiles. */
+export function precisionDeSalida(resumen: ResumenEstadistico, muestraOrdenada?: Float64Array): Precision | undefined {
+  // Los intervalos de percentil con la muestra retenida valen para esa
+  // muestra; si hay más iteraciones, son algo conservadores. Mejor eso que
+  // prometer una precisión que no se ha medido.
+  return precisionDeSimulacion(resumen.n, resumen.media, resumen.desviacion, muestraOrdenada) ?? undefined;
+}
+
+export function conPrecision(s: ResultadoSalida): ResultadoSalida {
+  const precision = precisionDeSalida(s.resumen, s.muestraOrdenada);
+  return precision ? { ...s, precision } : s;
+}
+
 export function analisisDeMuestra(
   modelo: ModeloRiesgo,
   clavesEntrada: readonly string[],
@@ -262,6 +279,16 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     if (umbral && s.muestraOrdenada && s.muestraOrdenada.length > 0) {
       const p = probabilidadUmbral(s.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima');
       añadir([describirUmbral(s.nombre, umbral.value, umbral.direction), p]);
+      añadir([]);
+    }
+    if (s.precision) {
+      añadir(
+        ['Margen de la media (95 %)', s.precision.margenMedia],
+        ['Iteraciones para un margen del 1 %', s.precision.iteracionesParaObjetivo],
+      );
+      for (const iv of s.precision.percentiles) {
+        añadir([`p${Math.round(iv.p * 100)} (intervalo 95 %)`, iv.inferior, iv.superior]);
+      }
       añadir([]);
     }
     if (s.sensibilidad && s.sensibilidad.length > 0) {

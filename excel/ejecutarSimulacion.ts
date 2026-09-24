@@ -35,6 +35,7 @@ import {
 import { curvaCDF, resumenEstadistico, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
 import {
   analisisDeMuestra,
+  conPrecision,
   type AvanceSimulacion,
   type FalloSimulacion,
   type ResultadoSimulacionPanel,
@@ -249,7 +250,7 @@ function porElRapido(
           noNumericas: s?.noNumericas ?? 0,
           ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
         };
-      }),
+      }).map(conPrecision),
     };
   });
 }
@@ -317,7 +318,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         noNumericas: s?.noNumericas ?? 0,
         ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
       };
-    }),
+    }).map(conPrecision),
   };
 }
 
