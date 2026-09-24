@@ -177,7 +177,7 @@ describe('cobertura', () => {
       hojas: [{
         nombre: 'Presupuesto',
         celdas: [
-          { ref: 'H42', formula: 'FILTER(H5:H9,H5:H9>0)' },
+          { ref: 'H42', formula: 'TEXTSPLIT(H5,",")' },
           { ref: 'J17', formula: 'INDIRECT("A"&B1)' },
           { ref: 'C8', formula: 'MiMacroVBA(B8)' },
           { ref: 'A1', formula: 'SUM(B1:B2)' },
@@ -186,9 +186,9 @@ describe('cobertura', () => {
     });
 
     const nombres = inf.bloqueantes.map((b) => b.nombre).sort();
-    expect(nombres).toEqual(['FILTER', 'INDIRECT', 'MIMACROVBA']);
+    expect(nombres).toEqual(['INDIRECT', 'MIMACROVBA', 'TEXTSPLIT']);
 
-    const deTexto = inf.bloqueantes.find((b) => b.nombre === 'FILTER');
+    const deTexto = inf.bloqueantes.find((b) => b.nombre === 'TEXTSPLIT');
     expect(deTexto?.ejemplo).toBe('Presupuesto!H42');
     expect(deTexto?.nivel).toBe('n2');
     expect(inf.bloqueantes.find((b) => b.nombre === 'INDIRECT')?.nivel).toBe('no-soportada');
@@ -247,14 +247,14 @@ describe('cobertura', () => {
     // Regresión: con un umbral por porcentaje, 1 bloqueante entre 1.000
     // fórmulas daba "99,9 % compatible", que es tranquilizador y falso. Basta
     // una celda en el camino entrada->salida para tumbar el motor rápido.
-    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'FILTER(A1:A2,A1:A2>0)' }];
+    const celdas: CeldaFixture[] = [{ ref: 'Z1', formula: 'TEXTSPLIT(A1,",")' }];
     for (let f = 1; f <= 1000; f++) celdas.push({ ref: `A${f}`, formula: `B${f}*2` });
 
     const inf = escanear({ hojas: [{ nombre: 'H', celdas }] });
 
     expect(inf.coberturaN0N1).toBeGreaterThan(99);
     expect(veredicto(inf)).not.toBe('compatible');
-    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['FILTER']);
+    expect(inf.bloqueantes.map((b) => b.nombre)).toEqual(['TEXTSPLIT']);
   });
 
   it('un libro sin fórmulas no rompe los porcentajes', () => {

@@ -59,13 +59,19 @@ describe('elegirMotor — las cinco cosas que el evaluador rechaza', () => {
     expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(false);
   });
 
-  it('una fórmula matricial: rango por rango', () => {
-    const g = grafoDe({ B1: 'SUM(A1:A3*C1:C3)' });
+  it('una operación entre rangos que derramaría (sola en la celda)', () => {
+    const g = grafoDe({ B1: 'A1:A3*C1:C3' });
     const e = elegirMotor(g, [k('A1')], [k('B1')]);
 
     expect(e.motor).toBe('compatible');
     expect(e.motivos.map((m) => m.tipo)).toEqual(['matricial']);
     expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(false);
+  });
+
+  it('la misma operación dentro de SUMA sí va al motor rápido', () => {
+    const g = grafoDe({ B1: 'SUM(A1:A3*C1:C3)' });
+    expect(elegirMotor(g, [k('A1')], [k('B1')]).motor).toBe('fast');
+    expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(true);
   });
 
   it('un nombre definido sin resolver', () => {
@@ -77,13 +83,19 @@ describe('elegirMotor — las cinco cosas que el evaluador rechaza', () => {
     expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(false);
   });
 
-  it('una constante matricial', () => {
-    const g = grafoDe({ B1: 'SUM({1,2,3})+A1' });
+  it('una constante matricial que derramaría', () => {
+    const g = grafoDe({ B1: '{1,2,3}+A1' });
     const e = elegirMotor(g, [k('A1')], [k('B1')]);
 
     expect(e.motor).toBe('compatible');
-    expect(e.motivos.map((m) => m.tipo)).toEqual(['matriz']);
+    expect(e.motivos.map((m) => m.tipo)).toEqual(['matricial']);
     expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(false);
+  });
+
+  it('una constante matricial consumida por SUMA va al motor rápido', () => {
+    const g = grafoDe({ B1: 'SUM({1,2,3})+A1' });
+    expect(elegirMotor(g, [k('A1')], [k('B1')]).motor).toBe('fast');
+    expect(elEvaluadorPuede(g, 'A1', 'B1')).toBe(true);
   });
 
   it('una fórmula que el parser no entiende', () => {

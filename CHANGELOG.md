@@ -5,6 +5,30 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Matrices en el motor rápido (2026-09-24)
+
+**Añadido**
+- **Funciones de matrices dinámicas** dentro de otra función que las consuma:
+  `FILTRAR`, `ORDENAR`, `ORDENARPOR`, `UNICOS`, `SECUENCIA`, `TRANSPONER`,
+  `MMULT`, `MINVERSA` (`=SUMA(FILTRAR(…))`, `=INDICE(ORDENAR(…); 1)`). Se
+  calculan **por iteración**: un `FILTRAR` cuyo criterio depende de la
+  simulación deja pasar filas distintas en cada una (las que pasan, arriba y
+  en orden; el resto vacío).
+- **Operaciones entre rangos dentro de funciones** y las **fórmulas
+  matriciales clásicas**: `SUMA(A2:A9*B2:B9)`, `SUMAPRODUCTO((A2:A9>5)*B2:B9)`,
+  `SUMA(SI(A2:A9>5; B2:B9))`, constantes `{1;2;3}`, con la difusión de Excel
+  (fila contra columna; `#N/A` donde una no llega). Las funciones escalares
+  (`SI`, `REDONDEAR`, `ABS`…) se aplican elemento a elemento en ese contexto.
+- Lo que **derramaría** (una matriz que llega a la raíz de la fórmula) sigue
+  yendo al modo compatible, con el motivo: las celdas derramadas no tienen
+  fórmula propia y el motor rápido las tomaría por constantes.
+- Octava tanda de fidelidad (`fidelidad-tanda8.xlsx`, 27 casos), escritos como
+  fórmulas matriciales para que cualquier Excel las evalúe igual. Pendiente de
+  calcular en Excel.
+
+**Nivel 2**: 37/41 (quedan `LAMBDA`, `DIVIDIRTEXTO`, `FORMULATEXTO` y
+`IMPORTARDATOSDINAMICOS`).
+
 ### Funciones RIESGO.* en las celdas (2026-09-24)
 
 **Añadido**

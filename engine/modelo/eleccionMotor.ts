@@ -25,12 +25,13 @@
 import { clausuraDependencias, subgrafoRelevante } from '../graph/subgraph.ts';
 import type { Grafo } from '../graph/graph.ts';
 import { funcionSoportada } from '../functions/registry.ts';
+import { motivoMatricial } from '../compiler/usoMatricial.ts';
 import { recorrer, type Nodo } from '../parser/ast.ts';
 import type { MotorSimulacion } from './riskModel.ts';
 
 export type MotivoIncompatible =
   | { tipo: 'funcion'; clave: string; nombre: string }
-  | { tipo: 'matricial'; clave: string }
+  | { tipo: 'matricial'; clave: string; motivo?: string }
   | { tipo: 'nombre'; clave: string; nombre: string }
   | { tipo: 'matriz'; clave: string }
   | { tipo: 'no-soportado'; clave: string; motivo: string }
@@ -89,21 +90,18 @@ export function elegirMotor(
     }
     if (!nodo.ast) continue; // celda sin fórmula: un valor, nada que evaluar
 
+    // Matrices: rangos operados, constantes {…} y funciones como FILTRAR solo
+    // valen si algo las consume en la misma fórmula (ver `usoMatricial.ts`).
+    const matricial = motivoMatricial(nodo.ast);
+    if (matricial) motivos.push({ tipo: 'matricial', clave, motivo: matricial });
+
     recorrer(nodo.ast, (n: Nodo) => {
       switch (n.tipo) {
         case 'funcion':
           if (!funcionSoportada(n.nombre)) motivos.push({ tipo: 'funcion', clave, nombre: n.nombre });
           break;
-        case 'binaria':
-          // `A1:A3*B1:B3` exige semántica de matrices. Mismo criterio que el
-          // evaluador, palabra por palabra.
-          if (n.izq.tipo === 'rango' || n.der.tipo === 'rango') motivos.push({ tipo: 'matricial', clave });
-          break;
         case 'nombre':
           motivos.push({ tipo: 'nombre', clave, nombre: n.nombre });
-          break;
-        case 'matriz':
-          motivos.push({ tipo: 'matriz', clave });
           break;
         case 'no-soportado':
           motivos.push({ tipo: 'no-soportado', clave, motivo: n.motivo });
@@ -146,7 +144,9 @@ export function describirMotivo(m: MotivoIncompatible): string {
     case 'funcion':
       return `${m.clave} usa ${m.nombre}, que el motor rápido no conoce todavía.`;
     case 'matricial':
-      return `${m.clave} opera con rangos enteros (fórmula matricial), que el motor rápido no implementa.`;
+      return m.motivo
+        ? `${m.clave} usa ${m.motivo}. El motor rápido solo admite matrices dentro de una función que las consuma.`
+        : `${m.clave} opera con rangos enteros (fórmula matricial), que el motor rápido no implementa.`;
     case 'nombre':
       return `${m.clave} usa el nombre definido ${m.nombre}, que el motor rápido no resuelve todavía.`;
     case 'matriz':

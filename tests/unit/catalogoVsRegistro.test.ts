@@ -81,15 +81,17 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       'AGGREGATE', 'SUBTOTAL',
       // Nombres locales: se resuelven al parsear (engine/parser/let.ts).
       'LET',
+      // Matriciales dinámicas, dentro de una función que las consuma
+      // (engine/functions/matriciales.ts, compiler/usoMatricial.ts).
+      'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TRANSPOSE', 'UNIQUE',
     ].sort());
   });
 
   it('lo que queda de Nivel 2 es lo que el escáner debe seguir marcando bloqueante', () => {
     const pendientes = [...NIVEL_2].filter((f) => !implementadas.has(f)).sort();
     expect(pendientes).toEqual([
-      // Matriciales dinámicas: devuelven varias celdas ("derraman") y el motor
-      // modela una celda por valor. Necesitan otro modelo, no otra función.
-      'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TEXTSPLIT', 'TRANSPOSE', 'UNIQUE',
+      // Divide texto en varias celdas: solo tiene sentido derramando.
+      'TEXTSPLIT',
       // Funciones anónimas: necesitan ámbitos de verdad en el evaluador (LET no,
       // porque sin efectos secundarios se puede resolver sustituyendo).
       'LAMBDA',

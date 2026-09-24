@@ -28,6 +28,8 @@ import { clausuraDependencias } from '../graph/subgraph.ts';
 import { ordenarTopologicamente } from '../graph/toposort.ts';
 import { claveCelda, type ErrorExcel, type Nodo } from '../parser/ast.ts';
 import { obtenerFuncion } from '../functions/registry.ts';
+import { REGISTRO_MATRICIAL, celda as celdaMatriz, escalar, type Matriz } from '../functions/matriciales.ts';
+import { ACEPTAN_MATRICES, ELEVABLES, MATRICIALES, normalizarFuncion, produceMatriz } from './usoMatricial.ts';
 import { argRango, argValor, type Argumento } from '../functions/types.ts';
 import { coercionNumerica, coercionTexto, compararEn } from '../values/coercion.ts';
 import {
@@ -70,7 +72,8 @@ export function evaluarModelo(
   salidas: string[],
   n: number,
 ): ResultadoEvaluacion {
-  const necesarias = clausuraDependencias(grafo, salidas);
+  // Las entradas cortan el recorrido: su fórmula no se evalúa (ver `plan.ts`).
+  const necesarias = clausuraDependencias(grafo, salidas, new Set(entradas.keys()));
   const { orden, enCiclo } = ordenarTopologicamente(grafo, necesarias);
 
   for (const clave of orden) {
@@ -191,12 +194,18 @@ export function evaluarNodo(
     }
 
     case 'funcion': {
+      const nombre = normalizarFuncion(nodo.nombre);
+      if (MATRICIALES.has(nombre)) {
+        // Solo o en una operación, el resultado derramaría: ver `usoMatricial.ts`.
+        return { ok: false, motivo: `${nombre} devuelve varias celdas y aquí derramaría` };
+      }
       const f = obtenerFuncion(nodo.nombre);
       if (!f) return { ok: false, motivo: `Función no soportada por el motor rápido: ${nodo.nombre}` };
 
+      const admite = ACEPTAN_MATRICES.has(nombre);
       const args: Argumento[] = [];
       for (const argNodo of nodo.args) {
-        const r = evaluarArgumento(argNodo, hojaActual, valores, n);
+        const r = evaluarArgumento(argNodo, hojaActual, valores, n, admite);
         if (!r.ok) return r;
         args.push(r.arg);
       }
@@ -239,29 +248,22 @@ function evaluarArgumento(
   hojaActual: string,
   valores: Map<string, Columna>,
   n: number,
+  admiteMatriz = false,
 ): ResultadoArg {
   if (nodo.tipo === 'rango') {
-    const ref = nodo.ref;
-    if (ref.col1 === null || ref.fila1 === null || ref.col2 === null || ref.fila2 === null) {
-      return { ok: false, motivo: 'Rango abierto (columna o fila entera) no soportado todavía' };
-    }
-    const hoja = ref.hoja ?? hojaActual;
-    const columnas: Columna[] = [];
-    for (let col = ref.col1; col <= ref.col2; col++) {
-      for (let fila = ref.fila1; fila <= ref.fila2; fila++) {
-        const clave = claveCelda(hoja, col, fila);
-        const c = valores.get(clave);
-        if (!c) return { ok: false, motivo: `Referencia no resuelta a ${clave}` };
-        columnas.push(c);
-      }
-    }
+    const m = matrizDeRango(nodo, hojaActual, valores);
+    if (!m.ok) return m;
     // La forma la necesitan las búsquedas: `BUSCARV` tiene que saber cuántas
     // columnas tiene la tabla para poder ir a la que le piden.
-    const forma = {
-      filas: ref.fila2 - ref.fila1 + 1,
-      cols: ref.col2 - ref.col1 + 1,
-    };
-    return { ok: true, arg: argRango(columnas, forma) };
+    return { ok: true, arg: argRango(m.matriz.celdas, { filas: m.matriz.filas, cols: m.matriz.cols }) };
+  }
+
+  // Una expresión que produce una matriz (`A2:A9>5`, `FILTRAR(…)`), dentro de
+  // una función que sabe consumirla: se entrega como si fuera un rango.
+  if (admiteMatriz && produceMatriz(nodo)) {
+    const m = evaluarMatriz(nodo, hojaActual, valores, n);
+    if (!m.ok) return m;
+    return { ok: true, arg: argRango(m.matriz.celdas, { filas: m.matriz.filas, cols: m.matriz.cols }) };
   }
 
   const r = evaluarNodo(nodo, hojaActual, valores, n);
@@ -269,6 +271,132 @@ function evaluarArgumento(
   // El hueco se marca además de valer 0: hay funciones donde "no lo escribí"
   // y "escribí 0" no son lo mismo. Ver `Argumento.omitido`.
   return { ok: true, arg: argValor(r.columna, nodo.tipo === 'vacio') };
+}
+
+type ResultadoMatrizNodo = { ok: true; matriz: Matriz } | { ok: false; motivo: string };
+
+function matrizDeRango(
+  nodo: Extract<Nodo, { tipo: 'rango' }>,
+  hojaActual: string,
+  valores: Map<string, Columna>,
+): ResultadoMatrizNodo {
+  const ref = nodo.ref;
+  if (ref.col1 === null || ref.fila1 === null || ref.col2 === null || ref.fila2 === null) {
+    return { ok: false, motivo: 'Rango abierto (columna o fila entera) no soportado todavía' };
+  }
+  const hoja = ref.hoja ?? hojaActual;
+  const celdas: Columna[] = [];
+  for (let col = ref.col1; col <= ref.col2; col++) {
+    for (let fila = ref.fila1; fila <= ref.fila2; fila++) {
+      const clave = claveCelda(hoja, col, fila);
+      const c = valores.get(clave);
+      if (!c) return { ok: false, motivo: `Referencia no resuelta a ${clave}` };
+      celdas.push(c);
+    }
+  }
+  return { ok: true, matriz: { filas: ref.fila2 - ref.fila1 + 1, cols: ref.col2 - ref.col1 + 1, celdas } };
+}
+
+/**
+ * Evalúa un nodo **como matriz**, en un contexto que la va a consumir. Un
+ * valor suelto es una matriz 1×1. Las operaciones y las funciones elevables se
+ * aplican celda a celda, con la difusión de Excel: una fila contra una columna
+ * da la tabla entera, y donde una de las dos no llega, `#N/A`.
+ */
+function evaluarMatriz(
+  nodo: Nodo,
+  hojaActual: string,
+  valores: Map<string, Columna>,
+  n: number,
+): ResultadoMatrizNodo {
+  switch (nodo.tipo) {
+    case 'rango':
+      return matrizDeRango(nodo, hojaActual, valores);
+
+    case 'matriz': {
+      const filas = nodo.filas.length;
+      const cols = Math.max(...nodo.filas.map((f) => f.length));
+      if (nodo.filas.some((f) => f.length !== cols)) return { ok: false, motivo: 'Constante matricial con filas de distinto largo' };
+      const celdas: Columna[] = [];
+      for (let c = 0; c < cols; c++) {
+        for (let f = 0; f < filas; f++) {
+          const r = evaluarNodo((nodo.filas[f] as Nodo[])[c] as Nodo, hojaActual, valores, n);
+          if (!r.ok) return r;
+          celdas.push(r.columna);
+        }
+      }
+      return { ok: true, matriz: { filas, cols, celdas } };
+    }
+
+    case 'funcion': {
+      const nombre = normalizarFuncion(nodo.nombre);
+      const matricial = REGISTRO_MATRICIAL[nombre];
+      if (matricial) {
+        const args: Matriz[] = [];
+        for (const a of nodo.args) {
+          if (a.tipo === 'vacio') { args.push(escalar(numeroConstante(0, n))); continue; }
+          const m = evaluarMatriz(a, hojaActual, valores, n);
+          if (!m.ok) return m;
+          args.push(m.matriz);
+        }
+        return matricial(args, n);
+      }
+      if (ELEVABLES.has(nombre) && nodo.args.some(produceMatriz)) {
+        const f = obtenerFuncion(nodo.nombre);
+        if (!f) return { ok: false, motivo: `Función no soportada por el motor rápido: ${nodo.nombre}` };
+        const args: Matriz[] = [];
+        for (const a of nodo.args) {
+          const m = evaluarMatriz(a, hojaActual, valores, n);
+          if (!m.ok) return m;
+          args.push(m.matriz);
+        }
+        return { ok: true, matriz: difundir(args, n, (celdas) => f(celdas.map((c, k) => argValor(c, (nodo.args[k] as Nodo).tipo === 'vacio')), n)) };
+      }
+      break;
+    }
+
+    case 'binaria': {
+      const izq = evaluarMatriz(nodo.izq, hojaActual, valores, n);
+      if (!izq.ok) return izq;
+      const der = evaluarMatriz(nodo.der, hojaActual, valores, n);
+      if (!der.ok) return der;
+      let fallo: string | null = null;
+      const m = difundir([izq.matriz, der.matriz], n, ([a, b]) => {
+        const r = aplicarBinaria(nodo.op, a as Columna, b as Columna, n);
+        if (!r.ok) { fallo = r.motivo; return errorConstante('#VALUE!', n); }
+        return r.columna;
+      });
+      return fallo ? { ok: false, motivo: fallo } : { ok: true, matriz: m };
+    }
+
+    case 'unaria':
+    case 'porcentaje': {
+      const a = evaluarMatriz(nodo.arg, hojaActual, valores, n);
+      if (!a.ok) return a;
+      const factor = nodo.tipo === 'porcentaje' ? 1 / 100 : nodo.op === '-' ? -1 : 1;
+      return { ok: true, matriz: difundir([a.matriz], n, ([c]) => escalarPor(c as Columna, factor, n)) };
+    }
+
+    default:
+      break;
+  }
+  const r = evaluarNodo(nodo, hojaActual, valores, n);
+  return r.ok ? { ok: true, matriz: escalar(r.columna) } : r;
+}
+
+/** Aplica `f` celda a celda sobre matrices difundidas a una forma común. */
+function difundir(ms: Matriz[], n: number, f: (celdas: Columna[]) => Columna): Matriz {
+  const filas = ms.reduce((acc, m) => (m.filas === 1 ? acc : Math.max(acc, m.filas)), 1);
+  const cols = ms.reduce((acc, m) => (m.cols === 1 ? acc : Math.max(acc, m.cols)), 1);
+  const na = errorConstante('#N/A', n);
+  const tomar = (m: Matriz, fi: number, ci: number): Columna => {
+    const ff = m.filas === 1 ? 0 : fi;
+    const cc = m.cols === 1 ? 0 : ci;
+    return ff < m.filas && cc < m.cols ? celdaMatriz(m, ff, cc) : na;
+  };
+  const celdas: Columna[] = [];
+  for (let c = 0; c < cols; c++) for (let fi = 0; fi < filas; fi++) celdas.push(f(ms.map((m) => tomar(m, fi, c))));
+  return { filas, cols, celdas };
 }
 
 /** Los operadores de comparación, que devuelven lógicos y no números. */

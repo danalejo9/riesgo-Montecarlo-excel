@@ -36,6 +36,7 @@ import {
   NUMBERVALUE, PROPER, REPLACE, REPT, RIGHT, SEARCH, SUBSTITUTE, T, TEXTJOIN, TRIM, TYPE,
   UPPER, VALUE,
 } from './texto.ts';
+import { REGISTRO_MATRICIAL } from './matriciales.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -86,9 +87,11 @@ function normalizar(nombre: string): string {
 /**
  * Construcciones que el motor soporta sin ser una función del registro: se
  * resuelven al parsear y nunca llegan a evaluarse como llamada. `LET` es la
- * única (ver `engine/parser/let.ts`). Cuentan como soportadas para el escáner.
+ * primera (ver `engine/parser/let.ts`); las matriciales (`FILTRAR`, `ORDENAR`…)
+ * las evalúa el evaluador como matrices, dentro de otra función (ver
+ * `compiler/usoMatricial.ts`). Cuentan como soportadas para el escáner.
  */
-export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET']);
+export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET', ...Object.keys(REGISTRO_MATRICIAL)]);
 
 export function funcionSoportada(nombre: string): boolean {
   const n = normalizar(nombre);
