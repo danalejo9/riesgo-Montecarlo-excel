@@ -49,6 +49,7 @@ export interface PeticionCompatible {
   iteraciones: number;
   compresionTDigest?: number;
   cadaCuantas?: number;
+  retenerMuestra?: number;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }

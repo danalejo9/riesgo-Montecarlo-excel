@@ -43,6 +43,8 @@ export interface SalidaCompatible {
    * de Excel, un texto, un infinito). Excluidas de `welford` y de `digest`.
    */
   noNumericas: number;
+  /** Las primeras iteraciones, valor a valor, si se pidió `retenerMuestra`. */
+  muestra?: Float64Array;
 }
 
 export type ResultadoCompatible =
@@ -110,6 +112,8 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
   const cadaCuantas = Math.max(1, opciones.cadaCuantas ?? 25);
 
   const acumuladores = salidas.map(() => nuevoAcumulador());
+  const limiteMuestra = Math.max(0, Math.min(iteraciones, Math.floor(opciones.retenerMuestra ?? 0)));
+  const muestras = salidas.map(() => new Float64Array(limiteMuestra).fill(NaN));
   const valoresDeEntrada = new Array<number>(entradas.length);
 
   const arranque = ahora();
@@ -148,6 +152,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
 
     for (let s = 0; s < salidas.length; s++) {
       anotar(acumuladores[s] as Acumulador, leidas[s] as number, compresion);
+      if (i < limiteMuestra) (muestras[s] as Float64Array)[i] = Number(leidas[s]);
     }
     completadas += 1;
   }
@@ -163,6 +168,9 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       welford: acc.welford,
       digest: combinarTDigest(acc.digestsParciales, compresion),
       noNumericas: acc.noNumericas,
+      ...(limiteMuestra > 0
+        ? { muestra: (muestras[s] as Float64Array).subarray(0, Math.min(limiteMuestra, completadas)) }
+        : {}),
     });
   }
 

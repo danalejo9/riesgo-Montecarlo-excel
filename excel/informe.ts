@@ -12,7 +12,11 @@
 
 import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import type { EleccionMotor } from '../engine/modelo/index.ts';
-import type { PuntoCDF, ResumenEstadistico } from '../engine/stats/index.ts';
+import {
+  analizarSensibilidad,
+  type PuntoCDF,
+  type ResumenEstadistico,
+} from '../engine/stats/index.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
 export interface AvanceSimulacion {
@@ -38,6 +42,46 @@ export interface ResultadoSalida {
    * en los dos motores.
    */
   noNumericas: number;
+  /**
+   * Qué entrada mueve más esta salida, ordenado de mayor a menor |ρ|. Falta si
+   * la simulación no retuvo muestra (por ejemplo, cancelada antes de empezar).
+   */
+  sensibilidad?: FilaSensibilidadPanel[];
+}
+
+/** Una barra del tornado: una entrada del modelo y cuánto mueve una salida. */
+export interface FilaSensibilidadPanel {
+  id: string;
+  nombre: string;
+  ref: string;
+  /** Correlación de rangos de Spearman, −1..1. */
+  spearman: number;
+  /** ρ² normalizado entre todas las entradas, 0..1. */
+  peso: number;
+}
+
+/**
+ * La sensibilidad de una salida, ya con los nombres y celdas del modelo.
+ *
+ * `muestrasPorClave` va indexado por la clave de celda de cada entrada
+ * (`clavesEntrada[i]` es la de `modelo.inputs[i]`): es lo que tienen a mano
+ * los dos motores, que conocen celdas y no ids.
+ */
+export function sensibilidadDeSalida(
+  modelo: ModeloRiesgo,
+  clavesEntrada: readonly string[],
+  muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
+  muestraSalida: ArrayLike<number>,
+): FilaSensibilidadPanel[] {
+  const entradas = modelo.inputs.flatMap((e, i) => {
+    const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
+    return muestras ? [{ id: e.id, muestras }] : [];
+  });
+  const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
+  return analizarSensibilidad(entradas, muestraSalida).map((f) => {
+    const e = porId.get(f.id);
+    return { ...f, nombre: e?.name ?? f.id, ref: e?.ref ?? '' };
+  });
 }
 
 export interface SimulacionCompletada {
@@ -55,6 +99,8 @@ export interface SimulacionCompletada {
   cancelada: boolean;
   milisegundos: number;
   lectura: EstadisticasLectura;
+  /** Cuántas iteraciones entraron en el análisis de sensibilidad. */
+  muestraSensibilidad?: number;
 }
 
 export type FalloSimulacion =
@@ -151,6 +197,15 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
 
   for (const s of resultado.salidas) {
     detallarSalida(s, { añadir, titulo, tenue });
+    if (s.sensibilidad && s.sensibilidad.length > 0) {
+      añadir(['Sensibilidad: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ² normalizado)']);
+      for (const f of s.sensibilidad) añadir([f.nombre, f.ref, f.spearman, f.peso]);
+      tenue(
+        `Correlación de rangos sobre ${resultado.muestraSensibilidad ?? resultado.iteracionesCompletadas} ` +
+          'iteraciones. ρ > 0: la salida sube con la entrada; ρ < 0: baja. El peso es aproximado si las entradas están correlacionadas.',
+      );
+      añadir([]);
+    }
 
     // La curva, como datos: dos columnas que el gráfico de Excel usa y que el
     // usuario puede reutilizar para hacer el suyo.

@@ -19,6 +19,9 @@
   --acento: #217346; /* el verde de Excel */
   --error-fondo: #fdf3f4;
   --error-borde: #d13438;
+  /* Polaridad del tornado: validados contra el fondo (CVD ΔE ≥ 19). */
+  --sube: #2a78d6;
+  --baja: #e34948;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,6 +33,8 @@
     --acento: #4cc38a;
     --error-fondo: #2d1b1d;
     --error-borde: #f1707b;
+    --sube: #3987e5;
+    --baja: #e66767;
   }
 }
 
@@ -273,3 +278,25 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .correlacion input[type='range'] { width: 100%; margin: 4px 0 0; accent-color: var(--acento); }
 
 .guardado { margin: 8px 0 0; }
+
+/* --- Tornado de sensibilidad --- */
+.tornado { margin: 8px 0 0; }
+.tornado-leyenda { display: flex; justify-content: space-between; font-size: 11px; color: var(--tenue); margin: 0 0 4px; }
+.tornado-leyenda .marca { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0 4px; vertical-align: middle; }
+.tornado-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 38%) 1fr 3.2em;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0; /* separación entre barras */
+  cursor: default;
+}
+.tornado-fila:hover, .tornado-fila:focus { background: color-mix(in srgb, var(--borde) 45%, transparent); outline: none; }
+.tornado-nombre { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tornado-pista { position: relative; height: 14px; }
+.tornado-pista::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--tenue); }
+.tornado-barra { position: absolute; top: 2px; height: 10px; }
+.tornado-barra.sube { left: 50%; background: var(--sube); border-radius: 0 4px 4px 0; }
+.tornado-barra.baja { right: 50%; background: var(--baja); border-radius: 4px 0 0 4px; }
+.tornado-valor { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.tornado button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }

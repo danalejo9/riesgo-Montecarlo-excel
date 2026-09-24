@@ -24,3 +24,11 @@ export {
   varianzaPoblacional,
   type EstadoWelford,
 } from './welford.ts';
+export {
+  analizarSensibilidad,
+  rangos,
+  spearman,
+  LIMITE_MUESTRA_SENSIBILIDAD,
+  type EntradaSensibilidad,
+  type FilaSensibilidad,
+} from './sensibilidad.ts';

@@ -42,6 +42,13 @@ export interface OpcionesSimulacion {
    * `engine/values/regional.ts`.
    */
   regional?: ConfiguracionRegional;
+  /**
+   * Cuántas de las primeras iteraciones se guardan valor a valor, para el
+   * análisis de sensibilidad. 0 (lo predeterminado) no guarda nada. Un
+   * ejecutor externo tiene que respetarlo por su cuenta; si no devuelve
+   * muestras, la salida simplemente no la trae.
+   */
+  retenerMuestra?: number;
 }
 
 export interface SalidaSimulada {
@@ -52,6 +59,8 @@ export interface SalidaSimulada {
    * `welford` y de `digest`. Ver `ParcialSalida.noNumericas`.
    */
   noNumericas: number;
+  /** Las primeras iteraciones, valor a valor, si se pidió `retenerMuestra`. */
+  muestra?: Float64Array;
 }
 
 export type ResultadoSimulacion =
@@ -73,6 +82,7 @@ export async function simularPorBloques(
   opciones: OpcionesSimulacion = {},
 ): Promise<ResultadoSimulacion> {
   const compresionTDigest = opciones.compresionTDigest ?? 100;
+  const limiteMuestra = Math.max(0, Math.min(n, Math.floor(opciones.retenerMuestra ?? 0)));
   const entradasResueltas = resolverEntradas(definicionesEntrada, seed, n);
 
   // Aproximación del ancho del grafo: las entradas más las celdas del plan
@@ -85,13 +95,17 @@ export async function simularPorBloques(
   const bloques = particionarEnBloques(n, tamano);
 
   const ejecutor =
-    opciones.ejecutor ?? crearEjecutorSecuencial(grafo, plan, entradasResueltas, seed, compresionTDigest);
+    opciones.ejecutor ??
+    crearEjecutorSecuencial(grafo, plan, entradasResueltas, seed, compresionTDigest, limiteMuestra);
   const bloquesPorRonda = Math.max(1, opciones.bloquesPorRonda ?? bloques.length);
 
   const acumuladoWelford = new Map<string, EstadoWelford>();
   const digestsPorSalida = new Map<string, TDigest[]>();
   const noNumericasPorSalida = new Map<string, number>();
+  const muestrasPorSalida = new Map<string, Float64Array>();
+  let hayMuestra = false;
   for (const clave of plan.salidas) {
+    if (limiteMuestra > 0) muestrasPorSalida.set(clave, new Float64Array(limiteMuestra).fill(NaN));
     acumuladoWelford.set(clave, crearWelford());
     digestsPorSalida.set(clave, []);
     noNumericasPorSalida.set(clave, 0);
@@ -113,15 +127,21 @@ export async function simularPorBloques(
       const ronda = bloques.slice(i, i + bloquesPorRonda);
       const resultados = await ejecutor.ejecutar(ronda);
 
-      for (const parcial of resultados) {
+      resultados.forEach((parcial, k) => {
+        const inicio = (ronda[k] as { inicio: number }).inicio;
         for (const clave of plan.salidas) {
           const p = parcial.get(clave);
           if (!p) continue;
+          const destino = muestrasPorSalida.get(clave);
+          if (destino && p.muestra) {
+            destino.set(p.muestra.subarray(0, Math.max(0, limiteMuestra - inicio)), inicio);
+            hayMuestra = true;
+          }
           acumuladoWelford.set(clave, combinar(acumuladoWelford.get(clave) as EstadoWelford, p.welford));
           (digestsPorSalida.get(clave) as TDigest[]).push(p.digest);
           noNumericasPorSalida.set(clave, (noNumericasPorSalida.get(clave) as number) + (p.noNumericas ?? 0));
         }
-      }
+      });
 
       completadas += ronda.reduce((acc, b) => acc + b.largo, 0);
       opciones.progreso?.(completadas, n);
@@ -133,12 +153,17 @@ export async function simularPorBloques(
     establecerRegional(regionalPrevia);
   }
 
+  // Si se canceló, solo vale el tramo que de verdad se calculó: los bloques
+  // se despachan en orden, así que lo completado es un prefijo.
+  const largoMuestra = Math.min(limiteMuestra, completadas);
   const porSalida = new Map<string, SalidaSimulada>();
   for (const clave of plan.salidas) {
+    const muestra = hayMuestra ? muestrasPorSalida.get(clave)?.subarray(0, largoMuestra) : undefined;
     porSalida.set(clave, {
       welford: acumuladoWelford.get(clave) as EstadoWelford,
       digest: combinarTDigest(digestsPorSalida.get(clave) as TDigest[], compresionTDigest),
       noNumericas: noNumericasPorSalida.get(clave) as number,
+      ...(muestra ? { muestra } : {}),
     });
   }
 

@@ -5,6 +5,25 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Análisis de sensibilidad: el tornado (2026-09-24)
+
+**Añadido**
+- **Qué entrada mueve más cada salida.** Debajo de cada salida, un gráfico de
+  tornado con la correlación de rangos de Spearman de cada entrada, ordenado
+  de mayor a menor efecto: a la derecha las que la suben, a la izquierda las
+  que la bajan. Las diez primeras, con acceso a la lista completa.
+- El **peso** de cada entrada (ρ² normalizado), marcado como aproximado cuando
+  hay entradas correlacionadas entre sí.
+- La tabla de sensibilidad también se escribe en la hoja al volcar resultados.
+- Funciona con los dos motores. Se calcula sobre las primeras 100.000
+  iteraciones (error típico de ρ ≈ 0,003); el motor retiene solo los valores de
+  las salidas y regenera las entradas, que con un generador de contador salen
+  idénticas.
+
+**Confirmado**
+- El modelo sobrevive a guardar, cerrar y reabrir el libro (verificado por el
+  usuario en su Excel).
+
 ### La sexta tanda vuelve de Excel: 69 de 69 a la primera (2026-09-23)
 
 Las once funciones nuevas del Nivel 1 coinciden con Excel en todos los casos,

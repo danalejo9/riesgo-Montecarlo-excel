@@ -828,11 +828,29 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     sondeos de `FECHANUMERO` en español. Confirmó también la regla de las
     letras de `TEXTO` que la quinta tanda dedujo de un solo caso.
 
+25. [x] **Tornado de sensibilidad y persistencia confirmada (2026-09-24)**
+
+    **El modelo sí sobrevive a guardar, cerrar y reabrir**: el usuario lo
+    comprobó en su Excel con el diagnóstico de ajustes guardados. Cerrado.
+
+    **Análisis de sensibilidad** (`engine/stats/sensibilidad.ts`): Spearman por
+    rangos con empates repartidos, y un peso ρ² normalizado que se presenta
+    como aproximado. Los dos motores retienen las primeras
+    `LIMITE_MUESTRA_SENSIBILIDAD` (100.000) iteraciones de cada salida
+    (`retenerMuestra`); las entradas no se guardan, se regeneran con el mismo
+    generador de contador. Se muestra como tornado en HTML debajo de cada
+    salida (`ui/Resultados.tsx`) y se escribe en la hoja al volcar. Colores de
+    polaridad validados para daltonismo en claro y oscuro.
+
+    **Límite conocido**: el peso reparte mal el mérito entre entradas
+    correlacionadas entre sí; ρ sigue siendo correcto. La contribución a la
+    varianza por regresión (la de @RISK) queda para después.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
-   diagnóstico de ajustes guardados.
-2. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
+1. **Probar el tornado en Excel** con el libro de demostración (Aurora).
+2. **Histograma** a partir de la misma muestra retenida, y **probabilidad de
+   superar un umbral** escrito por el usuario (E7).
 3. **`LET`**, y los **botones en la cinta**.
 4. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
 5. **`DESREF` con desplazamientos constantes**, resuelto al compilar.

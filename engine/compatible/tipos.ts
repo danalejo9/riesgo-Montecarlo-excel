@@ -73,6 +73,8 @@ export interface OpcionesCompatible {
    * preguntar a menudo no penaliza y hace que el botón de cancelar responda.
    */
   cadaCuantas?: number;
+  /** Cuántas de las primeras iteraciones se guardan valor a valor (sensibilidad). */
+  retenerMuestra?: number;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }

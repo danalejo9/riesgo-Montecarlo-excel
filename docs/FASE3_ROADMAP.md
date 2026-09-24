@@ -84,7 +84,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | ⬜ no empezada |
 | E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 43/44, N2 28/41 — Nivel 1 completo salvo `DESREF`; texto completo |
 | E6 | Escala D11 y rendimiento | 6–8 d | 🟡 el ejecutor por bloques está; falta el histograma en *streaming* |
-| E7 | Análisis y visualización | 8–10 d | 🟡 estadísticos, percentiles, CDF y volcado a hoja hechos |
+| E7 | Análisis y visualización | 8–10 d | 🟡 estadísticos, percentiles, CDF, volcado a hoja y tornado (Spearman) hechos |
 | E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |

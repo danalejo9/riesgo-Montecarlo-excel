@@ -27,6 +27,7 @@ export function calcularBloque(
   seed: number,
   bloque: Bloque,
   compresionTDigest: number,
+  limiteMuestra = 0,
 ): ResultadoCalculoBloque {
   const entradas = new Map<string, Buffer>();
   for (const def of entradasResueltas) {
@@ -39,11 +40,17 @@ export function calcularBloque(
   const parcial: ResultadoBloque = new Map();
   for (const clave of plan.salidas) {
     const buffer = aBufferNumerico(r.valores.get(clave) as Columna, bloque.largo);
+    // Lo que cae por debajo de `limiteMuestra` se copia **antes** de apartar
+    // los no numéricos: la muestra tiene que seguir alineada, iteración a
+    // iteración, con las muestras de las entradas.
+    const retener = Math.min(bloque.largo, limiteMuestra - bloque.inicio);
+    const muestra = retener > 0 ? buffer.slice(0, retener) : undefined;
     const { utiles, noNumericas } = separarUtilizables(buffer);
     parcial.set(clave, {
       welford: acumular(crearWelford(), utiles),
       digest: tdigestDeBuffer(utiles, compresionTDigest),
       noNumericas,
+      ...(muestra ? { muestra } : {}),
     });
   }
   return { ok: true, parcial };

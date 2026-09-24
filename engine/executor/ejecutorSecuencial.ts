@@ -18,11 +18,12 @@ export function crearEjecutorSecuencial(
   entradasResueltas: readonly DefinicionEntrada[],
   seed: number,
   compresionTDigest: number,
+  limiteMuestra = 0,
 ): EjecutorDeBloques {
   return {
     ejecutar(trabajos: readonly Trabajo[]): ResultadoBloque[] {
       return trabajos.map((trabajo) => {
-        const r = calcularBloque(grafo, plan, entradasResueltas, seed, trabajo, compresionTDigest);
+        const r = calcularBloque(grafo, plan, entradasResueltas, seed, trabajo, compresionTDigest, limiteMuestra);
         if (!r.ok) throw new ErrorCalculoBloque(r.error.clave, r.error.motivo);
         return r.parcial;
       });

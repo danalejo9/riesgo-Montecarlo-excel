@@ -138,4 +138,27 @@ describe('construirInforme', () => {
     const informe = construirInforme(MODELO, { ...RESULTADO, motor: 'compatible' });
     expect(informe.filas.map((f) => f.join(' ')).join('\n')).toContain('Excel en el bucle');
   });
+
+  it('la sensibilidad de cada salida va a la hoja, con la muestra usada', () => {
+    const conSensibilidad: SimulacionCompletada = {
+      ...RESULTADO,
+      muestraSensibilidad: 10_000,
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        sensibilidad: [
+          { id: 'in_precio', nombre: 'Precio', ref: 'Modelo!C5', spearman: 0.81, peso: 0.7 },
+          { id: 'in_coste', nombre: 'Coste', ref: 'Modelo!C6', spearman: -0.52, peso: 0.3 },
+        ],
+      })),
+    };
+    const texto = construirInforme(MODELO, conSensibilidad).filas.map((f) => f.join('\t')).join('\n');
+    expect(texto).toContain('Sensibilidad: entrada\tCelda\tSpearman (ρ)');
+    expect(texto).toContain('Precio\tModelo!C5\t0.81\t0.7');
+    expect(texto).toContain('Coste\tModelo!C6\t-0.52\t0.3');
+    expect(texto).toContain('sobre 10000 iteraciones');
+  });
+
+  it('sin sensibilidad no escribe una tabla vacía', () => {
+    expect(comoTexto()).not.toContain('Sensibilidad');
+  });
 });

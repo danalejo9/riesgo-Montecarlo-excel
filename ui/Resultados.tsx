@@ -14,6 +14,10 @@
  * diferencia es de decimales, pero decir "p95" a secas cuando es aproximado es
  * mentir en un informe que alguien va a firmar (Fase 2 §3.3 lo exige).
  *
+ * **El tornado va debajo de cada salida**, no en una pestaña aparte: "qué la
+ * mueve" es una propiedad de esa salida, y la siguiente pregunta natural tras
+ * mirar su curva.
+ *
  * **Se dice con qué motor se calculó y cuánto tardó.** No es un detalle
  * técnico: si fue el compatible, el usuario acaba de esperar minutos y tiene
  * derecho a saber por qué, y qué función del libro lo obligó.
@@ -26,6 +30,7 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
+import type { FilaSensibilidadPanel } from '../excel/informe.ts';
 import { duracion, miles, numero } from './formato.ts';
 
 export function Resultados({
@@ -134,6 +139,13 @@ export function Resultados({
 
           <h3>Probabilidad acumulada</h3>
           <CurvaAcumulada puntos={salida.cdf} />
+
+          {salida.sensibilidad && salida.sensibilidad.length > 0 && (
+            <>
+              <h3>Qué la mueve más</h3>
+              <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} />
+            </>
+          )}
         </section>
       ))}
     </>
@@ -215,6 +227,81 @@ function CurvaAcumulada({ puntos }: { puntos: readonly PuntoCDF[] }) {
         {cerca
           ? `${Math.round(cerca.p * 100)} % de probabilidad de quedar por debajo de ${numero(cerca.x)}`
           : 'Pasa el ratón por la curva para leer un valor.'}
+      </figcaption>
+    </figure>
+  );
+}
+
+const VISIBLES_TORNADO = 10;
+
+/** Coma decimal y signo explícito: "+0,82", "−0,15". */
+function rho(v: number): string {
+  const t = Math.abs(v).toFixed(2).replace('.', ',');
+  return `${v < 0 ? '\u2212' : '+'}${t}`;
+}
+
+/**
+ * El gráfico de tornado: una barra por entrada, de mayor a menor efecto.
+ *
+ * Hacia la derecha, las entradas que **suben** la salida al subir (ρ > 0);
+ * hacia la izquierda, las que la **bajan**. El color repite lo que ya dicen el
+ * lado y el signo del número, así que no hace falta distinguir colores para
+ * leerlo. La longitud es |ρ| sobre una escala fija de −1 a 1: dos tornados se
+ * pueden comparar entre sí a ojo.
+ *
+ * HTML y no SVG porque los nombres de las entradas son largos y el panel,
+ * estrecho: una rejilla recorta con puntos suspensivos y el nombre completo
+ * sigue en la línea de lectura de abajo.
+ */
+function Tornado({ filas, muestra }: { filas: readonly FilaSensibilidadPanel[]; muestra?: number }) {
+  const [todas, setTodas] = useState(false);
+  const [cerca, setCerca] = useState<FilaSensibilidadPanel | null>(null);
+  const visibles = todas ? filas : filas.slice(0, VISIBLES_TORNADO);
+
+  const describir = (f: FilaSensibilidadPanel) =>
+    `${f.nombre === f.ref ? f.nombre : `${f.nombre} (${f.ref})`}: ρ = ${rho(f.spearman)} · ${Math.round(f.peso * 100)} % del efecto. ` +
+    (f.spearman >= 0 ? 'Cuando sube, la salida tiende a subir.' : 'Cuando sube, la salida tiende a bajar.');
+
+  return (
+    <figure className="tornado" aria-label="Sensibilidad de la salida a cada entrada">
+      <p className="tornado-leyenda" aria-hidden="true">
+        <span><span className="marca" style={{ background: 'var(--baja)' }} />la baja</span>
+        <span>la sube<span className="marca" style={{ background: 'var(--sube)' }} /></span>
+      </p>
+
+      {visibles.map((f) => {
+        const lado = f.spearman >= 0 ? 'sube' : 'baja';
+        return (
+          <div
+            key={f.id}
+            className="tornado-fila"
+            tabIndex={0}
+            title={describir(f)}
+            onMouseEnter={() => setCerca(f)}
+            onMouseLeave={() => setCerca(null)}
+            onFocus={() => setCerca(f)}
+            onBlur={() => setCerca(null)}
+          >
+            <span className="tornado-nombre">{f.nombre}</span>
+            <span className="tornado-pista">
+              <span className={`tornado-barra ${lado}`} style={{ width: `${Math.abs(f.spearman) * 50}%` }} />
+            </span>
+            <span className="tornado-valor">{rho(f.spearman)}</span>
+          </div>
+        );
+      })}
+
+      {filas.length > VISIBLES_TORNADO && (
+        <button type="button" className="enlace" onClick={() => setTodas(!todas)}>
+          {todas ? `Ver solo las ${VISIBLES_TORNADO} primeras` : `Ver las ${filas.length} entradas`}
+        </button>
+      )}
+
+      <figcaption className="tenue">
+        {cerca
+          ? describir(cerca)
+          : `Correlación de rangos (Spearman) sobre ${muestra ? miles(muestra) : 'las'} iteraciones. ` +
+            'Pasa el ratón por una barra para leerla.'}
       </figcaption>
     </figure>
   );

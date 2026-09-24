@@ -32,8 +32,13 @@ import {
   type EleccionMotor,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
-import { curvaCDF, resumenEstadistico } from '../engine/stats/index.ts';
-import type { AvanceSimulacion, FalloSimulacion, ResultadoSimulacionPanel } from './informe.ts';
+import { curvaCDF, resumenEstadistico, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
+import {
+  sensibilidadDeSalida,
+  type AvanceSimulacion,
+  type FalloSimulacion,
+  type ResultadoSimulacionPanel,
+} from './informe.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -112,7 +117,9 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque };
   return eleccion.motor === 'compatible'
-    ? await porElCompatible({ ...comun, definiciones: preparadas.entradas, clavesSalida, n, semilla, progreso, debeCancelar })
+    ? await porElCompatible({
+        ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
+      })
     : porElRapido({ ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar });
 }
 
@@ -122,6 +129,7 @@ interface Comun {
   lectura: EstadisticasLectura;
   arranque: number;
   definiciones: DefinicionEntrada[];
+  clavesEntrada: string[];
   clavesSalida: string[];
   n: number;
   semilla: number;
@@ -130,7 +138,7 @@ interface Comun {
 }
 
 function porElRapido(
-  args: Comun & { grafo: ReturnType<typeof construirGrafo>['grafo']; clavesEntrada: string[] },
+  args: Comun & { grafo: ReturnType<typeof construirGrafo>['grafo'] },
 ): Promise<ResultadoSimulacionPanel> {
   const { grafo, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar } = args;
 
@@ -147,11 +155,20 @@ function porElRapido(
 
   return simularPorBloques(grafo, compilado.plan, args.definiciones, semilla, n, {
     regional: locale ? desdeLocaleDelModelo(locale) : undefined,
+    retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
     debeCancelar,
     progreso: (completadas, totales) =>
       progreso?.({ fase: 'simulando', mensaje: 'Simulando…', completadas, totales }),
   }).then((r) => {
     if (!r.ok) return fallo('calculo', 'El motor rápido no pudo calcular el modelo.', [`${r.error.clave}: ${r.error.motivo}`]);
+
+    // Las entradas no se guardaron durante la simulación: se regeneran. El
+    // generador es de contador, así que la iteración i vuelve a dar
+    // exactamente la misma muestra que entró en el cálculo.
+    const largo = Math.min(LIMITE_MUESTRA_SENSIBILIDAD, r.iteracionesCompletadas);
+    const muestrasEntrada = new Map(
+      resolverEntradas(args.definiciones, semilla, n).map((def) => [def.clave, generarTramoDeEntrada(def, semilla, 0, largo)] as const),
+    );
 
     return {
       ok: true as const,
@@ -161,6 +178,7 @@ function porElRapido(
       iteracionesCompletadas: r.iteracionesCompletadas,
       cancelada: r.cancelada,
       milisegundos: performance.now() - args.arranque,
+      muestraSensibilidad: largo,
       salidas: args.modelo.outputs.map((salida, i) => {
         const s = r.porSalida.get(clavesSalida[i] as string);
         return {
@@ -173,6 +191,9 @@ function porElRapido(
           ),
           cdf: s ? curvaCDF(s.digest) : [],
           noNumericas: s?.noNumericas ?? 0,
+          ...(s?.muestra
+            ? { sensibilidad: sensibilidadDeSalida(args.modelo, clavesEntrada, muestrasEntrada, s.muestra) }
+            : {}),
         };
       }),
     };
@@ -180,7 +201,7 @@ function porElRapido(
 }
 
 async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
-  const { clavesSalida, n, semilla, progreso, debeCancelar } = args;
+  const { clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar } = args;
 
   // Con Excel en el bucle no hay bloques: se necesitan las N muestras de cada
   // entrada por adelantado, porque se escriben una a una. Se reutiliza el
@@ -197,6 +218,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     entradas,
     salidas: clavesSalida,
     iteraciones: n,
+    retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
     progreso: (a) =>
       progreso?.({
         fase: 'simulando',
@@ -214,6 +236,9 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     ]);
   }
 
+  const largo = Math.min(LIMITE_MUESTRA_SENSIBILIDAD, r.iteracionesCompletadas);
+  const muestrasEntrada = new Map(entradas.map((e) => [e.direccion, e.muestras.subarray(0, largo)] as const));
+
   return {
     ok: true,
     motor: 'compatible',
@@ -223,6 +248,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     cancelada: r.cancelada,
     iteracionesPorSegundo: r.iteracionesPorSegundo,
     milisegundos: performance.now() - args.arranque,
+    muestraSensibilidad: largo,
     salidas: args.modelo.outputs.map((salida, i) => {
       const s = r.porSalida.get(clavesSalida[i] as string);
       return {
@@ -235,6 +261,9 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         ),
         cdf: s ? curvaCDF(s.digest) : [],
         noNumericas: s?.noNumericas ?? 0,
+        ...(s?.muestra
+          ? { sensibilidad: sensibilidadDeSalida(args.modelo, clavesEntrada, muestrasEntrada, s.muestra) }
+          : {}),
       };
     }),
   };
