@@ -96,7 +96,11 @@ export function Resultados({
             {miles(resultado.iteracionesCompletadas)}
             {resultado.cancelada && ' · cancelada antes de terminar'}
           </dd>
-          <dt>Tiempo</dt><dd>{duracion(resultado.milisegundos)}</dd>
+          <dt>Tiempo</dt>
+          <dd>
+            {duracion(resultado.milisegundos)}
+            {resultado.hilos !== undefined && ` · ${resultado.hilos === 1 ? 'un hilo' : `${resultado.hilos} hilos`}`}
+          </dd>
           <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
         </dl>
 

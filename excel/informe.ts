@@ -136,6 +136,8 @@ export interface SimulacionCompletada {
   cancelada: boolean;
   milisegundos: number;
   lectura: EstadisticasLectura;
+  /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
+  hilos?: number;
   /** Cuántas iteraciones entraron en el análisis de sensibilidad. */
   muestraSensibilidad?: number;
 }
@@ -197,6 +199,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   añadir(
     ['Motor', resultado.motor === 'fast' ? 'Rápido (en memoria)' : 'Compatible (Excel en el bucle)'],
     ['Iteraciones', resultado.iteracionesCompletadas],
+    ...(resultado.hilos ? [['Hilos de cálculo', resultado.hilos] as Fila] : []),
     ['Tiempo', `${(resultado.milisegundos / 1000).toFixed(1)} s`],
     ['Semilla', modelo.settings.seed],
     ['Muestreo', modelo.settings.sampling === 'lhs' ? 'Hipercubo latino' : 'Monte Carlo'],

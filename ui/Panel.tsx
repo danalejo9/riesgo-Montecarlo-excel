@@ -33,6 +33,7 @@ import {
 } from '../excel/ejecutarSimulacion.ts';
 import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
+import { crearPoolNavegador } from './motor/poolNavegador.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
@@ -169,6 +170,7 @@ export function Panel() {
         modelo,
         progreso: setAvance,
         debeCancelar: () => cancelado.current,
+        crearPool: crearPoolNavegador,
       });
       setResultado(r);
       if (r.ok) setPestana('resultados');

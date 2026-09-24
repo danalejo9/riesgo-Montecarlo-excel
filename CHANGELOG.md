@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### El motor rápido calcula en varios hilos (2026-09-24)
+
+**Añadido**
+- **Web Workers en el panel.** El motor rápido reparte los bloques entre
+  hasta ocho hilos (los núcleos menos uno, que queda para Excel). El panel ya
+  no se congela: el progreso avanza y cancelar responde mientras simula.
+- **El modelo viaja una vez por hilo**; cada trabajo es solo un rango de
+  iteraciones, y las muestras vuelven transferidas, sin copiarse
+  (`engine/executor/pool.ts`, sin depender de ninguna API de hilos).
+- **Misma semilla, mismo resultado** con uno o con ocho hilos: el troceo es
+  fijo (al menos 16 bloques, `bloquesMinimos`) y los resultados se colocan por
+  índice. Probado: estadísticas, t-digest y muestra idénticos bit a bit.
+- Si el entorno no deja crear hilos, o uno no arranca, se calcula en el hilo
+  del panel como antes. "Cómo se calculó" dice con cuántos hilos.
+
+**Medido** (Chromium, 4 núcleos, modelo de ejemplo de 7 celdas, 1.000.000 de
+iteraciones): 969 ms en un hilo, 715 ms con 3. En un modelo tan pequeño manda
+el trabajo fijo (ordenar la muestra, la sensibilidad); la ganancia crece con
+el tamaño del libro.
+
 ### Histograma, umbrales y botones en la cinta (2026-09-24)
 
 **Añadido**

@@ -49,6 +49,15 @@ export interface OpcionesSimulacion {
    * muestras, la salida simplemente no la trae.
    */
   retenerMuestra?: number;
+  /**
+   * Al menos cuántos bloques hacer, si `n` lo permite (sin bajar de 1.024
+   * iteraciones por bloque). Con el tamaño adaptativo solo, diez mil
+   * iteraciones son **un** bloque y un pool de ocho hilos tendría siete
+   * parados. Es un número fijo y no "tantos como hilos" a propósito: el troceo
+   * decide cómo se combinan los t-digest, y así la misma semilla da el mismo
+   * resultado en un portátil de cuatro núcleos que en uno de dieciséis.
+   */
+  bloquesMinimos?: number;
 }
 
 export interface SalidaSimulada {
@@ -91,7 +100,10 @@ export async function simularPorBloques(
   // vez— pero sobreestimar el número de buffers vivos solo hace el bloque
   // más chico de lo estrictamente necesario, nunca al revés.
   const buffersVivosEstimado = entradasResueltas.length + plan.orden.length - plan.esConstante.size;
-  const tamano = tamanoBloqueAdaptativo(buffersVivosEstimado, opciones.presupuestoBytesPorWorker);
+  const adaptativo = tamanoBloqueAdaptativo(buffersVivosEstimado, opciones.presupuestoBytesPorWorker);
+  const tamano = opciones.bloquesMinimos
+    ? Math.min(adaptativo, Math.max(1024, Math.ceil(n / opciones.bloquesMinimos)))
+    : adaptativo;
   const bloques = particionarEnBloques(n, tamano);
 
   const ejecutor =

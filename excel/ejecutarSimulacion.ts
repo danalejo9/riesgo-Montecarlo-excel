@@ -21,7 +21,7 @@
  * caja negra.
  */
 
-import { simularPorBloques } from '../engine/executor/index.ts';
+import { simularPorBloques, type ContextoHilo, type Pool } from '../engine/executor/index.ts';
 import { generarTramoDeEntrada, resolverEntradas, type DefinicionEntrada } from '../engine/executor/entradas.ts';
 import { compilarPlan } from '../engine/compiler/plan.ts';
 import { construirGrafo } from '../engine/graph/index.ts';
@@ -58,10 +58,25 @@ export interface PeticionSimulacion {
   modelo: ModeloRiesgo;
   progreso?: (avance: AvanceSimulacion) => void;
   debeCancelar?: () => boolean;
+  /**
+   * Crea un pool de hilos para el motor rápido, o devuelve `null` si no se
+   * puede. Lo pone quien sabe crear hilos (el panel, con Web Workers); esta
+   * capa no sabe nada de cómo se empaquetan. Sin él, se calcula en el hilo
+   * del panel, que es correcto pero lo congela mientras dura.
+   */
+  crearPool?: (contexto: ContextoHilo) => Pool | null;
 }
 
+/**
+ * Bloques mínimos de una simulación rápida: los suficientes para repartir
+ * entre los hilos de cualquier equipo corriente, y fijos para que el resultado
+ * no dependa de cuántos núcleos tenga (ver `OpcionesSimulacion.bloquesMinimos`).
+ */
+const BLOQUES_MINIMOS = 16;
+const COMPRESION_TDIGEST = 100;
+
 export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<ResultadoSimulacionPanel> {
-  const { modelo, progreso, debeCancelar } = peticion;
+  const { modelo, progreso, debeCancelar, crearPool } = peticion;
   const arranque = performance.now();
 
   if (modelo.inputs.length === 0) {
@@ -120,7 +135,10 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     ? await porElCompatible({
         ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
       })
-    : porElRapido({ ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar });
+    : porElRapido({
+        ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
+        crearPool,
+      });
 }
 
 interface Comun {
@@ -138,7 +156,10 @@ interface Comun {
 }
 
 function porElRapido(
-  args: Comun & { grafo: ReturnType<typeof construirGrafo>['grafo'] },
+  args: Comun & {
+    grafo: ReturnType<typeof construirGrafo>['grafo'];
+    crearPool?: PeticionSimulacion['crearPool'];
+  },
 ): Promise<ResultadoSimulacionPanel> {
   const { grafo, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar } = args;
 
@@ -153,13 +174,47 @@ function porElRapido(
   // calcula con la neutra, que es como calculaba el motor antes de existir.
   const locale = args.modelo.settings.locale;
 
-  return simularPorBloques(grafo, compilado.plan, args.definiciones, semilla, n, {
-    regional: locale ? desdeLocaleDelModelo(locale) : undefined,
+  const regional = locale ? desdeLocaleDelModelo(locale) : undefined;
+  const opciones = {
+    regional,
     retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
+    compresionTDigest: COMPRESION_TDIGEST,
+    bloquesMinimos: BLOQUES_MINIMOS,
+    // Con hilos, una ronda por cada par de bloques por hilo: el progreso
+    // avanza y cancelar responde. Sin hilos da igual, el panel está ocupado.
+    bloquesPorRonda: 4,
     debeCancelar,
-    progreso: (completadas, totales) =>
+    progreso: (completadas: number, totales: number) =>
       progreso?.({ fase: 'simulando', mensaje: 'Simulando…', completadas, totales }),
-  }).then((r) => {
+  };
+
+  // Las entradas LHS se resuelven aquí para poder dárselas ya hechas a los
+  // hilos; `simularPorBloques` las deja tal cual al verlas resueltas.
+  const resueltas = resolverEntradas(args.definiciones, semilla, n);
+  let pool: Pool | null = null;
+  try {
+    pool = args.crearPool?.({
+      grafo, plan: compilado.plan, entradas: resueltas, seed: semilla,
+      compresionTDigest: COMPRESION_TDIGEST, limiteMuestra: LIMITE_MUESTRA_SENSIBILIDAD, regional,
+    }) ?? null;
+  } catch {
+    pool = null; // sin hilos (navegador antiguo, política de seguridad): en este hilo
+  }
+
+  const enEsteHilo = () => simularPorBloques(grafo, compilado.plan, resueltas, semilla, n, opciones);
+  const simulacion = pool
+    ? simularPorBloques(grafo, compilado.plan, resueltas, semilla, n, { ...opciones, ejecutor: pool.ejecutor, bloquesPorRonda: pool.hilos * 2 })
+        .catch(() => {
+          // Un hilo que no arranca (no un error del modelo, que llega como
+          // resultado) no debe dejar al usuario sin simulación: se repite aquí.
+          pool?.cerrar();
+          pool = null;
+          return enEsteHilo();
+        })
+    : enEsteHilo();
+  const hilos = () => pool?.hilos ?? 1;
+
+  return simulacion.finally(() => pool?.cerrar()).then((r) => {
     if (!r.ok) return fallo('calculo', 'El motor rápido no pudo calcular el modelo.', [`${r.error.clave}: ${r.error.motivo}`]);
 
     // Las entradas no se guardaron durante la simulación: se regeneran. El
@@ -167,7 +222,7 @@ function porElRapido(
     // exactamente la misma muestra que entró en el cálculo.
     const largo = Math.min(LIMITE_MUESTRA_SENSIBILIDAD, r.iteracionesCompletadas);
     const muestrasEntrada = new Map(
-      resolverEntradas(args.definiciones, semilla, n).map((def) => [def.clave, generarTramoDeEntrada(def, semilla, 0, largo)] as const),
+      resueltas.map((def) => [def.clave, generarTramoDeEntrada(def, semilla, 0, largo)] as const),
     );
 
     return {
@@ -179,6 +234,7 @@ function porElRapido(
       cancelada: r.cancelada,
       milisegundos: performance.now() - args.arranque,
       muestraSensibilidad: largo,
+      hilos: hilos(),
       salidas: args.modelo.outputs.map((salida, i) => {
         const s = r.porSalida.get(clavesSalida[i] as string);
         return {

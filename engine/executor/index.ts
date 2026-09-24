@@ -10,3 +10,12 @@ export {
 } from './entradas.ts';
 export { simularPorBloques, type OpcionesSimulacion, type ResultadoSimulacion, type SalidaSimulada } from './simular.ts';
 export { ErrorCalculoBloque, type EjecutorDeBloques, type ParcialSalida, type ResultadoBloque, type Trabajo } from './tipos.ts';
+export {
+  crearAtendedor,
+  crearPool,
+  type CanalHilo,
+  type ContextoHilo,
+  type MensajeAlHilo,
+  type MensajeDelHilo,
+  type Pool,
+} from './pool.ts';
