@@ -5,6 +5,20 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Comparar escenarios (2026-09-24)
+
+**Añadido**
+- **"Fijar como referencia"** en Resultados, con un nombre ("Sin
+  refinanciación"). Al cambiar el modelo y volver a simular, cada salida
+  enseña una tabla frente a la referencia —media, desviación, p5, p50, p95 y
+  la probabilidad del umbral— con la diferencia (actual − referencia), y la
+  curva acumulada de la referencia punteada debajo de la actual, a la misma
+  escala.
+- La referencia se guarda en el libro (`riesgoMontecarlo.reference`) y
+  sobrevive a cerrarlo. Las salidas se emparejan por id; una que no estaba en
+  la referencia lo dice.
+- El margen relativo de la precisión se muestra con sus cifras ("0,025 %").
+
 ### ¿Bastan las iteraciones? (2026-09-24)
 
 **Añadido**

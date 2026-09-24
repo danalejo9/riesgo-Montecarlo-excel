@@ -22,7 +22,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
-import { guardarModelo, guardarResultados, leerModelo, leerResultadosGuardados } from '../excel/almacenModelo.ts';
+import {
+  guardarModelo, guardarReferencia, guardarResultados, leerModelo, leerReferenciaGuardada, leerResultadosGuardados,
+} from '../excel/almacenModelo.ts';
+import { restaurarReferencia, serializarReferencia, type ReferenciaGuardada } from '../excel/comparacion.ts';
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado } from '../excel/resaltado.ts';
@@ -62,6 +65,7 @@ export function Panel() {
   const [simulando, setSimulando] = useState(false);
   const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
   const [guardado, setGuardado] = useState<EstadoGuardado>({ estado: 'sin-cambios' });
+  const [referencia, setReferencia] = useState<ReferenciaGuardada | null>(null);
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
@@ -107,8 +111,14 @@ export function Panel() {
 
         const base = lectura.estado === 'ok' ? lectura.modelo : modeloVacio();
 
-        // Los resultados de la última simulación, si el libro los trae.
+        // Los resultados de la última simulación, y la referencia con la que
+        // compararlos, si el libro los trae.
         if (lectura.estado === 'ok') {
+          void leerReferenciaGuardada()
+            .then((texto) => setReferencia(texto ? restaurarReferencia(texto) : null))
+            .catch(() => {
+              // Sin referencia legible, no hay comparación: nada más.
+            });
           void leerResultadosGuardados()
             .then((texto) => {
               if (!texto) return;
@@ -187,7 +197,7 @@ export function Panel() {
         debeCancelar: () => cancelado.current,
         crearPool: crearPoolNavegador,
       });
-      const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo) } : r;
+      const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo), idSimulacion: new Date().toISOString() } : r;
       setResultado(conHuella);
       if (conHuella.ok) {
         setPestana('resultados');
@@ -308,7 +318,23 @@ export function Panel() {
       )}
 
       {pestana === 'resultados' && resultado?.ok === true && modelo && (
-        <Resultados modelo={modelo} resultado={resultado} alCambiarModelo={cambiarModelo} />
+        <Resultados
+          modelo={modelo}
+          resultado={resultado}
+          alCambiarModelo={cambiarModelo}
+          referencia={referencia}
+          alFijarReferencia={(etiqueta) => {
+            const nueva = { etiqueta, resultado };
+            setReferencia(nueva);
+            void guardarReferencia(serializarReferencia(modelo, etiqueta, resultado)).catch((e: unknown) =>
+              setError(`La referencia no se pudo guardar en el libro: ${mensajeDe(e)}`),
+            );
+          }}
+          alQuitarReferencia={() => {
+            setReferencia(null);
+            void guardarReferencia(null).catch((e: unknown) => setError(mensajeDe(e)));
+          }}
+        />
       )}
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}

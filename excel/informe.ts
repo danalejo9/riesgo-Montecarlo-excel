@@ -159,6 +159,8 @@ export interface SimulacionCompletada {
   cancelada: boolean;
   milisegundos: number;
   lectura: EstadisticasLectura;
+  /** Identifica la simulación (su marca de tiempo), para no compararla consigo misma. */
+  idSimulacion?: string;
   /** Si vienen del libro y no de una simulación de esta sesión. */
   restaurado?: { guardadoEn: string };
   /**

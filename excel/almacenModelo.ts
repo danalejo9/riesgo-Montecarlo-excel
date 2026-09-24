@@ -51,6 +51,37 @@ export async function guardarResultados(texto: string): Promise<void> {
   });
 }
 
+/** Clave de la simulación de referencia para comparar escenarios (`comparacion.ts`). */
+export const CLAVE_REFERENCIA = 'riesgoMontecarlo.reference';
+
+export async function leerReferenciaGuardada(): Promise<string | null> {
+  return Excel.run(async (context) => {
+    const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_REFERENCIA);
+    ajuste.load(['value', 'isNullObject']);
+    await context.sync();
+    if (ajuste.isNullObject) return null;
+    return typeof ajuste.value === 'string' ? ajuste.value : JSON.stringify(ajuste.value);
+  });
+}
+
+/** Guarda la referencia, o la borra con `null`. */
+export async function guardarReferencia(texto: string | null): Promise<void> {
+  await Excel.run(async (context) => {
+    if (texto !== null) {
+      context.workbook.settings.add(CLAVE_REFERENCIA, texto);
+      await context.sync();
+      return;
+    }
+    const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_REFERENCIA);
+    ajuste.load('isNullObject');
+    await context.sync();
+    if (!ajuste.isNullObject) {
+      ajuste.delete();
+      await context.sync();
+    }
+  });
+}
+
 export type LecturaModelo =
   | { estado: 'vacio' }
   | { estado: 'ok'; modelo: ModeloRiesgo }

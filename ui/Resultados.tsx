@@ -37,6 +37,9 @@ import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
+import {
+  compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada,
+} from '../excel/comparacion.ts';
 import type { BinHistograma } from '../engine/stats/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
@@ -47,11 +50,18 @@ export function Resultados({
   modelo,
   resultado,
   alCambiarModelo,
+  referencia,
+  alFijarReferencia,
+  alQuitarReferencia,
 }: {
   modelo: ModeloRiesgo;
   resultado: SimulacionCompletada;
   /** Para guardar el umbral de cada salida en el modelo del libro. */
   alCambiarModelo?: (m: ModeloRiesgo) => void;
+  /** La simulación fijada para comparar escenarios, si hay. */
+  referencia?: ReferenciaGuardada | null;
+  alFijarReferencia?: (etiqueta: string) => void;
+  alQuitarReferencia?: () => void;
 }) {
   const motivos = motivosLegibles(resultado.eleccion);
   const [volcando, setVolcando] = useState(false);
@@ -72,6 +82,11 @@ export function Resultados({
   };
 
   const desactualizados = resultadosDesactualizados(resultado, modelo);
+  // Comparar solo si la referencia es otra simulación, no esta misma.
+  const comparando =
+    referencia && !(referencia.resultado.idSimulacion && referencia.resultado.idSimulacion === resultado.idSimulacion)
+      ? referencia
+      : null;
 
   return (
     <>
@@ -107,6 +122,15 @@ export function Resultados({
         {volcado && <p className="tenue">{volcado}</p>}
         {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
       </section>
+
+      {alFijarReferencia && (
+        <Escenarios
+          referencia={referencia ?? null}
+          esEsta={Boolean(referencia) && !comparando}
+          alFijar={alFijarReferencia}
+          alQuitar={alQuitarReferencia}
+        />
+      )}
 
       <section>
         <h2>Cómo se calculó</h2>
@@ -207,8 +231,21 @@ export function Resultados({
             </>
           )}
 
+          {comparando && (() => {
+            const ref = salidaDeReferencia(comparando, salida.id);
+            if (!ref) {
+              return <p className="tenue">Esta salida no estaba en «{comparando.etiqueta}»: no se compara.</p>;
+            }
+            const filas = compararSalida(salida, ref, modelo.outputs.find((o) => o.id === salida.id)?.threshold);
+            return <TablaComparacion etiqueta={comparando.etiqueta} filas={filas} />;
+          })()}
+
           <h3>Probabilidad acumulada</h3>
-          <CurvaAcumulada puntos={salida.cdf} />
+          <CurvaAcumulada
+            puntos={salida.cdf}
+            referencia={comparando ? salidaDeReferencia(comparando, salida.id)?.cdf : undefined}
+            etiquetaReferencia={comparando?.etiqueta}
+          />
 
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
             <>
@@ -238,12 +275,22 @@ const MARGEN = { arriba: 8, derecha: 8, abajo: 20, izquierda: 34 };
  * 4,2 M" **es** el uso de esta curva, y sin cursor hay que estimarlo a ojo
  * contra el eje.
  */
-function CurvaAcumulada({ puntos }: { puntos: readonly PuntoCDF[] }) {
+function CurvaAcumulada({
+  puntos,
+  referencia,
+  etiquetaReferencia,
+}: {
+  puntos: readonly PuntoCDF[];
+  referencia?: readonly PuntoCDF[];
+  etiquetaReferencia?: string;
+}) {
   const [cerca, setCerca] = useState<PuntoCDF | null>(null);
 
   if (puntos.length < 2) return <p className="tenue">Sin curva: hacen falta al menos dos valores distintos.</p>;
 
-  const xs = puntos.map((p) => p.x);
+  const conRef = referencia && referencia.length >= 2 ? referencia : null;
+  // El eje abarca las dos curvas, para que se puedan comparar a la misma escala.
+  const xs = [...puntos, ...(conRef ?? [])].map((p) => p.x);
   const min = Math.min(...xs);
   const max = Math.max(...xs);
   const rango = max - min || 1;
@@ -280,6 +327,12 @@ function CurvaAcumulada({ puntos }: { puntos: readonly PuntoCDF[] }) {
           </g>
         ))}
 
+        {conRef && (
+          <polyline
+            className="curva-referencia"
+            points={conRef.map((p) => `${aX(p.x).toFixed(1)},${aY(p.p).toFixed(1)}`).join(' ')}
+          />
+        )}
         <polyline className="curva" points={linea} />
 
         {cerca && (
@@ -293,6 +346,12 @@ function CurvaAcumulada({ puntos }: { puntos: readonly PuntoCDF[] }) {
         <text className="eje" x={ANCHO - MARGEN.derecha} y={ALTO - 6} textAnchor="end">{numero(max)}</text>
       </svg>
 
+      {conRef && (
+        <p className="leyenda-curvas">
+          <span><span className="muestra-linea actual" />Esta simulación</span>
+          <span><span className="muestra-linea referencia" />{etiquetaReferencia ?? 'Referencia'}</span>
+        </p>
+      )}
       <figcaption className="tenue">
         {cerca
           ? `${Math.round(cerca.p * 100)} % de probabilidad de quedar por debajo de ${numero(cerca.x)}`
@@ -540,8 +599,13 @@ const pct = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractio
  * suficientes" o "! pocas, harían falta unas N". El criterio (un 1 %) se dice,
  * para que quien tenga otro listón pueda aplicarlo con el número de al lado.
  */
+/** Un margen relativo pequeño con sus cifras: "0,03 %", no "0 %". */
+const pctFino = (x: number) =>
+  `${(x * 100).toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`;
+
 function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) {
   const { margenMedia, margenRelativo, iteracionesParaObjetivo, suficiente, percentiles } = precision;
+  const pct = pctFino;
   return (
     <div className={`precision ${suficiente ? 'bien' : 'mejorable'}`}>
       <p>
@@ -560,5 +624,91 @@ function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) 
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Fijar esta simulación como referencia para comparar la siguiente contra
+ * ella: "sin refinanciación" frente a "con refinanciación", sin apuntar nada.
+ */
+function Escenarios({
+  referencia,
+  esEsta,
+  alFijar,
+  alQuitar,
+}: {
+  referencia: ReferenciaGuardada | null;
+  esEsta: boolean;
+  alFijar: (etiqueta: string) => void;
+  alQuitar?: () => void;
+}) {
+  const [etiqueta, setEtiqueta] = useState('Escenario base');
+  return (
+    <section>
+      <h2>Comparar escenarios</h2>
+      {!referencia && (
+        <p className="tenue">
+          Fija esta simulación como referencia, cambia el modelo y vuelve a simular:
+          cada salida se comparará con ella.
+        </p>
+      )}
+      {referencia && (
+        <p className="tenue">
+          {esEsta
+            ? <>Esta simulación es la referencia «{referencia.etiqueta}». Cambia el modelo y vuelve a simular para comparar.</>
+            : <>Comparando con «{referencia.etiqueta}».</>}
+        </p>
+      )}
+      <div className="fila-botones">
+        {!esEsta && (
+          <>
+            <input
+              type="text"
+              aria-label="Nombre de la referencia"
+              value={etiqueta}
+              onChange={(e) => setEtiqueta(e.target.value)}
+            />
+            <button type="button" onClick={() => alFijar(etiqueta.trim() || 'Referencia')}>
+              {referencia ? 'Usar esta como referencia' : 'Fijar como referencia'}
+            </button>
+          </>
+        )}
+        {referencia && alQuitar && (
+          <button type="button" className="plano" onClick={alQuitar}>Quitar la referencia</button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function diferenciaTexto(f: FilaComparacion): string {
+  const signo = f.diferencia > 0 ? '+' : f.diferencia < 0 ? '\u2212' : '';
+  if (f.esProbabilidad) {
+    return `${signo}${Math.abs(f.diferencia * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} pt`;
+  }
+  return `${signo}${numero(Math.abs(f.diferencia))}`;
+}
+
+function TablaComparacion({ etiqueta, filas }: { etiqueta: string; filas: readonly FilaComparacion[] }) {
+  const valor = (f: FilaComparacion, x: number) => (f.esProbabilidad ? pct(x) : numero(x));
+  return (
+    <>
+      <h3>Frente a «{etiqueta}»</h3>
+      <table className="comparacion">
+        <thead>
+          <tr><th /><th>{etiqueta}</th><th>Esta</th><th>Diferencia</th></tr>
+        </thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr key={f.medida}>
+              <th scope="row">{f.medida}</th>
+              <td>{valor(f, f.referencia)}</td>
+              <td>{valor(f, f.actual)}</td>
+              <td>{diferenciaTexto(f)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
