@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Informe PDF (2026-09-24)
+
+**Añadido**
+- Botón **"Informe PDF"** en Resultados: abre en el navegador del sistema un
+  informe maquetado para A4 —cómo se calculó, entradas, y por cada salida el
+  umbral, estadísticos, precisión, comparación con la referencia, histograma,
+  curva acumulada, tornado y araña—, con un botón "Imprimir o guardar como
+  PDF". Una salida por página al imprimir; siempre en claro en papel.
+- Los datos viajan **comprimidos en el fragmento de la dirección** (`#d=…`,
+  unos 4 kB por salida): el navegador no envía el fragmento a ningún
+  servidor, así que no salen del equipo. Dentro de Excel se abre con
+  `openBrowserWindow`, la vía oficial.
+
 ### Gráfico de araña y contribución a la varianza (2026-09-24)
 
 **Añadido**

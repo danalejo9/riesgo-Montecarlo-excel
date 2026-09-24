@@ -37,6 +37,7 @@ import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
+import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
 import {
   compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada,
 } from '../excel/comparacion.ts';
@@ -67,6 +68,17 @@ export function Resultados({
   const [volcando, setVolcando] = useState(false);
   const [volcado, setVolcado] = useState<string | null>(null);
   const [falloVolcado, setFalloVolcado] = useState<string | null>(null);
+
+  const abrirInforme = async () => {
+    setFalloVolcado(null);
+    try {
+      const codigo = await codificarInforme(datosDelInforme(modelo, resultado, { referencia: referencia ?? null }));
+      const url = `${new URL('/informe.html', window.location.href).href}#d=${codigo}`;
+      abrirEnNavegador(url);
+    } catch (e) {
+      setFalloVolcado(`No se pudo preparar el informe: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
 
   const volcar = async () => {
     setVolcando(true);
@@ -116,9 +128,16 @@ export function Resultados({
           gráfico de Excel encima de ellos. Así se puede guardar, imprimir y
           enviar. La hoja se rehace en cada volcado.
         </p>
-        <button type="button" onClick={() => void volcar()} disabled={volcando}>
-          {volcando ? 'Escribiendo…' : 'Volcar a una hoja'}
-        </button>
+        <div className="fila-botones">
+          <button type="button" onClick={() => void volcar()} disabled={volcando}>
+            {volcando ? 'Escribiendo…' : 'Volcar a una hoja'}
+          </button>
+          <button type="button" onClick={() => void abrirInforme()}>Informe PDF</button>
+        </div>
+        <p className="tenue">
+          «Informe PDF» abre el informe en tu navegador, listo para imprimir o
+          guardar como PDF. Los datos viajan en la propia dirección y no salen del equipo.
+        </p>
         {volcado && <p className="tenue">{volcado}</p>}
         {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
       </section>
@@ -292,7 +311,7 @@ const MARGEN = { arriba: 8, derecha: 8, abajo: 20, izquierda: 34 };
  * 4,2 M" **es** el uso de esta curva, y sin cursor hay que estimarlo a ojo
  * contra el eje.
  */
-function CurvaAcumulada({
+export function CurvaAcumulada({
   puntos,
   referencia,
   etiquetaReferencia,
@@ -399,7 +418,7 @@ function rho(v: number): string {
  * estrecho: una rejilla recorta con puntos suspensivos y el nombre completo
  * sigue en la línea de lectura de abajo.
  */
-function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilidadPanel[]; muestra?: number; r2?: number }) {
+export function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilidadPanel[]; muestra?: number; r2?: number }) {
   const [todas, setTodas] = useState(false);
   const [cerca, setCerca] = useState<FilaSensibilidadPanel | null>(null);
   const visibles = todas ? filas : filas.slice(0, VISIBLES_TORNADO);
@@ -554,7 +573,7 @@ const MARGEN_H = { arriba: 6, derecha: 8, abajo: 20, izquierda: 8 };
  * área coloreada **es** la respuesta de arriba, y se ve de un vistazo si la
  * cola que preocupa es fina o gruesa.
  */
-function Histograma({ barras, umbral }: { barras: readonly BinHistograma[]; umbral?: UmbralRiskModel }) {
+export function Histograma({ barras, umbral }: { barras: readonly BinHistograma[]; umbral?: UmbralRiskModel }) {
   const [cerca, setCerca] = useState<number | null>(null);
   const min = (barras[0] as BinHistograma).x0;
   const max = (barras[barras.length - 1] as BinHistograma).x1;
@@ -630,7 +649,7 @@ const pct = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractio
 const pctFino = (x: number) =>
   `${(x * 100).toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`;
 
-function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) {
+export function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) {
   const { margenMedia, margenRelativo, iteracionesParaObjetivo, suficiente, percentiles } = precision;
   const pct = pctFino;
   return (
@@ -716,7 +735,7 @@ function diferenciaTexto(f: FilaComparacion): string {
   return `${signo}${numero(Math.abs(f.diferencia))}`;
 }
 
-function TablaComparacion({ etiqueta, filas }: { etiqueta: string; filas: readonly FilaComparacion[] }) {
+export function TablaComparacion({ etiqueta, filas }: { etiqueta: string; filas: readonly FilaComparacion[] }) {
   const valor = (f: FilaComparacion, x: number) => (f.esProbabilidad ? pct(x) : numero(x));
   return (
     <>
@@ -751,7 +770,7 @@ const SERIES_ARANA = 4;
  * plana es una entrada que no importa; una empinada, una que manda; una que
  * se tuerce, un efecto que se satura o tiene umbral.
  */
-function Arana({ curvas }: { curvas: readonly CurvaAranaPanel[] }) {
+export function Arana({ curvas }: { curvas: readonly CurvaAranaPanel[] }) {
   const [cerca, setCerca] = useState<{ c: number; d: number } | null>(null);
   const visibles = curvas.slice(0, SERIES_ARANA);
   const todas = visibles.flatMap((c) => c.medias);
@@ -813,4 +832,16 @@ function Arana({ curvas }: { curvas: readonly CurvaAranaPanel[] }) {
       </figcaption>
     </figure>
   );
+}
+
+/**
+ * Abre una dirección en el navegador del sistema. Dentro de Excel,
+ * `openBrowserWindow` es la vía oficial (una ventana del panel no puede
+ * imprimir de forma fiable); fuera de Office —el banco de pruebas— basta
+ * `window.open`.
+ */
+function abrirEnNavegador(url: string): void {
+  const ui = typeof Office !== 'undefined' ? (Office.context?.ui as { openBrowserWindow?: (u: string) => void } | undefined) : undefined;
+  if (ui?.openBrowserWindow) ui.openBrowserWindow(url);
+  else window.open(url, '_blank', 'noopener');
 }
