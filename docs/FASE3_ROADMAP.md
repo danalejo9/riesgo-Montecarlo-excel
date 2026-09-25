@@ -222,7 +222,60 @@ Mac, instalación sin `npm start`, manifiesto de producción, licencias,
 interfaz en inglés, privacidad y AppSource: sin cambios respecto a lo
 descrito abajo.
 
-**Orden propuesto**: A → B1–B3 → C1, C2, C5 → B4, B6 → D1 → C3, C4 → resto.
+### H. Calidad del modelo y análisis avanzado — 6–9 d
+Añadido en la segunda revisión con el usuario (25/09).
+- **H1. Resultados que no cambian al volver a marcar una celda.** Hoy el
+  flujo aleatorio de una entrada depende de su identificador, que se genera
+  nuevo cada vez que se marca: quitar y volver a marcar la misma celda cambia
+  los números con la misma semilla. Ligar el flujo a la celda (y conservarlo
+  al renombrar). Corto y protege la reproducibilidad de todo lo demás: **va
+  pronto**.
+- **H2. Más medidas de riesgo**: VaR y CVaR (pérdida media en la peor cola),
+  asimetría, curtosis, semidesviación. En el panel, el informe y el volcado.
+- **H3. Simulaciones en serie (paramétricas)**: repetir la simulación
+  variando un parámetro (precio 100 / 110 / 120) y comparar los resultados
+  lado a lado. Reutiliza la comparación de escenarios.
+- **H4. Búsqueda de objetivo con riesgo**: «¿qué valor de esta celda hace que
+  P(VAN < 0) quede por debajo del 10 %?», por bisección sobre simulaciones.
+- **H5. Series temporales**: entradas que evolucionan periodo a periodo de
+  forma aleatoria (paseo aleatorio, crecimiento con ruido, reversión a la
+  media), declaradas sobre un rango (C7:H7). Enlaza con D3 y el abanico C4.
+- **H6. Avisos de coherencia**: distribuciones que dan negativos en
+  cantidades que no pueden serlo, correlaciones que apuntan a celdas que ya
+  no existen, salidas que no dependen de ninguna entrada (ya existe) o
+  entradas que no afectan a ninguna salida.
+- **H7. Trazado de dependencias**: qué salidas dependen de cada entrada y por
+  qué celdas intermedias pasa, para detectar entradas mal conectadas.
+- **H8. Migración del modelo guardado**: cuando cambie el esquema de
+  `RiskModel`, que los libros de versiones anteriores se abran sin perder
+  nada (hoy un esquema desconocido se rechaza, sin migrar).
+- **H9. Manual de usuario en español** y más libros de ejemplo (proyecto de
+  inversión, presupuesto de obra, cartera), además de la guía de pruebas.
+- **H10. Libros compartidos** (OneDrive/SharePoint, coautoría): comprobar qué
+  pasa si dos personas abren a la vez el mismo libro con el complemento, y
+  proteger el modelo guardado de escrituras cruzadas.
+
+**Orden propuesto**: A → **H1** → B1–B3 → C1, C2, C5 → B4, B6 → D1 → H2 →
+C3, C4 → resto de B, D, E, H → F según los libros → G.
+
+---
+
+## 2.2 Fuera del alcance: productos futuros
+
+Decidido con el usuario el 25/09: **no entran en este complemento**, porque
+cada uno es un producto entero con su propio motor y su propia interfaz.
+Quedan registrados como candidatos a desarrollar después, reutilizando lo que
+se pueda (el motor de simulación, el lector del libro, el canal de valores).
+
+| Producto futuro | Qué haría | Referencia en el mercado | Qué se reutilizaría |
+|---|---|---|---|
+| **Optimización bajo incertidumbre** | Buscar los valores de las decisiones (celdas ajustables) que maximizan o minimizan una salida simulada, con restricciones («maximizar el VAN medio con P(VAN<0) < 10 %») | RISKOptimizer (@RISK), OptQuest (Crystal Ball) | El motor rápido completo: cada evaluación de la optimización es una simulación |
+| **Árboles de decisión** | Modelar decisiones secuenciales con sucesos inciertos, valor esperado de cada rama y valor de la información | PrecisionTree (Palisade) | La interfaz en Excel, el panel, las distribuciones como nodos de azar |
+| **Muestreo avanzado** | Cuasi Monte Carlo (Sobol, Halton) para converger con menos iteraciones; cópulas (t, Clayton, Gumbel) para dependencias de cola | Opciones avanzadas de @RISK | El diseño por contador del generador y el ejecutor por bloques |
+| **Pruebas automáticas en Excel real** | Batería que abre Excel, carga el complemento y comprueba resultados sin intervención | Script Lab, Office Add-in test tooling | La guía de pruebas como especificación |
+
+Mientras tanto, las pruebas en Excel real se hacen con guías manuales como
+`docs/GUIA_PRUEBAS_EXCEL.md`.
 
 ---
 
