@@ -367,3 +367,6 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .punto-serie { fill: var(--fondo); stroke-width: 2; }
 .leyenda-series { flex-wrap: wrap; row-gap: 2px; }
 .tornado-contribucion { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.ajuste-tabla th, .ajuste-tabla td { font-size: 11px; }
+.ordenar-ajuste { margin: 6px 0; }

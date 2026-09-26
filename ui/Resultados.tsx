@@ -175,6 +175,10 @@ export function Resultados({
             <ul className="motivos">
               {resultado.entradasDeFunciones.map((e) => <li key={e.ref}>{e.ref}: {e.distribucion}</li>)}
             </ul>
+            <p className="aviso-linea">
+              Antes de enviar este libro a alguien sin el complemento, usa «Preparar para compartir»
+              (pestaña Modelo): si no, verá #¿NOMBRE? en esas celdas.
+            </p>
           </>
         )}
         {resultado.funcionesIgnoradas && resultado.funcionesIgnoradas.length > 0 && (

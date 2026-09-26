@@ -15,6 +15,8 @@ import { construirDesdeDescriptor } from '../engine/distributions/index.ts';
 import {
   ajustarDistribuciones,
   describirDistribucion,
+  ordenarCandidatos,
+  type CriterioAjuste,
   leerDatos,
   resumirDistribucion,
   toDescriptor,
@@ -39,10 +41,12 @@ export function AjusteDatos({
   const [origen, setOrigen] = useState<string | null>(null);
   const [elegida, setElegida] = useState(0);
   const [fallo, setFallo] = useState<string | null>(null);
+  const [criterio, setCriterio] = useState<CriterioAjuste>('aic');
 
   const lectura = useMemo(() => leerDatos(texto, decimal), [texto, decimal]);
   const ajuste = useMemo(() => ajustarDistribuciones(lectura.valores), [lectura]);
-  const candidata = ajuste?.candidatos[elegida];
+  const candidatos = useMemo(() => (ajuste ? ordenarCandidatos(ajuste.candidatos, criterio) : []), [ajuste, criterio]);
+  const candidata = candidatos[elegida];
 
   const deLaSeleccion = async () => {
     setFallo(null);
@@ -108,12 +112,32 @@ export function AjusteDatos({
 
       {ajuste && ajuste.candidatos.length > 0 && (
         <>
+          <label className="campo ordenar-ajuste">
+            <span className="tenue">Ordenar por</span>
+            <select
+              value={criterio}
+              onChange={(e) => {
+                setCriterio(e.target.value as CriterioAjuste);
+                setElegida(0);
+              }}
+            >
+              <option value="aic">AIC (ajuste, castigando parámetros)</option>
+              <option value="bic">BIC (castiga más los parámetros)</option>
+              <option value="andersonDarling">Anderson–Darling (colas)</option>
+            </select>
+          </label>
           <table className="comparacion ajuste-tabla">
             <thead>
-              <tr><th>Distribución</th><th title="Anderson–Darling: cuanto menor, mejor">A–D</th><th title="Kolmogorov–Smirnov">K–S</th><th /></tr>
+              <tr>
+                <th>Distribución</th>
+                <th title="Criterio de Akaike: cuanto menor, mejor">AIC</th>
+                <th title="Criterio bayesiano: cuanto menor, mejor">BIC</th>
+                <th title="Anderson–Darling: cuanto menor, mejor">A–D</th>
+                <th />
+              </tr>
             </thead>
             <tbody>
-              {ajuste.candidatos.map((c, i) => (
+              {candidatos.map((c, i) => (
                 <tr
                   key={c.spec.type}
                   className={i === elegida ? 'elegida' : undefined}
@@ -124,8 +148,11 @@ export function AjusteDatos({
                     {describirDistribucion(c.spec.type)?.nombre ?? c.spec.type}
                     <span className="tenue parametros-ajuste">{resumirDistribucion(c.spec)}</span>
                   </th>
-                  <td>{c.andersonDarling.toLocaleString('es-ES', { maximumFractionDigits: 2 })}</td>
-                  <td>{c.kolmogorovSmirnov.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>
+                  <td>{c.aic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
+                  <td>{c.bic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
+                  <td title={`Kolmogorov–Smirnov: ${c.kolmogorovSmirnov.toLocaleString('es-ES', { maximumFractionDigits: 3 })}`}>
+                    {c.andersonDarling.toLocaleString('es-ES', { maximumFractionDigits: 2 })}
+                  </td>
                   <td>
                     <button type="button" onClick={(e) => { e.stopPropagation(); alUsar(c.spec); }}>Usar</button>
                   </td>
@@ -135,9 +162,11 @@ export function AjusteDatos({
           </table>
           {candidata && <CurvaAjuste datos={lectura.valores} spec={candidata.spec} />}
           <p className="tenue">
-            Ordenadas por Anderson–Darling, que pesa más las colas. Es una
-            ordenación, no una prueba de aceptación: mira que la curva siga a
-            los datos en la cola que te importa.
+            AIC y BIC comparan cómo de probables son los datos con cada
+            distribución, castigando las que tienen más parámetros; A–D pesa más
+            las colas (pasa el ratón para ver K–S). Todos: cuanto menor, mejor.
+            Es una ordenación, no una prueba de aceptación: mira que la curva
+            siga a los datos en la cola que te importa.
           </p>
         </>
       )}

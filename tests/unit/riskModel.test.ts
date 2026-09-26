@@ -189,6 +189,21 @@ describe('agruparCorrelaciones', () => {
 });
 
 describe('prepararEntradas', () => {
+  it('el flujo aleatorio va ligado a la celda: volver a marcarla (id nuevo) da los mismos números', () => {
+    const resolver = (ref: string) => `Hoja1!${ref}`;
+    const a = modeloBase();
+    const b = modeloBase();
+    (b.inputs[0] as EntradaRiskModel).id = 'in_otro_id_generado';
+    (b.inputs[0] as EntradaRiskModel).name = 'Otro nombre';
+    for (const sampling of ['monte-carlo', 'lhs'] as const) {
+      a.settings.sampling = sampling;
+      b.settings.sampling = sampling;
+      const ra = prepararEntradas(a, resolver, 7);
+      const rb = prepararEntradas(b, resolver, 7);
+      expect(ra).toEqual(rb);
+    }
+  });
+
   it('una entrada sin correlación se deja perezosa (distribucion), no materializada', () => {
     const modelo = modeloBase();
     const r = prepararEntradas(modelo, (ref) => `Hoja1!${ref}`, 42);

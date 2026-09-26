@@ -1,6 +1,6 @@
 # Estado del proyecto y traspaso de contexto
 
-**Última actualización:** 2026-09-21
+**Última actualización:** 2026-09-26 (roadmap reordenado con el estudio de mercado, ver §9 «Siguiente acción» y `FASE3_ROADMAP.md` §1.2)
 **Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada**. El motor tiene ya el **canal de valores completo** (los cinco tipos de celda de Excel) y el **Nivel 1 de funciones de criterio**; el libro de fidelidad pasa **31/31 sin excepciones**. Lo que queda de E3 necesita Excel de verdad (ver §9.12).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
@@ -73,6 +73,7 @@ Los cinco hechos que hay que tener presentes:
 | 15 | Modo compatible (Excel en el bucle) | **Entra en el MVP**, invirtiendo la decisión 2.2 | Con usuarios desconocidos, "no puedo simular tu modelo" es motivo de desinstalar |
 | 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
 | 17 | **Configuración regional** (separador decimal) | **Se lee de Office al crear el modelo y se guarda en el libro** (`RiskModel v1`) | Ni se pregunta al usuario ni se relee en cada ejecución: el libro queda reproducible entre máquinas con idiomas distintos, que es lo que necesita un producto que van a compartir 100+ personas. Ver §9.14 |
+| 18 | **Prioridades tras el estudio de mercado** (2026-09-26) | La arquitectura se mantiene; se reordena: tornado y ajuste de distribuciones primero, prueba de humo en Excel Web y Mac adelantada, Web Worker en el navegador, y `RISK.*` sin romper los libros compartidos | Ver `FASE3_ROADMAP.md` §1.2. Rechazados expresamente: créditos de cálculo en la nube, explicaciones con IA externa, integración con matrices dinámicas y Python, WASM sin benchmark |
 
 ### Consecuencia arquitectónica principal
 
@@ -904,6 +905,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
       regla común `compiler/usoMatricial.ts`; lo que derrama sigue en el
       compatible. Nivel 2: 37/41.
     - Tandas de fidelidad 7 (LET) y 8 (matrices) pendientes de Excel.
+
+30. [x] **Fusión con el roadmap del estudio de mercado (2026-09-26)**. El
+    usuario revisó el roadmap sobre `main` (estado del 23/09); se fusionó
+    conservando sus decisiones (§1.2 del roadmap: E4 redefinida, E9a, E12,
+    precio, rechazos). Antes de las pruebas se hicieron H1 (flujos
+    aleatorios por celda), «Preparar para compartir» (E4) y AIC/BIC en el
+    ajuste; la guía de pruebas se amplió (bloques J, K, W).
 
 **Siguiente acción al retomar**, en orden de valor:
 

@@ -32,6 +32,7 @@ import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
 import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
 import { AjusteDatos } from './AjusteDatos.tsx';
+import { Compartir } from './Compartir.tsx';
 import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
@@ -397,6 +398,8 @@ export function Modelo({
           </button>
         )}
       </section>
+
+      <Compartir modelo={modelo} alCambiar={alCambiar} />
 
       {modelo.settings.engine === 'compatible' && (
         <AvisoCompatible

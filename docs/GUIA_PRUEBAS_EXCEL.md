@@ -4,6 +4,9 @@ Paso a paso para probar el complemento en tu Excel con el libro de
 demostración **`ejemplos/demo-proyecto-aurora.xlsx`**. Cada prueba tiene un
 código (A1, A2…). Al terminar cada bloque, dime por cada código:
 
+*Versión del 26/09: añadidos los bloques J (compartir el libro), K
+(reproducibilidad) y W (Excel para la Web y Mac), y AIC/BIC en D1.*
+
 - **OK**, o
 - **Falla** + qué ves (una captura ayuda mucho).
 
@@ -13,10 +16,23 @@ No hace falta hacerlas todas de una vez: se pueden repartir en varios días.
 
 ## 0. Preparación (una vez)
 
-1. En la carpeta del proyecto: `git pull`.
-2. `npm install` (por si hay dependencias nuevas).
-3. `npm run stop` y después `npm start`. Esto recarga el complemento: sin
-   ello no aparecen los botones nuevos ni las funciones `RIESGO`.
+En **PowerShell**, una línea cada vez:
+
+```
+cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
+git checkout claude/nifty-thompson-xfnqm2
+git pull origin claude/nifty-thompson-xfnqm2
+npm install
+npm run stop
+npm start
+```
+
+1. `git checkout` asegura que estás en la rama de trabajo (todo lo nuevo
+   está ahí, no en `main`).
+2. `git pull` trae los cambios; `npm install`, lo que falte.
+3. `npm run stop` y `npm start` recargan el complemento: sin ello no
+   aparecen los botones nuevos ni las funciones `RIESGO`. Deja esa ventana
+   abierta mientras pruebas.
 4. Abre `ejemplos/demo-proyecto-aurora.xlsx` **de nuevo** (el archivo ha
    cambiado: ahora tiene una hoja «Pruebas»).
 
@@ -118,8 +134,12 @@ Abre el panel.
 **D1.** En Modelo, abre la entrada C5 (precio). Pulsa **Ajustar a datos
 históricos…**. Selecciona en la hoja «Pruebas» el rango **K5:K44** y pulsa
 **Leer de la selección**.
-- Esperado: «40 datos de Pruebas!K5:K44» y una tabla de distribuciones con
-  **Lognormal** o **Gamma** arriba («mejor»), con la curva sobre los datos.
+- Esperado: «40 datos de Pruebas!K5:K44» y una tabla con columnas **AIC**,
+  **BIC** y **A–D**, ordenada por AIC, con **Lognormal** o **Gamma** arriba
+  («mejor») y la curva sobre los datos.
+- En «Ordenar por» cambia a **BIC** y luego a **Anderson–Darling**: el orden
+  puede cambiar un poco, y la primera sigue siendo una distribución con cola
+  a la derecha.
 - Pulsa **Usar** en la primera: la distribución de C5 cambia a esa.
 
 ---
@@ -189,6 +209,77 @@ como salida. En Configuración, motor **Compatible** e iteraciones `1000`
 - Esperado: al terminar, **C21 sigue teniendo la fórmula `=7+1`** (míralo en
   la barra de fórmulas), no un número. Antes de esta versión se perdía.
 - Vuelve el motor a **Automático**.
+
+---
+
+## J. Compartir el libro sin romperlo
+
+Necesita las funciones RIESGO del bloque E escritas en `Pruebas!C5` y `C6`.
+
+**J1. Preparar.** Pestaña Modelo → sección **Compartir el libro** → **Preparar
+para compartir**.
+- Esperado: «Convertidas 2 funciones RIESGO…». En la hoja, **C5 vale 1000 y
+  C6 vale 10,67 como números** (la barra de fórmulas ya no muestra
+  `=RIESGO…`). En el panel aparecen dos entradas nuevas, `Pruebas!C5` y
+  `Pruebas!C6`, con su normal y su triangular.
+
+**J2. Sigue simulando igual.** Con C7 como salida, simula.
+- Esperado: media de C7 en torno a **10.670**, como en E3. Ahora las entradas
+  vienen del panel, no de las funciones.
+
+**J3. Sin el complemento (opcional, pero es lo importante).** Guarda el libro
+y ábrelo donde no esté el complemento: otro ordenador, o Excel para la Web
+sin cargarlo.
+- Esperado: **ningún #¿NOMBRE?**; C5, C6 y C7 muestran números.
+
+**J4. Restaurar.** Vuelve a Modelo → **Restaurar las 2 funciones RIESGO**.
+- Esperado: C5 y C6 vuelven a tener `=RIESGO.NORMAL(1000;150)` y
+  `=RIESGO.TRIANGULAR(8;10;14)`, y las dos entradas desaparecen del panel.
+
+---
+
+## K. Mismos números al volver a marcar
+
+**K1.** En la hoja «Modelo», con el modelo de los bloques A–C (o márcalo de
+nuevo), simula con 10.000 iteraciones y **apunta la media del VAN**.
+
+**K2.** Quita la entrada C5 con la ✕ y vuelve a añadirla con **la misma
+distribución** (Triangular 105 / 120 / 140). Simula.
+- Esperado: **la media del VAN es exactamente la misma** que en K1. Antes de
+  esta versión cambiaba un poco cada vez que se volvía a marcar una celda.
+
+---
+
+## W. Excel para la Web (y Mac, si tienes)
+
+Es la «prueba de humo» que el estudio de mercado pedía adelantar: saber si lo
+que funciona en Windows funciona también en las otras plataformas.
+
+**Preparación (Web):**
+1. Deja `npm start` funcionando en tu PC (el complemento se sirve desde tu
+   equipo, así que la Web solo puede cargarlo **en ese mismo PC**).
+2. Sube `demo-proyecto-aurora.xlsx` a tu OneDrive y ábrelo en
+   **excel.office.com**.
+3. **Inicio → Complementos → Más complementos → Mis complementos → Cargar
+   mi complemento**, y elige el archivo `manifest.xml` de la carpeta del
+   proyecto.
+
+**W1.** Aparece la pestaña **Riesgo** (o el botón del complemento) y el panel
+se abre.
+
+**W2.** Marca las entradas y salidas de A2 y simula.
+- Esperado: motor rápido, resultados como en Windows. Apunta **cuántos
+  hilos** dice «Cómo se calculó».
+
+**W3.** Pestaña **Diagnóstico**: apunta la versión de **ExcelApi** que dice.
+
+**W4.** Volcar a una hoja, y cerrar y reabrir el libro (C3 y C4).
+
+**W5.** Escribe `=RIESGO.NORMAL(1000;150)` en una celda vacía.
+- Esperado: vale 1000.
+
+**Mac (si tienes acceso):** lo mismo, cargando el manifiesto en Excel para
+Mac. Si no tienes Mac, sáltalo y dímelo.
 
 ---
 

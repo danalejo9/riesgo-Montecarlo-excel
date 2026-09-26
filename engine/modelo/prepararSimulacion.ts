@@ -13,6 +13,13 @@
  * que ya le pasa a LHS en `engine/executor/entradas.ts`. Las variables sin
  * correlación declarada quedan como definiciones perezosas — el ejecutor por
  * bloques decide si puede generarlas por tramos (Monte Carlo) o no (LHS).
+ *
+ * **El flujo aleatorio de cada entrada va ligado a su celda**, no a su id.
+ * El id se genera nuevo cada vez que se marca una celda, así que antes quitar
+ * y volver a marcar la misma entrada cambiaba los números con la misma
+ * semilla. Ahora `Modelo!C5` con la semilla 12345 da siempre la misma
+ * secuencia, se marque cuando se marque y se llame como se llame. (Cambia si
+ * la celda cambia de sitio o la hoja de nombre: es otra celda.)
  */
 import { construirDesdeDescriptor } from '../distributions/index.ts';
 import type { DefinicionEntrada } from '../executor/entradas.ts';
@@ -35,6 +42,8 @@ export function prepararEntradas(
 
   const n = modelo.settings.iterations;
   const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
+  /** La clave del flujo aleatorio: la celda, en su forma canónica. */
+  const flujo = (e: EntradaRiskModel) => resolverRef(e.ref);
   const enGrupo = new Set(agrupacion.grupos.flatMap((g) => g.ids));
   const definiciones: DefinicionEntrada[] = [];
 
@@ -43,22 +52,22 @@ export function prepararEntradas(
     definiciones.push({
       tipo: 'distribucion',
       clave: resolverRef(entrada.ref),
-      id: entrada.id,
+      id: flujo(entrada),
       distribucion: toDescriptor(entrada.dist),
       metodo: modelo.settings.sampling,
     });
   }
 
   for (const grupo of agrupacion.grupos) {
-    const buffers = grupo.ids.map((id) => {
-      const entrada = porId.get(id) as EntradaRiskModel;
+    const entradasGrupo = grupo.ids.map((id) => porId.get(id) as EntradaRiskModel);
+    const buffers = entradasGrupo.map((entrada) => {
       const dist = construirDesdeDescriptor(toDescriptor(entrada.dist));
       return modelo.settings.sampling === 'lhs'
-        ? muestrearLHS(dist, id, seed, n)
-        : muestrearMonteCarlo(dist, id, seed, n);
+        ? muestrearLHS(dist, flujo(entrada), seed, n)
+        : muestrearMonteCarlo(dist, flujo(entrada), seed, n);
     });
 
-    const correlacionados = correlacionarImanConover(buffers, grupo.matriz, seed, grupo.ids.join('|'));
+    const correlacionados = correlacionarImanConover(buffers, grupo.matriz, seed, entradasGrupo.map(flujo).join('|'));
 
     grupo.ids.forEach((id, i) => {
       const entrada = porId.get(id) as EntradaRiskModel;

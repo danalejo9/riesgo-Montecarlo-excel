@@ -5,6 +5,32 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Fusión con el roadmap del estudio de mercado, y tres cosas antes de las pruebas (2026-09-26)
+
+**Plan**
+- Fusionada la revisión del roadmap con el estudio de mercado (§1.2: E4
+  redefinida, E9a adelantada, E12, precio, rechazos). Se escribió sobre el
+  estado del 23/09; sus tres primeras prioridades (tornado, ajuste, Web
+  Worker) ya estaban hechas y se marcan como tales.
+
+**Añadido**
+- **«Preparar para compartir»** (E4 redefinida): convierte cada `RIESGO.*` en
+  una entrada del panel y deja en la celda su media, para que quien abra el
+  libro sin el complemento no vea `#¿NOMBRE?`. Guarda las fórmulas originales
+  y **«Restaurar funciones RIESGO»** las devuelve. Aviso en Resultados si el
+  libro usa funciones RIESGO.
+- **AIC y BIC** en el ajuste de distribuciones (con la densidad de cada
+  candidata), y selector «Ordenar por» AIC / BIC / Anderson–Darling. AIC por
+  defecto: castiga los parámetros de más.
+
+**Cambiado**
+- **El flujo aleatorio de cada entrada va ligado a su celda** (H1): volver a
+  marcar una celda ya no cambia los números con la misma semilla. Los
+  resultados de una misma semilla cambian una vez respecto a versiones
+  anteriores.
+- Guía de pruebas ampliada: bloques J (compartir), K (reproducibilidad) y W
+  (Excel para la Web y Mac).
+
 ### Guía de pruebas en Excel y hoja «Pruebas» (2026-09-24)
 
 **Añadido**

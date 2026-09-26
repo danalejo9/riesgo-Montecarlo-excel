@@ -53,6 +53,69 @@ Lo que **no** cambia: el cálculo sigue siendo 100 % local y la arquitectura del
 la misma. Alojar el complemento en una URL significa que se descarga el programa, no que
 los datos salgan del equipo.
 
+### 1.2 Revisión del 2026-09-26: lo que dice el estudio de mercado
+
+El usuario aportó un estudio de mercado sobre los complementos de simulación y
+riesgo para Excel (@RISK, Crystal Ball, ModelRisk, Analytic Solver, RiskAMP). Se
+comparó con el estado real del código. Conclusión: **la arquitectura ya está donde el
+estudio dice que hay que estar** (Office.js, cálculo 100 % local, motor fuera del
+recálculo de Excel), así que no cambia. Lo que cambia es **el orden** y el alcance de
+cuatro etapas.
+
+**Qué se reordena:**
+
+1. **E7 pasa delante de E4, y dentro de E7 van primero el tornado y el ajuste de
+   distribuciones.** Son las dos capacidades que cualquier usuario de @RISK da por
+   hechas. Sin ellas el producto parece incompleto, por bueno que sea el motor.
+2. **Una prueba de humo en Excel para la Web y en Mac se adelanta** (antes en E9, ahora
+   E9a, justo después del tornado). El manifiesto ya declara esas plataformas y solo se
+   ha verificado Windows. Enterarse en la validación de AppSource es caro.
+3. **La simulación sale del hilo del panel (Web Worker en el navegador)**, dentro de
+   E6. Hoy el complemento usa `crearEjecutorSecuencial` en el mismo hilo que React. Los
+   workers solo se han probado en Node. A 1M de iteraciones el panel se congelaría, que
+   es una de las quejas del mercado.
+
+**Qué se redefine:**
+
+4. **E4 queda condicionada a que el libro siga funcionando al compartirlo.** Hoy, quien
+   abre el libro sin el complemento ve un Excel normal con los valores base, porque el
+   modelo vive en `workbook.settings`. Es justo lo que el estudio llama «modo visor»
+   y la competencia no ofrece. Escribir `=RISK.NORMAL(...)` en las celdas lo
+   rompería: sin el complemento, esas celdas acaban en `#¿NOMBRE?`. Ver E4.
+
+**Qué se añade** (E12, después de la v1.0):
+
+5. **Depurador de escenarios**: aislar el peor 5 % (o cualquier percentil) y ver cómo
+   fluye esa iteración por las celdas. Philox es un generador basado en contador, así
+   que cualquier iteración se puede reproducir exactamente. Es barato para esta
+   arquitectura y caro para la competencia.
+6. **Conversor de modelos de @RISK** (`RiskNormal` → `RiskModel v1`), sobre el lector
+   `.xlsx` del escáner. Baja el coste de cambiarse.
+7. **Narrativa de resultados en local**: textos generados con reglas a partir del
+   tornado y los percentiles. Nunca con un modelo de IA externo.
+
+**Qué se rechaza expresamente** (para no reabrirlo sin datos nuevos):
+
+- **Créditos de cálculo en la nube**: rompen la promesa de cálculo local, y con esta
+  velocidad no hacen falta.
+- **Explicaciones con una IA externa**: sacarían del equipo los datos del libro.
+- **Matrices dinámicas y Python en Excel como integración**: poco valor para quien
+  modela presupuestos y mucho coste (es otro modelo de celda). Como mucho, una opción
+  de «volcar iteraciones a una hoja» dentro de E7. *(Nota de la fusión: lo que sí se
+  hizo el 24/09 es **cobertura**: que las fórmulas del usuario que usan `FILTRAR` o
+  `SUMAPRODUCTO` dentro de otra función corran en el motor rápido. No es una
+  integración con el derrame de Excel, que sigue yendo al modo compatible.)*
+- **Pasar a Rust→WASM por principio**: sigue siendo una decisión de E6, tomada con
+  benchmark delante.
+
+**Pendiente para después de la v1.0, sin fecha:** cópulas (Clayton, Gumbel, Frank, t),
+optimización bajo incertidumbre y ampliar el catálogo de distribuciones (hoy ~14,
+frente a 135 de ModelRisk).
+
+**Cautela sobre la fuente:** las citas del estudio se repiten sobre cinco fuentes, y
+varias son de Vose, competidor directo. Los precios y las quejas son orientativos y
+hay que verificarlos antes de usarlos en material comercial.
+
 ---
 
 **2.2 — ¿El modo compatible entra en el MVP?** *(decisión original, luego invertida — se
@@ -69,7 +132,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 
 ## 2. Vista general
 
-> **Estado al 24/09/2026.** Actualizado con lo que de verdad está hecho y
+> **Estado al 26/09/2026.** Actualizado con lo que de verdad está hecho y
 > verificado en Excel, no con lo que el plan preveía. Las etapas no se han
 > recorrido en orden: E3 arrastró trozos de E5 y de E7 porque el escáner
 > encontró `TIR` en un libro real del usuario, y porque un panel que no enseña
@@ -81,21 +144,47 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E1 | Escáner de compatibilidad | 4–5 d | ✅ **v0.1**, pasado por dos libros reales |
 | E2 | Motor Nivel 0 | 15–20 d | ✅ hecha — 57/57 funciones, fidelidad verificada contra Excel |
 | E3 | Integración Excel + UI **+ modo compatible** | 11–14 d | ✅ **v0.5 — el MVP simula de verdad en Excel** |
-| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | 🟡 12 funciones `RIESGO.*` hechas (muestran la media); faltan runtime compartido, modo determinístico/probabilístico y el resto de §2.1-B |
-| E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 43/44, N2 37/41 — Nivel 1 completo salvo `DESREF`; texto completo |
-| E6 | Escala D11 y rendimiento | 6–8 d | 🟡 ejecutor por bloques, **pool de Web Workers** y núcleos configurables hechos; falta medir con libros grandes |
-| E7 | Análisis y visualización | 8–10 d | 🟡 hecho: estadísticos, CDF, histograma, umbrales, tornado + contribución, araña, precisión, escenarios, ajuste a datos, informe PDF y volcado. Pendiente: §2.1-C |
+| E4 | Funciones `RISK.*` + modo exploración F9 | 5–6 d | 🟡 12 funciones `RIESGO.*` hechas (muestran la media) y **«Preparar para compartir» hecho** (26/09); faltan runtime compartido, modo determinístico/probabilístico y el resto de §2.1-B. **Redefinida el 26/09** (§1.2): el libro tiene que seguir funcionando sin el complemento |
+| E5 | Motor Niveles 1 y 2 | 10–12 d | 🟡 N1 43/44, N2 37/41 — Nivel 1 completo salvo `DESREF`; texto, `LET` y matrices dentro de funciones hechos |
+| E6 | Escala D11 y rendimiento | 7–10 d | 🟡 ejecutor por bloques, **Web Workers en el panel** (24/09) y núcleos configurables hechos; faltan medir con libros grandes y el escenario D11 |
+| E7 | Análisis y visualización | 8–10 d | 🟡 hechos: tornado (Spearman + contribución a la varianza + R²), araña, **ajuste de distribuciones (A–D, K–S, AIC y BIC)**, histograma, CDF, umbrales, precisión, escenarios, informe PDF y volcado. Pendiente: §2.1-C |
+| E9a | Prueba de humo en Excel Web y Mac | 1–2 d | ⬜ **adelantada** desde E9 (§1.2); incluida en la guía de pruebas (bloque W) |
 | E9 | Mac, empaquetado y documentación | 4–5 d | ⬜ no empezada |
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
+| E12 | Diferenciadores: depurador de escenarios, conversor de @RISK, narrativa local | 8–12 d | ⬜ después de la v1.0 (§1.2) |
 
 **Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
 salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el
 motor rápido (en varios hilos) o con Excel en el bucle, ver y guardar
 resultados, comparar escenarios, informe PDF y volcado a hoja—. **Casi todo lo
-de los días 23 y 24 está probado en el banco y en Node, no en el Excel del
+de los días 23 al 26 está probado en el banco y en Node, no en el Excel del
 usuario**: la guía `docs/GUIA_PRUEBAS_EXCEL.md` es el siguiente paso
-obligatorio. Lo que queda está ordenado en §2.1.
+obligatorio.
+
+> **Nota de la fusión (26/09).** La revisión con el estudio de mercado (§1.2) se
+> escribió sobre `main`, que estaba en el estado del 23/09. Sus tres primeras
+> prioridades —tornado, ajuste de distribuciones y Web Worker— se hicieron en la
+> rama de trabajo el 24/09, sin conocer el estudio y en el mismo orden que él
+> propone. Se conservan sus decisiones (E4 redefinida, E9a, E12, precio,
+> rechazos) y se actualizan los estados.
+
+**Orden de trabajo desde el 2026-09-26** (estudio de mercado §1.2 + revisión
+§2.1, sobre el estado real):
+
+1. ~~E7: tornado y sensibilidad~~ ✅ 24/09.
+2. ~~E7: ajuste de distribuciones~~ ✅ 24/09; AIC y BIC añadidos el 26/09.
+3. ~~E6: Web Worker en el panel~~ ✅ 24/09. **E9a (Excel Web y Mac)**: en la
+   guía de pruebas, junto con Windows.
+4. **E4 redefinida**: «Preparar para compartir» ✅ 26/09; el resto de E4 en
+   §2.1-B.
+5. **Pruebas en Excel** (§2.1-A) — bloqueante para lo siguiente.
+6. **E10: decidir licencia y precio.** Decisión del usuario; bloquea la publicación.
+7. §2.1 en su orden (B1–B3, C1–C2–C5, B4–B6, D1, H2, C3–C4…).
+8. **E12**, después de la v1.0.
+
+Todo el trabajo de producto (E9–E11) no es técnico, pero sin él esto no llega a
+nadie más que a su autor.
 
 **Cobertura de funciones, medida** (`npm test` la ata; no es una estimación):
 
@@ -194,7 +283,8 @@ Estimaciones en días de trabajo efectivo.
 - **C6. Percentiles configurables** (qué percentiles se enseñan y exportan).
 
 ### D. Análisis que faltan — 3–5 d
-- **D1. Análisis de escenarios por cola** (el de @RISK): qué entradas están
+- **D1. Análisis de escenarios por cola** (el de @RISK; su versión iteración a
+  iteración es el depurador de escenarios de E12): qué entradas están
   más desplazadas cuando la salida cae en su peor 10 % (o mejor 10 %). Dice
   *qué tiene que pasar* para que salga mal, que el tornado no dice.
 - **D2. Análisis de estrés / qué pasa si determinista**: fijar una entrada
@@ -364,11 +454,25 @@ La etapa crítica y la más larga. Es el corazón del producto.
 - **Modo exploración (D9)**: conmutador en la cinta, funciones volátiles, F9 remuestrea, con las tres advertencias del §6.1 visibles en la UI.
 - Script de limpieza de la caché `Wef` para desarrollo.
 
-**Estado (24/09):** hechas 12 funciones `RIESGO.*` sin runtime compartido,
-que devuelven la media; el motor las reconoce como entradas. Lo pendiente
-está en §2.1-B.
+> **Revisión del 2026-09-26 (§1.2): compartir no puede romper el libro.**
+> Hoy el modelo vive en `workbook.settings` y las celdas conservan sus valores, así que
+> quien abre el libro sin el complemento ve un Excel normal con los valores base. Es
+> una ventaja frente a @RISK que hay que conservar. Una función personalizada en una
+> celda, en un Excel sin el complemento, acaba en `#¿NOMBRE?` al recalcular. Por eso:
+>
+> - **`workbook.settings` sigue siendo la fuente de verdad del modelo.** `RISK.*` es
+>   una forma opcional de declarar, no la única.
+> - **Comando «Preparar para compartir»**: sustituye cada `RISK.*` por su valor base
+>   (media o valor de la celda antes de declararla), sin perder la declaración, que
+>   sigue en el modelo. Quien vuelva a abrir el libro con el complemento lo recupera.
+> - Aviso en el panel si el libro tiene `RISK.*` escritas y se va a guardar.
 
-**Criterio de hecho:** `=RISK.NORMAL(1000;50)` escrita a mano en una celda de Excel **en Windows** devuelve 1000, el motor la reconoce como entrada, y al activar el modo exploración F9 la mueve. Verificado en Excel real, no en el validador.
+**Estado (26/09):** hechas 12 funciones `RIESGO.*` sin runtime compartido, que
+devuelven la media; el motor las reconoce como entradas. **«Preparar para
+compartir» y su inverso «Restaurar funciones RIESGO» hechos** (Diagnóstico y
+aviso en Modelo). Lo pendiente está en §2.1-B.
+
+**Criterio de hecho:** `=RISK.NORMAL(1000;50)` escrita a mano en una celda de Excel **en Windows** devuelve 1000, el motor la reconoce como entrada, y al activar el modo exploración F9 la mueve. Verificado en Excel real, no en el validador. **Y además:** el libro, tras «Preparar para compartir», abierto en un Excel sin el complemento, no muestra ningún `#¿NOMBRE?` y recalcula con los valores base.
 
 ---
 
@@ -396,9 +500,10 @@ está en §2.1-B.
 - Reservorio de 20.000 iteraciones para sensibilidad (§3.4).
 - Iman–Conover por bloque, solo sobre grupos correlacionados declarados.
 - Ajuste fino del tamaño de bloque y del reparto entre workers.
+- ✅ **Web Worker en el navegador** (hecho el 24/09: `engine/executor/pool.ts`, `ui/motor/`). Texto original de la revisión: hoy el complemento simula con `crearEjecutorSecuencial` en el mismo hilo que el panel; el pool de workers solo existe en Node (`tests/helpers/poolNodeWorkers.ts`). La interfaz `EjecutorDeBloques` ya separa «calcular un bloque» de «quién lo reparte», así que es un ejecutor nuevo, no un rediseño. Va con E9a, porque el comportamiento de los workers dentro del panel de Office cambia entre Windows, Mac y Web.
 - Suite `npm run bench` con resultados versionados.
 
-**Criterio de hecho:** el escenario D11 (1M × 300 entradas × 100 salidas × 3.000 celdas) ejecutado, por debajo de 60 s y de 800 MB de pico. **Si no se alcanza, aquí es donde se decide sobre Rust→WASM**, con los números delante.
+**Criterio de hecho:** el escenario D11 (1M × 300 entradas × 100 salidas × 3.000 celdas) ejecutado, por debajo de 60 s y de 800 MB de pico. **Y el panel sigue respondiendo** (se puede cancelar y cambiar de pestaña) durante una simulación de 1M de iteraciones dentro de Excel. **Si no se alcanza, aquí es donde se decide sobre Rust→WASM**, con los números delante.
 
 ---
 
@@ -406,14 +511,19 @@ está en §2.1-B.
 
 **Entregable:** el producto que querías, completo.
 
-- Histograma con bins configurables y densidad; CDF con cortes por percentil arrastrables.
-- Tornado con Spearman, regresión estandarizada y contribución a la varianza, **top 20 con acceso a la lista completa** (§3.4).
-- Comparación de escenarios.
-- Probabilidad de superar umbrales.
-- Ajuste de distribuciones a datos, unificando las dos implementaciones heredadas, con MLE y PERT real.
-- Exportación a hojas nativas de Excel.
+> **Orden dentro de la etapa, desde el 2026-09-26 (§1.2):** primero el tornado, después
+> el ajuste de distribuciones, y luego lo demás. Son las dos capacidades que el
+> estudio de mercado identifica como imprescindibles en cualquier herramienta
+> profesional, y hoy no existe ninguna de las dos.
 
-**Criterio de hecho:** un informe completo generado desde un libro real, y ningún cálculo estadístico ejecutándose dentro de un render de React.
+1. ✅ **Tornado** con Spearman, regresión estandarizada y contribución a la varianza, **top 20 con acceso a la lista completa** (§3.4). Diagrama **spider** (salida frente a percentil de cada entrada) sobre el mismo reservorio.
+2. ✅ **Ajuste de distribuciones a datos**, unificando las dos implementaciones heredadas, con MLE y PERT real. Ranking por **AIC y BIC**, y bondad de ajuste con **Kolmogorov–Smirnov** y **Anderson–Darling**. El ajuste elegido se guarda como una distribución normal del modelo.
+3. Histograma con bins configurables y densidad; CDF con cortes por percentil arrastrables.
+4. Comparación de escenarios.
+5. Probabilidad de superar umbrales.
+6. Exportación a hojas nativas de Excel, incluido el tornado. Opción de **volcar las iteraciones** a una hoja (con el límite de filas de Excel), para quien quiera filtrarlas con fórmulas nativas.
+
+**Criterio de hecho:** un informe completo generado desde un libro real, y ningún cálculo estadístico ejecutándose dentro de un render de React. **El tornado del libro de demostración ordena las entradas como se espera por construcción**, y el ajuste recupera los parámetros de muestras sintéticas generadas con distribuciones conocidas (test estadístico, no a ojo).
 
 ---
 
@@ -429,9 +539,24 @@ está en §2.1-B.
 
 ---
 
+## E9a — Prueba de humo en Excel para la Web y en Mac  *(adelantada el 2026-09-26)*
+
+**Entregable:** saber pronto, y con dato, si lo que funciona en Windows funciona en las otras dos plataformas que declara el manifiesto.
+
+- Sideload en **Excel para la Web** (basta una cuenta de Microsoft 365) y, si hay acceso, en **Excel para Mac**.
+- Recorrer el libro de demostración de punta a punta: marcar, simular por el motor rápido, ver resultados, volcar a hoja, cerrar y reabrir.
+- Anotar por plataforma el `ExcelApi` disponible (el panel de Diagnóstico ya lo mide), si el modo de cálculo se puede cambiar (en la Web no siempre) y si arranca un Web Worker desde el panel.
+- Lo que falle se documenta en `ESTADO_Y_HANDOFF.md` y se decide si se arregla ya o se deja de declarar esa plataforma.
+
+**Qué NO entra:** la validación completa, el empaquetado y el manual. Eso sigue en E9.
+
+**Criterio de hecho:** una tabla por plataforma (Windows, Web, Mac) con qué funciona y qué no, medida en Excel real.
+
+---
+
 ## E9 — Mac, empaquetado y documentación
 
-- Prueba real en **Mac** (D1). Esto se valida antes, no aquí: una prueba de humo en Mac debe hacerse ya en E4, cuando se toca el manifiesto. E9 es la validación completa.
+- Prueba real en **Mac** (D1). La prueba de humo ya se hizo en E9a; E9 es la validación completa.
 - Empaquetado y sideload documentado para ambos sistemas; manifiesto de producción sin `localhost`.
 - Re-registro del sideload apuntando a esta carpeta (hoy apunta a `1 complemento sensibilidad`).
 - **Documentación que permita a otra IA reconstruir el proyecto desde cero** (§21 de tus instrucciones maestras): decisiones, arquitectura, formatos, catálogo de funciones, cómo correr tests y benchmarks.
@@ -457,6 +582,15 @@ complemento tiene que llegar a alguien que no seas tú.
   contra un servidor choca con la promesa de "no se conecta a Internet". Se puede
   resolver con activación única o licencia firmada offline, pero hay que elegir qué se
   promete, porque acaba en la política de privacidad.
+- **Precio** (añadido el 2026-09-26, §1.2). El estudio sitúa a la competencia entre
+  ~1.550 € y 6.000 $ por usuario y año, con contratos anuales y precios opacos, y
+  propone una suscripción **mensual, pública y sin permanencia** (orientativo: 29–49 $
+  al mes) con prueba gratuita. Encaja con este producto. **No** entra la parte de
+  «créditos de cálculo en la nube» del estudio: rompe la promesa de cálculo local.
+  Decisión del usuario, junto con la de licencia.
+- **La ficha del producto debe contar lo que ya se tiene**: cálculo 100 % local, Windows
+  + Mac + Web con un solo código, y libros que siguen funcionando al compartirlos sin el
+  complemento (E4). Son las tres quejas principales del mercado.
 - **Mensajes de error para desconocidos.** Hoy están pensados para alguien que conoce el
   proyecto. Un usuario que acaba de instalarlo necesita saber qué hacer, no qué falló.
 - **Telemetría opcional y explícita**, si la hay: nunca datos del libro, nunca activada
@@ -489,6 +623,20 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 
 ---
 
+## E12 — Diferenciadores  *(nueva el 2026-09-26, después de la v1.0)*
+
+**Entregable:** tres cosas que la competencia no tiene o hace mal, y que esta arquitectura hace baratas. Nace del estudio de mercado (§1.2).
+
+- **Depurador de escenarios.** Elegir un percentil de una salida (por ejemplo, el peor 5 %), elegir una iteración concreta de ese tramo y ver sus valores celda a celda, con la hoja resaltada. Philox es un generador basado en contador: la iteración *k* se regenera exactamente sin guardar las anteriores, y el evaluador de referencia la recalcula entera. Sirve para auditar el modelo y para contestar «¿qué tiene que pasar para que perdamos dinero?».
+- **Conversor de modelos de @RISK.** Leer un `.xlsx` con `RiskNormal`, `RiskTriang`, `RiskPert`, `RiskOutput`… (el lector del escáner ya parsea las fórmulas) y proponer el `RiskModel v1` equivalente, avisando de lo que no tiene traducción. Revisar la marca antes de nombrarlo en la ficha (ver E11).
+- **Narrativa de resultados en local.** Dos o tres frases generadas con reglas a partir del tornado y de los percentiles («hay un 15 % de probabilidad de VAN negativo; el 60 % de la varianza lo explica el precio»). Nada sale del equipo; **no** se usa un modelo de IA externo.
+
+**Qué NO entra:** cópulas, optimización y el catálogo ampliado de distribuciones. Siguen sin fecha (§1.2).
+
+**Criterio de hecho:** el depurador enseña la iteración del percentil 5 del libro de demostración y su valor coincide con el que dio la simulación; el conversor traduce un libro de @RISK de ejemplo sin pérdidas silenciosas.
+
+---
+
 ## 3. Riesgos del plan
 
 | Riesgo | Señal temprana | Respuesta |
@@ -501,6 +649,9 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 | **Cobertura de funciones insuficiente para usuarios desconocidos** | Quejas tras publicar | El modo compatible en el MVP garantiza que nada quede sin simular; el registro de funciones hace barato ampliar |
 | **Rechazo en la validación de Microsoft** | E11 | Revisar la lista de requisitos antes de E9, no al final |
 | **Soporte y compatibilidad con 100+ usuarios** | A partir de la publicación | Versionado estricto del formato, versión visible en la UI, mensajes de error autoexplicativos |
+| **Parecer incompleto frente a @RISK** | Sin tornado ni ajuste de distribuciones | Son lo primero de E7 desde el 2026-09-26 (§1.2) |
+| **`RISK.*` rompe los libros compartidos** | `#¿NOMBRE?` en un Excel sin el complemento | `workbook.settings` sigue siendo la fuente de verdad y «Preparar para compartir» entra en el criterio de hecho de E4 |
+| **Excel Web o Mac no se comportan como Windows** | Solo verificado en Windows | E9a adelantada: prueba de humo antes de E4 |
 
 ---
 
@@ -508,7 +659,8 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 
 | Cuándo | Qué |
 |---|---|
-| Ahora | **Decidir el modelo de licencia** y qué se promete exactamente sobre la conexión a Internet (§E10). Condiciona la arquitectura, así que cuanto antes mejor |
+| Ahora | **Decidir el modelo de licencia y el precio** y qué se promete exactamente sobre la conexión a Internet (§E10). Condiciona la arquitectura, así que cuanto antes mejor |
+| En E9a | Hacer el sideload en Excel para la Web (y en un Mac si tienes acceso) y recorrer el libro de demostración |
 | Antes de E10 | Cuenta de Partner Center, política de privacidad, condiciones de uso, canal de soporte, revisión de marca. Son tareas tuyas, no mías |
 | Al cerrar E1 | Pasar el escáner por tus libros reales y revisar juntos el catálogo del §4.2 |
 | Al cerrar E3 (MVP) | Probarlo con un modelo tuyo de verdad y decir qué falla |

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { exponential, gamma, lognormal, normal, uniform, weibull } from '../../engine/distributions/index.ts';
-import { ajustarDistribuciones, leerDatos } from '../../engine/modelo/index.ts';
+import { ajustarDistribuciones, leerDatos, logDensidad, ordenarCandidatos, type DistributionSpec } from '../../engine/modelo/index.ts';
 import { muestrearMonteCarlo } from '../../engine/sampling/index.ts';
 
 const datos = (dist: Parameters<typeof muestrearMonteCarlo>[0], n = 2000) =>
@@ -71,10 +71,14 @@ describe('ajustarDistribuciones', () => {
     for (const t of ['lognormal', 'gamma', 'weibull', 'exponential', 'beta']) expect(tipos).not.toContain(t);
   });
 
-  it('K–S entre 0 y 1, y la lista ordenada por Anderson–Darling', () => {
+  it('K–S entre 0 y 1, la lista ordenada por AIC, y reordenable por BIC o A–D', () => {
     const r = ajustarDistribuciones(datos(normal(5, 1), 500));
-    const ad = r?.candidatos.map((c) => c.andersonDarling) ?? [];
-    expect(ad).toEqual([...ad].sort((a, b) => a - b));
+    const aic = r?.candidatos.map((c) => c.aic) ?? [];
+    expect(aic).toEqual([...aic].sort((a, b) => a - b));
+    const porAd = ordenarCandidatos(r?.candidatos ?? [], 'andersonDarling').map((c) => c.andersonDarling);
+    expect(porAd).toEqual([...porAd].sort((a, b) => a - b));
+    const porBic = ordenarCandidatos(r?.candidatos ?? [], 'bic').map((c) => c.bic);
+    expect(porBic).toEqual([...porBic].sort((a, b) => a - b));
     for (const c of r?.candidatos ?? []) {
       expect(c.kolmogorovSmirnov).toBeGreaterThanOrEqual(0);
       expect(c.kolmogorovSmirnov).toBeLessThanOrEqual(1);
@@ -102,5 +106,43 @@ describe('leerDatos', () => {
   it('separados por punto y coma o espacios; con punto decimal si se pide', () => {
     expect(leerDatos('1;2 3\t4').valores).toEqual([1, 2, 3, 4]);
     expect(leerDatos('1,500.5 2.5', '.').valores).toEqual([1500.5, 2.5]);
+  });
+});
+
+describe('densidades (para AIC y BIC)', () => {
+  // Cada densidad integra 1 y es coherente con la CDF del motor (regla del trapecio fina).
+  const casos: [DistributionSpec, number, number][] = [
+    [{ type: 'normal', mean: 3, stdDev: 2 }, -20, 26],
+    [{ type: 'lognormal', p1: 10, p2: 4 }, 1e-9, 120],
+    [{ type: 'uniform', min: 2, max: 5 }, 2, 5],
+    [{ type: 'triangular', min: 0, mode: 1, max: 4 }, 0, 4],
+    [{ type: 'pert', min: 0, mode: 1, max: 4 }, 0, 4],
+    [{ type: 'beta', alpha: 2, beta: 3 }, 0, 1],
+    [{ type: 'gamma', shape: 3, scale: 2 }, 1e-9, 80],
+    [{ type: 'exponential', lambda: 0.5 }, 0, 80],
+    [{ type: 'weibull', shape: 2.5, scale: 10 }, 1e-9, 60],
+  ];
+  for (const [spec, a, b] of casos) {
+    it(`${spec.type} integra 1`, () => {
+      const d = logDensidad(spec);
+      if (!d) throw new Error('sin densidad');
+      const pasos = 200_000;
+      const h = (b - a) / pasos;
+      let s = 0;
+      for (let i = 0; i <= pasos; i++) {
+        const v = Math.exp(d.f(a + i * h));
+        s += (i === 0 || i === pasos ? 0.5 : 1) * (Number.isFinite(v) ? v : 0);
+      }
+      expect(s * h).toBeCloseTo(1, 3);
+    });
+  }
+
+  it('AIC castiga los parámetros: con datos normales, la normal gana a la PERT', () => {
+    const r = ajustarDistribuciones(datos(normal(100, 15), 3000));
+    const n = r?.candidatos.find((c) => c.spec.type === 'normal');
+    const p = r?.candidatos.find((c) => c.spec.type === 'pert');
+    expect(n?.parametros).toBe(2);
+    expect(p?.parametros).toBe(3);
+    expect((n?.aic as number) < (p?.aic as number)).toBe(true);
   });
 });

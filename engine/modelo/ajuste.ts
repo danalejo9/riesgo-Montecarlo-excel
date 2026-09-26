@@ -19,10 +19,14 @@
  *   (mín − rango/(n−1), máx + rango/(n−1)) y la moda por momentos;
  * - beta: por momentos, solo si todos los datos están entre 0 y 1.
  *
- * **Cómo se ordenan**: por el estadístico de **Anderson–Darling**, que pesa
- * más las colas que Kolmogorov–Smirnov —y en riesgo lo que importa son las
- * colas—. Se da también el de K–S porque es el que la gente conoce. Los dos
- * solo necesitan la función de distribución, que todas las del motor tienen.
+ * **Cómo se ordenan**: por **AIC** por defecto (criterio de Akaike, que
+ * premia el ajuste y castiga cada parámetro: una PERT de tres parámetros no
+ * gana a una normal de dos solo por tener uno más). Se dan también **BIC**
+ * (castiga más los parámetros cuando hay muchos datos), **Anderson–Darling**
+ * (pesa las colas, que en riesgo es lo que importa) y **Kolmogorov–Smirnov**
+ * (la que la gente conoce). La interfaz deja elegir por cuál ordenar. AIC y
+ * BIC necesitan la densidad de cada candidata, que se escribe aquí
+ * (`logDensidad`); A–D y K–S solo la función de distribución.
  *
  * **Lo que no dice**: si el ajuste es "estadísticamente aceptable". Los
  * valores críticos de A–D dependen de la distribución y de que los parámetros
@@ -32,10 +36,17 @@
  */
 
 import { construirDesdeDescriptor } from '../distributions/index.ts';
+import { lgamma } from '../distributions/mathfn.ts';
 import { toDescriptor, type DistributionSpec } from './distributionSchema.ts';
 
 export interface AjusteCandidato {
   spec: DistributionSpec;
+  /** Criterio de información de Akaike: 2k − 2·ln L. Cuanto menor, mejor; penaliza parámetros. */
+  aic: number;
+  /** Criterio bayesiano: k·ln n − 2·ln L. Penaliza más los parámetros con muchos datos. */
+  bic: number;
+  /** Número de parámetros estimados de los datos. */
+  parametros: number;
   /** Anderson–Darling: cuanto menor, mejor. */
   andersonDarling: number;
   /** Kolmogorov–Smirnov (distancia máxima entre CDF empírica y teórica, 0..1). */
@@ -48,7 +59,7 @@ export interface ResultadoAjuste {
   desviacion: number;
   min: number;
   max: number;
-  /** De mejor a peor. */
+  /** De mejor a peor según AIC (ver `ordenarCandidatos` para otro criterio). */
   candidatos: AjusteCandidato[];
 }
 
@@ -95,6 +106,76 @@ function redondearSpec(spec: DistributionSpec): DistributionSpec {
 
 const Z = 1e-12;
 
+/** ln B(a, b). */
+const lbeta = (a: number, b: number) => lgamma(a) + lgamma(b) - lgamma(a + b);
+
+/** ln de la densidad de una beta de parámetros (a, b) escalada a [min, max]. */
+function logBetaEscalada(x: number, a: number, b: number, min: number, max: number): number {
+  if (x < min || x > max) return -Infinity;
+  const r = max - min;
+  const u = (x - min) / r;
+  // En los extremos con un exponente 0 la densidad es finita; con uno negativo, infinita.
+  const t1 = a === 1 ? 0 : (a - 1) * Math.log(u);
+  const t2 = b === 1 ? 0 : (b - 1) * Math.log(1 - u);
+  return t1 + t2 - lbeta(a, b) - Math.log(r);
+}
+
+/**
+ * ln f(x) de una candidata, y cuántos parámetros se estimaron de los datos.
+ * Solo las familias que propone el ajuste.
+ */
+export function logDensidad(spec: DistributionSpec): { f: (x: number) => number; k: number } | null {
+  switch (spec.type) {
+    case 'normal': {
+      const { mean: m, stdDev: s } = spec;
+      return { k: 2, f: (x) => -0.5 * ((x - m) / s) ** 2 - Math.log(s) - 0.5 * Math.log(2 * Math.PI) };
+    }
+    case 'lognormal': {
+      // Parámetros de la variable -> mu y sigma del logaritmo.
+      const sigma = Math.sqrt(Math.log(1 + (spec.p2 * spec.p2) / (spec.p1 * spec.p1)));
+      const mu = Math.log(spec.p1) - (sigma * sigma) / 2;
+      return {
+        k: 2,
+        f: (x) => (x <= 0 ? -Infinity : -Math.log(x * sigma * Math.sqrt(2 * Math.PI)) - (Math.log(x) - mu) ** 2 / (2 * sigma * sigma)),
+      };
+    }
+    case 'uniform':
+      return { k: 2, f: (x) => (x < spec.min || x > spec.max ? -Infinity : -Math.log(spec.max - spec.min)) };
+    case 'triangular': {
+      const { min: a, mode: c, max: b } = spec;
+      return {
+        k: 3,
+        f: (x) => {
+          if (x < a || x > b) return -Infinity;
+          const d = x < c ? (2 * (x - a)) / ((b - a) * (c - a)) : x > c ? (2 * (b - x)) / ((b - a) * (b - c)) : 2 / (b - a);
+          return Math.log(d);
+        },
+      };
+    }
+    case 'pert': {
+      const { min: a, mode: c, max: b } = spec;
+      const l = spec.lambda ?? 4;
+      const al = 1 + (l * (c - a)) / (b - a);
+      const be = 1 + (l * (b - c)) / (b - a);
+      return { k: 3, f: (x) => logBetaEscalada(x, al, be, a, b) };
+    }
+    case 'beta':
+      return { k: 2, f: (x) => logBetaEscalada(x, spec.alpha, spec.beta, 0, 1) };
+    case 'gamma': {
+      const { shape: k, scale: t } = spec;
+      return { k: 2, f: (x) => (x <= 0 ? -Infinity : (k - 1) * Math.log(x) - x / t - lgamma(k) - k * Math.log(t)) };
+    }
+    case 'exponential':
+      return { k: 1, f: (x) => (x < 0 ? -Infinity : Math.log(spec.lambda) - spec.lambda * x) };
+    case 'weibull': {
+      const { shape: k, scale: l } = spec;
+      return { k: 2, f: (x) => (x <= 0 ? -Infinity : Math.log(k / l) + (k - 1) * Math.log(x / l) - (x / l) ** k) };
+    }
+    default:
+      return null;
+  }
+}
+
 function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidato | null {
   let dist;
   try {
@@ -116,7 +197,26 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
     ks = Math.max(ks, (i + 1) / n - f, f - i / n);
     suma += (2 * i + 1) * (Math.log(f) + Math.log(1 - (F[n - 1 - i] as number)));
   }
-  return { spec, andersonDarling: -n - suma / n, kolmogorovSmirnov: ks };
+  const densidad = logDensidad(spec);
+  if (!densidad) return null;
+  let ll = 0;
+  for (let i = 0; i < n; i++) ll += densidad.f(ordenados[i] as number);
+  const k = densidad.k;
+  return {
+    spec,
+    aic: 2 * k - 2 * ll,
+    bic: k * Math.log(n) - 2 * ll,
+    parametros: k,
+    andersonDarling: -n - suma / n,
+    kolmogorovSmirnov: ks,
+  };
+}
+
+export type CriterioAjuste = 'aic' | 'bic' | 'andersonDarling';
+
+/** Ordena las candidatas por el criterio elegido (todos: cuanto menor, mejor). */
+export function ordenarCandidatos(c: readonly AjusteCandidato[], criterio: CriterioAjuste): AjusteCandidato[] {
+  return [...c].sort((p, q) => p[criterio] - q[criterio]);
 }
 
 function weibullForma(x: Float64Array, mediaLn: number): number | null {
@@ -199,8 +299,8 @@ export function ajustarDistribuciones(datos: readonly number[]): ResultadoAjuste
   const candidatos = specs
     .map(redondearSpec)
     .map((s) => bondad(s, x))
-    .filter((c): c is AjusteCandidato => c !== null && Number.isFinite(c.andersonDarling))
-    .sort((p, q) => p.andersonDarling - q.andersonDarling);
+    .filter((c): c is AjusteCandidato => c !== null && Number.isFinite(c.andersonDarling) && Number.isFinite(c.aic))
+    .sort((p, q) => p.aic - q.aic);
 
   return { n, media, desviacion, min, max, candidatos };
 }
