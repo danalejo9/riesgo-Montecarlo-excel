@@ -946,6 +946,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     **Siguiente de desarrollo**: E5 (nombres legibles), E6 (elegir salida),
     C7 (PDF del proyecto), según el orden de §2.1.
 
+35. [x] **Etapa 1 hecha (2026-09-28)**: E5 nombres legibles, E6 elegir la
+    salida (tabla + selector + salto por selección en la hoja), C7 informe
+    del proyecto (campo `project` del modelo y lectura en palabras con
+    reglas), E7 escenarios (hasta 10, migra la referencia única), E8 color
+    melocotón para `RIESGO.*`, F4 un hilo con poco trabajo. Diseño de los
+    libros tutoriales y del manual en `docs/LIBROS_TUTORIAL.md` (bloque M, al
+    final). Pendiente del usuario: bloque L de la guía. **Siguiente**: etapa
+    2 (B1 runtime compartido, B2 determinístico/probabilístico, B3 cinta).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.

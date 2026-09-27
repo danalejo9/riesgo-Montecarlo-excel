@@ -422,8 +422,9 @@ export function Modelo({
         <h2>Resaltado en la hoja</h2>
         <p className="tenue">
           Las entradas se pintan de amarillo y las salidas de verde, el convenio
-          de toda la vida en modelización financiera. Al quitarlo, cada celda
-          vuelve al relleno que tenía.
+          de toda la vida en modelización financiera; las celdas con funciones
+          RIESGO, de melocotón (se descubren al simular). Al quitarlo, cada
+          celda vuelve al relleno que tenía.
         </p>
         <div className="botonera">
           <button type="button" onClick={() => void aplicarResaltado(modelo)} disabled={ocupado}>

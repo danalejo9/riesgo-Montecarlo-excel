@@ -61,16 +61,16 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 1 | A | Tu prueba **K**, y repetir **W5**, **J4** y **G3** | Plan | ⬜ tú |
 | 2 | E10 | **Decidir licencia y precio** (bloquea la publicación, no el desarrollo) | Estudio | ⬜ tú |
 
-### Etapa 1: lo que pediste en las pruebas (≈ 5–7 días)
+### Etapa 1: lo que pediste en las pruebas — ✅ hecha el 28/09 (falta tu prueba, bloque L de la guía)
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 3 | E5 | **Nombres legibles automáticos**: C5 se llama «Precio unitario» (el texto de su izquierda), en el panel, los gráficos, el PDF y el volcado | Pruebas |
-| 4 | E6 | **Elegir la salida en Resultados**: selector arriba y tabla resumen de todas; si se puede, que al seleccionar una salida en la hoja el panel salte a ella | **Tú** |
-| 5 | C7 | **Informe PDF del proyecto**: título, descripción y un párrafo de lectura de los resultados | **Tú** |
-| 6 | E7 | **Administrador de escenarios**: varios escenarios con nombre, compararlos, borrarlos | **Tú** |
-| 7 | E8 | **Color propio para las celdas con `RIESGO.*`** | **Tú** |
-| 8 | F4 | Núcleos en automático según el tamaño (con poco trabajo, 1 núcleo es más rápido) | Pruebas |
+| 3 | E5 | ✅ **Nombres legibles automáticos**: C5 se llama «Precio unitario» (el texto de su izquierda), en el panel, los gráficos, el PDF y el volcado | Pruebas |
+| 4 | E6 | ✅ **Elegir la salida en Resultados**: selector arriba y tabla resumen de todas; si se puede, que al seleccionar una salida en la hoja el panel salte a ella | **Tú** |
+| 5 | C7 | ✅ **Informe PDF del proyecto**: título, descripción y un párrafo de lectura de los resultados | **Tú** |
+| 6 | E7 | ✅ **Administrador de escenarios**: varios escenarios con nombre, compararlos, borrarlos | **Tú** |
+| 7 | E8 | ✅ **Color propio para las celdas con `RIESGO.*`** | **Tú** |
+| 8 | F4 | ✅ Núcleos en automático según el tamaño (con poco trabajo, 1 núcleo es más rápido) | Pruebas |
 
 ### Etapa 2: funciones RIESGO completas y la cinta (≈ 6–8 días)
 

@@ -69,7 +69,7 @@ export interface PeticionSimulacion {
    * capa no sabe nada de cómo se empaquetan. Sin él, se calcula en el hilo
    * del panel, que es correcto pero lo congela mientras dura.
    */
-  crearPool?: (contexto: ContextoHilo) => Pool | null;
+  crearPool?: (contexto: ContextoHilo, info: { iteraciones: number }) => Pool | null;
 }
 
 /**
@@ -278,7 +278,7 @@ function porElRapido(
     pool = args.crearPool?.({
       grafo, plan: compilado.plan, entradas: resueltas, seed: semilla,
       compresionTDigest: COMPRESION_TDIGEST, limiteMuestra: LIMITE_MUESTRA_SENSIBILIDAD, regional,
-    }) ?? null;
+    }, { iteraciones: n }) ?? null;
   } catch {
     pool = null; // sin hilos (navegador antiguo, política de seguridad): en este hilo
   }

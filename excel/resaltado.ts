@@ -35,6 +35,22 @@ import { rangoDesdeDireccion } from './rangos.ts';
 export const COLOR_ENTRADA = '#FFF2CC';
 /** Verde suave, el de un resultado calculado. */
 export const COLOR_SALIDA = '#E2EFDA';
+/**
+ * Melocotón suave: una celda con una función `RIESGO.*` (E8). Es una entrada,
+ * pero declarada en la fórmula y no en el panel; el usuario pidió distinguirla.
+ */
+export const COLOR_RIESGO = '#FCE4D6';
+
+/**
+ * Las celdas con funciones `RIESGO.*` que afectan al modelo. Solo se conocen al
+ * simular (hay que leer el libro), así que el panel las apunta aquí tras cada
+ * simulación y cada resaltado posterior las incluye.
+ */
+let celdasRiesgo: readonly string[] = [];
+
+export function recordarCeldasRiesgo(refs: readonly string[]): void {
+  celdasRiesgo = [...refs];
+}
 
 /**
  * Dónde se guarda el formato anterior de cada celda pintada, dentro del libro.
@@ -81,6 +97,8 @@ function guardarPrevios(context: Excel.RequestContext, previos: RellenosPrevios)
  */
 export async function aplicarResaltado(modelo: ModeloRiesgo): Promise<void> {
   const deseado = new Map<string, string>();
+  // Primero las RIESGO: si una celda está también en el panel, manda el panel.
+  for (const ref of celdasRiesgo) deseado.set(ref, COLOR_RIESGO);
   for (const e of modelo.inputs) deseado.set(e.ref, COLOR_ENTRADA);
   for (const s of modelo.outputs) deseado.set(s.ref, COLOR_SALIDA);
 

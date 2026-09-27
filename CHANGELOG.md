@@ -5,7 +5,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7) y escenarios (E7) (2026-09-27)
+### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7), escenarios (E7), color RIESGO (E8) y núcleos (F4) (2026-09-27)
 
 **Añadido**
 - **Las celdas marcadas nacen con un nombre legible**: el texto de su
@@ -33,6 +33,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   el marcado; el mismo nombre actualiza el escenario. La referencia única de
   antes pasa sola a ser el primer escenario (`excel/escenarios.ts`, clave
   `riesgoMontecarlo.scenarios`).
+- **Color propio para las celdas con `RIESGO.*`** (E8): melocotón, distinto
+  del amarillo de las entradas del panel. Se pintan al simular (es cuando se
+  descubren).
+
+**Cambiado**
+- **Núcleos en automático según el tamaño** (F4): con poco trabajo
+  (iteraciones × celdas que cambian < 1,5 millones) se simula en un hilo, que
+  es más rápido que arrancar varios (medido en el Excel del usuario: 212 ms en
+  uno frente a 527 ms en ocho). Si los núcleos se eligen a mano, se respetan.
 
 ### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
 

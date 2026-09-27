@@ -31,7 +31,7 @@ import {
 } from '../excel/escenarios.ts';
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
-import { aplicarResaltado } from '../excel/resaltado.ts';
+import { aplicarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
@@ -42,6 +42,7 @@ import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
 import { Configuracion } from './Configuracion.tsx';
 import { crearPoolNavegador } from './motor/poolNavegador.ts';
+import { compensanHilos } from '../engine/executor/pool.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
@@ -133,7 +134,9 @@ export function Panel() {
               if (!texto) return;
               const r = restaurarResultados(texto);
               // Solo si no se ha simulado ya en esta sesión mientras se leía.
-              if (r.ok) setResultado((actual) => actual ?? r.resultado);
+              if (!r.ok) return;
+              setResultado((actual) => actual ?? r.resultado);
+              recordarCeldasRiesgo((r.resultado.entradasDeFunciones ?? []).map((e) => e.ref));
             })
             .catch(() => {
               // Sin resultados guardados legibles se abre como un libro sin simular.
@@ -206,12 +209,22 @@ export function Panel() {
         modelo,
         progreso: setAvance,
         debeCancelar: () => cancelado.current,
-        crearPool: (contexto) => crearPoolNavegador(contexto, hilosEfectivos(leerPreferenciaHilos())),
+        crearPool: (contexto, { iteraciones }) => {
+          const preferencia = leerPreferenciaHilos();
+          // F4: en automático, una simulación pequeña va en un hilo (arrancar
+          // varios tarda más de lo que ahorran). Si el usuario eligió los
+          // núcleos a mano, se respeta.
+          if (preferencia === 'auto' && !compensanHilos(contexto.plan, iteraciones)) return null;
+          return crearPoolNavegador(contexto, hilosEfectivos(preferencia));
+        },
       });
       const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo), idSimulacion: new Date().toISOString() } : r;
       setResultado(conHuella);
       if (conHuella.ok) {
         setPestana('resultados');
+        // E8: las celdas con RIESGO.* se conocen ahora; se pintan con su color.
+        recordarCeldasRiesgo((conHuella.entradasDeFunciones ?? []).map((e) => e.ref));
+        void aplicarResaltado(modelo).catch(() => {});
         // Guardarlos no puede estropear la simulación: si falla, se dice y ya.
         void guardarResultados(serializarResultados(modelo, conHuella)).catch((e: unknown) =>
           setError(`Los resultados no se pudieron guardar en el libro: ${mensajeDe(e)}`),

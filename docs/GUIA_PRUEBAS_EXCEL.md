@@ -11,6 +11,9 @@ código (A1, A2…). Al terminar cada bloque, dime por cada código:
 (todo en la hoja «Pruebas», y una E5 nueva). Repite **C2** (el PDF ya
 imprime el tornado) y **E1–E5**; luego sigue desde F.
 
+*Versión del 28/09: bloque **L** nuevo con la etapa 1 (nombres legibles,
+elegir la salida, informe del proyecto, escenarios, color RIESGO, núcleos).*
+
 *Versión del 27/09 (tarde), tras tu segunda ronda (C2–W):* pasaron E, F, G1,
 G2, H, J y W1–W4, y las tandas 7 y 8. Falta **K** (no venía en el reporte).
 Repite solo:
@@ -334,6 +337,54 @@ se abre.
 
 **Mac (si tienes acceso):** lo mismo, cargando el manifiesto en Excel para
 Mac. Si no tienes Mac, sáltalo y dímelo.
+
+---
+
+## L. Etapa 1: lo que pediste en las pruebas (nuevo, 28/09)
+
+Con el libro limpio, en la hoja **Modelo**. Quita todo del panel antes.
+
+**L1. Nombres legibles (E5).** Marca C5 como entrada y C32 como salida.
+- Esperado: la entrada se llama **«Precio unitario»** y la salida **«VAN al
+  11 %»** (el texto de su izquierda), no «Modelo!C5». Marca también H28 como
+  salida: debe llamarse **«Flujo de caja libre (H28)»**.
+- En un modelo que ya tenías marcado (con nombres «Modelo!C5»), aparece el
+  aviso con el botón **«Poner nombres desde la hoja»**: púlsalo.
+
+**L2. Elegir la salida (E6).** Con las entradas de A2 y las salidas C32, C33
+y C34, simula.
+- Esperado: al principio de Resultados, una tabla **«Salidas»** con las tres
+  y un selector «Ver». Solo se ve una salida debajo; al pulsar otra fila de la
+  tabla, cambia.
+- **Selecciona en la hoja la celda C33**: el panel debe saltar a la TIR. Dime
+  si lo hace.
+
+**L3. Informe del proyecto (C7).** En **⚙ → Proyecto**, escribe un título y
+una descripción. Simula y pulsa **Informe PDF**.
+- Esperado: el PDF empieza con tu título y tu descripción, y cada salida
+  tiene un párrafo que la explica en palabras. En el panel, ese párrafo sale
+  debajo del nombre de cada salida.
+- **Volcar a una hoja**: la hoja empieza también con tu título.
+
+**L4. Escenarios (E7).** Simula y pulsa **Guardar como escenario** («Escenario
+base»). Cambia la entrada C9 (costes fijos, máximo 600000), simula y guarda
+como «Costes altos».
+- Esperado: la lista de escenarios con los dos; «Escenario base» sigue
+  marcado, y cada salida tiene la tabla «Frente a «Escenario base»» y otra
+  **«En todos los escenarios»** con las dos filas.
+- Marca «Costes altos» y luego «No comparar con ninguno»: la comparación
+  cambia o desaparece. Borra uno con la ✕.
+- Guarda, cierra y reabre el libro: los escenarios siguen ahí.
+
+**L5. Color de las celdas RIESGO (E8).** En la hoja **Pruebas**, escribe las
+funciones de E1 y E2, marca Pruebas!C7 como salida y simula.
+- Esperado: Pruebas!C5 y C6 quedan pintadas de **melocotón** (distinto del
+  amarillo de las entradas del panel).
+
+**L6. Núcleos automáticos (F4).** Con ⚙ → núcleos en **Automático**, simula el
+modelo de A2 con 10.000 iteraciones y luego con 250.000.
+- Esperado: con 10.000, «Cómo se calculó» dice **un hilo** y tarda poco
+  (≈ 200 ms); con 250.000, **varios hilos**.
 
 ---
 

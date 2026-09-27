@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { compilarPlan } from '../../engine/compiler/plan.ts';
 import {
-  crearAtendedor, crearPool, particionarEnBloques, simularPorBloques,
+  compensanHilos, crearAtendedor, crearPool, particionarEnBloques, simularPorBloques,
   type CanalHilo, type ContextoHilo, type DefinicionEntrada, type MensajeAlHilo, type MensajeDelHilo,
 } from '../../engine/executor/index.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
@@ -138,5 +138,26 @@ describe('bloquesMinimos', () => {
     await simularPorBloques(g, plan, defs, SEED, 10_000, { ejecutor: espia, bloquesMinimos: 16 });
     expect(vistos.length).toBeGreaterThanOrEqual(9); // bloques de al menos 1.024
     expect(vistos.reduce((a, b) => a + b, 0)).toBe(10_000);
+  });
+});
+
+describe('compensanHilos (F4: núcleos en automático según el tamaño)', () => {
+  const plan = (celdas: number, constantes = 0) => ({
+    orden: Array.from({ length: celdas }, (_, i) => `H!A${i + 1}`),
+    esConstante: new Set(Array.from({ length: constantes }, (_, i) => `H!A${i + 1}`)),
+    salidas: [],
+  });
+
+  it('10.000 iteraciones del libro de demostración (70 celdas): un hilo, como se midió', () => {
+    expect(compensanHilos(plan(70), 10_000)).toBe(false);
+  });
+
+  it('250.000 iteraciones del mismo libro: varios hilos', () => {
+    expect(compensanHilos(plan(70), 250_000)).toBe(true);
+  });
+
+  it('las celdas constantes no cuentan: se calculan una vez', () => {
+    expect(compensanHilos(plan(1000, 990), 100_000)).toBe(false);
+    expect(compensanHilos(plan(1000, 0), 100_000)).toBe(true);
   });
 });

@@ -31,6 +31,23 @@ import type { DefinicionEntrada } from './entradas.ts';
 import { ErrorCalculoBloque, type EjecutorDeBloques, type ResultadoBloque, type Trabajo } from './tipos.ts';
 
 /** Todo lo que un hilo necesita saber del modelo, una sola vez. */
+/**
+ * Por debajo de este trabajo (iteraciones × celdas que cambian en cada una),
+ * repartir en hilos tarda más que hacerlo en uno: arrancar los workers y
+ * compilar el plan en cada uno cuesta unos 300–400 ms. Medido en el Excel del
+ * usuario el 27/09: 10.000 iteraciones × 70 celdas (700.000) tardaron 212 ms
+ * en un hilo y 527 ms en ocho; 250.000 iteraciones, 875 ms en ocho. Con unos
+ * 3,3 millones de celdas por segundo en un hilo, ocho hilos empiezan a
+ * compensar hacia 1,5 millones.
+ */
+export const TRABAJO_MINIMO_PARA_HILOS = 1_500_000;
+
+/** ¿Compensa repartir esta simulación en hilos? (F4, solo con los núcleos en automático). */
+export function compensanHilos(plan: Plan, iteraciones: number): boolean {
+  const variables = Math.max(1, plan.orden.length - plan.esConstante.size);
+  return iteraciones * variables >= TRABAJO_MINIMO_PARA_HILOS;
+}
+
 export interface ContextoHilo {
   grafo: Grafo;
   plan: Plan;
