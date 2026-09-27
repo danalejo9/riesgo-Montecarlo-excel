@@ -138,14 +138,21 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 48 | E10 | Servidor HTTPS permanente, interfaz en inglés, licencia, privacidad, mensajes de error para desconocidos | Plan / Estudio |
 | 49 | E11 | Publicación en AppSource (la tienda de Microsoft) | Plan |
 
+### Cierre: tutoriales y manual (≈ 6–9 días) — lo último antes de publicar
+
+| # | Código | Funcionalidad | Origen |
+|---|---|---|---|
+| 50 | M1 | **Tres libros tutoriales**: «Feria de fin de semana» (sencillo, un periodo), «Proyecto Aurora» (el actual, ampliado) y «Parque solar Altamira» (completo, todo el potencial). Diseño en `docs/LIBROS_TUTORIAL.md` | **Tú** |
+| 51 | M2 | **Manual en HTML** con índice, buscador, lectura paso a paso, tutoriales y preguntas frecuentes; botón «Ayuda» en el panel | **Tú** |
+
 ### Después de la versión 1.0
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 50 | E12 | Depurador de escenarios (ver una iteración mala celda a celda) | Estudio |
-| 51 | E12 | Conversor de modelos de @RISK | Estudio |
-| 52 | E12 | Narrativa de resultados con reglas (se adelanta en parte con C7) | Estudio |
-| 53 | I3 | Ajuste avanzado: colas extremas (GPD), datos censurados, mezclas | **Tú** (investigación) |
+| 52 | E12 | Depurador de escenarios (ver una iteración mala celda a celda) | Estudio |
+| 53 | E12 | Conversor de modelos de @RISK | Estudio |
+| 54 | E12 | Narrativa de resultados con reglas (se adelanta en parte con C7) | Estudio |
+| 55 | I3 | Ajuste avanzado: colas extremas (GPD), datos censurados, mezclas | **Tú** (investigación) |
 
 ### Otros productos, fuera de este complemento (decidido el 25/09)
 
@@ -185,3 +192,5 @@ Cálculo en la nube, cualquier uso de IA externa (quitado a petición tuya el
 | Cinta más rápida (B4 tarda una fracción de segundo) | B1 debería mejorarlo |
 | Congelar la pantalla en el modo compatible (G3) | F5 |
 | `npm start` hay que repetirlo (C4) | Desaparece con la instalación real (E9) |
+| Tres libros tutoriales (sencillo, Aurora, completo) | M1, al final |
+| Manual en HTML con índice | M2, lo último |

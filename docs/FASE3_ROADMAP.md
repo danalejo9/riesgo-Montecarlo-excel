@@ -457,9 +457,26 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
+### M. Libros tutoriales y manual — lo último, 6–9 d
+Pedido por el usuario el 27/09. Diseño completo en `docs/LIBROS_TUTORIAL.md`.
+Va **al final** porque enseña las funcionalidades de los demás bloques.
+- **M1. Tres libros tutoriales**, de menos a más: «Feria de fin de semana»
+  (un periodo, lo esencial), «Proyecto Aurora» (el libro de demostración
+  ampliado: proyecto de inversión a cinco años) y «Parque solar Altamira»
+  (varias hojas, 20 años, financiación, riesgos de evento, series: todo el
+  potencial). Cada uno con hoja de lecciones, resultados esperados y una
+  prueba automática que los comprueba. Absorbe la parte de libros de H9 y las
+  plantillas de U1.
+- **M2. Manual en HTML**: índice lateral, buscador, lectura de principio a fin
+  con «anterior / siguiente», capturas, una página por distribución y por
+  gráfico, los tres tutoriales paso a paso, preguntas frecuentes y glosario.
+  Botón «Ayuda» en el panel que abre la sección de la pestaña. Absorbe el
+  manual de H9 y de E9.
+
 **Orden propuesto**: A → **E5, E6, C7, E7, E8, F4** (lo que pidió el usuario
 en las pruebas) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
-C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G → I3.
+C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G →
+**M (libros tutoriales y manual)** → I3.
 La lista completa, numerada y con su origen, está en
 `docs/INVENTARIO_FUNCIONALIDADES.md`. *(H1 ✅ 26/09.)*
 
