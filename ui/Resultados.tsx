@@ -28,9 +28,10 @@
  * derecho a saber por qué, y qué función del libro lo obligó.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
@@ -68,6 +69,35 @@ export function Resultados({
   const [volcando, setVolcando] = useState(false);
   const [volcado, setVolcado] = useState<string | null>(null);
   const [falloVolcado, setFalloVolcado] = useState<string | null>(null);
+
+  // E6: con varias salidas se enseña una cada vez (o todas), elegida arriba,
+  // en la tabla resumen o seleccionando su celda en la hoja.
+  const varias = resultado.salidas.length > 1;
+  const [vista, setVista] = useState<string>(() => (varias ? (resultado.salidas[0]?.id ?? TODAS) : TODAS));
+  const vistaValida = vista === TODAS || resultado.salidas.some((s) => s.id === vista) ? vista : TODAS;
+  const salidasVisibles = vistaValida === TODAS ? resultado.salidas : resultado.salidas.filter((s) => s.id === vistaValida);
+
+  useEffect(() => {
+    if (!varias) return;
+    const porClave = new Map<string, string>();
+    for (const s of resultado.salidas) {
+      const clave = claveComparable(s.ref);
+      if (clave) porClave.set(clave, s.id);
+    }
+    let dejar: (() => Promise<void>) | undefined;
+    let vivo = true;
+    escucharSeleccion((direccion) => {
+      const clave = claveComparable(direccion);
+      const id = clave ? porClave.get(clave) : undefined;
+      if (id && vivo) setVista(id);
+    })
+      .then((d) => (vivo ? (dejar = d) : void d()))
+      .catch(() => {}); // sin el evento, se elige a mano: no es un error
+    return () => {
+      vivo = false;
+      void dejar?.().catch(() => {});
+    };
+  }, [varias, resultado.salidas]);
 
   const abrirInforme = async () => {
     setFalloVolcado(null);
@@ -118,6 +148,15 @@ export function Resultados({
             </p>
           )}
         </section>
+      )}
+
+      {varias && (
+        <ResumenSalidas
+          salidas={resultado.salidas}
+          umbrales={new Map(modelo.outputs.map((o) => [o.id, o.threshold]))}
+          vista={vistaValida}
+          alElegir={setVista}
+        />
       )}
 
       <section>
@@ -217,7 +256,7 @@ export function Resultados({
         )}
       </section>
 
-      {resultado.salidas.map((salida) => salida.resumen.n === 0 ? (
+      {salidasVisibles.map((salida) => salida.resumen.n === 0 ? (
         // Ninguna iteración dio un número (una celda que devuelve texto, como
         // un FILTRAR de nombres, o un error en todas): no hay nada que medir, y
         // enseñar «mínimo ∞» o un tornado de ceros solo confunde (prueba G3).
@@ -433,6 +472,84 @@ export function CurvaAcumulada({
 const VISIBLES_TORNADO = 10;
 
 /** Coma decimal y signo explícito: "+0,82", "−0,15". */
+const TODAS = '__todas__';
+
+/**
+ * La tabla con todas las salidas y el selector de cuál enseñar (E6). Con
+ * muchas salidas, recorrer una detrás de otra obligaba a desplazarse mucho
+ * (prueba del usuario, 27/09).
+ */
+function ResumenSalidas({
+  salidas,
+  umbrales,
+  vista,
+  alElegir,
+}: {
+  salidas: readonly ResultadoSalida[];
+  umbrales: ReadonlyMap<string, UmbralRiskModel | undefined>;
+  vista: string;
+  alElegir: (id: string) => void;
+}) {
+  const conUmbral = salidas.some((s) => umbrales.get(s.id) && s.muestraOrdenada);
+  return (
+    <section>
+      <h2>Salidas</h2>
+      <label className="selector-salida">
+        <span className="tenue">Ver</span>
+        <select value={vista} onChange={(e) => alElegir(e.target.value)}>
+          {salidas.map((s) => (
+            <option key={s.id} value={s.id}>{s.nombre}</option>
+          ))}
+          <option value={TODAS}>Todas, una debajo de otra</option>
+        </select>
+      </label>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen">
+          <thead>
+            <tr>
+              <th>Salida</th>
+              <th>Media</th>
+              <th>p5</th>
+              <th>p50</th>
+              <th>p95</th>
+              {conUmbral && <th>Umbral</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {salidas.map((s) => {
+              const u = umbrales.get(s.id);
+              const p = u && s.muestraOrdenada && s.resumen.n > 0
+                ? probabilidadUmbral(s.muestraOrdenada, u.value, u.direction === 'below' ? 'debajo' : 'encima')
+                : null;
+              const sinDatos = s.resumen.n === 0;
+              return (
+                <tr
+                  key={s.id}
+                  className={s.id === vista ? 'elegida' : undefined}
+                  onClick={() => alElegir(s.id)}
+                  title="Ver esta salida"
+                >
+                  <td>{s.nombre}</td>
+                  <td>{sinDatos ? '—' : numero(s.resumen.media)}</td>
+                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p5 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p50 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p95 ?? NaN)}</td>
+                  {conUmbral && (
+                    <td>{p === null ? '' : `${u?.direction === 'below' ? '<' : '>'} ${numero(u?.value ?? 0)}: ${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Pulsa una fila, o selecciona la celda de una salida en la hoja, para verla.
+      </p>
+    </section>
+  );
+}
+
 function rho(v: number): string {
   const t = Math.abs(v).toFixed(2).replace('.', ',');
   return `${v < 0 ? '\u2212' : '+'}${t}`;

@@ -375,3 +375,14 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 
 .ajuste-tabla th, .ajuste-tabla td { font-size: 11px; }
 .ordenar-ajuste { margin: 6px 0; }
+
+/* E6: resumen de salidas y selector. */
+.selector-salida { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
+.selector-salida select { flex: 1; min-width: 0; }
+.tabla-desplazable { overflow-x: auto; }
+.tabla-resumen { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tabla-resumen th, .tabla-resumen td { padding: 4px 6px; border-bottom: 1px solid var(--borde); text-align: right; white-space: nowrap; }
+.tabla-resumen th:first-child, .tabla-resumen td:first-child { text-align: left; white-space: normal; }
+.tabla-resumen tbody tr { cursor: pointer; }
+.tabla-resumen tbody tr:hover { background: color-mix(in srgb, var(--acento) 8%, transparent); }
+.tabla-resumen tr.elegida { background: color-mix(in srgb, var(--acento) 15%, transparent); font-weight: 600; }

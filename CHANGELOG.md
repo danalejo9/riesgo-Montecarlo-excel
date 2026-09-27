@@ -5,7 +5,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### Etapa 1: nombres legibles (E5) (2026-09-27)
+### Etapa 1: nombres legibles (E5) y elegir la salida (E6) (2026-09-27)
 
 **Añadido**
 - **Las celdas marcadas nacen con un nombre legible**: el texto de su
@@ -16,6 +16,10 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - Las entradas que vienen de funciones `RIESGO.*` también se nombran así.
 - **«Poner nombres desde la hoja»** para los modelos marcados antes, cuyas
   celdas aún se llaman como su referencia.
+- **Elegir la salida en Resultados** (E6): con varias salidas, una tabla
+  resumen arriba (media, p5, p50, p95 y el umbral) y un selector que enseña
+  una cada vez o todas. Se elige pulsando una fila o **seleccionando la celda
+  de la salida en la hoja** (`excel/seleccionActiva.ts`, ExcelApi 1.2).
 
 ### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
 
