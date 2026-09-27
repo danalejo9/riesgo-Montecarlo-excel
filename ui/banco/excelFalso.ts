@@ -156,6 +156,18 @@ export function instalarExcelFalso(): void {
     visibility: 'Visible',
     load: () => {},
     getRange: (ref: string) => rangoFalso(ref),
+    // Para los nombres legibles (E5): una franja de valores por índices (desde 0).
+    getRangeByIndexes: (fila: number, col: number, filas: number, cols: number) => ({
+      load: () => {},
+      get values() {
+        return Array.from({ length: filas }, (_, f) =>
+          Array.from({ length: cols }, (_, c) => {
+            const letra = String.fromCharCode(65 + col + c);
+            return LIBRO[`${letra}${fila + f + 1}`]?.valor ?? '';
+          }),
+        );
+      },
+    }),
     getUsedRangeOrNullObject: () => ({
       isNullObject: false,
       address: `${HOJA}!A1:B10`,

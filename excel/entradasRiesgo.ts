@@ -30,6 +30,8 @@ export function entradasDeFunciones(
   grafo: Grafo,
   clavesEntradaPanel: readonly string[],
   clavesSalida: readonly string[],
+  /** El nombre legible de la celda (E5); sin él, la entrada se llama como su clave. */
+  nombrar?: (clave: string, hoja: string, col: number, fila: number) => string,
 ): EntradasDeFunciones {
   const out: EntradasDeFunciones = { entradas: [], claves: [], errores: [], duplicadas: [] };
   const candidatas = formulas.filter((f) => mencionaRiesgo(f.formula));
@@ -50,7 +52,8 @@ export function entradasDeFunciones(
       out.errores.push(`${clave}: ${r.motivo}`);
       continue;
     }
-    out.entradas.push({ id: `rf_${clave}`, name: clave, ref: clave, dist: r.spec, correlations: [] });
+    const name = nombrar?.(clave, f.hoja, f.col, f.fila) ?? clave;
+    out.entradas.push({ id: `rf_${clave}`, name, ref: clave, dist: r.spec, correlations: [] });
     out.claves.push(clave);
   }
   return out;

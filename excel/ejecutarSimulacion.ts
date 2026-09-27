@@ -53,6 +53,7 @@ export type {
   SimulacionCompletada,
 } from './informe.ts';
 import { entradasDeFunciones, resolverConFunciones } from './entradasRiesgo.ts';
+import { indiceDeTextos } from './nombreSugerido.ts';
 import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
@@ -115,7 +116,8 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const { grafo } = construirGrafo(libro.formulas, libro.valores.map(aValorCelda));
 
   // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
-  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida);
+  const textos = indiceDeTextos(libro.valores);
+  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre);
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
   }

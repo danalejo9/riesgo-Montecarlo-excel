@@ -17,6 +17,8 @@
 
 import { useCallback, useState } from 'react';
 
+import { leerNombresSugeridos } from '../excel/etiquetasEnExcel.ts';
+import { nombreUnico } from '../excel/nombreSugerido.ts';
 import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
 import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 import {
@@ -205,6 +207,40 @@ export function Modelo({
     return sel;
   }, []);
 
+  /**
+   * El nombre con el que nace una celda marcada: el texto de su izquierda
+   * («Precio unitario»), no «Modelo!C5» (E5). Si Excel no lo puede leer, la
+   * referencia: un nombre feo no puede impedir marcar la celda.
+   */
+  const nombreLegible = useCallback(async (ref: string): Promise<string> => {
+    const usados = [...modelo.inputs, ...modelo.outputs].map((x) => x.name);
+    try {
+      const nombre = (await leerNombresSugeridos([ref])).get(ref) ?? ref;
+      return nombreUnico(nombre, ref, usados);
+    } catch {
+      return ref;
+    }
+  }, [modelo]);
+
+  /** Para los modelos marcados antes del 27/09: nombrar desde la hoja lo que aún se llama como su celda. */
+  const sinNombre = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name === x.ref);
+  const nombrarDesdeLaHoja = useCallback(async () => {
+    try {
+      const refs = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name === x.ref).map((x) => x.ref);
+      const sugeridos = await leerNombresSugeridos(refs);
+      const usados = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name !== x.ref).map((x) => x.name);
+      const nombrar = <T extends { name: string; ref: string }>(x: T): T => {
+        if (x.name !== x.ref) return x;
+        const nombre = nombreUnico(sugeridos.get(x.ref) ?? x.ref, x.ref, usados);
+        usados.push(nombre);
+        return { ...x, name: nombre };
+      };
+      alCambiar({ ...modelo, inputs: modelo.inputs.map(nombrar), outputs: modelo.outputs.map(nombrar) });
+    } catch (e) {
+      setAviso(`No se pudieron leer las etiquetas de la hoja: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [modelo, alCambiar]);
+
   const anadirEntrada = useCallback(async () => {
     const sel = await celdaSeleccionada();
     if (!sel) return;
@@ -215,14 +251,14 @@ export function Modelo({
     }
     const entrada: EntradaRiskModel = {
       id: generarId('in'),
-      name: ref,
+      name: await nombreLegible(ref),
       ref,
       dist: distribucionInicial(sel.valor),
       correlations: [],
     };
     alCambiar({ ...modelo, inputs: [...modelo.inputs, entrada] });
     setAbierta(entrada.id);
-  }, [modelo, alCambiar, celdaSeleccionada]);
+  }, [modelo, alCambiar, celdaSeleccionada, nombreLegible]);
 
   const anadirSalida = useCallback(async () => {
     const sel = await celdaSeleccionada();
@@ -232,9 +268,9 @@ export function Modelo({
       setAviso(`${ref} ya está en el modelo.`);
       return;
     }
-    const salida: SalidaRiskModel = { id: generarId('out'), name: ref, ref };
+    const salida: SalidaRiskModel = { id: generarId('out'), name: await nombreLegible(ref), ref };
     alCambiar({ ...modelo, outputs: [...modelo.outputs, salida] });
-  }, [modelo, alCambiar, celdaSeleccionada]);
+  }, [modelo, alCambiar, celdaSeleccionada, nombreLegible]);
 
   const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
     alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === id ? { ...e, ...cambio } : e)) });
@@ -262,6 +298,16 @@ export function Modelo({
       {aviso && <p className="aviso-linea">{aviso}</p>}
 
       {preparadoParaCompartir && compartir}
+
+      {sinNombre.length > 0 && (
+        <p className="aviso-linea">
+          {sinNombre.length === 1 ? 'Una celda se llama' : `${miles(sinNombre.length)} celdas se llaman`} como su
+          referencia ({sinNombre.slice(0, 3).map((x) => x.ref).join(', ')}{sinNombre.length > 3 ? '…' : ''}).{' '}
+          <button type="button" className="plano" onClick={() => void nombrarDesdeLaHoja()}>
+            Poner nombres desde la hoja
+          </button>
+        </p>
+      )}
 
       <section>
         <h2>Entradas inciertas</h2>

@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 1: nombres legibles (E5) (2026-09-27)
+
+**Añadido**
+- **Las celdas marcadas nacen con un nombre legible**: el texto de su
+  izquierda («Precio unitario») en vez de «Modelo!C5». En una tabla por años,
+  con números en medio, se añade la celda: «Flujo de caja libre (H28)». Sin
+  texto a la izquierda, el de encima. Se usa en el panel, el tornado, la araña,
+  el informe y el volcado (`excel/nombreSugerido.ts`, `etiquetasEnExcel.ts`).
+- Las entradas que vienen de funciones `RIESGO.*` también se nombran así.
+- **«Poner nombres desde la hoja»** para los modelos marcados antes, cuyas
+  celdas aún se llaman como su referencia.
+
 ### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
 
 **Verificado en Excel**
