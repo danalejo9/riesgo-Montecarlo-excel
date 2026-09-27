@@ -7,6 +7,10 @@ código (A1, A2…). Al terminar cada bloque, dime por cada código:
 *Versión del 26/09: añadidos los bloques J (compartir el libro), K
 (reproducibilidad) y W (Excel para la Web y Mac), y AIC/BIC en D1.*
 
+*Versión del 27/09, tras tu primera ronda (A–E4):* el bloque E está rehecho
+(todo en la hoja «Pruebas», y una E5 nueva). Repite **C2** (el PDF ya
+imprime el tornado) y **E1–E5**; luego sigue desde F.
+
 - **OK**, o
 - **Falla** + qué ves (una captura ayuda mucho).
 
@@ -116,6 +120,8 @@ fijos) y sube el máximo a `600000`. Simula.
 - Esperado: se abre tu navegador con el informe. Pulsa «Imprimir o guardar
   como PDF» y guárdalo. **Mándame el PDF.**
 - Si el navegador avisa de un certificado, dímelo.
+- *Desde el 27/09:* las barras del tornado salen en el PDF (antes salían en
+  blanco) y la primera salida empieza en la primera página.
 
 **C3. Volcar a una hoja.** **Volcar a una hoja**.
 - Esperado: hoja «Riesgo Monte Carlo» con las tablas (sensibilidad, araña,
@@ -126,6 +132,10 @@ Abre el panel.
 - Esperado: el modelo sigue ahí y los **resultados también** (con la nota
   «Resultados guardados en el libro el…»); la referencia «Base» sigue fijada,
   y el umbral del VAN sigue escrito.
+
+- *Nota sobre `npm start`:* al cerrar Excel, el complemento de desarrollo
+  se desregistra y hay que volver a ejecutar `npm start`. Es propio del
+  entorno de desarrollo; instalado de verdad (E9) no hará falta.
 
 ---
 
@@ -146,27 +156,49 @@ históricos…**. Selecciona en la hoja «Pruebas» el rango **K5:K44** y pulsa
 
 ## E. Funciones RIESGO (hoja «Pruebas»)
 
-Para esta parte, **empieza un modelo limpio**: quita del panel las entradas y
-salidas de «Modelo» con la ✕ (o usa una copia del libro).
+*Rehecho el 27/09.* **Todo este bloque va en la hoja «Pruebas»**, no en
+«Modelo»: haz clic en la pestaña **Pruebas**, abajo a la izquierda, antes de
+empezar. En la hoja «Modelo» C5 y C6 son el precio y las unidades; en
+«Pruebas» son celdas vacías preparadas para esto, y C7 ya multiplica C5 × C6.
 
-**E1.** En `Pruebas!C5` escribe `=RIESGO.NORMAL(1000;150)`.
+**Antes de empezar:**
+- Si en una prueba anterior escribiste funciones RIESGO en la hoja
+  «Modelo», **cierra el libro sin guardar** y ábrelo de nuevo (o descarga
+  otra vez `ejemplos/demo-proyecto-aurora.xlsx`): los valores de «Modelo»
+  tienen que volver a ser 120 € y 20.000.
+- En el panel, quita todas las entradas y salidas con la ✕.
+
+**E1.** En la hoja **Pruebas**, celda **C5**, escribe
+`=RIESGO.NORMAL(1000;150)`.
 - Esperado: al escribir `=RIES` Excel propone las funciones RIESGO. La celda
   vale **1.000** (fuera de la simulación enseña la media).
 
-**E2.** En `C6` escribe `=RIESGO.TRIANGULAR(8;10;14)`.
-- Esperado: C6 = **10,67**; C7 (ya escrita) = **10.666,67**.
+**E2.** En **Pruebas!C6** escribe `=RIESGO.TRIANGULAR(8;10;14)`.
+- Esperado: C6 = **10,67**; **Pruebas!C7** (ya escrita) = **10.666,67**.
 
-**E3.** En el panel marca **solo C7 como salida**, sin ninguna entrada, y
-simula.
-- Esperado: motor rápido; en «Cómo se calculó», «Entradas con funciones
-  RIESGO del libro: Pruebas!C5 … Pruebas!C6 …». Media de C7 en torno a
-  **10.670**.
+**E3.** Selecciona **Pruebas!C7** y pulsa «Añadir la selección como
+salida». No añadas ninguna entrada. Simula.
+- Esperado: en la lista de salidas se lee **Pruebas!C7** (si dice
+  «Modelo!…», estás en la hoja equivocada). Motor rápido; en «Cómo se
+  calculó», «Entradas con funciones RIESGO del libro: Pruebas!C5 …
+  Pruebas!C6 …». Media de C7 en torno a **10.670**.
+- *Arreglado el 27/09:* antes de esta versión aquí salía «Referencia sin
+  resolver». Es el fallo que encontraste al usar C32.
 
-**E4. Error bien explicado.** En C5 escribe `=RIESGO.NORMAL(C12;150)` y
-simula.
+**E4. Error bien explicado.** En **Pruebas!C5** escribe
+`=RIESGO.NORMAL(C12;150)` y simula.
 - Esperado: no simula y dice que los argumentos tienen que ser números
   escritos, nombrando **Pruebas!C5**. Después vuelve a poner
   `=RIESGO.NORMAL(1000;150)`.
+
+**E5. Una RIESGO dentro de un modelo grande.** *(Nueva: es lo que hiciste
+por tu cuenta en E3, y destapó el fallo.)* Cierra sin guardar y reabre el
+libro. En la hoja **Modelo**, escribe en **C5** `=RIESGO.NORMAL(120;10)`.
+Quita todo del panel, añade **solo Modelo!C32** (VAN) como salida y simula.
+- Esperado: simula sin error; en «Cómo se calculó» aparece «Entradas con
+  funciones RIESGO del libro: Modelo!C5 …»; el tornado tiene una sola
+  barra, Modelo!C5.
+- Al terminar, **cierra sin guardar** para que «Modelo» vuelva a su estado.
 
 ---
 

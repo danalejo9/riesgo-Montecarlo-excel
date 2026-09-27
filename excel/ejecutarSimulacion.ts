@@ -52,7 +52,7 @@ export type {
   ResultadoSimulacionPanel,
   SimulacionCompletada,
 } from './informe.ts';
-import { entradasDeFunciones } from './entradasRiesgo.ts';
+import { entradasDeFunciones, resolverConFunciones } from './entradasRiesgo.ts';
 import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
@@ -123,6 +123,9 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     modelo = { ...modelo, inputs: [...modelo.inputs, ...deFunciones.entradas] };
     clavesEntrada.push(...deFunciones.claves);
   }
+  // Las entradas de funciones se descubrieron después de resolver: su `ref`
+  // ya es la clave de la celda.
+  const resolver = resolverConFunciones(resolucion.resolver, deFunciones);
   if (modelo.inputs.length === 0) {
     return fallo('modelo', 'El modelo no tiene ninguna entrada.', [
       'Marca al menos una celda como entrada incierta y dale una distribución,',
@@ -149,7 +152,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
 
   if (eleccion.motor === 'compatible') {
-    const preparadas = prepararEntradas(modelo, resolucion.resolver, semilla);
+    const preparadas = prepararEntradas(modelo, resolver, semilla);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     const r = await porElCompatible({
       ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
@@ -172,7 +175,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   let r: ResultadoSimulacionPanel | null = null;
   for (let ronda = 0; ronda < MAX_TANDAS; ronda++) {
     const deTanda = nTanda === n ? modelo : { ...modelo, settings: { ...modelo.settings, iterations: nTanda } };
-    const preparadas = prepararEntradas(deTanda, resolucion.resolver, semilla);
+    const preparadas = prepararEntradas(deTanda, resolver, semilla);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     tandas.push(nTanda);
     r = await porElRapido({

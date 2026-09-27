@@ -252,6 +252,14 @@ Estimaciones en días de trabajo efectivo.
   (botones de la cinta con el panel abierto) y C2 (informe en el navegador).
 - **A2.** Tandas de fidelidad 7 (LET) y 8 (matrices); las 3 fórmulas
   matriciales de `Caso_practico.xlsx`.
+- **Primera ronda (27/09, A1–E4).** Pasaron A1–A8, B1–B4, C1–C4 y D1.
+  Fallos arreglados el mismo día: el panel en blanco dentro de Excel (Office.js
+  anula `history.replaceState`), «Referencia sin resolver» cuando una salida
+  depende de una `RIESGO.*` que no está en el panel, y el tornado que no salía
+  en el PDF. La guía del bloque E se rehízo (las pruebas se hicieron en la hoja
+  «Modelo» porque la guía no insistía en «Pruebas»). Mejoras que propuso el
+  usuario, repartidas abajo: **C7**, **C8**, **E5**, **E6**, **E7**, **E8** y
+  **F4**.
 
 ### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
 - **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
@@ -305,6 +313,13 @@ Estimaciones en días de trabajo efectivo.
   p5/p50/p95), para no elegir parámetros a ciegas. Es probablemente la mejora
   de uso más barata con más efecto.
 - **C6. Percentiles configurables** (qué percentiles se enseñan y exportan).
+- **C7. Informe PDF que habla del proyecto** *(usuario, 27/09)*: título y
+  descripción del proyecto (editables en Configuración, guardados en el libro),
+  nombres legibles en vez de `Modelo!C5` (ver E5), y un párrafo de lectura
+  generado con reglas a partir de los percentiles y el tornado (E12-7).
+- **C8. Hoja volcada más legible** *(usuario, 27/09: «desorganizada y difícil
+  de leer»)*: una sección por salida con título, estadísticas arriba y
+  gráficos al lado, tablas con formato de tabla de Excel; va con C1.
 
 ### D. Análisis que faltan — 3–5 d
 - **D1. Análisis de escenarios por cola** (el de @RISK; su versión iteración a
@@ -324,12 +339,31 @@ Estimaciones en días de trabajo efectivo.
 - **E3. Deshacer** el último cambio del modelo.
 - **E4. Ayuda contextual**: qué es cada distribución, cada gráfico y cada
   número, sin salir del panel.
+- **E5. Nombres legibles automáticos** *(27/09)*: al marcar una celda,
+  proponer como nombre el texto de su izquierda (B5 «Precio unitario») o de
+  encima; se usa en el panel, el tornado, la araña, el informe y el volcado.
+  Barato y es lo que más cambia la lectura de todo lo demás.
+- **E6. Elegir la salida en Resultados** *(usuario, 27/09)*: con muchas
+  salidas hay que desplazarse mucho. Un selector arriba que enseñe una salida
+  cada vez, más una tabla resumen de todas; y, si se puede, que al
+  seleccionar en la hoja una celda de salida el panel salte a ella.
+- **E7. Administrador de escenarios** *(usuario, 27/09)*: hoy solo hay una
+  referencia fijada. Guardar varios escenarios con nombre (parámetros y
+  resultados), compararlos de dos en dos o todos a la vez, y borrarlos.
+  Enlaza con H3 (simulaciones en serie).
+- **E8. Distinguir las celdas con `RIESGO.*`** *(usuario, 27/09)*: pintarlas
+  de un color propio, distinto del amarillo de las entradas del panel.
 
 ### F. Motor y cobertura — según lo que pidan los libros
 - **F1.** `DESREF` con desplazamientos constantes; `LAMBDA`.
 - **F2.** Medir con libros grandes (el de 132 hojas) el tiempo de lectura y de
   simulación, y optimizar donde se vea.
 - **F3.** Modo compatible más rápido (lotes de iteraciones por sincronización).
+- **F4. Núcleos en automático según el tamaño** *(medido el 27/09)*: con
+  10.000 iteraciones del libro de demostración, 1 hilo tardó 212 ms y 8 hilos
+  527 ms (arrancar los workers cuesta más que lo que reparten). El modo
+  automático debería usar un hilo por debajo de un umbral de trabajo
+  (iteraciones × celdas), medido.
 
 ### G. Producto (E9–E11)
 Mac, instalación sin `npm start`, manifiesto de producción, licencias,
@@ -400,7 +434,8 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
-**Orden propuesto**: A → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+**Orden propuesto**: A → **E5, E6, C7** (lo que pidió el usuario en la primera
+ronda) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
 C3, C4 → resto de B, D, E, H → F según los libros → G → I3. *(H1 ✅ 26/09.)*
 
 ---

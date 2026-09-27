@@ -928,6 +928,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     navegador no reproduce las modificaciones que Office.js hace a `window`;
     probar con un `office.js` falso que las imite.
 
+33. [x] **Primera ronda de pruebas del usuario (2026-09-27, A1–E4)**.
+    Pasaron A, B, C y D1. Arreglado: «Referencia sin resolver» con salidas
+    que dependen de `RIESGO.*` fuera del panel (nunca había funcionado en
+    Excel: faltaba una prueba de extremo a extremo con resolvedor estricto)
+    y el tornado en blanco en el PDF. Guía E rehecha. Mejoras del usuario en
+    el roadmap (C7, C8, E5–E8, F4). **Siguiente del usuario**: repetir C2 y
+    E1–E5, seguir desde F.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.

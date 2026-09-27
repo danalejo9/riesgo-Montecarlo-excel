@@ -55,3 +55,21 @@ export function entradasDeFunciones(
   }
   return out;
 }
+
+/**
+ * El resolvedor de referencias ampliado con las celdas `RIESGO.*`.
+ *
+ * El del panel (`cargarResolverRef`) solo conoce las referencias que se le
+ * pidieron antes de leer el libro; las entradas de funciones se descubren
+ * después, y su `ref` ya es la clave canónica de la celda. Sin esto,
+ * preparar la simulación fallaba con «Referencia sin resolver» en cuanto una
+ * salida dependía de una `RIESGO.*` (primera prueba en Excel, 27/09).
+ */
+export function resolverConFunciones(
+  resolver: (ref: string) => string,
+  deFunciones: Pick<EntradasDeFunciones, 'claves'>,
+): (ref: string) => string {
+  if (deFunciones.claves.length === 0) return resolver;
+  const propias = new Set(deFunciones.claves);
+  return (ref) => (propias.has(ref) ? ref : resolver(ref));
+}

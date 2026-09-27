@@ -24,9 +24,16 @@
     --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-4: #eda100;
   }
   body { background: #fff !important; color: #000 !important; }
+  /* Sin esto, el navegador no imprime los fondos: las barras del tornado
+     (que son fondos) salían en blanco en el PDF (prueba C2, 27/09). */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Un título nunca se queda solo al pie de la página, lejos de su gráfico. */
+  h2, h3 { break-after: avoid; }
   .solo-pantalla { display: none !important; }
   .informe { max-width: none; padding: 0; }
   .salida-informe { break-before: page; border-top: 0; margin-top: 0; }
+  /* La primera salida sigue a las entradas: no deja la portada casi vacía. */
+  .salida-informe.primera { break-before: auto; margin-top: 18px; }
   .tornado-fila:hover { background: none; }
   .informe figcaption { display: none; }
   svg, table, .precision { break-inside: avoid; }

@@ -8,11 +8,11 @@ import { compilarPlan } from '../../engine/compiler/plan.ts';
 import { simularPorBloques, type DefinicionEntrada } from '../../engine/executor/index.ts';
 import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
 import {
-  elegirMotor, FUNCIONES_RIESGO, idDeFuncionRiesgo, leerFuncionRiesgo, mediaDeFuncionRiesgo, mencionaRiesgo,
+  elegirMotor, FUNCIONES_RIESGO, modeloVacio, prepararEntradas, idDeFuncionRiesgo, leerFuncionRiesgo, mediaDeFuncionRiesgo, mencionaRiesgo,
   toDescriptor,
 } from '../../engine/modelo/index.ts';
 import { metadatosFunciones } from '../../engine/modelo/metadatosFunciones.ts';
-import { entradasDeFunciones } from '../../excel/entradasRiesgo.ts';
+import { entradasDeFunciones, resolverConFunciones } from '../../excel/entradasRiesgo.ts';
 
 const H = 'Hoja1';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -103,6 +103,28 @@ describe('entradasDeFunciones', () => {
     expect(r.entradas[0]).toMatchObject({ ref: k('A1'), dist: { type: 'normal', mean: 100, stdDev: 10 } });
     expect(r.duplicadas).toEqual([k('A3')]);
     expect(r.errores).toEqual([]);
+  });
+
+  it('preparar la simulación resuelve las celdas RIESGO (fallo «Referencia sin resolver» de la prueba E3)', () => {
+    // Como el de Excel: solo conoce las referencias del panel, y lanza con las demás.
+    const delPanel = new Map([['B1', k('B1')]]);
+    const estricto = (ref: string) => {
+      const c = delPanel.get(ref);
+      if (!c) throw new Error(`Referencia sin resolver: ${ref}`);
+      return c;
+    };
+    const d = entradasDeFunciones(formulas, grafo, [], [k('B1')]);
+    const base = modeloVacio();
+    const modelo = {
+      ...base,
+      inputs: d.entradas,
+      outputs: [{ id: 'sal', name: 'B1', ref: 'B1' }],
+      settings: { ...base.settings, iterations: 100 },
+    };
+    expect(() => prepararEntradas(modelo, estricto, 1)).toThrow(/Referencia sin resolver/);
+    const r = prepararEntradas(modelo, resolverConFunciones(estricto, d), 1);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.entradas.map((e) => e.clave).sort()).toEqual([k('A1'), k('A3')].sort());
   });
 
   it('una RIESGO mal escrita que afecta a la salida es un error con su celda', () => {

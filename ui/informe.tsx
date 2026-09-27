@@ -77,7 +77,7 @@ function Informe() {
         </table>
       </section>
 
-      {datos.salidas.map((s) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} />)}
+      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}
 
       <footer className="tenue pie-informe">
         Percentiles aproximados (t-digest). Sensibilidad por correlación de rangos y regresión sobre las primeras
@@ -87,9 +87,9 @@ function Informe() {
   );
 }
 
-function SalidaImpresa({ salida: s, referencia }: { salida: SalidaInforme; referencia?: string }) {
+function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInforme; referencia?: string; primera: boolean }) {
   return (
-    <section className="salida-informe">
+    <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
       <h2>{s.nombre} <span className="tenue">({s.ref})</span></h2>
 
       {s.umbral && (
@@ -127,12 +127,14 @@ function SalidaImpresa({ salida: s, referencia }: { salida: SalidaInforme; refer
         </div>
       </div>
 
-      {s.sensibilidad && s.sensibilidad.length > 0 && (
-        <><h3>Qué la mueve más</h3><Tornado filas={s.sensibilidad} r2={s.r2} /></>
-      )}
-      {s.arana && s.arana.length > 0 && (
-        <><h3>Qué pasa si cada entrada se mueve</h3><Arana curvas={s.arana} /></>
-      )}
+      <div className="dos-columnas graficos-informe">
+        {s.sensibilidad && s.sensibilidad.length > 0 && (
+          <div><h3>Qué la mueve más</h3><Tornado filas={s.sensibilidad} r2={s.r2} /></div>
+        )}
+        {s.arana && s.arana.length > 0 && (
+          <div><h3>Qué pasa si cada entrada se mueve</h3><Arana curvas={s.arana} /></div>
+        )}
+      </div>
     </section>
   );
 }

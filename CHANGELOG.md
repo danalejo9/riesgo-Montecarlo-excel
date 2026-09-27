@@ -5,6 +5,30 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Primera ronda de pruebas en Excel (A1–E4) (2026-09-27)
+
+**Corregido**
+- **«Referencia sin resolver» al simular una salida que depende de una
+  `RIESGO.*`** que no está en el panel (Modelo!C32 con =RIESGO.NORMAL en
+  C5). Las entradas de funciones se descubren después de resolver las
+  referencias del panel, y preparar la simulación pedía resolverlas otra vez.
+  `resolverConFunciones` (excel/entradasRiesgo.ts) y una prueba con un
+  resolvedor estricto como el de Excel.
+- **El tornado salía en blanco en el PDF**: el navegador no imprime fondos
+  por defecto; ahora `print-color-adjust: exact`. La primera salida ya no
+  empieza en una página nueva, y el tornado y la araña van lado a lado.
+
+**Guía de pruebas**
+- Bloque E rehecho: todo en la hoja «Pruebas», con aviso de reabrir el libro
+  si se escribió en «Modelo», y una E5 nueva (RIESGO dentro del modelo
+  grande). Nota sobre `npm start` en C4.
+
+**Plan**
+- Mejoras propuestas por el usuario registradas: C7 (PDF con datos del
+  proyecto), C8 (hoja volcada legible), E5 (nombres legibles automáticos),
+  E6 (elegir la salida en Resultados), E7 (administrador de escenarios), E8
+  (color para celdas RIESGO), F4 (núcleos en automático según el tamaño).
+
 ### Arreglo: el panel se quedaba en blanco dentro de Excel (2026-09-27)
 
 **Corregido**
