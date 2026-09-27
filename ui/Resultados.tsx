@@ -31,6 +31,9 @@
 import { useEffect, useState } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import {
+  escenarioActivo, MAXIMO_ESCENARIOS, tablaEscenarios, type AlmacenEscenarios, type FilaEscenario,
+} from '../excel/escenarios.ts';
 import { lecturaDeSalida } from '../excel/lectura.ts';
 import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
@@ -53,19 +56,18 @@ export function Resultados({
   modelo,
   resultado,
   alCambiarModelo,
-  referencia,
-  alFijarReferencia,
-  alQuitarReferencia,
+  escenarios,
+  alCambiarEscenarios,
 }: {
   modelo: ModeloRiesgo;
   resultado: SimulacionCompletada;
   /** Para guardar el umbral de cada salida en el modelo del libro. */
   alCambiarModelo?: (m: ModeloRiesgo) => void;
-  /** La simulación fijada para comparar escenarios, si hay. */
-  referencia?: ReferenciaGuardada | null;
-  alFijarReferencia?: (etiqueta: string) => void;
-  alQuitarReferencia?: () => void;
+  /** Los escenarios guardados en el libro (E7); el activo es con el que se compara. */
+  escenarios?: AlmacenEscenarios;
+  alCambiarEscenarios?: (accion: AccionEscenarios) => void;
 }) {
+  const referencia: ReferenciaGuardada | null = escenarios ? escenarioActivo(escenarios) : null;
   const motivos = motivosLegibles(resultado.eleccion);
   const [volcando, setVolcando] = useState(false);
   const [volcado, setVolcado] = useState<string | null>(null);
@@ -182,12 +184,11 @@ export function Resultados({
         {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
       </section>
 
-      {alFijarReferencia && (
+      {alCambiarEscenarios && (
         <Escenarios
-          referencia={referencia ?? null}
-          esEsta={Boolean(referencia) && !comparando}
-          alFijar={alFijarReferencia}
-          alQuitar={alQuitarReferencia}
+          escenarios={escenarios ?? { escenarios: [] }}
+          idSimulacion={resultado.idSimulacion}
+          alCambiar={alCambiarEscenarios}
         />
       )}
 
@@ -341,6 +342,12 @@ export function Resultados({
             }
             const filas = compararSalida(salida, ref, modelo.outputs.find((o) => o.id === salida.id)?.threshold);
             return <TablaComparacion etiqueta={comparando.etiqueta} filas={filas} />;
+          })()}
+
+          {escenarios && escenarios.escenarios.length > 0 && (() => {
+            const umbral = modelo.outputs.find((o) => o.id === salida.id)?.threshold;
+            const filas = tablaEscenarios(salida, resultado, escenarios, umbral);
+            return filas.length > 1 ? <TablaEscenarios filas={filas} conUmbral={Boolean(umbral)} /> : null;
           })()}
 
           <h3>Probabilidad acumulada</h3>
@@ -837,57 +844,126 @@ export function PrecisionSalida({ precision, n }: { precision: Precision; n: num
   );
 }
 
+/** Lo que el panel pide hacer con los escenarios (E7). */
+export type AccionEscenarios =
+  | { tipo: 'guardar'; etiqueta: string }
+  | { tipo: 'quitar'; id: string }
+  | { tipo: 'activar'; id: string | null };
+
 /**
- * Fijar esta simulación como referencia para comparar la siguiente contra
- * ella: "sin refinanciación" frente a "con refinanciación", sin apuntar nada.
+ * El administrador de escenarios (E7): guardar la simulación con un nombre,
+ * elegir con cuál se compara y borrar los que sobran. Ver `excel/escenarios.ts`.
  */
 function Escenarios({
-  referencia,
-  esEsta,
-  alFijar,
-  alQuitar,
+  escenarios,
+  idSimulacion,
+  alCambiar,
 }: {
-  referencia: ReferenciaGuardada | null;
-  esEsta: boolean;
-  alFijar: (etiqueta: string) => void;
-  alQuitar?: () => void;
+  escenarios: AlmacenEscenarios;
+  idSimulacion?: string;
+  alCambiar: (accion: AccionEscenarios) => void;
 }) {
-  const [etiqueta, setEtiqueta] = useState('Escenario base');
+  const lista = escenarios.escenarios;
+  const [etiqueta, setEtiqueta] = useState(lista.length === 0 ? 'Escenario base' : `Escenario ${lista.length + 1}`);
+  const yaGuardada = lista.find((e) => idSimulacion && e.resultado.idSimulacion === idSimulacion);
   return (
     <section>
-      <h2>Comparar escenarios</h2>
-      {!referencia && (
-        <p className="tenue">
-          Fija esta simulación como referencia, cambia el modelo y vuelve a simular:
-          cada salida se comparará con ella.
-        </p>
+      <h2>Escenarios</h2>
+      <p className="tenue">
+        Guarda esta simulación con un nombre, cambia el modelo y vuelve a simular: cada salida se
+        compara con el escenario marcado, y una tabla enseña todos a la vez. Se guardan en el libro
+        (hasta {MAXIMO_ESCENARIOS}).
+      </p>
+      {lista.length > 0 && (
+        <ul className="lista-escenarios">
+          {lista.map((e) => (
+            <li key={e.id}>
+              <label>
+                <input
+                  type="radio"
+                  name="escenario-activo"
+                  checked={escenarios.activo === e.id}
+                  onChange={() => alCambiar({ tipo: 'activar', id: e.id })}
+                />
+                <span>{e.etiqueta}</span>
+                {e.guardadoEn && <span className="tenue"> · {fecha(e.guardadoEn)}</span>}
+                {idSimulacion && e.resultado.idSimulacion === idSimulacion && <span className="tenue"> · esta simulación</span>}
+              </label>
+              <button
+                type="button"
+                className="plano borrar"
+                aria-label={`Borrar el escenario ${e.etiqueta}`}
+                title="Borrar este escenario"
+                onClick={() => alCambiar({ tipo: 'quitar', id: e.id })}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+          <li>
+            <label>
+              <input
+                type="radio"
+                name="escenario-activo"
+                checked={!escenarios.activo}
+                onChange={() => alCambiar({ tipo: 'activar', id: null })}
+              />
+              <span className="tenue">No comparar con ninguno</span>
+            </label>
+          </li>
+        </ul>
       )}
-      {referencia && (
-        <p className="tenue">
-          {esEsta
-            ? <>Esta simulación es la referencia «{referencia.etiqueta}». Cambia el modelo y vuelve a simular para comparar.</>
-            : <>Comparando con «{referencia.etiqueta}».</>}
-        </p>
+      {yaGuardada ? (
+        <p className="tenue">Esta simulación está guardada como «{yaGuardada.etiqueta}».</p>
+      ) : (
+        <div className="fila-botones">
+          <input
+            type="text"
+            aria-label="Nombre del escenario"
+            value={etiqueta}
+            onChange={(ev) => setEtiqueta(ev.target.value)}
+          />
+          <button type="button" onClick={() => alCambiar({ tipo: 'guardar', etiqueta: etiqueta.trim() || 'Escenario' })}>
+            Guardar como escenario
+          </button>
+        </div>
       )}
-      <div className="fila-botones">
-        {!esEsta && (
-          <>
-            <input
-              type="text"
-              aria-label="Nombre de la referencia"
-              value={etiqueta}
-              onChange={(e) => setEtiqueta(e.target.value)}
-            />
-            <button type="button" onClick={() => alFijar(etiqueta.trim() || 'Referencia')}>
-              {referencia ? 'Usar esta como referencia' : 'Fijar como referencia'}
-            </button>
-          </>
-        )}
-        {referencia && alQuitar && (
-          <button type="button" className="plano" onClick={alQuitar}>Quitar la referencia</button>
-        )}
-      </div>
     </section>
+  );
+}
+
+/** Una salida en todos los escenarios a la vez (E7). */
+function TablaEscenarios({ filas, conUmbral }: { filas: readonly FilaEscenario[]; conUmbral: boolean }) {
+  return (
+    <>
+      <h3>En todos los escenarios</h3>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead>
+            <tr>
+              <th>Escenario</th>
+              <th>Media</th>
+              <th>p5</th>
+              <th>p50</th>
+              <th>p95</th>
+              {conUmbral && <th>Umbral</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.etiqueta} className={f.esActual ? 'elegida' : undefined}>
+                <td>{f.etiqueta}</td>
+                <td>{numero(f.media)}</td>
+                <td>{f.p5 === undefined ? '' : numero(f.p5)}</td>
+                <td>{f.p50 === undefined ? '' : numero(f.p50)}</td>
+                <td>{f.p95 === undefined ? '' : numero(f.p95)}</td>
+                {conUmbral && <td>{f.probabilidad === undefined ? '' : `${(f.probabilidad * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

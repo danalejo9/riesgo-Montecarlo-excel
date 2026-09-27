@@ -390,3 +390,10 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 /* C7: la lectura de cada salida en palabras. */
 .lectura { margin: 4px 0 10px; line-height: 1.45; }
 textarea { width: 100%; font: inherit; box-sizing: border-box; }
+
+/* E7: lista de escenarios. */
+.lista-escenarios { list-style: none; padding: 0; margin: 6px 0; }
+.lista-escenarios li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 0; }
+.lista-escenarios label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lista-escenarios button { margin-top: 0; }
+.tabla-resumen.sin-clic tbody tr { cursor: default; }

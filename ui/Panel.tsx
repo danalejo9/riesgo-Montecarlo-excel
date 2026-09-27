@@ -23,9 +23,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
 import {
-  guardarModelo, guardarReferencia, guardarResultados, leerModelo, leerReferenciaGuardada, leerResultadosGuardados,
+  guardarEscenarios, guardarModelo, guardarResultados, leerEscenariosGuardados, leerModelo, leerResultadosGuardados,
 } from '../excel/almacenModelo.ts';
-import { restaurarReferencia, serializarReferencia, type ReferenciaGuardada } from '../excel/comparacion.ts';
+import {
+  elegirActivo, guardarEscenario, quitarEscenario, restaurarEscenarios, serializarEscenarios, vacio as sinEscenarios,
+  type AlmacenEscenarios,
+} from '../excel/escenarios.ts';
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado } from '../excel/resaltado.ts';
@@ -70,7 +73,7 @@ export function Panel() {
   const [simulando, setSimulando] = useState(false);
   const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
   const [guardado, setGuardado] = useState<EstadoGuardado>({ estado: 'sin-cambios' });
-  const [referencia, setReferencia] = useState<ReferenciaGuardada | null>(null);
+  const [escenarios, setEscenarios] = useState<AlmacenEscenarios>(sinEscenarios);
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
@@ -117,13 +120,13 @@ export function Panel() {
 
         const base = lectura.estado === 'ok' ? lectura.modelo : modeloVacio();
 
-        // Los resultados de la última simulación, y la referencia con la que
+        // Los resultados de la última simulación, y los escenarios con los que
         // compararlos, si el libro los trae.
         if (lectura.estado === 'ok') {
-          void leerReferenciaGuardada()
-            .then((texto) => setReferencia(texto ? restaurarReferencia(texto) : null))
+          void leerEscenariosGuardados()
+            .then(({ texto, legado }) => setEscenarios(restaurarEscenarios(texto, legado)))
             .catch(() => {
-              // Sin referencia legible, no hay comparación: nada más.
+              // Sin escenarios legibles, no hay comparación: nada más.
             });
           void leerResultadosGuardados()
             .then((texto) => {
@@ -345,17 +348,25 @@ export function Panel() {
           modelo={modelo}
           resultado={resultado}
           alCambiarModelo={cambiarModelo}
-          referencia={referencia}
-          alFijarReferencia={(etiqueta) => {
-            const nueva = { etiqueta, resultado };
-            setReferencia(nueva);
-            void guardarReferencia(serializarReferencia(modelo, etiqueta, resultado)).catch((e: unknown) =>
-              setError(`La referencia no se pudo guardar en el libro: ${mensajeDe(e)}`),
+          escenarios={escenarios}
+          alCambiarEscenarios={(accion) => {
+            let nuevo: AlmacenEscenarios;
+            if (accion.tipo === 'guardar') {
+              const r = guardarEscenario(escenarios, accion.etiqueta, resultado);
+              if (!r.ok) {
+                setError(r.motivo);
+                return;
+              }
+              nuevo = r.almacen;
+            } else if (accion.tipo === 'quitar') {
+              nuevo = quitarEscenario(escenarios, accion.id);
+            } else {
+              nuevo = elegirActivo(escenarios, accion.id);
+            }
+            setEscenarios(nuevo);
+            void guardarEscenarios(serializarEscenarios(modelo, nuevo)).catch((e: unknown) =>
+              setError(`Los escenarios no se pudieron guardar en el libro: ${mensajeDe(e)}`),
             );
-          }}
-          alQuitarReferencia={() => {
-            setReferencia(null);
-            void guardarReferencia(null).catch((e: unknown) => setError(mensajeDe(e)));
           }}
         />
       )}

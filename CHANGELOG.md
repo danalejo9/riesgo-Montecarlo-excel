@@ -5,7 +5,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### Etapa 1: nombres legibles (E5), elegir la salida (E6) e informe del proyecto (C7) (2026-09-27)
+### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7) y escenarios (E7) (2026-09-27)
 
 **Añadido**
 - **Las celdas marcadas nacen con un nombre legible**: el texto de su
@@ -26,6 +26,13 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   **lectura en palabras** generada con reglas (rango del 90 %, probabilidad del
   umbral, qué la mueve más, si bastan las iteraciones), también en el panel
   (`excel/lectura.ts`). Las entradas `RIESGO.*` salen con su nombre legible.
+- **Administrador de escenarios** (E7): varias simulaciones guardadas en el
+  libro con su nombre (hasta 10). Se elige con cuál se compara (tabla de
+  diferencias y curva punteada) y cada salida enseña una tabla con **todos
+  los escenarios a la vez**. Guardar una variante no quita la comparación con
+  el marcado; el mismo nombre actualiza el escenario. La referencia única de
+  antes pasa sola a ser el primer escenario (`excel/escenarios.ts`, clave
+  `riesgoMontecarlo.scenarios`).
 
 ### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
 
