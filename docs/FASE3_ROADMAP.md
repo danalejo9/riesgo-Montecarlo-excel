@@ -339,6 +339,10 @@ Estimaciones en días de trabajo efectivo.
   en un percentil y ver el efecto en la salida sin simular el resto a mano.
 - **D3. Salidas que son un rango** (C28:H28 como una sola salida con
   periodos), base del gráfico de abanico C4.
+- **D4. Tornado de cambio en la salida** *(nuevo, 27/09)*: cuánto sube o baja
+  la media (o un percentil) de la salida entre el valor bajo y el alto de cada
+  entrada, en unidades de la salida. Complementa al tornado de correlaciones,
+  que dice «cuánto se parecen» pero no «cuánto dinero mueve».
 
 ### E. Uso del panel — 2–4 d
 - **E1. Vista de todas las entradas** en una tabla (nombre, celda,
@@ -362,6 +366,10 @@ Estimaciones en días de trabajo efectivo.
   Enlaza con H3 (simulaciones en serie).
 - **E8. Distinguir las celdas con `RIESGO.*`** *(usuario, 27/09)*: pintarlas
   de un color propio, distinto del amarillo de las entradas del panel.
+- **U1. Asistente del primer modelo y plantillas** *(nuevo, 27/09; el
+  estudio pedía «asistentes paso a paso»)*: guía a quien empieza (qué celdas
+  son inciertas, qué distribución elegir, qué salida medir) y ofrece modelos
+  de partida (proyecto de inversión, presupuesto de obra, cartera).
 
 ### F. Motor y cobertura — según lo que pidan los libros
 - **F1.** `DESREF` con desplazamientos constantes; `LAMBDA`.
@@ -449,9 +457,11 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
-**Orden propuesto**: A → **E5, E6, C7** (lo que pidió el usuario en la primera
-ronda) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
-C3, C4 → resto de B, D, E, H → F según los libros → G → I3. *(H1 ✅ 26/09.)*
+**Orden propuesto**: A → **E5, E6, C7, E7, E8, F4** (lo que pidió el usuario
+en las pruebas) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G → I3.
+La lista completa, numerada y con su origen, está en
+`docs/INVENTARIO_FUNCIONALIDADES.md`. *(H1 ✅ 26/09.)*
 
 ---
 
