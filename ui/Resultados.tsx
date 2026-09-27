@@ -31,6 +31,7 @@
 import { useEffect, useState } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import { lecturaDeSalida } from '../excel/lectura.ts';
 import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
 
@@ -212,7 +213,7 @@ export function Resultados({
           <>
             <h3>Entradas con funciones RIESGO del libro</h3>
             <ul className="motivos">
-              {resultado.entradasDeFunciones.map((e) => <li key={e.ref}>{e.ref}: {e.distribucion}</li>)}
+              {resultado.entradasDeFunciones.map((e) => <li key={e.ref}>{e.nombre && e.nombre !== e.ref ? `${e.nombre} (${e.ref})` : e.ref}: {e.distribucion}</li>)}
             </ul>
             <p className="aviso-linea">
               Antes de enviar este libro a alguien sin el complemento, usa «Preparar para compartir»
@@ -274,6 +275,7 @@ export function Resultados({
         <section key={salida.id}>
           <h2 className="titulo-salida">{salida.nombre}</h2>
           <p className="tenue">{salida.ref}</p>
+          <LecturaSalida salida={salida} umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold} />
 
           <dl>
             <dt>Media</dt><dd>{numero(salida.resumen.media)}</dd>
@@ -473,6 +475,18 @@ const VISIBLES_TORNADO = 10;
 
 /** Coma decimal y signo explícito: "+0,82", "−0,15". */
 const TODAS = '__todas__';
+
+/** Dos o tres frases que dicen lo que enseñan los números de la salida (C7). Con reglas, sin IA. */
+function LecturaSalida({ salida, umbral }: { salida: ResultadoSalida; umbral?: UmbralRiskModel }) {
+  const p = umbral && salida.muestraOrdenada && salida.muestraOrdenada.length > 0
+    ? probabilidadUmbral(salida.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima')
+    : undefined;
+  const frases = lecturaDeSalida({
+    ...salida,
+    ...(umbral && p !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad: p } } : {}),
+  });
+  return frases.length > 0 ? <p className="lectura">{frases.join(' ')}</p> : null;
+}
 
 /**
  * La tabla con todas las salidas y el selector de cuál enseñar (E6). Con

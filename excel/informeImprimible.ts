@@ -19,16 +19,21 @@ import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.t
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
+import { lecturaDeSalida } from './lectura.ts';
 
 export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada'> {
   umbral?: { texto: string; probabilidad: number };
   comparacion?: FilaComparacion[];
   cdfReferencia?: ResultadoSalida['cdf'];
+  /** La lectura en palabras (C7). */
+  lectura?: string[];
 }
 
 export interface DatosInforme {
   version: 1;
   titulo: string;
+  /** La descripción del proyecto, si el modelo la tiene (C7). */
+  descripcion?: string;
   generado: string;
   libro?: string;
   ajustes: {
@@ -57,7 +62,8 @@ export function datosDelInforme(
 
   return {
     version: 1,
-    titulo: 'Análisis de riesgo — simulación Monte Carlo',
+    titulo: modelo.project?.title.trim() || 'Análisis de riesgo — simulación Monte Carlo',
+    ...(modelo.project?.description?.trim() ? { descripcion: modelo.project.description.trim() } : {}),
     generado: (opciones.ahora ?? new Date()).toISOString(),
     ...(opciones.libro ? { libro: opciones.libro } : {}),
     ajustes: {
@@ -77,15 +83,23 @@ export function datosDelInforme(
         correlaciones: e.correlations.map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`).join('; '),
       })),
       ...(resultado.entradasDeFunciones ?? []).map((e) => ({
-        nombre: `${e.ref} (RIESGO)`, ref: e.ref, distribucion: e.distribucion, correlaciones: '',
+        nombre: `${e.nombre && e.nombre !== e.ref ? e.nombre : e.ref} (RIESGO)`, ref: e.ref, distribucion: e.distribucion, correlaciones: '',
       })),
     ],
     ...(ref ? { referencia: ref.etiqueta } : {}),
     salidas: resultado.salidas.map(({ muestraOrdenada, ...s }) => {
       const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;
       const deRef = ref ? salidaDeReferencia(ref, s.id) : undefined;
+      const probabilidad = umbral && muestraOrdenada && muestraOrdenada.length > 0
+        ? probabilidadUmbral(muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima')
+        : undefined;
+      const lectura = lecturaDeSalida({
+        ...s,
+        ...(umbral && probabilidad !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad } } : {}),
+      });
       return {
         ...s,
+        ...(lectura.length > 0 ? { lectura } : {}),
         ...(umbral && muestraOrdenada && muestraOrdenada.length > 0
           ? {
               umbral: {

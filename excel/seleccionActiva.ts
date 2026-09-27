@@ -7,12 +7,7 @@
  * salida es una comodidad.
  */
 
-import { claveDesdeDireccion } from './direcciones.ts';
-
-/** La clave canónica de una dirección, para comparar «Modelo!$C$32» con «Modelo!C32». */
-export function claveComparable(direccion: string): string | undefined {
-  return claveDesdeDireccion(direccion.replace(/\$/g, ''));
-}
+export { claveComparable } from './direcciones.ts';
 
 /**
  * Llama a `alCambiar` con la dirección de la nueva selección cada vez que

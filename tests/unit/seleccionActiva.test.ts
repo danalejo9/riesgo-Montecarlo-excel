@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { claveComparable } from '../../excel/seleccionActiva.ts';
+import { claveComparable } from '../../excel/direcciones.ts';
 
 describe('claveComparable (E6: saltar a la salida seleccionada en la hoja)', () => {
   it('la dirección con $ y la referencia del modelo son la misma celda', () => {

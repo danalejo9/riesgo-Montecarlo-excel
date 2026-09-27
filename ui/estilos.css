@@ -386,3 +386,7 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .tabla-resumen tbody tr { cursor: pointer; }
 .tabla-resumen tbody tr:hover { background: color-mix(in srgb, var(--acento) 8%, transparent); }
 .tabla-resumen tr.elegida { background: color-mix(in srgb, var(--acento) 15%, transparent); font-weight: 600; }
+
+/* C7: la lectura de cada salida en palabras. */
+.lectura { margin: 4px 0 10px; line-height: 1.45; }
+textarea { width: 100%; font: inherit; box-sizing: border-box; }

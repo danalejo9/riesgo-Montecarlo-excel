@@ -210,7 +210,7 @@ function conEntradasDeFunciones(
   if (!r.ok || (d.entradas.length === 0 && d.duplicadas.length === 0)) return r;
   return {
     ...r,
-    entradasDeFunciones: d.entradas.map((e) => ({ ref: e.ref, distribucion: resumirDistribucion(e.dist) })),
+    entradasDeFunciones: d.entradas.map((e) => ({ ref: e.ref, nombre: e.name, distribucion: resumirDistribucion(e.dist) })),
     ...(d.duplicadas.length > 0 ? { funcionesIgnoradas: d.duplicadas } : {}),
   };
 }

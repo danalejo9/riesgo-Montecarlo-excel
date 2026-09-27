@@ -13,6 +13,8 @@
 import { useEffect, useState } from 'react';
 
 import {
+  LARGO_MAXIMO_DESCRIPCION,
+  LARGO_MAXIMO_TITULO,
   OBJETIVO_PRECISION_POR_DEFECTO,
   type ConvergenciaRiskModel,
   type ModeloRiesgo,
@@ -52,6 +54,8 @@ export function Configuracion({
 
   return (
     <>
+      <Proyecto modelo={modelo} alCambiar={alCambiar} />
+
       <Rendimiento hilosUltimaSimulacion={hilosUltimaSimulacion} />
 
       <section>
@@ -270,5 +274,58 @@ function CampoEntero({
       />
       {error ? <span className="aviso-linea">{error}</span> : ayuda && <span className="tenue ayuda">{ayuda}</span>}
     </label>
+  );
+}
+
+/**
+ * El título y la descripción del proyecto (C7): encabezan el informe PDF y el
+ * volcado. Se guardan con el modelo al salir del campo, no a cada tecla.
+ */
+function Proyecto({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambiar: (m: ModeloRiesgo) => void }) {
+  const [titulo, setTitulo] = useState(modelo.project?.title ?? '');
+  const [descripcion, setDescripcion] = useState(modelo.project?.description ?? '');
+
+  useEffect(() => {
+    setTitulo(modelo.project?.title ?? '');
+    setDescripcion(modelo.project?.description ?? '');
+  }, [modelo.project]);
+
+  const guardar = () => {
+    const t = titulo.trim();
+    const d = descripcion.trim();
+    if (t === (modelo.project?.title ?? '') && d === (modelo.project?.description ?? '')) return;
+    const copia = { ...modelo };
+    if (t === '' && d === '') delete copia.project;
+    else copia.project = { title: t, ...(d ? { description: d } : {}) };
+    alCambiar(copia);
+  };
+
+  return (
+    <section>
+      <h2>Proyecto</h2>
+      <p className="tenue">Encabezan el informe PDF y la hoja volcada. Se guardan en el libro.</p>
+      <label className="campo ancho">
+        <span className="tenue">Título</span>
+        <input
+          type="text"
+          value={titulo}
+          maxLength={LARGO_MAXIMO_TITULO}
+          placeholder="p. ej. Proyecto Aurora — evaluación a cinco años"
+          onChange={(e) => setTitulo(e.target.value)}
+          onBlur={guardar}
+        />
+      </label>
+      <label className="campo ancho">
+        <span className="tenue">Descripción</span>
+        <textarea
+          value={descripcion}
+          rows={3}
+          maxLength={LARGO_MAXIMO_DESCRIPCION}
+          placeholder="Qué se evalúa, para quién y con qué supuestos."
+          onChange={(e) => setDescripcion(e.target.value)}
+          onBlur={guardar}
+        />
+      </label>
+    </section>
   );
 }

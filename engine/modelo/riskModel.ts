@@ -101,8 +101,22 @@ export interface ConvergenciaRiskModel {
 /** Margen objetivo si el modelo no dice otro. */
 export const OBJETIVO_PRECISION_POR_DEFECTO = 0.01;
 
+/**
+ * El proyecto al que pertenece el modelo (C7): su título y una descripción,
+ * para que el informe y el volcado digan de qué hablan. Opcional: los modelos
+ * anteriores no lo tienen y siguen siendo válidos.
+ */
+export interface ProyectoRiskModel {
+  title: string;
+  description?: string;
+}
+
+export const LARGO_MAXIMO_TITULO = 200;
+export const LARGO_MAXIMO_DESCRIPCION = 2000;
+
 export interface ModeloRiesgo {
   schema: 1;
+  project?: ProyectoRiskModel;
   inputs: EntradaRiskModel[];
   outputs: SalidaRiskModel[];
   settings: ConfiguracionRiskModel;
@@ -168,6 +182,20 @@ export function validarRiskModel(json: unknown): ResultadoValidacion {
   const outputs = validarLista(m.outputs, 'outputs', errores, (v, ctx) => validarSalida(v, ctx, errores));
   const settings = validarConfiguracion(m.settings, errores);
 
+  let project: ProyectoRiskModel | undefined;
+  if (m.project !== undefined) {
+    const p = m.project as Record<string, unknown> | null;
+    const valido =
+      typeof p === 'object' && p !== null &&
+      typeof p.title === 'string' && p.title.length <= LARGO_MAXIMO_TITULO &&
+      (p.description === undefined || (typeof p.description === 'string' && p.description.length <= LARGO_MAXIMO_DESCRIPCION));
+    if (!valido) {
+      errores.push(`"project" debe tener un título (hasta ${LARGO_MAXIMO_TITULO} caracteres) y, opcionalmente, una descripción (hasta ${LARGO_MAXIMO_DESCRIPCION}).`);
+    } else {
+      project = { title: p.title as string, ...(typeof p.description === 'string' ? { description: p.description } : {}) };
+    }
+  }
+
   // Unicidad de ids y de refs, entre entradas y salidas a la vez: ambos
   // espacios de nombres comparten el mismo libro.
   const idsVistos = new Map<string, number>();
@@ -194,7 +222,13 @@ export function validarRiskModel(json: unknown): ResultadoValidacion {
 
   return {
     ok: true,
-    modelo: { schema: VERSION_ESQUEMA_RISK_MODEL, inputs, outputs, settings: settings as ConfiguracionRiskModel },
+    modelo: {
+      schema: VERSION_ESQUEMA_RISK_MODEL,
+      ...(project ? { project } : {}),
+      inputs,
+      outputs,
+      settings: settings as ConfiguracionRiskModel,
+    },
   };
 }
 

@@ -5,7 +5,7 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### Etapa 1: nombres legibles (E5) y elegir la salida (E6) (2026-09-27)
+### Etapa 1: nombres legibles (E5), elegir la salida (E6) e informe del proyecto (C7) (2026-09-27)
 
 **Añadido**
 - **Las celdas marcadas nacen con un nombre legible**: el texto de su
@@ -20,6 +20,12 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   resumen arriba (media, p5, p50, p95 y el umbral) y un selector que enseña
   una cada vez o todas. Se elige pulsando una fila o **seleccionando la celda
   de la salida en la hoja** (`excel/seleccionActiva.ts`, ExcelApi 1.2).
+- **Informe PDF del proyecto** (C7): título y descripción del proyecto en
+  Configuración (se guardan en el libro, campo opcional `project` del
+  modelo); encabezan el PDF y la hoja volcada. Cada salida lleva una
+  **lectura en palabras** generada con reglas (rango del 90 %, probabilidad del
+  umbral, qué la mueve más, si bastan las iteraciones), también en el panel
+  (`excel/lectura.ts`). Las entradas `RIESGO.*` salen con su nombre legible.
 
 ### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
 

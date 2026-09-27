@@ -92,3 +92,8 @@ export function claveDesdeDireccion(direccion: string, hojaActiva?: string): str
   if (destino === undefined || !REF_CELDA.test(rango)) return undefined;
   return claveDeReferencia(destino, rango);
 }
+
+/** La clave canónica de una dirección, para comparar «Modelo!$C$32» con «Modelo!C32» (E6). */
+export function claveComparable(direccion: string): string | undefined {
+  return claveDesdeDireccion(direccion.replace(/\$/g, ''));
+}

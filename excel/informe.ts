@@ -211,7 +211,7 @@ export interface SimulacionCompletada {
    */
   huellaModelo?: string;
   /** Entradas declaradas en el libro con funciones RIESGO.*, además de las del panel. */
-  entradasDeFunciones?: { ref: string; distribucion: string }[];
+  entradasDeFunciones?: { ref: string; distribucion: string; nombre?: string }[];
   /** Celdas con RIESGO.* que también están en el panel: se usó lo del panel. */
   funcionesIgnoradas?: string[];
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
@@ -274,7 +274,8 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     filas.push([texto]);
   };
 
-  titulo('Análisis de riesgo — simulación Monte Carlo');
+  titulo(modelo.project?.title.trim() || 'Análisis de riesgo — simulación Monte Carlo');
+  if (modelo.project?.description?.trim()) añadir([modelo.project.description.trim()]);
   tenue(new Date().toLocaleString('es-ES'));
   añadir([]);
 
@@ -306,7 +307,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     añadir([e.name, e.ref, resumirDistribucion(e.dist), correlaciones]);
   }
   for (const e of resultado.entradasDeFunciones ?? []) {
-    añadir([`${e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
+    añadir([`${e.nombre && e.nombre !== e.ref ? e.nombre : e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
   }
   añadir([]);
 

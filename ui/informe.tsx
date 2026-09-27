@@ -52,6 +52,7 @@ function Informe() {
           {new Date(datos.generado).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}
           {datos.libro ? ` · ${datos.libro}` : ''}
         </p>
+        {datos.descripcion && <p className="descripcion-proyecto">{datos.descripcion}</p>}
       </header>
 
       <section>
@@ -99,6 +100,8 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
   return (
     <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
       <h2>{s.nombre} <span className="tenue">({s.ref})</span></h2>
+
+      {s.lectura && s.lectura.length > 0 && <p className="lectura">{s.lectura.join(' ')}</p>}
 
       {s.umbral && (
         <p className="umbral-respuesta">
