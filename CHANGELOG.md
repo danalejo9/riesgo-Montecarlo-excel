@@ -5,6 +5,28 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
+
+**Verificado en Excel**
+- Tandas de fidelidad 7 (LET, 14/14) y 8 (matrices, 27/27) calculadas por
+  el Excel del usuario y ya en las pruebas. El único desacuerdo (T8-012) era
+  del lector: Excel guarda `#CALC!` como «valor enriquecido» y escribe
+  `#VALUE!` para lectores antiguos. `tests/helpers/leerFidelidad.ts` lee ahora
+  `xl/richData`.
+- Las 3 fórmulas de `Caso_practico.xlsx` (`SUMAPRODUCTO(H42:DC42/H45:DC45)` y
+  similares) calculan bien y van por el motor rápido (prueba nueva).
+
+**Corregido**
+- **Funciones RIESGO en Excel para la Web** (W5): el servidor de desarrollo
+  no enviaba `Access-Control-Allow-Origin` en `funciones.json` y
+  `funciones.js` (ese middleware va antes que los encabezados de Vite).
+  Pendiente de confirmar en la Web.
+- **Una salida que nunca da un número** (G3, un FILTRAR de nombres) enseñaba
+  «mínimo ∞, máximo −∞» y un tornado de ceros; ahora un aviso claro, también
+  en el PDF.
+- **«Restaurar funciones RIESGO»** (J4) sale arriba de la pestaña Modelo, y
+  como botón, cuando el libro está preparado para compartir.
+
 ### Primera ronda de pruebas en Excel (A1–E4) (2026-09-27)
 
 **Corregido**

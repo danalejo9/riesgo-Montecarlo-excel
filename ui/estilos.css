@@ -104,6 +104,8 @@ button {
   cursor: pointer;
 }
 button:disabled { opacity: .6; cursor: default; }
+button.secundario { background: transparent; color: var(--acento); }
+section.compartido { border-left: 3px solid var(--acento); padding-left: 10px; }
 
 .error {
   border: 1px solid var(--error-borde);

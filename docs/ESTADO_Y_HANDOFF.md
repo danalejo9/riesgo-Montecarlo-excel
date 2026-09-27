@@ -938,6 +938,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Después: el editor ya no guarda distribuciones inválidas (borrador +
     aviso), el error se puede cerrar, y los parámetros se leen en español.
 
+34. [x] **Segunda ronda del usuario (2026-09-27, C2–W) y tandas 7 y 8**.
+    Todo pasa salvo W5 (RIESGO en la Web: CORS, arreglado sin confirmar).
+    Tandas 7 y 8 en verde (lector de errores enriquecidos). Caso práctico: sus
+    3 SUMAPRODUCTO van por el rápido. Arreglos menores G3 y J4. Pendiente del
+    usuario: K; repetir W5, J4, G3; decidir E10 (licencia y precio).
+    **Siguiente de desarrollo**: E5 (nombres legibles), E6 (elegir salida),
+    C7 (PDF del proyecto), según el orden de §2.1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.

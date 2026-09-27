@@ -11,6 +11,16 @@ código (A1, A2…). Al terminar cada bloque, dime por cada código:
 (todo en la hoja «Pruebas», y una E5 nueva). Repite **C2** (el PDF ya
 imprime el tornado) y **E1–E5**; luego sigue desde F.
 
+*Versión del 27/09 (tarde), tras tu segunda ronda (C2–W):* pasaron E, F, G1,
+G2, H, J y W1–W4, y las tandas 7 y 8. Falta **K** (no venía en el reporte).
+Repite solo:
+- **W5** (funciones RIESGO en Excel para la Web): arreglado lo que
+  probablemente las bloqueaba.
+- **J1 y J4**: ahora, con el libro preparado, «Restaurar» sale **arriba** de
+  la pestaña Modelo y como botón.
+- **G3**: ahora dice «ninguna iteración dio un número» en vez de «∞». Dime
+  también si al simular apareció el aviso de que H13 «derramaría».
+
 - **OK**, o
 - **Falla** + qué ves (una captura ayuda mucho).
 
@@ -230,6 +240,10 @@ Escribe en la hoja «Pruebas» (con los nombres en español):
 salen tres zonas hacia abajo. Añade H13 como salida y simula.
 - Esperado: el complemento pasa al **modo compatible** y explica que H13
   «devuelve varias celdas y aquí derramaría». Luego quita H13 de las salidas.
+- *Nota (27/09):* H13 devuelve **nombres de zona** (texto), así que las
+  estadísticas salen vacías: es correcto. Lo que se prueba es el paso al modo
+  compatible y el aviso. Desde esta versión, la salida dice «ninguna iteración
+  dio un número» en vez de «mínimo ∞».
 
 ---
 
@@ -237,7 +251,8 @@ salen tres zonas hacia abajo. Añade H13 como salida y simula.
 
 **H1.** Marca `Pruebas!C21` como entrada (tiene la fórmula `=7+1`) y `C22`
 como salida. En Configuración, motor **Compatible** e iteraciones `1000`
-(«Otra cantidad»). Simula.
+(«Otra cantidad»). Simula. La distribución que el panel le pone a C21 por
+defecto (triangular alrededor de 8) vale: no hace falta cambiarla.
 - Esperado: al terminar, **C21 sigue teniendo la fórmula `=7+1`** (míralo en
   la barra de fórmulas), no un número. Antes de esta versión se perdía.
 - Vuelve el motor a **Automático**.
@@ -309,6 +324,13 @@ se abre.
 
 **W5.** Escribe `=RIESGO.NORMAL(1000;150)` en una celda vacía.
 - Esperado: vale 1000.
+- *Arreglado el 27/09:* el servidor no daba permiso de origen cruzado a los
+  archivos de las funciones, y Excel para la Web los pide desde otro dominio.
+  Antes de repetirla: `git pull`, **`npm run stop`** y **`npm start`**, y en la
+  Web **quita el complemento y vuelve a cargar `manifest.xml`** (la Web
+  guarda en caché la lista de funciones). Si sigue sin funcionar, abre las
+  herramientas del navegador (F12 → Consola) y mándame una captura de los
+  errores en rojo.
 
 **Mac (si tienes acceso):** lo mismo, cargando el manifiesto en Excel para
 Mac. Si no tienes Mac, sáltalo y dímelo.

@@ -32,7 +32,7 @@ import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
 import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
 import { AjusteDatos } from './AjusteDatos.tsx';
-import { Compartir } from './Compartir.tsx';
+import { Compartir, useFormulasCompartidas } from './Compartir.tsx';
 import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
@@ -188,6 +188,11 @@ export function Modelo({
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
+  const [compartidas, setCompartidas] = useFormulasCompartidas();
+  const preparadoParaCompartir = compartidas !== null && compartidas > 0;
+  const compartir = (
+    <Compartir modelo={modelo} alCambiar={alCambiar} guardadas={compartidas} setGuardadas={setCompartidas} />
+  );
 
   /** La celda seleccionada, o un aviso de por qué no vale. */
   const celdaSeleccionada = useCallback(async (): Promise<SeleccionLeida | null> => {
@@ -255,6 +260,8 @@ export function Modelo({
   return (
     <>
       {aviso && <p className="aviso-linea">{aviso}</p>}
+
+      {preparadoParaCompartir && compartir}
 
       <section>
         <h2>Entradas inciertas</h2>
@@ -399,7 +406,7 @@ export function Modelo({
         )}
       </section>
 
-      <Compartir modelo={modelo} alCambiar={alCambiar} />
+      {!preparadoParaCompartir && compartir}
 
       {modelo.settings.engine === 'compatible' && (
         <AvisoCompatible

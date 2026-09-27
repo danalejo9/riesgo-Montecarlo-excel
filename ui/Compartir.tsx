@@ -1,6 +1,11 @@
 /**
  * «Compartir el libro»: convertir las funciones RIESGO en entradas del panel
  * antes de enviar el libro, y deshacerlo. Ver `excel/compartir.ts`.
+ *
+ * Cuánto hay por restaurar lo lleva quien lo pinta (`useFormulasCompartidas`),
+ * porque la pestaña Modelo pone esta sección **arriba** cuando el libro está
+ * preparado: «Restaurar» es lo primero que hay que ver al volver a trabajar
+ * con él (prueba J4, 27/09), y no el final de la pestaña.
  */
 
 import { useEffect, useState } from 'react';
@@ -9,14 +14,29 @@ import type { ModeloRiesgo } from '../engine/modelo/index.ts';
 import { formulasCompartidasGuardadas, prepararParaCompartir, restaurarFuncionesRiesgo } from '../excel/compartir.ts';
 import { miles } from './formato.ts';
 
-export function Compartir({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambiar: (m: ModeloRiesgo) => void }) {
+/** Cuántas funciones RIESGO hay guardadas para restaurar (`null` mientras se lee). */
+export function useFormulasCompartidas() {
   const [guardadas, setGuardadas] = useState<number | null>(null);
-  const [ocupado, setOcupado] = useState(false);
-  const [mensaje, setMensaje] = useState<{ texto: string; detalles?: string[]; aviso?: boolean } | null>(null);
-
   useEffect(() => {
     void formulasCompartidasGuardadas().then(setGuardadas).catch(() => setGuardadas(0));
   }, []);
+  return [guardadas, setGuardadas] as const;
+}
+
+export function Compartir({
+  modelo,
+  alCambiar,
+  guardadas,
+  setGuardadas,
+}: {
+  modelo: ModeloRiesgo;
+  alCambiar: (m: ModeloRiesgo) => void;
+  guardadas: number | null;
+  setGuardadas: (f: (g: number | null) => number | null) => void;
+}) {
+  const [ocupado, setOcupado] = useState(false);
+  const [mensaje, setMensaje] = useState<{ texto: string; detalles?: string[]; aviso?: boolean } | null>(null);
+  const preparado = guardadas !== null && guardadas > 0;
 
   const preparar = async () => {
     setOcupado(true);
@@ -47,7 +67,7 @@ export function Compartir({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambi
     try {
       const r = await restaurarFuncionesRiesgo(modelo);
       alCambiar(r.modelo);
-      setGuardadas(0);
+      setGuardadas(() => 0);
       setMensaje({ texto: `Restauradas ${miles(r.restauradas)} funciones RIESGO; sus entradas del panel se han quitado.` });
     } catch (e) {
       setMensaje({ texto: `No se pudo restaurar: ${e instanceof Error ? e.message : String(e)}`, aviso: true });
@@ -57,8 +77,14 @@ export function Compartir({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambi
   };
 
   return (
-    <section>
-      <h2>Compartir el libro</h2>
+    <section className={preparado ? 'compartido' : undefined}>
+      <h2>{preparado ? 'Libro preparado para compartir' : 'Compartir el libro'}</h2>
+      {preparado && (
+        <p>
+          {miles(guardadas)} funciones RIESGO están convertidas en entradas del panel. Para volver a
+          trabajar con ellas en sus celdas, pulsa <strong>Restaurar</strong>.
+        </p>
+      )}
       <p className="tenue">
         Quien abra el libro <strong>sin el complemento</strong> verá #¿NOMBRE? en las celdas con
         funciones RIESGO. «Preparar para compartir» las convierte en entradas del panel (que viajan
@@ -66,14 +92,14 @@ export function Compartir({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambi
         necesitan nada: ya se comparten bien.
       </p>
       <div className="fila-botones">
-        <button type="button" onClick={() => void preparar()} disabled={ocupado}>
-          {ocupado ? 'Trabajando…' : 'Preparar para compartir'}
-        </button>
-        {guardadas !== null && guardadas > 0 && (
-          <button type="button" className="plano" onClick={() => void restaurar()} disabled={ocupado}>
+        {preparado && (
+          <button type="button" onClick={() => void restaurar()} disabled={ocupado}>
             Restaurar las {miles(guardadas)} funciones RIESGO
           </button>
         )}
+        <button type="button" className={preparado ? 'secundario' : undefined} onClick={() => void preparar()} disabled={ocupado}>
+          {ocupado ? 'Trabajando…' : 'Preparar para compartir'}
+        </button>
       </div>
       {mensaje && (
         <>

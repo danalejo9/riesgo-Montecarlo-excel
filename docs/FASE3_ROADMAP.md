@@ -260,6 +260,15 @@ Estimaciones en días de trabajo efectivo.
   «Modelo» porque la guía no insistía en «Pruebas»). Mejoras que propuso el
   usuario, repartidas abajo: **C7**, **C8**, **E5**, **E6**, **E7**, **E8** y
   **F4**.
+- **Segunda ronda (27/09, C2–W).** Pasaron C2, E1–E5, F1, G1–G2, H1,
+  J1–J4, W1–W4. Tandas de fidelidad 7 (14/14) y 8 (27/27, tras leer bien
+  los errores «enriquecidos» como `#CALC!`). Las 3 fórmulas de
+  `Caso_practico.xlsx` (`SUMAPRODUCTO(fila/fila)` sobre H:DC) van por el
+  motor rápido. Arreglado: funciones RIESGO en Excel para la Web (CORS en
+  `funciones.json/js`, pendiente de confirmar), salida sin números (G3) sin
+  «∞», y «Restaurar» arriba cuando el libro está preparado (J4). Pendiente
+  del usuario: K, y repetir W5, J4 y G3. Excel para la Web: ExcelApi 1.12,
+  8 hilos, 757 ms para 10.000 iteraciones.
 
 ### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
 - **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
@@ -364,6 +373,12 @@ Estimaciones en días de trabajo efectivo.
   527 ms (arrancar los workers cuesta más que lo que reparten). El modo
   automático debería usar un hilo por debajo de un umbral de trabajo
   (iteraciones × celdas), medido.
+- **F5. Congelar la pantalla en el modo compatible** *(usuario, 27/09)*:
+  como `ScreenUpdating = False` en VBA. Office.js tiene
+  `application.suspendScreenUpdatingUntilNextSync()` (ExcelApi 1.9), pero la
+  documentación avisa de parpadeo si se llama en bucle, que es justo lo que
+  hace el modo compatible. Probarlo en Excel con una opción antes de dejarlo
+  por defecto; medir si acelera.
 
 ### G. Producto (E9–E11)
 Mac, instalación sin `npm start`, manifiesto de producción, licencias,

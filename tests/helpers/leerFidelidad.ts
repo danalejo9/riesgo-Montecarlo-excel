@@ -50,6 +50,8 @@ interface CeldaCruda {
   tipo?: string;
   formula?: string;
   valorCrudo?: string;
+  /** Índice (desde 1) en los metadatos de valor: los errores nuevos van ahí. */
+  metadatoValor?: number;
 }
 
 function leerCeldasDeHoja(xml: string): Map<string, CeldaCruda> {
@@ -87,7 +89,8 @@ function leerCeldasDeHoja(xml: string): Map<string, CeldaCruda> {
     const im = /<is>[\s\S]*?<t\b[^>]*>([\s\S]*?)<\/t>[\s\S]*?<\/is>/.exec(trozo);
     const valorCrudo = vm ? desescapar(vm[1] ?? '') : im ? desescapar(im[1] ?? '') : undefined;
 
-    celdas.set(ref, { tipo, formula, valorCrudo });
+    const vmAttr = /\bvm="(\d+)"/.exec(atributosC)?.[1];
+    celdas.set(ref, { tipo, formula, valorCrudo, metadatoValor: vmAttr ? Number(vmAttr) : undefined });
   }
   return celdas;
 }
@@ -113,6 +116,39 @@ function textoPlano(celda: CeldaCruda | undefined, sharedStrings: string[]): str
   if (!celda) return '';
   const v = interpretarValor(celda, sharedStrings);
   return v.tipo === 'texto' ? v.valor : v.tipo === 'numero' ? String(v.valor) : '';
+}
+
+/**
+ * Los errores que Excel guarda como «valor enriquecido» (`#CALC!`,
+ * `#SPILL!`…). En la celda escribe `#VALUE!` para los lectores antiguos y
+ * marca `vm="n"`; el error real está en `xl/richData`, con un número de tipo.
+ * Sin esto, T8-012 (FILTRAR sin resultados) parecía esperar `#VALUE!` cuando
+ * Excel dio `#CALC!`, lo mismo que el motor.
+ */
+const ERROR_ENRIQUECIDO: Record<number, string> = { 8: '#SPILL!', 11: '#BLOCKED!', 12: '#CONNECT!', 13: '#CALC!' };
+
+function leerErroresEnriquecidos(texto: (p: string) => string | undefined): Map<number, string> {
+  const out = new Map<number, string>();
+  const metadata = texto('xl/metadata.xml');
+  const valores = texto('xl/richData/rdrichvalue.xml');
+  const estructuras = texto('xl/richData/rdrichvaluestructure.xml');
+  if (!metadata || !valores || !estructuras) return out;
+
+  const tipoEstructura = [...estructuras.matchAll(/<s\b[^>]*\bt="([^"]+)"/g)].map((m) => m[1]);
+  const ricos = [...valores.matchAll(/<rv\b[^>]*\bs="(\d+)"[^>]*>([\s\S]*?)<\/rv>/g)].map((m) => ({
+    estructura: tipoEstructura[Number(m[1])],
+    valores: [...(m[2] as string).matchAll(/<v\b[^>]*>([\s\S]*?)<\/v>/g)].map((v) => v[1] as string),
+  }));
+  const futuro = /<futureMetadata\b[^>]*name="XLRICHVALUE"[^>]*>([\s\S]*?)<\/futureMetadata>/.exec(metadata)?.[1] ?? '';
+  const indiceRico = [...futuro.matchAll(/<bk>([\s\S]*?)<\/bk>/g)].map((m) => Number(/<xlrd:rvb\s+i="(\d+)"/.exec(m[1] as string)?.[1]));
+  const valorMeta = /<valueMetadata\b[^>]*>([\s\S]*?)<\/valueMetadata>/.exec(metadata)?.[1] ?? '';
+  [...valorMeta.matchAll(/<bk>([\s\S]*?)<\/bk>/g)].forEach((m, i) => {
+    const v = Number(/<rc\b[^>]*\bv="(\d+)"/.exec(m[1] as string)?.[1]);
+    const rico = ricos[indiceRico[v] ?? -1];
+    const codigo = rico?.estructura === '_error' ? ERROR_ENRIQUECIDO[Number(rico.valores[0])] : undefined;
+    if (codigo) out.set(i + 1, codigo);
+  });
+  return out;
 }
 
 /** Lee todas las cadenas de `xl/sharedStrings.xml`, en el orden que indexan los `t="s"`. */
@@ -164,6 +200,11 @@ export function leerCasosFidelidad(ruta: string): CasoFidelidad[] {
 
   const sharedStrings = leerSharedStrings(texto('xl/sharedStrings.xml'));
   const celdas = leerCeldasDeHoja(xmlHoja);
+  const enriquecidos = leerErroresEnriquecidos(texto);
+  for (const c of celdas.values()) {
+    const codigo = c.tipo === 'e' && c.metadatoValor ? enriquecidos.get(c.metadatoValor) : undefined;
+    if (codigo) c.valorCrudo = codigo;
+  }
 
   const filas = new Set<number>();
   for (const ref of celdas.keys()) {

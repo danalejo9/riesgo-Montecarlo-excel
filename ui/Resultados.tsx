@@ -217,7 +217,21 @@ export function Resultados({
         )}
       </section>
 
-      {resultado.salidas.map((salida) => (
+      {resultado.salidas.map((salida) => salida.resumen.n === 0 ? (
+        // Ninguna iteración dio un número (una celda que devuelve texto, como
+        // un FILTRAR de nombres, o un error en todas): no hay nada que medir, y
+        // enseñar «mínimo ∞» o un tornado de ceros solo confunde (prueba G3).
+        <section key={salida.id}>
+          <h2 className="titulo-salida">{salida.nombre}</h2>
+          <p className="tenue">{salida.ref}</p>
+          <p className="aviso-linea">
+            Ninguna de las {miles(salida.noNumericas ?? resultado.iteracionesCompletadas)} iteraciones
+            dio un número en esta celda (devuelve un texto o un error de Excel), así que no
+            hay estadísticas ni gráficos que enseñar. Si esperabas un número, revisa la
+            fórmula de la celda.
+          </p>
+        </section>
+      ) : (
         <section key={salida.id}>
           <h2 className="titulo-salida">{salida.nombre}</h2>
           <p className="tenue">{salida.ref}</p>

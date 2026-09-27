@@ -88,6 +88,14 @@ function Informe() {
 }
 
 function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInforme; referencia?: string; primera: boolean }) {
+  if (s.resumen.n === 0) {
+    return (
+      <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
+        <h2>{s.nombre} <span className="tenue">({s.ref})</span></h2>
+        <p>Ninguna iteración dio un número en esta celda (devuelve un texto o un error de Excel): no hay estadísticas.</p>
+      </section>
+    );
+  }
   return (
     <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
       <h2>{s.nombre} <span className="tenue">({s.ref})</span></h2>

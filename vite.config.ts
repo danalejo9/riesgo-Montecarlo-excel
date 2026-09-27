@@ -46,6 +46,13 @@ function funcionesRiesgo(): Plugin {
     name: 'funciones-riesgo',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
+        // Estas dos respuestas no pasan por `server.headers` (este middleware
+        // va antes que los de Vite), y Excel para la Web las pide desde otro
+        // origen: sin el permiso CORS el navegador las bloquea y las funciones
+        // RIESGO no aparecen, aunque el panel sí cargue (prueba W5, 27/09).
+        if (req.url === '/funciones.json' || req.url === '/funciones.js') {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        }
         if (req.url === '/funciones.json') {
           res.setHeader('Content-Type', 'application/json');
           res.end(await metadatos());

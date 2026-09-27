@@ -145,3 +145,35 @@ describe('una matriz que cambia en cada iteración', () => {
     expect(Array.from({ length: umbrales.length }, (_, i) => numeroEn(z, i))).toEqual([0, 10, 30, 60, 100, 100]);
   });
 });
+
+describe('las tres fórmulas de Caso_practico.xlsx (enviadas por el usuario el 27/09)', () => {
+  // Sin Refi!E46 = +SUMAPRODUCTO(H42:DC42/H45:DC45); las otras dos son iguales
+  // con otras filas. H..DC son 100 columnas: flujos y factores de descuento.
+  const col = (n: number) => {
+    let s = '';
+    for (let x = n; x > 0; x = Math.floor((x - 1) / 26)) s = String.fromCharCode(65 + ((x - 1) % 26)) + s;
+    return s;
+  };
+  const formulas: Record<string, string> = { E46: '+SUMPRODUCT(H42:DC42/H45:DC45)' };
+  let esperado = 0;
+  for (let c = 8; c <= 107; c++) {
+    const flujo = 1000 + c * 7;
+    const factor = 1.01 ** (c - 7);
+    formulas[`${col(c)}42`] = String(flujo);
+    formulas[`${col(c)}45`] = String(factor);
+    esperado += flujo / factor;
+  }
+
+  it('el rango va de H a DC y la suma de cocientes coincide', () => {
+    expect(col(107)).toBe('DC');
+    const g = grafoDe(formulas);
+    const r = evaluarModelo(g, new Map(), [k('E46')], 1);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(numeroEn(r.valores.get(k('E46')) as Columna, 0)).toBeCloseTo(esperado, 6);
+  });
+
+  it('va por el motor rápido con una entrada en los flujos', () => {
+    const g = grafoDe(formulas);
+    expect(elegirMotor(g, [k('H42')], [k('E46')]).motor).toBe('fast');
+  });
+});
