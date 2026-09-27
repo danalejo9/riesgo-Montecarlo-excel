@@ -116,6 +116,34 @@ frente a 135 de ModelRisk).
 varias son de Vose, competidor directo. Los precios y las quejas son orientativos y
 hay que verificarlos antes de usarlos en material comercial.
 
+#### 1.2.1 Segundo informe de competidores (27/09/2026)
+
+El usuario aportó un segundo informe (tabla comparativa de @RISK, Crystal Ball,
+ModelRisk, Analytic Solver y RiskAMP) y una propuesta detallada de motor de ajuste
+de distribuciones. Conclusiones:
+
+- **Confirma lo ya decidido**: la brecha común es que casi todos son complementos
+  COM solo para Windows (el nuestro es Office.js: Windows, Mac y Web, pendiente de
+  verificar en E9a); compartir modelos sin complemento exige pasos manuales («Swap»
+  de @RISK y ModelRisk), que aquí ya resuelve «Preparar para compartir» (26/09); y
+  el precio es una barrera (entrada de RiskAMP en ~149–279 USD perpetuos o 19 USD/mes),
+  lo que alimenta la decisión de E10.
+- **«IA para sugerir distribuciones»**: se atiende **en local, sin IA externa**
+  (coherente con §1.2): un diagnóstico previo de los datos (n, signo, sesgo,
+  curtosis, cola, si son enteros o acotados) que explica por qué se proponen unas
+  familias y se descartan otras, más el motor de ajuste del bloque I (§2.1-I).
+- **Colaboración en tiempo real**: se queda en lo que da Excel —OneDrive/SharePoint
+  y coautoría— y en proteger el modelo guardado de escrituras cruzadas (H10). **No**
+  se construye una nube propia: rompería la promesa de cálculo local y es otro
+  producto.
+- **Cautela**: el informe no cita fuentes concretas; los precios (≈3.680 €/año de
+  la suite de @RISK, ≈2.420 USD de Crystal Ball, ≈2.500–6.000 USD/año de Analytic
+  Solver) son orientativos. «Simulación 5.0» aparece sin datos públicos: no se
+  toma como referencia. Verificar todo antes de usarlo en material comercial.
+- **La propuesta de ajuste** se compara con lo que ya hay (MLE para normal,
+  lognormal, exponencial y Weibull; gamma por aproximación de Minka; A–D, K–S, AIC
+  y BIC) y lo que falta se registra como bloque I en tres niveles.
+
 ---
 
 **2.2 — ¿El modo compatible entra en el MVP?** *(decisión original, luego invertida — se
@@ -180,7 +208,7 @@ obligatorio.
    §2.1-B.
 5. **Pruebas en Excel** (§2.1-A) — bloqueante para lo siguiente.
 6. **E10: decidir licencia y precio.** Decisión del usuario; bloquea la publicación.
-7. §2.1 en su orden (B1–B3, C1–C2–C5, B4–B6, D1, H2, C3–C4…).
+7. §2.1 en su orden (B1–B3, C1–C2–C5 + I1, B4–B6, D1, H2, I2, C3–C4…).
 8. **E12**, después de la v1.0.
 
 Todo el trabajo de producto (E9–E11) no es técnico, pero sin él esto no llega a
@@ -345,8 +373,40 @@ Añadido en la segunda revisión con el usuario (25/09).
   pasa si dos personas abren a la vez el mismo libro con el complemento, y
   proteger el modelo guardado de escrituras cruzadas.
 
-**Orden propuesto**: A → **H1** → B1–B3 → C1, C2, C5 → B4, B6 → D1 → H2 →
-C3, C4 → resto de B, D, E, H → F según los libros → G.
+### I. Motor de ajuste de distribuciones — I1: 3–4 d · I2: 3–5 d · I3: sin fecha
+Añadido el 27/09 a partir de la propuesta del usuario (§1.2.1). Parte de lo
+que ya hay: MLE para normal, lognormal, exponencial y Weibull (Newton), gamma
+por la aproximación de Minka, acotadas por cotas extendidas y momentos, beta
+por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
+- **I1. Ajuste rápido y explicado** (va justo después de las pruebas, con C5):
+  - **Diagnóstico previo visible**: n, signo (¿hay negativos o ceros?), sesgo,
+    curtosis, peso de la cola, si todos son enteros, si están acotados. Explica
+    qué familias se proponen y cuáles se descartan (p. ej. «hay negativos: se
+    descartan lognormal, gamma y Weibull»). Es la vía local a la «IA que sugiere
+    distribuciones».
+  - **AICc** (AIC corregido para muestras pequeñas) y **Cramér–von Mises**, junto a
+    los criterios actuales.
+  - **Gráficas del ajuste**: histograma de los datos con la densidad ajustada
+    encima, y gráfico **Q-Q**.
+  - **Gamma por MLE exacto** (Newton sobre la aproximación de Minka).
+  - **Distribución empírica** como candidata en el ajuste y como función
+    `RIESGO.EMPIRICA(datos)` (enlaza con «general/histograma» de B5).
+- **I2. Ajuste orientado al riesgo**:
+  - **Error en percentiles** P50, P80, P90, P95 y P99 (ajustado frente a
+    empírico), con un objetivo elegible: *general*, *cola superior* o *cola
+    inferior*. Cada criterio se muestra por separado; **sin puntuación combinada
+    opaca**.
+  - **Bootstrap** de los parámetros y de los percentiles: intervalos que dicen
+    cuánto se puede fiar uno del ajuste con pocos datos.
+  - **Discretas**: Poisson, binomial y binomial negativa, propuestas cuando los
+    datos son enteros (detección automática).
+- **I3. Avanzado** (sin fecha, según lo que pidan los usuarios): bootstrap
+  paramétrico con p-valor para A–D y K–S; cola extrema con cuerpo empírico +
+  Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
+  censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
+
+**Orden propuesto**: A → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+C3, C4 → resto de B, D, E, H → F según los libros → G → I3. *(H1 ✅ 26/09.)*
 
 ---
 

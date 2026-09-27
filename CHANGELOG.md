@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Plan: motor de ajuste de distribuciones (2026-09-27)
+
+**Plan**
+- §1.2.1 del roadmap: conclusiones del segundo informe de competidores.
+- Nuevo bloque **I** en §2.1: I1 (diagnóstico previo de los datos, AICc,
+  Cramér–von Mises, histograma con densidad, Q-Q, gamma por MLE exacto,
+  distribución empírica y `RIESGO.EMPIRICA`), I2 (error en percentiles con
+  objetivo de cola, bootstrap, discretas) e I3 (avanzado). I1 va tras las
+  pruebas, junto a C5.
+
 ### Fusión con el roadmap del estudio de mercado, y tres cosas antes de las pruebas (2026-09-26)
 
 **Plan**

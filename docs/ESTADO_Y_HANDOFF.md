@@ -913,14 +913,21 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     aleatorios por celda), «Preparar para compartir» (E4) y AIC/BIC en el
     ajuste; la guía de pruebas se amplió (bloques J, K, W).
 
+31. [x] **Segundo informe de competidores y motor de ajuste (2026-09-27)**.
+    Solo plan, sin código: §1.2.1 del roadmap (confirma multiplataforma,
+    compartir y precio; la «IA que sugiere distribuciones» se hace en local
+    con un diagnóstico de los datos; colaboración = coautoría de Excel, H10)
+    y nuevo bloque **I** en §2.1 (I1 ajuste rápido y explicado, junto a C5
+    tras las pruebas; I2 ajuste orientado al riesgo; I3 avanzado).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.
    Arreglar lo que falle, empezando por B4 (cinta con el panel abierto) y C2
    (informe en el navegador), que no se pueden probar fuera de Excel.
 2. Tandas 7 y 8 de vuelta de Excel, y las 3 fórmulas de `Caso_practico.xlsx`.
-3. Después: botones de la cinta que actúan sin abrir el panel (marcar
-   entrada/salida, simular), Mac, empaquetado.
+3. Después, §2.1 del roadmap en su orden: B1–B3 (runtime compartido,
+   modo determinista/probabilístico, cinta que actúa), C1, C2, C5 + I1…
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 
