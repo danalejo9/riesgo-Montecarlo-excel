@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { histogramaDeMuestra, ordenarUtiles, probabilidadUmbral } from '../../engine/stats/index.ts';
 import { validarRiskModel, modeloVacio } from '../../engine/modelo/index.ts';
-import { leerNumero } from '../../ui/formato.ts';
+import { leerNumero, numeroEditable } from '../../ui/formato.ts';
 
 describe('ordenarUtiles', () => {
   it('ordena y aparta lo que no es número', () => {
@@ -91,6 +91,13 @@ describe('leerNumero (el campo del umbral)', () => {
     expect(leerNumero('2.5')).toBe(2.5);
     expect(leerNumero('0')).toBe(0);
     expect(leerNumero('−3')).toBe(-3);
+  });
+
+  it('un cero a la izquierda nunca es de miles, y lo que escribe numeroEditable se lee igual', () => {
+    expect(leerNumero('0.054')).toBe(0.054);
+    expect(leerNumero('-0.125')).toBe(-0.125);
+    expect(leerNumero('23.000')).toBe(23000);
+    for (const v of [0.054, 16000, -2.5, 1.125, 1e-7, 0]) expect(leerNumero(numeroEditable(v))).toBe(v);
   });
 
   it('con punto decimal, las comas son de miles', () => {

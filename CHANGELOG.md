@@ -8,6 +8,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### Primera ronda de pruebas en Excel (A1–E4) (2026-09-27)
 
 **Corregido**
+- **Un error de guardado no se podía quitar del panel.** Una triangular con
+  el máximo por debajo de la moda llegaba a guardarse, fallaba, y el aviso
+  rojo se quedaba aunque se corrigiera. Ahora el editor no guarda una
+  distribución inválida: la deja como borrador con un aviso al lado
+  (`problemaDeDistribucion`). El recuadro de error tiene ✕ y se borra solo
+  cuando el siguiente guardado sale bien.
+- **Los parámetros se leen en formato español**: «23.000» es veintitrés mil
+  (antes, 23), y se muestran con coma decimal. «0.054» sigue siendo 0,054.
 - **«Referencia sin resolver» al simular una salida que depende de una
   `RIESGO.*`** que no está en el panel (Modelo!C32 con =RIESGO.NORMAL en
   C5). Las entradas de funciones se descubren después de resolver las

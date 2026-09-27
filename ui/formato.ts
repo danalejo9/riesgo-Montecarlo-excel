@@ -82,7 +82,8 @@ export function leerNumero(texto: string, decimal: string = ','): number | null 
     const partes = t.split(',');
     if (partes.length > 2) return null;
     const [entera = '', fraccion] = partes;
-    const miles = /^-?\d{1,3}(\.\d{3})+$/.test(entera);
+    // "0.054" nunca es de miles: nadie agrupa un cero a la izquierda.
+    const miles = /^-?\d{1,3}(\.\d{3})+$/.test(entera) && !/^-?0\./.test(entera);
     if (fraccion !== undefined || miles) t = `${entera.replace(/\./g, '')}${fraccion !== undefined ? `.${fraccion}` : ''}`;
   } else {
     t = t.replace(/,/g, '');
@@ -90,4 +91,12 @@ export function leerNumero(texto: string, decimal: string = ','): number | null 
   if (!/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(t)) return null;
   const v = Number(t);
   return Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Un número para editarlo en un campo de texto: coma decimal y sin separador
+ * de miles, para que `leerNumero` lo lea de vuelta igual ("0,054", "23000").
+ */
+export function numeroEditable(v: number | undefined): string {
+  return v === undefined ? '' : String(v).replace('.', ',');
 }

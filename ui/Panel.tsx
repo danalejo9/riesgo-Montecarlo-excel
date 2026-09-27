@@ -57,6 +57,8 @@ export function pestanaDeFragmento(hash: string): Pestana {
   return h === 'resultados' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
 }
 
+const PREFIJO_FALLO_GUARDADO = 'El modelo no se pudo guardar:';
+
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDeFragmento(window.location.hash));
@@ -177,9 +179,11 @@ export function Panel() {
       (r) => {
         if (!r.ok) {
           setGuardado({ estado: 'fallo', detalle: r.errores.join('\n') });
-          setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
+          setError(`${PREFIJO_FALLO_GUARDADO}\n${r.errores.join('\n')}`);
         } else {
           setGuardado({ estado: r.verificado ? 'guardado' : 'sin-verificar', cuando: new Date() });
+          // Un fallo de guardado anterior ya no aplica: el modelo actual sí se guardó.
+          setError((previo) => (previo?.startsWith(PREFIJO_FALLO_GUARDADO) ? null : previo));
         }
       },
       (e: unknown) => setGuardado({ estado: 'fallo', detalle: mensajeDe(e) }),
@@ -259,7 +263,12 @@ export function Panel() {
 
       {error && (
         <section className="error">
-          <h2>Algo falló</h2>
+          <div className="error-cabecera">
+            <h2>Algo falló</h2>
+            <button type="button" className="cerrar-error" aria-label="Cerrar el aviso" title="Cerrar el aviso" onClick={() => setError(null)}>
+              ✕
+            </button>
+          </div>
           <pre>{error}</pre>
         </section>
       )}

@@ -9,6 +9,7 @@ export {
 export { agruparCorrelaciones, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
 export {
   fromDescriptor,
+  problemaDeDistribucion,
   toDescriptor,
   type DistributionSpec,
   type LognormalParametrization,

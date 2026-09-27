@@ -13,7 +13,7 @@
  * existe, y `RiskModel` no sabe que `DescriptorDistribucion` tiene nombres
  * en español — cada uno solo ve su propio idioma.
  */
-import type { DescriptorDistribucion, ParametrizacionLognormal } from '../distributions/index.ts';
+import { construirDesdeDescriptor, type DescriptorDistribucion, type ParametrizacionLognormal } from '../distributions/index.ts';
 
 export type LognormalParametrization = 'variable' | 'log';
 
@@ -93,5 +93,19 @@ export function fromDescriptor(d: DescriptorDistribucion): DistributionSpec {
     case 'discreta': return { type: 'discrete', values: d.valores, weights: d.pesos };
     default:
       throw new Error(`Tipo de distribución no reconocido: ${JSON.stringify((d as { tipo?: unknown }).tipo)}`);
+  }
+}
+
+/**
+ * Por qué una distribución no se puede muestrear tal como está (mínimo mayor
+ * que la moda, desviación negativa…), o `null` si es válida. Lo usa el editor
+ * del panel para avisar sin guardar, en vez de dejar que el guardado falle.
+ */
+export function problemaDeDistribucion(spec: DistributionSpec): string | null {
+  try {
+    construirDesdeDescriptor(toDescriptor(spec));
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
   }
 }

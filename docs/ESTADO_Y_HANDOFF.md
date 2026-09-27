@@ -935,6 +935,8 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     y el tornado en blanco en el PDF. Guía E rehecha. Mejoras del usuario en
     el roadmap (C7, C8, E5–E8, F4). **Siguiente del usuario**: repetir C2 y
     E1–E5, seguir desde F.
+    Después: el editor ya no guarda distribuciones inválidas (borrador +
+    aviso), el error se puede cerrar, y los parámetros se leen en español.
 
 **Siguiente acción al retomar**, en orden de valor:
 

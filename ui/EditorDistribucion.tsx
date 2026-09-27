@@ -12,13 +12,22 @@
  * escribiendo en cuanto el valor intermedio no es un número —escribir "-",
  * o "0," antes de los decimales— y hace imposible teclear un negativo. Se
  * guarda el texto mientras escribe y se convierte al salir del campo.
+ *
+ * Una combinación que no se puede muestrear (mínimo mayor que la moda…) **no
+ * se guarda**: queda como borrador en el editor, con un aviso al lado, hasta
+ * que el usuario la complete. Antes se guardaba y el panel entero mostraba un
+ * error rojo que no se podía quitar (prueba del 27/09). Los números se leen en
+ * formato español: "23.000" es veintitrés mil.
  */
 
 import { useEffect, useState } from 'react';
 
+import { leerNumero, numeroEditable } from './formato.ts';
+
 import {
   CATALOGO_DISTRIBUCIONES,
   describirDistribucion,
+  problemaDeDistribucion,
   type DistributionSpec,
   type TipoDistribucion,
 } from '../engine/modelo/index.ts';
@@ -30,21 +39,41 @@ export function EditorDistribucion({
   spec: DistributionSpec;
   alCambiar: (nueva: DistributionSpec) => void;
 }) {
-  const desc = describirDistribucion(spec.type);
+  // Lo que el usuario ha escrito y todavía no es una distribución válida.
+  const [borrador, setBorrador] = useState<DistributionSpec | null>(null);
+  const actual = borrador ?? spec;
+  const desc = describirDistribucion(actual.type);
+  const problema = borrador ? problemaDeDistribucion(borrador) : null;
+
+  // Si la distribución cambia desde fuera (otro libro, ajuste a datos), el
+  // borrador ya no tiene sentido.
+  useEffect(() => setBorrador(null), [spec]);
+
+  const intentar = (nueva: DistributionSpec) => {
+    if (problemaDeDistribucion(nueva) === null) {
+      setBorrador(null);
+      alCambiar(nueva);
+    } else {
+      setBorrador(nueva);
+    }
+  };
 
   return (
     <div className="distribucion">
       <label>
         <span className="tenue">Distribución</span>
         <select
-          value={spec.type}
+          value={actual.type}
           onChange={(e) => {
             const tipo = e.target.value as TipoDistribucion;
             // Al cambiar de tipo se parte del ejemplo por defecto: los
             // parámetros de una no significan nada en otra, y conservarlos
             // por nombre daría una PERT con la desviación de una normal.
             const nueva = describirDistribucion(tipo)?.porDefecto;
-            if (nueva) alCambiar(nueva);
+            if (nueva) {
+              setBorrador(null);
+              alCambiar(nueva);
+            }
           }}
         >
           {CATALOGO_DISTRIBUCIONES.map((d) => (
@@ -57,8 +86,8 @@ export function EditorDistribucion({
 
       {desc && <p className="tenue">{desc.cuando}</p>}
 
-      {spec.type === 'discrete' ? (
-        <EditorDiscreta spec={spec} alCambiar={alCambiar} />
+      {actual.type === 'discrete' ? (
+        <EditorDiscreta spec={actual} alCambiar={intentar} />
       ) : (
         <div className="parametros">
           {desc?.parametros.map((p) => (
@@ -66,11 +95,18 @@ export function EditorDistribucion({
               key={p.clave}
               etiqueta={p.etiqueta}
               ayuda={p.ayuda}
-              valor={(spec as unknown as Record<string, number | undefined>)[p.clave]}
-              alCambiar={(v) => alCambiar({ ...spec, [p.clave]: v } as DistributionSpec)}
+              valor={(actual as unknown as Record<string, number | undefined>)[p.clave]}
+              alCambiar={(v) => intentar({ ...actual, [p.clave]: v } as DistributionSpec)}
             />
           ))}
         </div>
+      )}
+
+      {problema && (
+        <p className="aviso-linea" role="alert">
+          Así todavía no es válida y no se guarda: {problema}. Se sigue usando{' '}
+          la anterior hasta que lo corrijas.
+        </p>
       )}
     </div>
   );
@@ -117,12 +153,12 @@ function CampoNumero({
   valor: number | undefined;
   alCambiar: (v: number) => void;
 }) {
-  const [texto, setTexto] = useState(valor === undefined ? '' : String(valor));
+  const [texto, setTexto] = useState(numeroEditable(valor));
 
   // Si el valor cambia desde fuera (cambio de tipo, modelo recargado), el
   // campo tiene que seguirlo; mientras el usuario escribe, manda el texto.
   useEffect(() => {
-    setTexto(valor === undefined ? '' : String(valor));
+    setTexto(numeroEditable(valor));
   }, [valor]);
 
   return (
@@ -134,9 +170,10 @@ function CampoNumero({
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={() => {
-          const n = Number(texto.replace(',', '.'));
-          if (Number.isFinite(n)) alCambiar(n);
-          else setTexto(valor === undefined ? '' : String(valor));
+          if (texto === numeroEditable(valor)) return;
+          const n = leerNumero(texto);
+          if (n !== null) alCambiar(n);
+          else setTexto(numeroEditable(valor));
         }}
       />
       {ayuda && <span className="tenue ayuda">{ayuda}</span>}
