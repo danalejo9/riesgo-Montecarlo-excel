@@ -128,10 +128,6 @@ de distribuciones. Conclusiones:
   de @RISK y ModelRisk), que aquí ya resuelve «Preparar para compartir» (26/09); y
   el precio es una barrera (entrada de RiskAMP en ~149–279 USD perpetuos o 19 USD/mes),
   lo que alimenta la decisión de E10.
-- **«IA para sugerir distribuciones»**: se atiende **en local, sin IA externa**
-  (coherente con §1.2): un diagnóstico previo de los datos (n, signo, sesgo,
-  curtosis, cola, si son enteros o acotados) que explica por qué se proponen unas
-  familias y se descartan otras, más el motor de ajuste del bloque I (§2.1-I).
 - **Colaboración en tiempo real**: se queda en lo que da Excel —OneDrive/SharePoint
   y coautoría— y en proteger el modelo guardado de escrituras cruzadas (H10). **No**
   se construye una nube propia: rompería la promesa de cálculo local y es otro
@@ -382,8 +378,7 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   - **Diagnóstico previo visible**: n, signo (¿hay negativos o ceros?), sesgo,
     curtosis, peso de la cola, si todos son enteros, si están acotados. Explica
     qué familias se proponen y cuáles se descartan (p. ej. «hay negativos: se
-    descartan lognormal, gamma y Weibull»). Es la vía local a la «IA que sugiere
-    distribuciones».
+    descartan lognormal, gamma y Weibull»).
   - **AICc** (AIC corregido para muestras pequeñas) y **Cramér–von Mises**, junto a
     los criterios actuales.
   - **Gráficas del ajuste**: histograma de los datos con la densidad ajustada

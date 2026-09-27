@@ -915,8 +915,7 @@ Vienen de sus instrucciones maestras y siguen vigentes:
 
 31. [x] **Segundo informe de competidores y motor de ajuste (2026-09-27)**.
     Solo plan, sin código: §1.2.1 del roadmap (confirma multiplataforma,
-    compartir y precio; la «IA que sugiere distribuciones» se hace en local
-    con un diagnóstico de los datos; colaboración = coautoría de Excel, H10)
+    compartir y precio; colaboración = coautoría de Excel, H10)
     y nuevo bloque **I** en §2.1 (I1 ajuste rápido y explicado, junto a C5
     tras las pruebas; I2 ajuste orientado al riesgo; I3 avanzado).
 
