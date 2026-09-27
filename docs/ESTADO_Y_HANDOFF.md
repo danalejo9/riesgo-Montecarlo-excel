@@ -919,6 +919,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     y nuevo bloque **I** en §2.1 (I1 ajuste rápido y explicado, junto a C5
     tras las pruebas; I2 ajuste orientado al riesgo; I3 avanzado).
 
+32. [x] **Panel en blanco en Excel (2026-09-27)**. Primera prueba real: el
+    panel parpadeaba y quedaba en blanco. Causa: Office.js deja
+    `history.replaceState` en `null` y el panel lo llamaba al montar
+    (navegación por fragmento de la cinta). Arreglo en `ui/fragmento.ts` +
+    copia del original en `taskpane.html`, y `ErrorPanel` para que un fallo
+    futuro se vea en vez de dejarlo en blanco. **Lección**: el banco del
+    navegador no reproduce las modificaciones que Office.js hace a `window`;
+    probar con un `office.js` falso que las imite.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.

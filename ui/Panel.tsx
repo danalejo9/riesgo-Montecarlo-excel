@@ -43,6 +43,7 @@ import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
+import { escribirFragmento } from './fragmento.ts';
 
 type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
 
@@ -78,7 +79,8 @@ export function Panel() {
     // La pestaña visible queda escrita en el fragmento, sin disparar
     // "hashchange" (replaceState no lo hace). Así, pulsar en la cinta el botón
     // de otra pestaña siempre cambia la URL y siempre se nota.
-    window.history.replaceState(null, '', `#${pestana}`);
+    // Ver `fragmento.ts`: dentro de Excel, Office.js anula replaceState.
+    escribirFragmento(pestana);
   }, [pestana]);
 
   useEffect(() => {

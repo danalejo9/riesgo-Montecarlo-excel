@@ -15,6 +15,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { ErrorPanel } from './ErrorPanel.tsx';
 import { Panel } from './Panel.tsx';
 import './estilos.css';
 
@@ -38,6 +39,10 @@ if (typeof Office === 'undefined') {
   );
 } else {
   void Office.onReady(() => {
-    montar(<Panel />);
+    montar(
+      <ErrorPanel>
+        <Panel />
+      </ErrorPanel>,
+    );
   });
 }

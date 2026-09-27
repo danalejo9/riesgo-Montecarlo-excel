@@ -5,6 +5,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Arreglo: el panel se quedaba en blanco dentro de Excel (2026-09-27)
+
+**Corregido**
+- **El panel parpadeaba y se quedaba en blanco en Excel** (primera prueba
+  del usuario). Office.js anula `history.replaceState`, y el panel lo
+  llamaba al montar para recordar la pestaña: el error desmontaba React.
+  Ahora se guarda el original antes de cargar Office.js y se usa con
+  protección (`ui/fragmento.ts`). Reproducido y verificado en Chromium
+  imitando a Office.js. No se vio antes porque el banco de pruebas corre en
+  un navegador normal, donde la función existe.
+
+**Añadido**
+- **Red de seguridad del panel** (`ui/ErrorPanel.tsx`): si algo falla al
+  pintarse, se muestra el mensaje de error y un botón para recargar, en vez
+  de un panel en blanco.
+
 ### Plan: motor de ajuste de distribuciones (2026-09-27)
 
 **Plan**
