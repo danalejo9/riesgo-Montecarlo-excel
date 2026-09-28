@@ -28,9 +28,11 @@
  * sueltos por salida para digerirlos de golpe gastaría la memoria que el
  * t-digest existe para no gastar.
  */
+import { sumarConteos } from '../executor/categorias.ts';
+import { regionalActual } from '../values/regional.ts';
 import { combinarTDigest, tdigestDeBuffer, type TDigest } from '../stats/tdigest.ts';
 import { acumular, crearWelford, type EstadoWelford } from '../stats/welford.ts';
-import type { AvanceCompatible, OpcionesCompatible } from './tipos.ts';
+import type { AvanceCompatible, OpcionesCompatible, ValorLeido } from './tipos.ts';
 
 /** Cuántos valores de una salida se acumulan antes de digerirlos en un t-digest parcial. */
 const TRAMO_DIGEST = 4096;
@@ -45,6 +47,10 @@ export interface SalidaCompatible {
   noNumericas: number;
   /** Las primeras iteraciones, valor a valor, si se pidió `retenerMuestra`. */
   muestra?: Float64Array;
+  /** Salidas de texto o sí/no (T2, T6): valor → iteraciones. */
+  categorias?: Record<string, number>;
+  /** El texto de cada iteración retenida, alineado con `muestra`. */
+  muestraTexto?: (string | null)[];
 }
 
 export type ResultadoCompatible =
@@ -67,6 +73,8 @@ interface Acumulador {
   tramo: Float64Array;
   enTramo: number;
   noNumericas: number;
+  categorias?: Record<string, number>;
+  muestraTexto?: (string | null)[];
 }
 
 function nuevoAcumulador(): Acumulador {
@@ -115,6 +123,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
   const limiteMuestra = Math.max(0, Math.min(iteraciones, Math.floor(opciones.retenerMuestra ?? 0)));
   const muestras = salidas.map(() => new Float64Array(limiteMuestra).fill(NaN));
   const valoresDeEntrada = new Array<number>(entradas.length);
+  const nombresLogicos = opciones.nombresLogicos ?? regionalActual();
 
   const arranque = ahora();
   let completadas = 0;
@@ -133,7 +142,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       valoresDeEntrada[e] = (entradas[e] as { muestras: Float64Array }).muestras[i] as number;
     }
 
-    let leidas: readonly number[];
+    let leidas: readonly ValorLeido[];
     try {
       leidas = await libro.calcularIteracion(valoresDeEntrada);
     } catch (e) {
@@ -151,8 +160,21 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
     }
 
     for (let s = 0; s < salidas.length; s++) {
-      anotar(acumuladores[s] as Acumulador, leidas[s] as number, compresion);
-      if (i < limiteMuestra) (muestras[s] as Float64Array)[i] = Number(leidas[s]);
+      const v = leidas[s] as ValorLeido;
+      const acc = acumuladores[s] as Acumulador;
+      // Un texto no es un número (cuenta como «sin valor»); un lógico cuenta
+      // como 1/0 y además como categoría, igual que en el motor rápido.
+      const numero = typeof v === 'number' ? v : typeof v === 'boolean' ? (v ? 1 : 0) : NaN;
+      anotar(acc, numero, compresion);
+      if (i < limiteMuestra) (muestras[s] as Float64Array)[i] = numero;
+      const categoria = typeof v === 'string' ? v : typeof v === 'boolean' ? (v ? nombresLogicos.verdadero : nombresLogicos.falso) : null;
+      if (categoria !== null) {
+        acc.categorias = sumarConteos(acc.categorias ?? {}, { [categoria]: 1 });
+        if (i < limiteMuestra) {
+          acc.muestraTexto ??= new Array<string | null>(limiteMuestra).fill(null);
+          acc.muestraTexto[i] = categoria;
+        }
+      }
     }
     completadas += 1;
   }
@@ -168,6 +190,8 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       welford: acc.welford,
       digest: combinarTDigest(acc.digestsParciales, compresion),
       noNumericas: acc.noNumericas,
+      ...(acc.categorias ? { categorias: acc.categorias } : {}),
+      ...(acc.muestraTexto ? { muestraTexto: acc.muestraTexto.slice(0, Math.min(limiteMuestra, completadas)) } : {}),
       ...(limiteMuestra > 0
         ? { muestra: (muestras[s] as Float64Array).subarray(0, Math.min(limiteMuestra, completadas)) }
         : {}),

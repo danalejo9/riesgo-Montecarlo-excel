@@ -24,7 +24,7 @@
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { claveCelda, columnaDeLetras } from '../../engine/parser/index.ts';
 import { construirGrafo, type FormulaCelda, type ValorCelda } from '../../engine/graph/index.ts';
-import { NUMERO, numeroEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
+import { LOGICO, NUMERO, TEXTO, numeroEn, textoEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
 
 interface Celda {
   formula?: string;
@@ -88,6 +88,8 @@ function recalcular(): void {
     const { col, fila } = refDe(ref);
     if (celda.formula) formulas.push({ hoja: HOJA, col, fila, formula: celda.formula });
     else if (typeof celda.valor === 'number') valores.push({ hoja: HOJA, col, fila, valor: { tipo: NUMERO, numero: celda.valor } as ValorEscalar });
+    else if (typeof celda.valor === 'string' && celda.valor !== '') valores.push({ hoja: HOJA, col, fila, valor: { tipo: TEXTO, texto: celda.valor } as ValorEscalar });
+    else if (typeof celda.valor === 'boolean') valores.push({ hoja: HOJA, col, fila, valor: { tipo: LOGICO, numero: celda.valor ? 1 : 0 } as ValorEscalar });
   }
 
   const { grafo } = construirGrafo(formulas, valores);
@@ -99,7 +101,12 @@ function recalcular(): void {
     if (!celda.formula) continue;
     const { col, fila } = refDe(ref);
     const columna = r.valores.get(claveCelda(HOJA, col, fila));
-    if (columna) celda.valor = tipoEn(columna, 0) === NUMERO ? numeroEn(columna, 0) : '#VALUE!';
+    if (!columna) continue;
+    const tipo = tipoEn(columna, 0);
+    celda.valor = tipo === NUMERO ? numeroEn(columna, 0)
+      : tipo === TEXTO ? (textoEn(columna, 0) ?? '')
+      : tipo === LOGICO ? numeroEn(columna, 0) !== 0
+      : '#VALUE!';
   }
 }
 

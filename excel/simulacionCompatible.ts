@@ -50,6 +50,7 @@ export interface PeticionCompatible {
   compresionTDigest?: number;
   cadaCuantas?: number;
   retenerMuestra?: number;
+  nombresLogicos?: { verdadero: string; falso: string };
   /** No repintar la hoja en cada iteración (F5). */
   congelarPantalla?: boolean;
   progreso?: (avance: AvanceCompatible) => void;
@@ -90,7 +91,10 @@ export async function simularEnExcel(peticion: PeticionCompatible): Promise<Resp
     await almacen.aplicar();
 
     try {
-      const libro = crearLibroCalculable(context, refs, peticion.salidas, { congelarPantalla: peticion.congelarPantalla ?? false });
+      const libro = crearLibroCalculable(context, refs, peticion.salidas, {
+        congelarPantalla: peticion.congelarPantalla ?? false,
+        categorias: peticion.entradas.map((e) => e.categorias),
+      });
       return await simularCompatible({ libro, ...peticion });
     } finally {
       restaurarDesdeRecuperacion(almacen);
@@ -125,7 +129,7 @@ export async function medirRitmoEnExcel(
     await almacen.aplicar();
 
     try {
-      const libro = crearLibroCalculable(context, refs, salidas);
+      const libro = crearLibroCalculable(context, refs, salidas, { categorias: entradas.map((e) => e.categorias) });
       const medida = await medirRitmo(libro, entradas, iteracionesDePrueba);
       return { ok: true as const, ...medida };
     } finally {

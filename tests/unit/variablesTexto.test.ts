@@ -157,3 +157,30 @@ describe('análisis de texto (T3)', async () => {
     expect(probabilidadDeValor(f, 'Quizá')).toBe(0);
   });
 });
+
+describe('modo compatible con textos (T1, T2, T6)', async () => {
+  const { simularCompatible } = await import('../../engine/compatible/index.ts');
+
+  it('cuenta textos y lógicos de las salidas, y los lógicos también como 1/0', async () => {
+    let i = 0;
+    const libro = {
+      async calcularIteracion(v: readonly number[]) {
+        i++;
+        const zona = ['Norte', 'Sur'][Math.round(v[0] as number)] as string;
+        return [zona, zona === 'Norte', 7] as const;
+      },
+    };
+    const muestras = Float64Array.from({ length: 100 }, (_, k) => (k < 30 ? 0 : 1));
+    const r = await simularCompatible({
+      libro, entradas: [{ direccion: 'A1', muestras, categorias: ['Norte', 'Sur'] }], salidas: ['B1', 'C1', 'D1'], iteraciones: 100, retenerMuestra: 50,
+    });
+    if (!r.ok) throw new Error(r.error.motivo);
+    expect(i).toBe(100);
+    expect(r.porSalida.get('B1')?.categorias).toEqual({ Norte: 30, Sur: 70 });
+    expect(r.porSalida.get('B1')?.noNumericas).toBe(100);
+    expect(r.porSalida.get('B1')?.muestraTexto?.slice(28, 32)).toEqual(['Norte', 'Norte', 'Sur', 'Sur']);
+    expect(r.porSalida.get('C1')?.welford.media).toBeCloseTo(0.3, 10);
+    expect(Object.values(r.porSalida.get('C1')?.categorias ?? {}).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(r.porSalida.get('D1')?.categorias).toBeUndefined();
+  });
+});

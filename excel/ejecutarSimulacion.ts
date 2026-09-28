@@ -356,6 +356,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
   const entradas = resueltas.map((def) => ({
     direccion: def.clave,
     muestras: generarTramoDeEntrada(def, semilla, 0, n),
+    ...(def.categorias ? { categorias: def.categorias } : {}),
   }));
 
   const r = await simularEnExcel({
@@ -364,6 +365,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     iteraciones: n,
     retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
     congelarPantalla: args.congelarPantalla ?? false,
+    ...(args.modelo.settings.locale ? { nombresLogicos: desdeLocaleDelModelo(args.modelo.settings.locale) } : {}),
     progreso: (a) =>
       progreso?.({
         fase: 'simulando',

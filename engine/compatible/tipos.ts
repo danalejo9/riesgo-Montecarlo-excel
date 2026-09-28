@@ -48,7 +48,13 @@ export interface LibroCalculable {
    * Escribe un valor por entrada, recalcula y devuelve un valor por salida,
    * en el mismo orden en que se declararon.
    */
-  calcularIteracion(valoresDeEntrada: readonly number[]): Promise<readonly number[]>;
+  calcularIteracion(valoresDeEntrada: readonly number[]): Promise<readonly ValorLeido[]>;
+}
+
+/** Cómo se llaman VERDADERO y FALSO en el idioma del libro (T6). */
+export interface NombresLogicos {
+  verdadero: string;
+  falso: string;
 }
 
 export interface EntradaCompatible {
@@ -56,9 +62,19 @@ export interface EntradaCompatible {
   direccion: string;
   /** Las muestras ya generadas, una por iteración. */
   muestras: Buffer;
+  /** Entrada de texto (T1): las muestras son índices y estos sus textos. */
+  categorias?: readonly string[];
 }
 
+/**
+ * Lo que devuelve una salida en una iteración: un número, un texto (T2) o un
+ * lógico (T6). Un error de Excel llega como `NaN`.
+ */
+export type ValorLeido = number | string | boolean;
+
 export interface OpcionesCompatible {
+  /** Nombres de VERDADERO/FALSO para las salidas de sí/no; por defecto, los del idioma activo. */
+  nombresLogicos?: NombresLogicos;
   libro: LibroCalculable;
   entradas: readonly EntradaCompatible[];
   /** Direcciones de las celdas de salida, en orden. */
