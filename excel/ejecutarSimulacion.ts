@@ -121,7 +121,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
 
   // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
   const textos = indiceDeTextos(libro.valores);
-  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre);
+  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre, libro.valores);
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
   }

@@ -22,7 +22,7 @@ export interface ResultadoPreparar {
 
 export async function prepararParaCompartir(modelo: ModeloRiesgo): Promise<ResultadoPreparar> {
   const libro = await leerLibro();
-  const plan = planificarCompartir(libro.formulas);
+  const plan = planificarCompartir(libro.formulas, libro.valores);
   if (plan.conversiones.length === 0) return { modelo, plan };
 
   await Excel.run(async (context) => {

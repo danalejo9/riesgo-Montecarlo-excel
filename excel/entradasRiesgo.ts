@@ -15,6 +15,8 @@
 import { clausuraDependencias, type FormulaCelda, type Grafo } from '../engine/graph/index.ts';
 import { claveCelda } from '../engine/parser/ast.ts';
 import { leerFuncionRiesgo, mencionaRiesgo, type EntradaRiskModel } from '../engine/modelo/index.ts';
+import { lectorDeLibro } from './lectorRangos.ts';
+import type { ValorEstatico } from './tiposLectura.ts';
 
 export interface EntradasDeFunciones {
   entradas: EntradaRiskModel[];
@@ -32,6 +34,8 @@ export function entradasDeFunciones(
   clavesSalida: readonly string[],
   /** El nombre legible de la celda (E5); sin él, la entrada se llama como su clave. */
   nombrar?: (clave: string, hoja: string, col: number, fila: number) => string,
+  /** Los valores escritos del libro, para los rangos de `RIESGO.CATEGORIA` (T4). */
+  valores?: readonly ValorEstatico[],
 ): EntradasDeFunciones {
   const out: EntradasDeFunciones = { entradas: [], claves: [], errores: [], duplicadas: [] };
   const candidatas = formulas.filter((f) => mencionaRiesgo(f.formula));
@@ -47,7 +51,7 @@ export function entradasDeFunciones(
       out.duplicadas.push(clave);
       continue;
     }
-    const r = leerFuncionRiesgo(f.formula);
+    const r = leerFuncionRiesgo(f.formula, valores ? lectorDeLibro(valores, f.hoja) : undefined);
     if (!r.ok) {
       out.errores.push(`${clave}: ${r.motivo}`);
       continue;

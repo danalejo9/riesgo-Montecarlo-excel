@@ -111,8 +111,57 @@ export function mencionaRiesgo(formula: string): boolean {
 }
 
 export type LecturaFuncionRiesgo =
-  | { ok: true; id: string; spec: DistributionSpec; media: number }
+  | { ok: true; id: string; spec: DistributionSpec; media: number | string }
   | { ok: false; motivo: string };
+
+/**
+ * `RIESGO.CATEGORIA(valores; pesos)` (T4): una entrada de texto. No va en
+ * `FUNCIONES_RIESGO` porque sus argumentos son **listas** (una matriz
+ * `{"Norte";"Sur"}` o un rango de la hoja), no números. Fuera de la
+ * simulación enseña el valor más probable.
+ */
+export const FUNCION_CATEGORIA = {
+  id: 'CATEGORIA',
+  descripcion: 'Entrada de texto: cada valor con su probabilidad (Norte, Sur, Este…).',
+  parametros: [
+    { nombre: 'valores', descripcion: 'Los textos posibles: un rango o una lista {"Norte";"Sur"}' },
+    { nombre: 'pesos', descripcion: 'La probabilidad o el peso de cada uno, en el mismo orden' },
+  ],
+} as const;
+
+/** Lee los valores de un rango de la hoja (lo pone quien tiene el libro leído). */
+export type LectorDeRango = (rango: Extract<Nodo, { tipo: 'rango' | 'celda' }>) => unknown[] | null;
+
+function listaDe(n: Nodo, lector?: LectorDeRango): unknown[] | null {
+  if (n.tipo === 'matriz') {
+    return n.filas.flat().map((x) => (x.tipo === 'texto' || x.tipo === 'numero' ? x.valor : x.tipo === 'unaria' ? constante(x) : null));
+  }
+  if ((n.tipo === 'rango' || n.tipo === 'celda') && lector) return lector(n);
+  return null;
+}
+
+/** La distribución de `RIESGO.CATEGORIA`, a partir de sus dos listas. */
+export function categoriaDesdeListas(valores: readonly unknown[], pesos: readonly unknown[]): { spec: DistributionSpec; masProbable: string } | string {
+  if (valores.length !== pesos.length) return 'RIESGO.CATEGORIA necesita un peso por cada valor';
+  const categories: string[] = [];
+  const weights: number[] = [];
+  valores.forEach((v, i) => {
+    if (v === null || v === undefined || String(v).trim() === '') return;
+    const p = typeof pesos[i] === 'number' ? (pesos[i] as number) : Number(String(pesos[i] ?? '').replace(',', '.'));
+    categories.push(String(v).trim());
+    weights.push(p);
+  });
+  if (categories.length === 0) return 'RIESGO.CATEGORIA necesita al menos un valor';
+  if (weights.some((w) => !Number.isFinite(w) || w < 0)) return 'los pesos de RIESGO.CATEGORIA tienen que ser números no negativos';
+  const spec: DistributionSpec = { type: 'categorical', categories, weights };
+  try {
+    construirDesdeDescriptor(toDescriptor(spec));
+  } catch (e) {
+    return `parámetros no válidos para RIESGO.CATEGORIA: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  const i = weights.reduce((mejor, w, k) => (w > (weights[mejor] as number) ? k : mejor), 0);
+  return { spec, masProbable: categories[i] as string };
+}
 
 function constante(n: Nodo): number | null {
   if (n.tipo === 'numero') return n.valor;
@@ -120,8 +169,11 @@ function constante(n: Nodo): number | null {
   return null;
 }
 
-/** Convierte la fórmula de una celda en su distribución, o dice por qué no. */
-export function leerFuncionRiesgo(formula: string): LecturaFuncionRiesgo {
+/**
+ * Convierte la fórmula de una celda en su distribución, o dice por qué no.
+ * `lector` resuelve los rangos de `RIESGO.CATEGORIA` con el libro ya leído.
+ */
+export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango): LecturaFuncionRiesgo {
   const r = parsear(formula.replace(/^=/, ''));
   if (!r.ok) return { ok: false, motivo: `la fórmula no se entiende: ${r.error.mensaje}` };
   const raiz = r.ast;
@@ -129,9 +181,20 @@ export function leerFuncionRiesgo(formula: string): LecturaFuncionRiesgo {
     return { ok: false, motivo: 'la función RIESGO tiene que ser toda la fórmula de la celda (no parte de una operación)' };
   }
   const id = idDeFuncionRiesgo(raiz.nombre) as string;
+  if (id === FUNCION_CATEGORIA.id) {
+    if (raiz.args.length !== 2) return { ok: false, motivo: 'RIESGO.CATEGORIA necesita 2 argumentos: valores; pesos' };
+    const valores = listaDe(raiz.args[0] as Nodo, lector);
+    const pesos = listaDe(raiz.args[1] as Nodo, lector);
+    if (!valores || !pesos) {
+      return { ok: false, motivo: 'los argumentos de RIESGO.CATEGORIA tienen que ser rangos de la hoja con valores escritos, o listas como {"Norte";"Sur"}' };
+    }
+    const c = categoriaDesdeListas(valores, pesos);
+    if (typeof c === 'string') return { ok: false, motivo: c };
+    return { ok: true, id, spec: c.spec, media: c.masProbable };
+  }
   const f = POR_ID.get(id);
   if (!f) {
-    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${FUNCIONES_RIESGO.map((x) => x.id).join(', ')}` };
+    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id].join(', ')}` };
   }
   if (raiz.args.length !== f.parametros.length) {
     return { ok: false, motivo: `RIESGO.${id} necesita ${f.parametros.length} argumento(s): ${f.parametros.map((p) => p.nombre).join('; ')}` };

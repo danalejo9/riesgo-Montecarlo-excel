@@ -5,7 +5,7 @@
  * puede quedar una descrita en Excel que el motor no sepa simular.
  */
 
-import { FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
+import { FUNCION_CATEGORIA, FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
 
 export function metadatosFunciones(): object {
   return {
@@ -20,6 +20,17 @@ export function metadatosFunciones(): object {
         type: 'number',
         dimensionality: 'scalar',
       })),
-    })),
+    })).concat([{
+      id: FUNCION_CATEGORIA.id,
+      name: FUNCION_CATEGORIA.id,
+      description: `${FUNCION_CATEGORIA.descripcion} Fuera de la simulación devuelve el valor más probable.`,
+      result: { type: 'string', dimensionality: 'scalar' },
+      parameters: FUNCION_CATEGORIA.parametros.map((p) => ({
+        name: p.nombre,
+        description: p.descripcion,
+        type: 'any',
+        dimensionality: 'matrix',
+      })),
+    }]),
   };
 }

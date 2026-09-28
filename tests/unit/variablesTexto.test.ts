@@ -184,3 +184,39 @@ describe('modo compatible con textos (T1, T2, T6)', async () => {
     expect(r.porSalida.get('D1')?.categorias).toBeUndefined();
   });
 });
+
+describe('RIESGO.CATEGORIA (T4)', async () => {
+  const { leerFuncionRiesgo } = await import('../../engine/modelo/index.ts');
+  const { lectorDeLibro } = await import('../../excel/lectorRangos.ts');
+  const { planificarCompartir } = await import('../../excel/compartirPuro.ts');
+  const { metadatosFunciones } = await import('../../engine/modelo/metadatosFunciones.ts');
+
+  it('con listas escritas en la fórmula; fuera de la simulación, el más probable', () => {
+    const r = leerFuncionRiesgo('=RIESGO.CATEGORIA({"Norte";"Sur";"Este"},{20;50;30})') // como la guarda Excel: comas entre argumentos;
+    expect(r).toMatchObject({ ok: true, id: 'CATEGORIA', media: 'Sur', spec: { type: 'categorical', categories: ['Norte', 'Sur', 'Este'], weights: [20, 50, 30] } });
+  });
+
+  it('con rangos de la hoja, leídos del libro', () => {
+    const valores = [
+      { hoja: 'Pruebas', col: 5, fila: 13, tipo: 'texto' as const, texto: 'Norte' },
+      { hoja: 'Pruebas', col: 5, fila: 14, tipo: 'texto' as const, texto: 'Sur' },
+      { hoja: 'Pruebas', col: 6, fila: 13, tipo: 'numero' as const, numero: 0.3 },
+      { hoja: 'Pruebas', col: 6, fila: 14, tipo: 'numero' as const, numero: 0.7 },
+    ];
+    const r = leerFuncionRiesgo('RIESGO.CATEGORIA(E13:E14,F13:F14)', lectorDeLibro(valores, 'Pruebas'));
+    expect(r).toMatchObject({ ok: true, media: 'Sur', spec: { categories: ['Norte', 'Sur'], weights: [0.3, 0.7] } });
+    // Preparar para compartir deja en la celda el texto más probable.
+    const plan = planificarCompartir([{ hoja: 'Pruebas', col: 3, fila: 16, formula: 'RIESGO.CATEGORIA(E13:E14,F13:F14)' }], valores);
+    expect(plan.conversiones[0]?.valorBase).toBe('Sur');
+  });
+
+  it('errores claros', () => {
+    expect(leerFuncionRiesgo('RIESGO.CATEGORIA({"A";"B"},{1})')).toMatchObject({ ok: false });
+    expect(leerFuncionRiesgo('RIESGO.CATEGORIA(E1:E2,F1:F2)')).toMatchObject({ ok: false }); // sin libro no hay rangos
+  });
+
+  it('va en los metadatos de las funciones de Excel, devolviendo texto', () => {
+    const f = (metadatosFunciones() as { functions: { id: string; result: { type: string } }[] }).functions.find((x) => x.id === 'CATEGORIA');
+    expect(f?.result.type).toBe('string');
+  });
+});

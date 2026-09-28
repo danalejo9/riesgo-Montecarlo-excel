@@ -83,7 +83,7 @@ describe('leerFuncionRiesgo', () => {
 describe('metadatos para Excel (funciones.json)', () => {
   it('uno por función del catálogo, con sus parámetros', () => {
     const m = metadatosFunciones() as { functions: { id: string; parameters: unknown[] }[] };
-    expect(m.functions.map((f) => f.id)).toEqual(FUNCIONES_RIESGO.map((f) => f.id));
+    expect(m.functions.map((f) => f.id)).toEqual([...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA']);
     expect(m.functions.find((f) => f.id === 'TRIANGULAR')?.parameters).toHaveLength(3);
   });
 });

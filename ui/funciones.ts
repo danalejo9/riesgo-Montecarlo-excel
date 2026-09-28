@@ -12,10 +12,10 @@
  * en Windows no es un navegador y no sabe importar.
  */
 
-import { FUNCIONES_RIESGO, mediaDeFuncionRiesgo } from '../engine/modelo/funcionesRiesgo.ts';
+import { categoriaDesdeListas, FUNCION_CATEGORIA, FUNCIONES_RIESGO, mediaDeFuncionRiesgo } from '../engine/modelo/funcionesRiesgo.ts';
 
 declare const CustomFunctions: {
-  associate(id: string, f: (...args: number[]) => number): void;
+  associate(id: string, f: (...args: never[]) => number | string): void;
   Error: new (codigo: unknown, mensaje?: string) => Error;
   ErrorCode: { invalidNumber: unknown; invalidName: unknown };
 };
@@ -30,3 +30,11 @@ for (const f of FUNCIONES_RIESGO) {
     );
   });
 }
+
+// T4: el valor más probable de una entrada de texto. Los argumentos llegan
+// como matrices (rango o lista), se aplanan en el mismo orden.
+CustomFunctions.associate(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][]) => {
+  const r = categoriaDesdeListas(valores.flat(), pesos.flat());
+  if (typeof r !== 'string') return r.masProbable;
+  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+});

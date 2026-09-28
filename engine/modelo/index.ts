@@ -54,9 +54,12 @@ export {
   type AjusteCandidato, type CriterioAjuste, type ResultadoAjuste,
 } from './ajuste.ts';
 export {
+  categoriaDesdeListas,
+  FUNCION_CATEGORIA,
   FUNCIONES_RIESGO,
   idDeFuncionRiesgo,
   leerFuncionRiesgo,
+  type LectorDeRango,
   mediaDeFuncionRiesgo,
   mencionaRiesgo,
   type FuncionRiesgo,

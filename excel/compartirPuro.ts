@@ -20,14 +20,16 @@ import type { FormulaCelda } from '../engine/graph/index.ts';
 import { generarId, leerFuncionRiesgo, mencionaRiesgo, type DistributionSpec, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { claveCelda, letrasDeColumna } from '../engine/parser/ast.ts';
 import { componerDireccion } from './direcciones.ts';
+import { lectorDeLibro } from './lectorRangos.ts';
+import type { ValorEstatico } from './tiposLectura.ts';
 
 export interface ConversionCompartir {
   /** Dirección para Office.js y para el modelo: `Pruebas!C5`, `'Mi hoja'!C5`. */
   direccion: string;
   clave: string;
   formula: string;
-  /** Lo que se escribe en la celda: la media de la distribución. */
-  valorBase: number;
+  /** Lo que se escribe en la celda: la media, o el valor más probable si es de texto. */
+  valorBase: number | string;
   spec: DistributionSpec;
 }
 
@@ -37,12 +39,12 @@ export interface PlanCompartir {
   noConvertibles: string[];
 }
 
-export function planificarCompartir(formulas: readonly FormulaCelda[]): PlanCompartir {
+export function planificarCompartir(formulas: readonly FormulaCelda[], valores: readonly ValorEstatico[] = []): PlanCompartir {
   const plan: PlanCompartir = { conversiones: [], noConvertibles: [] };
   for (const f of formulas) {
     if (!mencionaRiesgo(f.formula)) continue;
     const clave = claveCelda(f.hoja, f.col, f.fila);
-    const r = leerFuncionRiesgo(f.formula);
+    const r = leerFuncionRiesgo(f.formula, lectorDeLibro(valores, f.hoja));
     if (!r.ok) {
       plan.noConvertibles.push(`${clave}: ${r.motivo}`);
       continue;
