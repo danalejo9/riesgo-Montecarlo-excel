@@ -993,7 +993,10 @@ Vienen de sus instrucciones maestras y siguen vigentes:
    (cinta con el panel abierto), W5 (RIESGO en la Web) y J3 (iPad).
 2. Tandas 7 y 8 de vuelta de Excel (bloque I de la guía).
 3. Después, etapa 2: B1–B3 (runtime compartido, modo
-   determinista/probabilístico, cinta que actúa); luego B6, I2, T7–T9.
+   determinista/probabilístico, cinta que actúa) y **B1b** (las funciones
+   RIESGO sortean en el motor compatible: casos 2 y 3 de B7 con Excel en el
+   bucle, sin sobrescribir fórmulas); luego el resto de B6 (SALIDA,
+   CORRELACION, leer del libro), I2, T7–T9.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

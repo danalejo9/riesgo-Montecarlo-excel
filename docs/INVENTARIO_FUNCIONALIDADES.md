@@ -102,6 +102,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 9 | B1 | Runtime compartido (panel, cinta y funciones en el mismo proceso); hace más rápidos los botones de la cinta | Plan |
 | 10 | B2 | **Interruptor «Determinístico / Probabilístico»** en la cinta: las `RIESGO.*` muestran un valor fijo (media, moda, mediana o percentil) o uno aleatorio que cambia con F9 | **Tú** |
 | 11 | B3 | **Cinta que actúa sin abrir el panel**: marcar entrada, marcar salida, simular, quitar resaltado | **Tú** |
+| 11b | B1b | **Funciones RIESGO que sortean en el motor compatible**: `=10+RIESGO.NORMAL(0;1)` y los parámetros aleatorios (B7) también con Excel en el bucle, y sin escribir encima de las fórmulas (más seguro). Necesita B1 | **Tú** (28/09) |
 
 ### Etapa 3: gráficas, exportación y ajuste (≈ 8–10 días)
 

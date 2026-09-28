@@ -5,6 +5,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Plan: B1b (2026-09-28)
+
+**Cambiado**
+- Plan: nuevo **B1b**, después de B1–B3 en la etapa 2. Con el runtime
+  compartido, las funciones RIESGO devolverán su valor sorteado durante una
+  simulación con el motor compatible. Así, la función dentro de una operación
+  y los parámetros aleatorios (B7) funcionarán también con Excel en el bucle,
+  sin escribir encima de las fórmulas.
+
 ### B7 y B6: RIESGO con celdas y resultados en la hoja (2026-09-28)
 
 Pedido por el usuario tras la revisión: poder escribir `=RIESGO.NORMAL(50;

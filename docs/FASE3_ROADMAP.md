@@ -286,6 +286,29 @@ Estimaciones en días de trabajo efectivo.
   del libro no cambia los resultados de la simulación, y se dice en la UI.
 - **B3. Cinta que actúa sin abrir el panel**: «Marcar como entrada», «Marcar
   como salida», «Simular», «Quitar resaltado».
+- **B1b. Funciones RIESGO que sortean en el motor compatible** (decidido el
+  28/09; va después de B1, B2 y B3, dentro de la etapa 2). Con el runtime
+  compartido, durante una simulación con Excel en el bucle el panel dice a
+  las funciones qué iteración toca, y cada `RIESGO.*` devuelve su valor
+  sorteado (no la media), calculado con los parámetros que Excel acaba de
+  obtener. Razones:
+  - Completa B7: `=10+RIESGO.NORMAL(0;1)` y `=RIESGO.NORMAL(C34;50)` hoy
+    solo van con el motor rápido; con esto, también con el compatible. Es como
+    trabaja @RISK.
+  - **Más seguro para el libro**: el compatible ya no tendría que escribir
+    números encima de las celdas con RIESGO y devolverles la fórmula al final
+    (si Excel se cierra a mitad, hoy pueden quedarse sin su fórmula).
+  - Mismos sorteos que el motor rápido con la misma semilla: se reutiliza el
+    cuantil por iteración de B7 (`engine/functions/riesgo.ts`).
+
+  A vigilar:
+  - Cada llamada necesita una identidad fija (celda y posición en la
+    fórmula) para que el sorteo sea reproducible.
+  - Hay que comprobar en Excel real cómo recalcula las funciones en cada
+    iteración.
+  - No acelera el compatible: sigue siendo un recálculo por iteración.
+
+  Estimación: 2–3 d con B1 hecho.
 - **B4. Más funciones, las que el motor ya sabe muestrear**:
   `RIESGO.DISCRETA({valores};{pesos})`, truncado (`RIESGO.TRUNCAR` o argumento
   opcional de mínimo/máximo), `RIESGO.LOGNORMAL2` (parámetros del logaritmo).
@@ -621,7 +644,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
+pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → **B1b** → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
