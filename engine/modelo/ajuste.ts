@@ -45,6 +45,10 @@ export interface AjusteCandidato {
   aic: number;
   /** Criterio bayesiano: k·ln n − 2·ln L. Penaliza más los parámetros con muchos datos. */
   bic: number;
+  /** AIC corregido para muestras pequeñas (I1): AIC + 2k(k+1)/(n−k−1). Converge al AIC con muchos datos. */
+  aicc: number;
+  /** Cramér–von Mises (I1): distancia cuadrática entre la acumulada empírica y la teórica. Cuanto menor, mejor. */
+  cramerVonMises: number;
   /** Número de parámetros estimados de los datos. */
   parametros: number;
   /** Anderson–Darling: cuanto menor, mejor. */
@@ -53,12 +57,30 @@ export interface AjusteCandidato {
   kolmogorovSmirnov: number;
 }
 
+/**
+ * Lo que dicen los datos antes de ajustar nada (I1): la vía local, sin IA, a
+ * «sugerir distribuciones». Explica por qué se proponen unas familias y se
+ * descartan otras.
+ */
+export interface DiagnosticoDatos {
+  asimetria: number;
+  curtosis: number;
+  negativos: number;
+  ceros: number;
+  todosEnteros: boolean;
+  entreCeroYUno: boolean;
+  notas: string[];
+}
+
 export interface ResultadoAjuste {
   n: number;
   media: number;
   desviacion: number;
   min: number;
   max: number;
+  diagnostico?: DiagnosticoDatos;
+  /** Los datos tal cual como distribución (discreta con sus valores observados). */
+  empirica?: DistributionSpec;
   /** De mejor a peor según AIC (ver `ordenarCandidatos` para otro criterio). */
   candidatos: AjusteCandidato[];
 }
@@ -202,9 +224,13 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
   let ll = 0;
   for (let i = 0; i < n; i++) ll += densidad.f(ordenados[i] as number);
   const k = densidad.k;
+  let cvm = 1 / (12 * n);
+  for (let i = 0; i < n; i++) cvm += ((F[i] as number) - (2 * i + 1) / (2 * n)) ** 2;
   return {
     spec,
     aic: 2 * k - 2 * ll,
+    aicc: 2 * k - 2 * ll + (n - k - 1 > 0 ? (2 * k * (k + 1)) / (n - k - 1) : Infinity),
+    cramerVonMises: cvm,
     bic: k * Math.log(n) - 2 * ll,
     parametros: k,
     andersonDarling: -n - suma / n,
@@ -212,7 +238,83 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
   };
 }
 
-export type CriterioAjuste = 'aic' | 'bic' | 'andersonDarling';
+export type CriterioAjuste = 'aicc' | 'aic' | 'bic' | 'andersonDarling' | 'cramerVonMises';
+
+/** Digamma y trigamma (series asintóticas con recurrencia), para la gamma por máxima verosimilitud. */
+function digamma(x: number): number {
+  let r = 0;
+  while (x < 6) { r -= 1 / x; x += 1; }
+  const f = 1 / (x * x);
+  return r + Math.log(x) - 0.5 / x - f * (1 / 12 - f * (1 / 120 - f * (1 / 252 - f * (1 / 240 - f / 132))));
+}
+function trigamma(x: number): number {
+  let r = 0;
+  while (x < 6) { r += 1 / (x * x); x += 1; }
+  const f = 1 / (x * x);
+  return r + 1 / x + f / 2 + (f / x) * (1 / 6 - f * (1 / 30 - f * (1 / 42 - f / 30)));
+}
+
+/**
+ * Forma de la gamma por máxima verosimilitud exacta (I1): resuelve
+ * ln k − ψ(k) = s por Newton, partiendo de la aproximación de Minka (la que se
+ * usaba antes, buena pero no exacta).
+ */
+export function gammaFormaMLE(s: number): number {
+  let k = (3 - s + Math.sqrt((s - 3) ** 2 + 24 * s)) / (12 * s);
+  for (let it = 0; it < 50; it++) {
+    const f = Math.log(k) - digamma(k) - s;
+    const df = 1 / k - trigamma(k);
+    const nuevo = k - f / df;
+    if (!Number.isFinite(nuevo) || nuevo <= 0) break;
+    if (Math.abs(nuevo - k) < 1e-12 * k) return nuevo;
+    k = nuevo;
+  }
+  return k;
+}
+
+function diagnosticar(x: Float64Array, media: number, desviacion: number): DiagnosticoDatos {
+  const n = x.length;
+  let m3 = 0;
+  let m4 = 0;
+  let negativos = 0;
+  let ceros = 0;
+  let enteros = true;
+  for (const v of x) {
+    const d = v - media;
+    m3 += d ** 3;
+    m4 += d ** 4;
+    if (v < 0) negativos++;
+    if (v === 0) ceros++;
+    if (!Number.isInteger(v)) enteros = false;
+  }
+  const m2 = ((n - 1) / n) * desviacion * desviacion;
+  const asimetria = m2 > 0 ? m3 / n / m2 ** 1.5 : 0;
+  const curtosis = m2 > 0 ? m4 / n / (m2 * m2) - 3 : 0;
+  const entreCeroYUno = (x[0] as number) >= 0 && (x[n - 1] as number) <= 1;
+  const notas: string[] = [];
+  if (n < 30) notas.push(`Solo ${n} datos: los criterios distinguen poco entre familias parecidas; mira la curva y usa el AICc (corregido para pocos datos).`);
+  if (negativos > 0 || ceros > 0) {
+    notas.push(`Hay ${negativos > 0 ? `${negativos} valores negativos` : ''}${negativos > 0 && ceros > 0 ? ' y ' : ''}${ceros > 0 ? `${ceros} ceros` : ''}: se descartan la lognormal, la gamma y la Weibull, que solo valen para valores positivos.`);
+  }
+  if (asimetria > 0.5) notas.push(`Asimetría ${asimetria.toLocaleString('es-ES', { maximumFractionDigits: 2 })}: cola larga a la derecha, típica de costes, plazos e importes. La normal y la uniforme suelen encajar mal.`);
+  else if (asimetria < -0.5) notas.push(`Asimetría ${asimetria.toLocaleString('es-ES', { maximumFractionDigits: 2 })}: cola larga a la izquierda. Las familias de cola derecha (lognormal, gamma) encajarán mal.`);
+  else notas.push('Casi simétricos: la normal, la triangular o la PERT son candidatas naturales.');
+  if (curtosis > 1.5) notas.push(`Curtosis en exceso ${curtosis.toLocaleString('es-ES', { maximumFractionDigits: 2 })}: colas más gruesas que una normal; cuidado con subestimar los extremos.`);
+  // Enteros que parecen conteos: pequeños o muy repetidos (un importe redondeado no lo es).
+  const distintos = new Set(x).size;
+  if (enteros && ((x[n - 1] as number) <= 100 || distintos < n * 0.6)) notas.push('Todos son enteros: puede ser una cantidad contable (unidades, incidencias). Si lo es, valora una Poisson o una binomial, o usar los datos tal cual.');
+  if (entreCeroYUno) notas.push('Todos están entre 0 y 1: parecen una proporción; se prueba la beta.');
+  return { asimetria, curtosis, negativos, ceros, todosEnteros: enteros, entreCeroYUno, notas };
+}
+
+/** Los datos tal cual: una discreta con cada valor observado y cuántas veces aparece (hasta 2.000 distintos). */
+function empiricaDe(x: Float64Array): DistributionSpec | undefined {
+  const cuenta = new Map<number, number>();
+  for (const v of x) cuenta.set(v, (cuenta.get(v) ?? 0) + 1);
+  if (cuenta.size > 2_000 || cuenta.size < 2) return undefined;
+  const valores = [...cuenta.keys()].sort((a, b) => a - b);
+  return { type: 'discrete', values: valores, weights: valores.map((v) => cuenta.get(v) as number) };
+}
 
 /** Ordena las candidatas por el criterio elegido (todos: cuanto menor, mejor). */
 export function ordenarCandidatos(c: readonly AjusteCandidato[], criterio: CriterioAjuste): AjusteCandidato[] {
@@ -279,7 +381,7 @@ export function ajustarDistribuciones(datos: readonly number[]): ResultadoAjuste
 
     const s = Math.log(media) - mu;
     if (s > 0) {
-      const forma = (3 - s + Math.sqrt((s - 3) ** 2 + 24 * s)) / (12 * s);
+      const forma = gammaFormaMLE(s);
       specs.push({ type: 'gamma', shape: forma, scale: media / forma });
     }
     const k = weibullForma(x, mu);
@@ -300,7 +402,7 @@ export function ajustarDistribuciones(datos: readonly number[]): ResultadoAjuste
     .map(redondearSpec)
     .map((s) => bondad(s, x))
     .filter((c): c is AjusteCandidato => c !== null && Number.isFinite(c.andersonDarling) && Number.isFinite(c.aic))
-    .sort((p, q) => p.aic - q.aic);
+    .sort((p, q) => p.aicc - q.aicc);
 
-  return { n, media, desviacion, min, max, candidatos };
+  return { n, media, desviacion, min, max, candidatos, diagnostico: diagnosticar(x, media, desviacion), empirica: empiricaDe(x) };
 }

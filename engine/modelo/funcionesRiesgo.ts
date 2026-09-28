@@ -198,6 +198,23 @@ export const FUNCION_TRUNCAR = {
   ],
 } as const;
 
+/** `RIESGO.EMPIRICA(datos)` (I1): los datos históricos tal cual, cada valor con su frecuencia. */
+export const FUNCION_EMPIRICA = {
+  id: 'EMPIRICA',
+  descripcion: 'Empírica: los datos históricos tal cual; cada valor observado con la frecuencia con que aparece.',
+  parametros: [{ nombre: 'datos', descripcion: 'Un rango con los datos históricos (números)' }],
+} as const;
+
+export function empiricaDesdeLista(datos: readonly unknown[]): { spec: DistributionSpec; media: number } | string {
+  const numeros = datos.filter((v) => typeof v === 'number' && Number.isFinite(v)) as number[];
+  if (numeros.length < 2) return 'RIESGO.EMPIRICA necesita al menos 2 números';
+  const cuenta = new Map<number, number>();
+  for (const v of numeros) cuenta.set(v, (cuenta.get(v) ?? 0) + 1);
+  const values = [...cuenta.keys()].sort((a, b) => a - b);
+  const spec: DistributionSpec = { type: 'discrete', values, weights: values.map((v) => cuenta.get(v) as number) };
+  return { spec, media: numeros.reduce((a, b) => a + b, 0) / numeros.length };
+}
+
 /** La distribución de `RIESGO.DISCRETA`, a partir de sus dos listas. */
 export function discretaDesdeListas(valores: readonly unknown[], pesos: readonly unknown[]): { spec: DistributionSpec; media: number } | string {
   if (valores.length !== pesos.length) return 'RIESGO.DISCRETA necesita un peso por cada valor';
@@ -253,6 +270,12 @@ function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: Lecto
     if (typeof c === 'string') return { ok: false, motivo: c };
     return { ok: true, id, spec: c.spec, media: c.masProbable };
   }
+  if (id === FUNCION_EMPIRICA.id) {
+    const datos = raiz.args.length === 1 ? listaDe(raiz.args[0] as Nodo, lector) : null;
+    if (!datos) return { ok: false, motivo: 'RIESGO.EMPIRICA necesita 1 argumento: un rango con los datos, o una lista {1;2;3}' };
+    const e = empiricaDesdeLista(datos);
+    return typeof e === 'string' ? { ok: false, motivo: e } : { ok: true, id, spec: e.spec, media: e.media };
+  }
   if (id === FUNCION_TRUNCAR.id) {
     const [interior, a, b] = raiz.args;
     if (raiz.args.length !== 3 || !interior || interior.tipo !== 'funcion' || idDeFuncionRiesgo(interior.nombre) === null) {
@@ -272,7 +295,7 @@ function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: Lecto
   }
   const f = POR_ID.get(id);
   if (!f) {
-    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_TRUNCAR.id].join(', ')}` };
+    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_EMPIRICA.id, FUNCION_TRUNCAR.id].join(', ')}` };
   }
   if (raiz.args.length !== f.parametros.length) {
     return { ok: false, motivo: `RIESGO.${id} necesita ${f.parametros.length} argumento(s): ${f.parametros.map((p) => p.nombre).join('; ')}` };

@@ -13,7 +13,8 @@
  */
 
 import {
-  categoriaDesdeListas, discretaDesdeListas, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_TRUNCAR, FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
+  categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
+  FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
 } from '../engine/modelo/funcionesRiesgo.ts';
 
 declare const CustomFunctions: {
@@ -54,4 +55,11 @@ CustomFunctions.associate(FUNCION_TRUNCAR.id, (valor: number, minimo: number, ma
   // acotada de verdad.
   if (!(minimo < maximo)) throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'RIESGO.TRUNCAR: el mínimo tiene que ser menor que el máximo');
   return Math.min(maximo, Math.max(minimo, valor));
+});
+
+// I1: la media de los datos históricos.
+CustomFunctions.associate(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
+  const r = empiricaDesdeLista(datos.flat());
+  if (typeof r !== 'string') return r.media;
+  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
 });

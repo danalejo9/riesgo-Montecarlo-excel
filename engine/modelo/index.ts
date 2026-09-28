@@ -58,6 +58,8 @@ export {
   discretaDesdeListas,
   FUNCION_CATEGORIA,
   FUNCION_DISCRETA,
+  FUNCION_EMPIRICA,
+  empiricaDesdeLista,
   FUNCION_TRUNCAR,
   FUNCIONES_RIESGO,
   idDeFuncionRiesgo,

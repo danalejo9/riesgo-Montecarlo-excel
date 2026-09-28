@@ -32,6 +32,12 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   descarta y reescala la masa de fuera.
 - **`RIESGO.DISCRETA(valores; pesos)`** con listas o rangos, y
   **`RIESGO.LOGNORMAL2(mu; sigma)`** con los parámetros del logaritmo (B4).
+- **Ajuste de distribuciones explicado** (I1): «Lo que dicen los datos»
+  (asimetría, colas, negativos, enteros, proporciones) explica qué familias se
+  proponen y cuáles se descartan; AICc (ahora el criterio por defecto) y
+  Cramér–von Mises junto a BIC y A–D; la gamma por máxima verosimilitud exacta;
+  el histograma de los datos con la curva de la candidata elegida encima;
+  «Usar los datos tal cual» (empírica) y `=RIESGO.EMPIRICA(rango)`.
 
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 

@@ -420,3 +420,8 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .previa-p { stroke: var(--tenue); stroke-dasharray: 2 2; stroke-width: 1; }
 .previa-p50 { stroke: var(--texto); stroke-width: 1; }
 .previa-barra { fill: var(--acento); opacity: .75; }
+
+/* I1: diagnóstico de los datos en el ajuste. */
+.diagnostico-ajuste { border-left: 3px solid var(--acento); padding: 2px 0 2px 10px; margin: 8px 0; }
+.diagnostico-ajuste h5 { margin: 0 0 4px; font-size: 12px; }
+.diagnostico-ajuste ul { margin: 0; padding-left: 16px; font-size: 12px; }

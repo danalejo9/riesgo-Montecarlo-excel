@@ -22,7 +22,9 @@ import {
   toDescriptor,
   type DistributionSpec,
 } from '../engine/modelo/index.ts';
+import { histogramaDeMuestra, ordenarUtiles } from '../engine/stats/index.ts';
 import { leerSeleccion } from '../excel/seleccion.ts';
+import { Histograma } from './Resultados.tsx';
 import { miles, numero } from './formato.ts';
 
 const ANCHO = 280;
@@ -41,7 +43,7 @@ export function AjusteDatos({
   const [origen, setOrigen] = useState<string | null>(null);
   const [elegida, setElegida] = useState(0);
   const [fallo, setFallo] = useState<string | null>(null);
-  const [criterio, setCriterio] = useState<CriterioAjuste>('aic');
+  const [criterio, setCriterio] = useState<CriterioAjuste>('aicc');
 
   const lectura = useMemo(() => leerDatos(texto, decimal), [texto, decimal]);
   const ajuste = useMemo(() => ajustarDistribuciones(lectura.valores), [lectura]);
@@ -110,6 +112,13 @@ export function AjusteDatos({
         <p className="aviso-linea">Todos los datos son iguales: no hay distribución que ajustar.</p>
       )}
 
+      {ajuste?.diagnostico && ajuste.diagnostico.notas.length > 0 && (
+        <div className="diagnostico-ajuste">
+          <h5>Lo que dicen los datos</h5>
+          <ul>{ajuste.diagnostico.notas.map((n) => <li key={n}>{n}</li>)}</ul>
+        </div>
+      )}
+
       {ajuste && ajuste.candidatos.length > 0 && (
         <>
           <label className="campo ordenar-ajuste">
@@ -121,18 +130,21 @@ export function AjusteDatos({
                 setElegida(0);
               }}
             >
+              <option value="aicc">AICc (AIC corregido para pocos datos)</option>
               <option value="aic">AIC (ajuste, castigando parámetros)</option>
               <option value="bic">BIC (castiga más los parámetros)</option>
               <option value="andersonDarling">Anderson–Darling (colas)</option>
+              <option value="cramerVonMises">Cramér–von Mises (todo el rango)</option>
             </select>
           </label>
           <table className="comparacion ajuste-tabla">
             <thead>
               <tr>
                 <th>Distribución</th>
-                <th title="Criterio de Akaike: cuanto menor, mejor">AIC</th>
+                <th title="Akaike corregido para pocos datos: cuanto menor, mejor">AICc</th>
                 <th title="Criterio bayesiano: cuanto menor, mejor">BIC</th>
                 <th title="Anderson–Darling: cuanto menor, mejor">A–D</th>
+                <th title="Cramér–von Mises: cuanto menor, mejor">CvM</th>
                 <th />
               </tr>
             </thead>
@@ -148,11 +160,12 @@ export function AjusteDatos({
                     {describirDistribucion(c.spec.type)?.nombre ?? c.spec.type}
                     <span className="tenue parametros-ajuste">{resumirDistribucion(c.spec)}</span>
                   </th>
-                  <td>{c.aic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
+                  <td title={`AIC: ${c.aic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}`}>{c.aicc.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
                   <td>{c.bic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
                   <td title={`Kolmogorov–Smirnov: ${c.kolmogorovSmirnov.toLocaleString('es-ES', { maximumFractionDigits: 3 })}`}>
                     {c.andersonDarling.toLocaleString('es-ES', { maximumFractionDigits: 2 })}
                   </td>
+                  <td>{c.cramerVonMises.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>
                   <td>
                     <button type="button" onClick={(e) => { e.stopPropagation(); alUsar(c.spec); }}>Usar</button>
                   </td>
@@ -160,11 +173,21 @@ export function AjusteDatos({
               ))}
             </tbody>
           </table>
+          {candidata && <HistogramaAjuste datos={lectura.valores} spec={candidata.spec} />}
           {candidata && <CurvaAjuste datos={lectura.valores} spec={candidata.spec} />}
+          {ajuste.empirica && (
+            <p>
+              <button type="button" className="plano" onClick={() => alUsar(ajuste.empirica as DistributionSpec)}>
+                Usar los datos tal cual (distribución empírica)
+              </button>
+              <span className="tenue"> — cada valor observado con su frecuencia; no inventa valores que no se hayan visto.</span>
+            </p>
+          )}
           <p className="tenue">
-            AIC y BIC comparan cómo de probables son los datos con cada
-            distribución, castigando las que tienen más parámetros; A–D pesa más
-            las colas (pasa el ratón para ver K–S). Todos: cuanto menor, mejor.
+            AICc y BIC comparan cómo de probables son los datos con cada
+            distribución, castigando las que tienen más parámetros (el AICc,
+            además, corrige los pocos datos); A–D pesa más las colas y CvM todo
+            el rango (pasa el ratón para ver AIC y K–S). Todos: cuanto menor, mejor.
             Es una ordenación, no una prueba de aceptación: mira que la curva
             siga a los datos en la cola que te importa.
           </p>
@@ -172,6 +195,24 @@ export function AjusteDatos({
       )}
     </div>
   );
+}
+
+/** El histograma de los datos con lo que esperaba la candidata en cada barra (I1). */
+function HistogramaAjuste({ datos, spec }: { datos: readonly number[]; spec: DistributionSpec }) {
+  const { barras, esperado } = useMemo(() => {
+    const ordenada = ordenarUtiles(datos);
+    const barras = histogramaDeMuestra(ordenada, 25);
+    let esperado: number[] | undefined;
+    try {
+      const d = construirDesdeDescriptor(toDescriptor(spec));
+      esperado = barras.map((b) => ordenada.length * Math.max(0, d.cdf(b.x1) - d.cdf(b.x0)));
+    } catch {
+      esperado = undefined;
+    }
+    return { barras, esperado };
+  }, [datos, spec]);
+  if (barras.length === 0) return null;
+  return <Histograma barras={barras} {...(esperado ? { esperado } : {})} etiqueta="Histograma de los datos con la distribución elegida" />;
 }
 
 function CurvaAjuste({ datos, spec }: { datos: readonly number[]; spec: DistributionSpec }) {
