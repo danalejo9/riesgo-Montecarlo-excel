@@ -189,6 +189,23 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
         )}
       </div>
 
+      {s.colas?.map((c) => (
+        <div key={c.cola}>
+          <h3>Qué tiene que pasar para quedar en su 10 % {c.cola === 'baja' ? 'más bajo' : 'más alto'}</h3>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>Entrada</th><th>En esos casos</th><th>Normalmente</th><th>Desplazamiento</th></tr></thead>
+            <tbody>{c.filas.slice(0, 5).map((f) => (
+              <tr key={f.id}>
+                <td>{f.nombre}</td>
+                <td>{f.categoria !== undefined ? `«${f.categoria}» ${porcentajeTexto(f.proporcionCola ?? 0)}` : numero(f.medianaCola ?? NaN)}</td>
+                <td>{f.categoria !== undefined ? porcentajeTexto(f.proporcion ?? 0) : numero(f.mediana ?? NaN)}</td>
+                <td>{f.desplazamiento === undefined ? '' : `${f.desplazamiento > 0 ? '+' : '−'}${Math.abs(f.desplazamiento).toLocaleString('es-ES', { maximumFractionDigits: 2 })} σ`}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      ))}
+
       {s.porCategoria?.map((b) => (
         <div key={b.id}>
           <h3>Según {b.nombre}</h3>

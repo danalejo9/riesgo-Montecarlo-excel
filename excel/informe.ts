@@ -27,6 +27,7 @@ import {
   type PuntoCDF,
   type ResumenEstadistico,
 } from '../engine/stats/index.ts';
+import { analisisPorCola, type AnalisisCola } from './analisisCola.ts';
 import type { Decisivas, FilaCategoria, PorCategoria } from './analisisTexto.ts';
 import type { EntradaMuestreada } from './entradasMuestreadas.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
@@ -71,6 +72,8 @@ export interface ResultadoSalida {
   histograma?: BinHistograma[];
   /** VaR y CVaR de las dos colas, asimetría, curtosis y semidesviación (H2). */
   riesgo?: MedidasRiesgo;
+  /** Qué tiene que pasar para caer en el 10 % más bajo o más alto (D1). */
+  colas?: AnalisisCola[];
   /** Salidas de texto o sí/no (T2, T6): cada valor con su frecuencia, de más a menos. */
   categorias?: FilaCategoria[];
   /** El texto de cada iteración retenida. Solo en memoria, como `muestraOrdenada`. */
@@ -168,7 +171,7 @@ export function analisisDeMuestra(
   clavesEntrada: readonly string[],
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
   muestraSalida: ArrayLike<number> | undefined,
-): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2' | 'riesgo'> {
+): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2' | 'riesgo' | 'colas'> {
   if (!muestraSalida || muestraSalida.length === 0) return {};
   const muestraOrdenada = ordenarUtiles(muestraSalida);
   const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
@@ -178,8 +181,10 @@ export function analisisDeMuestra(
   }));
   const r2 = r2Sensibilidad(entradas, muestraSalida);
   const riesgo = medidasDeRiesgo(muestraOrdenada);
+  const colas = analisisPorCola(modelo, clavesEntrada, muestrasPorClave, muestraSalida);
   return {
     ...(riesgo ? { riesgo } : {}),
+    ...(colas.length > 0 ? { colas } : {}),
     sensibilidad: sensibilidadDeSalida(modelo, clavesEntrada, muestrasPorClave, muestraSalida),
     muestraOrdenada,
     histograma: histogramaDeMuestra(muestraOrdenada),
@@ -586,6 +591,19 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     }
     tenue('Percentiles aproximados: se calculan con un t-digest, no ordenando todos los valores.');
     fila++;
+    for (const c of s.colas ?? []) {
+      cabecera([`Para quedar en su 10 % ${c.cola === 'baja' ? 'más bajo' : 'más alto'}`, 'En esos casos', 'Normalmente', 'Desplazamiento (σ)']);
+      for (const x of c.filas.slice(0, 5)) {
+        if (x.categoria !== undefined) {
+          formato({ fila, col: 1, filas: 1, cols: 2 }, FORMATO_PORCENTAJE);
+          linea([`${x.nombre}: «${x.categoria}»`, x.proporcionCola ?? '', x.proporcion ?? '', '']);
+        } else {
+          formato({ fila, col: 3, filas: 1, cols: 1 }, FORMATO_RHO);
+          linea([x.nombre, x.medianaCola ?? '', x.mediana ?? '', x.desplazamiento ?? '']);
+        }
+      }
+      fila++;
+    }
     escribirPorCategoria(s, f);
 
     // Los datos de los gráficos, a la derecha, y los gráficos junto al bloque.

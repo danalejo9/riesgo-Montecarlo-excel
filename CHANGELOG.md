@@ -21,6 +21,11 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - **Tornado y araña como gráficos de Excel** (C2) en la hoja volcada, junto a
   los de la distribución: barras horizontales con la que más pesa arriba, y una
   línea por entrada con su leyenda.
+- **Qué tiene que pasar** (D1, análisis de escenarios por cola): en las
+  iteraciones en que la salida cae en su 10 % más bajo (o más alto), la
+  mediana de cada entrada frente a la normal, en desviaciones típicas, y en
+  las de texto la categoría que más abunda. En el panel, el PDF y la hoja
+  (`excel/analisisCola.ts`).
 
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 

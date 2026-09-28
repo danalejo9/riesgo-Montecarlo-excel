@@ -31,6 +31,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import type { AnalisisCola } from '../excel/analisisCola.ts';
 import type { EntradaMuestreada } from '../excel/entradasMuestreadas.ts';
 import {
   escenarioActivo, MAXIMO_ESCENARIOS, tablaEscenarios, type AlmacenEscenarios, type FilaEscenario,
@@ -396,6 +397,8 @@ export function Resultados({
             </>
           )}
 
+          {salida.colas && salida.colas.length > 0 && <QueTieneQuePasar colas={salida.colas} />}
+
           {salida.porCategoria && salida.porCategoria.length > 0 && (
             <TablasPorCategoria bloques={salida.porCategoria} />
           )}
@@ -691,6 +694,58 @@ export function MedidasDeRiesgo({ riesgo }: { riesgo: MedidasRiesgo }) {
         Asimetría {riesgo.asimetria.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ({forma}) ·
         curtosis {riesgo.curtosis.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ·
         semidesviación {numero(riesgo.semidesviacion)}.
+      </p>
+    </>
+  );
+}
+
+
+/**
+ * Qué tiene que pasar para que la salida caiga en su 10 % más bajo o más alto
+ * (D1): cómo están las entradas en esos casos frente a lo normal.
+ */
+export function QueTieneQuePasar({ colas }: { colas: readonly AnalisisCola[] }) {
+  const [cola, setCola] = useState<'baja' | 'alta'>('baja');
+  const c = colas.find((x) => x.cola === cola) ?? colas[0];
+  if (!c) return null;
+  const filas = c.filas.slice(0, 6);
+  const pct = (p: number) => `${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 0 })} %`;
+  return (
+    <>
+      <h3>Qué tiene que pasar</h3>
+      <label className="umbral-pregunta">
+        <span>Para que quede en su 10 %</span>
+        <select value={cola} onChange={(e) => setCola(e.target.value as 'baja' | 'alta')}>
+          <option value="baja">más bajo</option>
+          <option value="alta">más alto</option>
+        </select>
+      </label>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th>Entrada</th><th>En esos casos</th><th>Normalmente</th><th>Desplaz.</th></tr></thead>
+          <tbody>
+            {filas.map((f) => f.categoria !== undefined ? (
+              <tr key={f.id}>
+                <td>{f.nombre}</td>
+                <td className="celda-texto">«{f.categoria}» {pct(f.proporcionCola ?? 0)}</td>
+                <td>{pct(f.proporcion ?? 0)}</td>
+                <td></td>
+              </tr>
+            ) : (
+              <tr key={f.id}>
+                <td>{f.nombre}</td>
+                <td>{numero(f.medianaCola ?? NaN)}</td>
+                <td>{numero(f.mediana ?? NaN)}</td>
+                <td>{(f.desplazamiento ?? 0) > 0 ? '▲' : '▼'} {Math.abs(f.desplazamiento ?? 0).toLocaleString('es-ES', { maximumFractionDigits: 2 })} σ</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Medianas de cada entrada en las iteraciones en que la salida cae en su 10 % {cola === 'baja' ? 'más bajo' : 'más alto'},
+        frente a su mediana normal. El desplazamiento está en desviaciones típicas de la entrada: más de 0,5 σ
+        es una señal clara. En las entradas de texto, la categoría que más abunda en esos casos.
       </p>
     </>
   );
