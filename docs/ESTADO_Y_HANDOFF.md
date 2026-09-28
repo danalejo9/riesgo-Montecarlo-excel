@@ -955,6 +955,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     final). Pendiente del usuario: bloque L de la guía. **Siguiente**: etapa
     2 (B1 runtime compartido, B2 determinístico/probabilístico, B3 cinta).
 
+36. [x] **Etapa 1b y variables de texto (2026-09-28)**. F5 (pantalla
+    congelada en el compatible), C8 (hoja volcada con formatos y bloques), C9
+    (cómo se muestreó cada entrada). Bloque T: distribución `categorical`
+    (índice muestreado → texto en `ejecutarPlan`), recuento de textos y
+    lógicos por bloque (`executor/categorias.ts`), análisis en
+    `excel/analisisTexto.ts`, `valueOfInterest` en las salidas,
+    `RIESGO.CATEGORIA` con rangos leídos del libro (`lectorRangos.ts`), modo
+    compatible con `ValorLeido`. **Siguiente**: reescribir la guía de pruebas
+    desde cero y que el usuario la recorra entera; después, etapa 2.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.

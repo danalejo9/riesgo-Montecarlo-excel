@@ -480,7 +480,7 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
-### T. Variables de texto (categóricas) — ≈ 9–12 d *(diseño cerrado con el usuario el 28/09)*
+### T. Variables de texto (categóricas) — ✅ T1–T4 y T6 hechos el 28/09 (T5: documentación en el manual, bloque M)
 Propuesto por el usuario el 28/09 a raíz de G3: que una simulación pueda
 trabajar con **textos**, no solo con números. Dos mitades:
 
@@ -565,9 +565,9 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
   Botón «Ayuda» en el panel que abre la sección de la pestaña. Absorbe el
   manual de H9 y de E9.
 
-**Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → **C8, C9, F5**
-(pedidos otra vez en la tercera ronda) → **T1–T6** (variables de texto y
-salidas de sí/no) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+**Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
+✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
+pruebas con la guía reescrita** → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

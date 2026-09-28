@@ -5,7 +5,39 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
-### Etapa 1b: lo que se pidió dos veces (2026-09-28)
+### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
+
+Propuesto por el usuario a raíz de G3: que la simulación trabaje con textos,
+no solo con números. Hasta donde sabemos, ningún complemento del mercado lo
+hace.
+
+**Añadido**
+- **Entradas de texto** (T1): distribución `categorical` («Norte» 20, «Sur»
+  50, «Este» 30). En el panel, escrita o leída de la selección (nombres y
+  probabilidades); al marcar una celda que contiene texto se propone sola.
+  Se muestrea como un índice y el motor pone el texto justo antes de calcular,
+  así que Monte Carlo, hipercubo y reproducibilidad son los de siempre. No se
+  puede correlacionar (el orden de las categorías es arbitrario). También en
+  el modo compatible, que escribe el texto en la celda.
+- **Salidas de texto y de sí/no** (T2, T6): cada bloque cuenta con qué
+  frecuencia sale cada valor (tope de 200 distintos). Barras de frecuencia,
+  probabilidad de un **valor de interés** (guardado en el modelo, el
+  «umbral» de las salidas de texto), lectura en palabras, y comparación entre
+  escenarios por la probabilidad de cada valor. Los VERDADERO/FALSO se
+  cuentan además como 1/0 y usan los nombres del idioma del libro.
+- **Qué entradas deciden cada valor** (T3): su probabilidad cuando cada entrada
+  numérica está en su 10 % más bajo frente a su 10 % más alto.
+- **Cruce por categoría** (T3): cada salida numérica según cada entrada de
+  texto (media, p5, p95), y cada salida de texto según ella (valor más
+  frecuente). Las entradas de texto salen del tornado de correlaciones.
+- **`RIESGO.CATEGORIA(valores; pesos)`** (T4): con listas `{"Norte";"Sur"}` o
+  rangos de la hoja; fuera de la simulación enseña el valor más probable, y
+  «Preparar para compartir» deja ese texto en la celda.
+- Todo ello en el informe PDF, la hoja volcada (con gráfico de frecuencias) y
+  la tabla de escenarios; «Cómo se muestrearon las entradas» enseña las
+  frecuencias de una entrada de texto frente a lo esperado.
+
+### Etapa 1b: lo que se pidió dos veces (F5, C8, C9) (2026-09-28)
 
 **Añadido**
 - **Congelar la pantalla en el modo compatible** (F5): como `ScreenUpdating =

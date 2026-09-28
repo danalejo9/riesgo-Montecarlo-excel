@@ -72,25 +72,25 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 7 | E8 | ✅ **Color propio para las celdas con `RIESGO.*`** | **Tú** |
 | 8 | F4 | ✅ Núcleos en automático según el tamaño (con poco trabajo, 1 núcleo es más rápido) | Pruebas |
 
-### Etapa 1b: lo que pediste en la tercera ronda (≈ 3–5 días)
+### Etapa 1b: lo que pediste en la tercera ronda — ✅ hecha el 28/09
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 8a | C8 | **Hoja volcada legible** (sube desde la etapa 3: la pediste dos veces) | **Tú** |
-| 8b | C9 | **Ver cómo se muestreó cada entrada**: histograma, acumulada y estadísticos de los valores generados, con la distribución teórica encima | **Tú** |
-| 8c | F5 | **Congelar la pantalla en el modo compatible** (la pediste dos veces) | **Tú** |
+| 8a | C8 | ✅ **Hoja volcada legible** (sube desde la etapa 3: la pediste dos veces) | **Tú** |
+| 8b | C9 | ✅ **Ver cómo se muestreó cada entrada**: histograma, acumulada y estadísticos de los valores generados, con la distribución teórica encima | **Tú** |
+| 8c | F5 | ✅ **Congelar la pantalla en el modo compatible** (la pediste dos veces) | **Tú** |
 | 8d | F6 | ~~Reproducibilidad del modo compatible~~: casi seguro la distribución quedó distinta; se recomprueba en la ronda completa | Pruebas |
 
-### Bloque T: variables de texto y sí/no (T1–T6, ≈ 10–13 días; T7–T9 después de la etapa 2) — después de la etapa 1b; diseño cerrado contigo el 28/09
+### Bloque T: variables de texto y sí/no — ✅ T1–T4 y T6 hechos el 28/09 (T5, el manual, va con M; T7–T9 después de la etapa 2) — después de la etapa 1b; diseño cerrado contigo el 28/09
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| T1 | T1 | **Entradas de texto**: «Norte» 20 %, «Sur» 25 %… | **Tú** |
-| T2 | T2 | **Salidas de texto**: frecuencia de cada valor, cuál sale más, probabilidad de un valor | **Tú** |
-| T3 | T3 | Sensibilidad cruzada: salida numérica por categoría; qué entradas deciden una salida de texto | **Tú** |
-| T4 | T4 | `RIESGO.CATEGORIA` y «Preparar para compartir» | **Tú** |
+| T1 | T1 | ✅ **Entradas de texto**: «Norte» 20 %, «Sur» 25 %… | **Tú** |
+| T2 | T2 | ✅ **Salidas de texto**: frecuencia de cada valor, cuál sale más, probabilidad de un valor | **Tú** |
+| T3 | T3 | ✅ Sensibilidad cruzada: salida numérica por categoría; qué entradas deciden una salida de texto | **Tú** |
+| T4 | T4 | ✅ `RIESGO.CATEGORIA` y «Preparar para compartir» | **Tú** |
 | T5 | T5 | Manual, tutorial y pruebas con textos | **Tú** |
-| T6 | T6 | Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Tú** (confirmado 28/09) |
+| T6 | T6 | ✅ Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Tú** (confirmado 28/09) |
 | T7 | T7 | Entradas y salidas de fecha (percentiles en fechas) | Después de la etapa 2 |
 | T8 | T8 | Registro de riesgos: probabilidad × impacto en una tabla de la hoja | Después de la etapa 2 |
 | T9 | T9 | Opciones de decisión (A / B / C) simuladas y comparadas lado a lado | Después de la etapa 2 |
