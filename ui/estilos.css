@@ -397,3 +397,6 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .lista-escenarios label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .lista-escenarios button { margin-top: 0; }
 .tabla-resumen.sin-clic tbody tr { cursor: default; }
+
+/* C9: la distribución teórica sobre el histograma de lo muestreado. */
+.curva-teorica { fill: none; stroke: var(--baja, #e34948); stroke-width: 1.5; }

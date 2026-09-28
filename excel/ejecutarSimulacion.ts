@@ -53,6 +53,7 @@ export type {
   SimulacionCompletada,
 } from './informe.ts';
 import { entradasDeFunciones, resolverConFunciones } from './entradasRiesgo.ts';
+import { entradasMuestreadas } from './entradasMuestreadas.ts';
 import { indiceDeTextos } from './nombreSugerido.ts';
 import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
@@ -320,6 +321,7 @@ function porElRapido(
       cancelada: r.cancelada,
       milisegundos: performance.now() - args.arranque,
       muestraSensibilidad: largo,
+      entradas: entradasMuestreadas(args.modelo, clavesEntrada, muestrasEntrada),
       hilos: hilos(),
       salidas: args.modelo.outputs.map((salida, i) => {
         const s = r.porSalida.get(clavesSalida[i] as string);
@@ -390,6 +392,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     iteracionesPorSegundo: r.iteracionesPorSegundo,
     milisegundos: performance.now() - args.arranque,
     muestraSensibilidad: largo,
+    entradas: entradasMuestreadas(args.modelo, clavesEntrada, muestrasEntrada),
     salidas: args.modelo.outputs.map((salida, i) => {
       const s = r.porSalida.get(clavesSalida[i] as string);
       return {

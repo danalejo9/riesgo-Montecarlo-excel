@@ -19,6 +19,10 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   debajo y los dos gráficos a la derecha; los datos de los gráficos en su
   propia zona («Datos de los gráficos»); las salidas constantes en una línea;
   anchos de columna fijos (antes una nota larga ensanchaba la columna A).
+- **Cómo se muestrearon las entradas** (C9): en Resultados, para cada
+  entrada, los estadísticos de los valores que de verdad se generaron junto a
+  los de la distribución elegida, su histograma con la curva esperada encima
+  y su curva acumulada (`excel/entradasMuestreadas.ts`).
 
 ### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7), escenarios (E7), color RIESGO (E8) y núcleos (F4) (2026-09-27)
 

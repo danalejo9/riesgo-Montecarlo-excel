@@ -25,6 +25,7 @@ import {
   type PuntoCDF,
   type ResumenEstadistico,
 } from '../engine/stats/index.ts';
+import type { EntradaMuestreada } from './entradasMuestreadas.ts';
 import { lecturaDeSalida } from './lectura.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -213,6 +214,8 @@ export interface SimulacionCompletada {
   huellaModelo?: string;
   /** Entradas declaradas en el libro con funciones RIESGO.*, además de las del panel. */
   entradasDeFunciones?: { ref: string; distribucion: string; nombre?: string }[];
+  /** Cómo se muestreó cada entrada (C9), con los valores generados. */
+  entradas?: EntradaMuestreada[];
   /** Celdas con RIESGO.* que también están en el panel: se usó lo del panel. */
   funcionesIgnoradas?: string[];
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */

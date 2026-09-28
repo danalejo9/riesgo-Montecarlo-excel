@@ -31,6 +31,7 @@
 import { useEffect, useState } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import type { EntradaMuestreada } from '../excel/entradasMuestreadas.ts';
 import {
   escenarioActivo, MAXIMO_ESCENARIOS, tablaEscenarios, type AlmacenEscenarios, type FilaEscenario,
 } from '../excel/escenarios.ts';
@@ -372,6 +373,8 @@ export function Resultados({
           )}
         </section>
       ))}
+
+      {resultado.entradas && resultado.entradas.length > 0 && <EntradasMuestreadas entradas={resultado.entradas} />}
     </>
   );
 }
@@ -482,6 +485,57 @@ const VISIBLES_TORNADO = 10;
 
 /** Coma decimal y signo explícito: "+0,82", "−0,15". */
 const TODAS = '__todas__';
+
+/**
+ * Cómo se muestreó cada entrada (C9): los valores que de verdad se generaron,
+ * con la distribución elegida encima, para comprobar que el modelo usó lo que
+ * se quería. Una entrada cada vez, elegida arriba.
+ */
+function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestreada[] }) {
+  const [id, setId] = useState(entradas[0]?.id ?? '');
+  const e = entradas.find((x) => x.id === id) ?? entradas[0];
+  if (!e) return null;
+  return (
+    <section>
+      <h2>Cómo se muestrearon las entradas</h2>
+      <p className="tenue">
+        Los valores que de verdad se generaron en la simulación ({miles(e.n)} iteraciones), con la
+        distribución elegida encima: la línea es lo que se esperaba en cada barra.
+      </p>
+      <label className="selector-salida">
+        <span className="tenue">Entrada</span>
+        <select value={e.id} onChange={(ev) => setId(ev.target.value)}>
+          {entradas.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+        </select>
+      </label>
+      <p className="tenue">{e.ref} · {e.distribucion}</p>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead>
+            <tr><th></th><th>Muestreado</th>{e.teorica && <th>Esperado</th>}</tr>
+          </thead>
+          <tbody>
+            <tr><td>Media</td><td>{numero(e.media)}</td>{e.teorica && <td>{numero(e.teorica.media)}</td>}</tr>
+            <tr><td>Desviación</td><td>{numero(e.desviacion)}</td>{e.teorica && <td>{numero(e.teorica.desviacion)}</td>}</tr>
+            <tr><td>Mínimo</td><td>{numero(e.min)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p5</td><td>{numero(e.percentiles.p5)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p50</td><td>{numero(e.percentiles.p50)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p95</td><td>{numero(e.percentiles.p95)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>Máximo</td><td>{numero(e.max)}</td>{e.teorica && <td></td>}</tr>
+          </tbody>
+        </table>
+      </div>
+      {e.histograma.length > 0 && (
+        <>
+          <h3>Histograma</h3>
+          <Histograma barras={e.histograma} {...(e.esperado ? { esperado: e.esperado } : {})} etiqueta={`Histograma de ${e.nombre}`} />
+        </>
+      )}
+      <h3>Probabilidad acumulada</h3>
+      <CurvaAcumulada puntos={e.cdf} />
+    </section>
+  );
+}
 
 /** Dos o tres frases que dicen lo que enseñan los números de la salida (C7). Con reglas, sin IA. */
 function LecturaSalida({ salida, umbral }: { salida: ResultadoSalida; umbral?: UmbralRiskModel }) {
@@ -744,13 +798,24 @@ const MARGEN_H = { arriba: 6, derecha: 8, abajo: 20, izquierda: 8 };
  * área coloreada **es** la respuesta de arriba, y se ve de un vistazo si la
  * cola que preocupa es fina o gruesa.
  */
-export function Histograma({ barras, umbral }: { barras: readonly BinHistograma[]; umbral?: UmbralRiskModel }) {
+export function Histograma({
+  barras,
+  umbral,
+  esperado,
+  etiqueta = 'Histograma de la salida',
+}: {
+  barras: readonly BinHistograma[];
+  umbral?: UmbralRiskModel;
+  /** Lo que esperaba la distribución teórica en cada barra (C9): una línea encima. */
+  esperado?: readonly number[];
+  etiqueta?: string;
+}) {
   const [cerca, setCerca] = useState<number | null>(null);
   const min = (barras[0] as BinHistograma).x0;
   const max = (barras[barras.length - 1] as BinHistograma).x1;
   const rango = max - min || 1;
   const total = barras.reduce((s, b) => s + b.count, 0);
-  const mayor = Math.max(...barras.map((b) => b.count), 1);
+  const mayor = Math.max(...barras.map((b) => b.count), ...(esperado ?? []), 1);
   const ancho = ANCHO - MARGEN_H.izquierda - MARGEN_H.derecha;
   const aX = (x: number) => MARGEN_H.izquierda + ((x - min) / rango) * ancho;
   const alto = ALTO_H - MARGEN_H.arriba - MARGEN_H.abajo;
@@ -765,7 +830,7 @@ export function Histograma({ barras, umbral }: { barras: readonly BinHistograma[
 
   return (
     <figure className="grafico">
-      <svg viewBox={`0 0 ${ANCHO} ${ALTO_H}`} role="img" aria-label="Histograma de la salida" onMouseLeave={() => setCerca(null)}>
+      <svg viewBox={`0 0 ${ANCHO} ${ALTO_H}`} role="img" aria-label={etiqueta} onMouseLeave={() => setCerca(null)}>
         <line className="rejilla" x1={MARGEN_H.izquierda} y1={ALTO_H - MARGEN_H.abajo} x2={ANCHO - MARGEN_H.derecha} y2={ALTO_H - MARGEN_H.abajo} />
         {barras.map((bin, i) => {
           const x = aX(bin.x0);
@@ -786,6 +851,12 @@ export function Histograma({ barras, umbral }: { barras: readonly BinHistograma[
             </g>
           );
         })}
+        {esperado && esperado.length === barras.length && (
+          <polyline
+            className="curva-teorica"
+            points={barras.map((bin, i) => `${(aX(bin.x0) + aX(bin.x1)) / 2},${ALTO_H - MARGEN_H.abajo - ((esperado[i] ?? 0) / mayor) * alto}`).join(' ')}
+          />
+        )}
         {umbral && umbral.value > min && umbral.value < max && (
           <line className="cursor" x1={aX(umbral.value)} y1={MARGEN_H.arriba} x2={aX(umbral.value)} y2={ALTO_H - MARGEN_H.abajo} />
         )}
@@ -794,7 +865,8 @@ export function Histograma({ barras, umbral }: { barras: readonly BinHistograma[
       </svg>
       <figcaption className="tenue">
         {b
-          ? `Entre ${numero(b.x0)} y ${numero(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)`
+          ? `Entre ${numero(b.x0)} y ${numero(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)` +
+            (esperado && cerca !== null && esperado[cerca] !== undefined ? `; la distribución esperaba ${miles(Math.round(esperado[cerca]))}` : '')
           : 'Pasa el ratón por una barra para leerla.'}
       </figcaption>
     </figure>
