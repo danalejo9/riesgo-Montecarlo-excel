@@ -230,4 +230,29 @@ describe('construirInforme', () => {
     expect(t).toContain('Qué decide que salga «Sur»\t10 % más bajo\t10 % más alto');
     expect(informe.graficos.some((g) => g.titulo.includes('frecuencia'))).toBe(true);
   });
+
+  it('tornado y araña como gráficos de Excel, y resumen de entradas con su puesto (C1, C2)', () => {
+    const r: SimulacionCompletada = {
+      ...RESULTADO,
+      entradas: [{
+        id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', distribucion: 'Triangular(105; 120; 140)', n: 1000,
+        media: 121.6, desviacion: 7.1, min: 105, max: 140, percentiles: { p5: 110, p50: 121, p95: 134 }, histograma: [], cdf: [],
+      }],
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        sensibilidad: [
+          { id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', spearman: 0.8, peso: 0.7 },
+          { id: 'in_b', nombre: 'Unidades', ref: 'Modelo!C6', spearman: -0.3, peso: 0.3 },
+        ],
+        arana: [{ id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', medias: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], rango: 9 }],
+      })),
+    };
+    const informe = construirInforme(MODELO, r);
+    const tipos = informe.graficos.map((g) => g.tipo);
+    expect(tipos).toContain('barras');
+    expect(tipos).toContain('lineas-filas');
+    const t = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(t).toContain('Puesto en el tornado');
+    expect(t).toContain('Precio unitario\tModelo!C5\tTriangular(105; 120; 140)\t121.6\t7.1\t110\t121\t134\t1');
+  });
 });

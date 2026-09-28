@@ -103,13 +103,17 @@ export async function volcarResultados(
 
     // Gráficos nativos de Excel junto a cada salida, sobre sus datos.
     for (const g of bloques.graficos) {
+      const tipo = g.tipo === 'linea' || g.tipo === 'lineas-filas' ? Excel.ChartType.line
+        : g.tipo === 'barras' ? Excel.ChartType.barClustered
+        : Excel.ChartType.columnClustered;
       const grafico = hoja.charts.add(
-        g.tipo === 'linea' ? Excel.ChartType.line : Excel.ChartType.columnClustered,
+        tipo,
         zona(g.datos),
-        Excel.ChartSeriesBy.columns,
+        g.tipo === 'lineas-filas' ? Excel.ChartSeriesBy.rows : Excel.ChartSeriesBy.columns,
       );
       grafico.title.text = g.titulo;
-      grafico.legend.visible = false;
+      // La araña necesita leyenda: una línea por entrada.
+      grafico.legend.visible = g.tipo === 'lineas-filas';
       grafico.setPosition(
         hoja.getRangeByIndexes(g.desde.fila, g.desde.col, 1, 1),
         hoja.getRangeByIndexes(g.hasta.fila, g.hasta.col, 1, 1),

@@ -313,10 +313,10 @@ export function instalarExcelFalso(): void {
 
   g.Excel = {
     run: <T>(fn: (c: typeof contexto) => Promise<T>) => fn(contexto),
-    ChartType: { line: 'Line', columnClustered: 'ColumnClustered' },
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered' },
     BorderIndex: { edgeBottom: 'EdgeBottom' },
     BorderLineStyle: { continuous: 'Continuous' },
-    ChartSeriesBy: { columns: 'Columns' },
+    ChartSeriesBy: { columns: 'Columns', rows: 'Rows' },
     CalculationType: { recalculate: 'Recalculate', full: 'Full' },
     RangeValueType: { double: 'Double', integer: 'Integer', boolean: 'Boolean', string: 'String', error: 'Error', empty: 'Empty' },
     SheetVisibility: { visible: 'Visible' },

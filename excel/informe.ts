@@ -269,7 +269,8 @@ export interface Zona {
 }
 
 export interface GraficoInforme {
-  tipo: 'linea' | 'columnas';
+  /** `barras`: horizontales (tornado). `lineas-filas`: una serie por fila (araña). */
+  tipo: 'linea' | 'columnas' | 'barras' | 'lineas-filas';
   titulo: string;
   /** Los datos: la primera fila son las cabeceras. */
   datos: Zona;
@@ -297,9 +298,13 @@ export interface Informe {
   anchos: number[];
 }
 
-/** Columnas del cuerpo (A..F), de los gráficos (H..O) y de sus datos (Q en adelante). */
+/**
+ * Columnas del cuerpo (A..F), de los gráficos de la distribución (H..O), de
+ * los de sensibilidad (Q..X) y de los datos de todos ellos (Z en adelante).
+ */
 const COL_GRAFICOS = 7;
-const COL_DATOS = 16;
+const COL_GRAFICOS_2 = 16;
+const COL_DATOS = 25;
 const ALTO_GRAFICO = 15;
 
 export const FORMATO_ENTERO = '#,##0';
@@ -391,12 +396,27 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   if (resultado.eleccion.motivos.length > 0) tenue('El motor rápido no pudo con este modelo; se usó el compatible.');
   fila++;
 
-  titulo('ENTRADAS INCIERTAS');
-  cabecera(['Nombre', 'Celda', 'Distribución', 'Correlaciones']);
+  // C1: el resumen de las entradas, con lo que de verdad se muestreó y su
+  // puesto en el tornado (el mayor |ρ| con cualquier salida).
+  titulo('RESUMEN DE LAS ENTRADAS');
+  cabecera(['Nombre', 'Celda', 'Distribución', 'Media', 'Desviación', 'p5', 'p50', 'p95', 'Puesto en el tornado', 'Correlaciones']);
   const nombrePorId = new Map(modelo.inputs.map((e) => [e.id, e.name] as const));
+  const muestreadas = new Map((resultado.entradas ?? []).map((e) => [e.id, e] as const));
+  const influencia = new Map<string, number>();
+  for (const s of resultado.salidas) {
+    for (const x of s.sensibilidad ?? []) influencia.set(x.id, Math.max(influencia.get(x.id) ?? 0, Math.abs(x.spearman)));
+  }
+  const puestos = new Map([...influencia.entries()].sort((a, b) => b[1] - a[1]).map(([id], i) => [id, i + 1] as const));
   for (const e of modelo.inputs) {
     const correlaciones = e.correlations.map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`).join('; ');
-    linea([e.name, e.ref, resumirDistribucion(e.dist), correlaciones]);
+    const m = muestreadas.get(e.id);
+    const numerica = m && !m.frecuencias;
+    if (numerica) formato({ fila, col: 3, filas: 1, cols: 5 }, Math.abs(m.media) >= 100 ? FORMATO_ENTERO : '#,##0.00');
+    linea([
+      e.name, e.ref, resumirDistribucion(e.dist),
+      numerica ? m.media : '', numerica ? m.desviacion : '', numerica ? m.percentiles.p5 : '', numerica ? m.percentiles.p50 : '', numerica ? m.percentiles.p95 : '',
+      puestos.get(e.id) ?? '', correlaciones,
+    ]);
   }
   for (const e of resultado.entradasDeFunciones ?? []) {
     linea([`${e.nombre && e.nombre !== e.ref ? e.nombre : e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
@@ -602,13 +622,37 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     });
     filaDatos++;
 
+    // C2: el tornado y la araña como gráficos de Excel, a la derecha de los otros.
+    if (s.sensibilidad && s.sensibilidad.length > 0) {
+      poner(filaDatos++, COL_DATOS, [`${s.nombre}: tornado (correlación de rangos)`]);
+      const filaCab = filaDatos;
+      cabeceras.push({ fila: filaCab, col: COL_DATOS, filas: 1, cols: 2 });
+      poner(filaDatos++, COL_DATOS, ['Entrada', 'Spearman (ρ)']);
+      // Excel dibuja la primera categoría abajo: de menor a mayor para que la
+      // que más pesa quede arriba, como en el panel.
+      const orden = [...s.sensibilidad].sort((a, b) => Math.abs(a.spearman) - Math.abs(b.spearman));
+      for (const x of orden) poner(filaDatos++, COL_DATOS, [x.nombre, x.spearman]);
+      formato({ fila: filaCab + 1, col: COL_DATOS + 1, filas: orden.length, cols: 1 }, FORMATO_RHO);
+      graficos.push({
+        tipo: 'barras', titulo: `${s.nombre} — qué la mueve más`,
+        datos: { fila: filaCab, col: COL_DATOS, filas: orden.length + 1, cols: 2 },
+        desde: { fila: inicio, col: COL_GRAFICOS_2 }, hasta: { fila: inicio + ALTO_GRAFICO, col: COL_GRAFICOS_2 + 7 },
+      });
+      filaDatos++;
+    }
     if (s.arana && s.arana.length > 0) {
       poner(filaDatos++, COL_DATOS, [`${s.nombre}: araña (media de la salida por decil de la entrada)`]);
-      cabeceras.push({ fila: filaDatos, col: COL_DATOS, filas: 1, cols: 12 });
+      const filaCab = filaDatos;
+      cabeceras.push({ fila: filaCab, col: COL_DATOS, filas: 1, cols: 12 });
       poner(filaDatos++, COL_DATOS, ['Entrada', ...Array.from({ length: 10 }, (_, i) => `D${i + 1}`), 'Rango']);
       const ini = filaDatos;
       for (const c of s.arana) poner(filaDatos++, COL_DATOS, [c.nombre, ...c.medias, c.rango]);
       formato({ fila: ini, col: COL_DATOS + 1, filas: s.arana.length, cols: 11 }, f);
+      graficos.push({
+        tipo: 'lineas-filas', titulo: `${s.nombre} — qué pasa si cada entrada se mueve`,
+        datos: { fila: filaCab, col: COL_DATOS, filas: s.arana.length + 1, cols: 11 },
+        desde: { fila: inicio + ALTO_GRAFICO + 1, col: COL_GRAFICOS_2 }, hasta: { fila: inicio + 2 * ALTO_GRAFICO + 1, col: COL_GRAFICOS_2 + 7 },
+      });
       filaDatos++;
     }
 

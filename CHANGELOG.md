@@ -15,6 +15,12 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   puede ser una ganancia o un coste), asimetría, curtosis en exceso y
   semidesviación, en el panel, el PDF y la hoja volcada
   (`engine/stats/riesgo.ts`).
+- **Resumen de las entradas** en la hoja volcada (C1): distribución, media,
+  desviación, p5, p50 y p95 de lo que de verdad se muestreó, y su puesto en el
+  tornado.
+- **Tornado y araña como gráficos de Excel** (C2) en la hoja volcada, junto a
+  los de la distribución: barras horizontales con la que más pesa arriba, y una
+  línea por entrada con su leyenda.
 
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 
