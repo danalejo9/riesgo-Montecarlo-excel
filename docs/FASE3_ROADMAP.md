@@ -408,9 +408,8 @@ Estimaciones en días de trabajo efectivo.
   distinto al repetir K1/K2 con el motor de Excel. En el banco los dos dan
   exactamente lo mismo (media, desviación y todos los percentiles). Sospecha:
   la entrada C5 se volvió a marcar con la triangular por defecto (108/120/132)
-  en vez de 105/120/140. Pendiente de los datos del usuario; si se confirma que
-  Excel da números distintos con las mismas entradas, investigar el orden de
-  recálculo.
+  en vez de 105/120/140. El usuario confirma (28/09) que probablemente la
+  distribución quedó distinta. Se cierra; se recomprueba en la ronda completa.
 
 ### G. Producto (E9–E11)
 Mac, instalación sin `npm start`, manifiesto de producción, licencias,
@@ -531,20 +530,21 @@ entradas deciden cada valor; salida numérica por categoría) · T4 función
 `RIESGO.CATEGORIA` y «Preparar para compartir» · T5 documentación, tutorial y
 pruebas de fidelidad con textos.
 
-**Ideas del mismo estilo** *(propuestas el 28/09, pendientes de confirmar)*:
-- **T6. Salidas de sí/no** (`VERDADERO`/`FALSO`): «¿se cumple el covenant?»,
+**Ideas del mismo estilo** *(propuestas el 28/09; el usuario incluye T6 en
+este bloque y deja T7, T8 y T9 para después de la etapa 2)*:
+- **T6. Salidas de sí/no** *(entra en el bloque T)* (`VERDADERO`/`FALSO`): «¿se cumple el covenant?»,
   «¿llega a tiempo?» → probabilidad de que sea verdadero, y qué entradas lo
   deciden. Sale casi gratis con T2.
-- **T7. Entradas de fecha**: una fecha de inicio o de entrega incierta
+- **T7. Entradas de fecha** *(después de la etapa 2)*: una fecha de inicio o de entrega incierta
   (triangular entre dos fechas) que se enseña como fecha y no como número de
   serie, y salidas de fecha («fecha de fin del proyecto») con percentiles en
   fechas. Muy de gestión de proyectos.
-- **T8. Registro de riesgos**: cada riesgo como probabilidad × impacto (un
+- **T8. Registro de riesgos** *(después de la etapa 2)*: cada riesgo como probabilidad × impacto (un
   sí/no y una distribución del coste o del retraso), declarado en una tabla
   de la hoja, con su propia vista: qué riesgos pesan más en el total. Es como
   se trabaja el riesgo en obra y en proyectos, y ningún complemento de
   simulación lo trae hecho de forma sencilla.
-- **T9. Opciones de decisión**: una celda con varias opciones que **no** son
+- **T9. Opciones de decisión** *(después de la etapa 2)*: una celda con varias opciones que **no** son
   aleatorias («proveedor A / B / C», «deuda al 60 / 70 / 80 %»): se simula
   el modelo con cada una y se comparan lado a lado. Es la versión de texto
   de H3 (simulaciones en serie).
@@ -566,9 +566,17 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
   manual de H9 y de E9.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → **C8, C9, F5**
-(pedidos otra vez en la tercera ronda) → **T1–T5** (variables de texto) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
-C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G →
+(pedidos otra vez en la tercera ronda) → **T1–T6** (variables de texto y
+salidas de sí/no) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+**T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
+libros → G →
 **M (libros tutoriales y manual)** → I3.
+**Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por
+separado. Se consolidan varios (etapa 1b y bloque T como mínimo), se
+**reescribe la guía de pruebas desde cero** y el usuario la recorre entera
+desde el principio. J3 (abrir el libro preparado sin el complemento, en el
+iPad) queda para esa ronda.
+
 La lista completa, numerada y con su origen, está en
 `docs/INVENTARIO_FUNCIONALIDADES.md`. *(H1 ✅ 26/09.)*
 

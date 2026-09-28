@@ -79,9 +79,9 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 8a | C8 | **Hoja volcada legible** (sube desde la etapa 3: la pediste dos veces) | **Tú** |
 | 8b | C9 | **Ver cómo se muestreó cada entrada**: histograma, acumulada y estadísticos de los valores generados, con la distribución teórica encima | **Tú** |
 | 8c | F5 | **Congelar la pantalla en el modo compatible** (la pediste dos veces) | **Tú** |
-| 8d | F6 | Comprobar la reproducibilidad del modo compatible con tus datos | Pruebas |
+| 8d | F6 | ~~Reproducibilidad del modo compatible~~: casi seguro la distribución quedó distinta; se recomprueba en la ronda completa | Pruebas |
 
-### Bloque T: variables de texto (≈ 9–12 días) — después de la etapa 1b; diseño cerrado contigo el 28/09
+### Bloque T: variables de texto y sí/no (T1–T6, ≈ 10–13 días; T7–T9 después de la etapa 2) — después de la etapa 1b; diseño cerrado contigo el 28/09
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
@@ -90,10 +90,10 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | T3 | T3 | Sensibilidad cruzada: salida numérica por categoría; qué entradas deciden una salida de texto | **Tú** |
 | T4 | T4 | `RIESGO.CATEGORIA` y «Preparar para compartir» | **Tú** |
 | T5 | T5 | Manual, tutorial y pruebas con textos | **Tú** |
-| T6 | T6 | Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Nuevo**, por confirmar |
-| T7 | T7 | Entradas y salidas de fecha (percentiles en fechas) | **Nuevo**, por confirmar |
-| T8 | T8 | Registro de riesgos: probabilidad × impacto en una tabla de la hoja | **Nuevo**, por confirmar |
-| T9 | T9 | Opciones de decisión (A / B / C) simuladas y comparadas lado a lado | **Nuevo**, por confirmar |
+| T6 | T6 | Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Tú** (confirmado 28/09) |
+| T7 | T7 | Entradas y salidas de fecha (percentiles en fechas) | Después de la etapa 2 |
+| T8 | T8 | Registro de riesgos: probabilidad × impacto en una tabla de la hoja | Después de la etapa 2 |
+| T9 | T9 | Opciones de decisión (A / B / C) simuladas y comparadas lado a lado | Después de la etapa 2 |
 
 ### Etapa 2: funciones RIESGO completas y la cinta (≈ 6–8 días)
 
