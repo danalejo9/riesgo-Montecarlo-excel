@@ -9,6 +9,8 @@ export {
 export { agruparCorrelaciones, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
 export {
   fromDescriptor,
+  categoriasDe,
+  MAXIMO_CATEGORIAS,
   problemaDeDistribucion,
   toDescriptor,
   type DistributionSpec,

@@ -1,0 +1,115 @@
+/**
+ * Variables de texto (T1, T2, T6): una entrada que vale «Norte», «Sur» o
+ * «Este» con sus probabilidades, fórmulas del libro que la usan, y salidas
+ * de texto y de sí/no contadas por frecuencia.
+ */
+import { describe, expect, it } from 'vitest';
+
+import { compilarPlan } from '../../engine/compiler/plan.ts';
+import { simularPorBloques } from '../../engine/executor/index.ts';
+import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
+import { modeloVacio, prepararEntradas, problemaDeDistribucion, resumirDistribucion } from '../../engine/modelo/index.ts';
+import { establecerRegional, regionalDesdeIdioma, restablecerRegional } from '../../engine/values/regional.ts';
+
+const H = 'Hoja1';
+const k = (ref: string) => claveDeReferencia(H, ref);
+
+function celdas(formulas: Record<string, string>): FormulaCelda[] {
+  return Object.entries(formulas).map(([ref, formula]) => {
+    const m = /^([A-Z]+)([0-9]+)$/.exec(ref) as RegExpExecArray;
+    const col = [...(m[1] as string)].reduce((acc, c) => acc * 26 + (c.charCodeAt(0) - 64), 0);
+    return { hoja: H, col, fila: Number(m[2]), formula };
+  });
+}
+
+async function simular(n = 20_000, retener = 0) {
+  const f = celdas({
+    A1: '"Norte"',
+    B1: 'IF(A1="Norte",100,IF(A1="Sur",60,20))', // numérica que depende del texto
+    C1: 'A1&" (zona)"',                          // salida de texto
+    D1: 'B1>50',                                 // salida de sí/no
+  });
+  const { grafo } = construirGrafo(f);
+  const m = modeloVacio();
+  m.inputs.push({
+    id: 'in_z', name: 'Zona', ref: 'A1',
+    dist: { type: 'categorical', categories: ['Norte', 'Sur', 'Este'], weights: [2, 5, 3] },
+    correlations: [],
+  });
+  m.settings.iterations = n;
+  const prep = prepararEntradas(m, (ref) => k(ref), 11);
+  if (!prep.ok) throw new Error(prep.errores.join());
+  const c = compilarPlan(grafo, new Set([k('A1')]), [k('B1'), k('C1'), k('D1')]);
+  if (!c.ok) throw new Error(c.error.motivo);
+  const r = await simularPorBloques(grafo, c.plan, prep.entradas, 11, n, { retenerMuestra: retener, bloquesMinimos: 16 });
+  if (!r.ok) throw new Error(r.error.motivo);
+  return r;
+}
+
+describe('entradas de texto (T1)', () => {
+  it('la distribución categórica se valida y se resume', () => {
+    expect(problemaDeDistribucion({ type: 'categorical', categories: ['A', 'B'], weights: [1, 1] })).toBeNull();
+    expect(problemaDeDistribucion({ type: 'categorical', categories: ['A', 'A'], weights: [1, 1] })).toMatch(/repetidas/);
+    expect(problemaDeDistribucion({ type: 'categorical', categories: ['A', 'B'], weights: [1] })).toMatch(/un peso por categoría/);
+    expect(resumirDistribucion({ type: 'categorical', categories: ['Norte', 'Sur'], weights: [1, 1] })).toBe('Categórica (Norte, Sur)');
+  });
+
+  it('el libro calcula con el texto: la media de la numérica sigue las probabilidades', async () => {
+    const r = await simular();
+    // 0,2·100 + 0,5·60 + 0,3·20 = 56
+    expect(r.porSalida.get(k('B1'))?.welford.media).toBeCloseTo(56, 0);
+  });
+
+  it('no se puede correlacionar una entrada de texto', () => {
+    const m = modeloVacio();
+    m.inputs.push(
+      { id: 'a', name: 'Zona', ref: 'A1', dist: { type: 'categorical', categories: ['N', 'S'], weights: [1, 1] }, correlations: [{ with: 'b', coefficient: 0.5 }] },
+      { id: 'b', name: 'Precio', ref: 'A2', dist: { type: 'normal', mean: 1, stdDev: 1 }, correlations: [{ with: 'a', coefficient: 0.5 }] },
+    );
+    const p = prepararEntradas(m, (ref) => k(ref), 1);
+    expect(p.ok).toBe(false);
+    if (!p.ok) expect(p.errores[0]).toMatch(/entrada de texto/);
+  });
+});
+
+describe('salidas de texto y de sí/no (T2, T6)', () => {
+  it('frecuencias de la salida de texto', async () => {
+    const r = await simular();
+    const c = r.porSalida.get(k('C1'));
+    const total = Object.values(c?.categorias ?? {}).reduce((a, b) => a + b, 0);
+    expect(total).toBe(20_000);
+    expect((c?.categorias?.['Sur (zona)'] ?? 0) / total).toBeCloseTo(0.5, 1);
+    expect((c?.categorias?.['Norte (zona)'] ?? 0) / total).toBeCloseTo(0.2, 1);
+    expect(c?.noNumericas).toBe(20_000); // no son números: fuera de media y percentiles
+  });
+
+  it('la de sí/no cuenta como categoría y como 1/0 (su media es la probabilidad)', async () => {
+    establecerRegional(regionalDesdeIdioma('es-ES', { decimal: ',', miles: '.' }));
+    try {
+      const r = await simular();
+      const d = r.porSalida.get(k('D1'));
+      // VERDADERO cuando B1 > 50: Norte y Sur, 0,7.
+      expect(d?.welford.media).toBeCloseTo(0.7, 1);
+      const total = Object.values(d?.categorias ?? {}).reduce((a, b) => a + b, 0);
+      expect((d?.categorias?.['VERDADERO'] ?? 0) / total).toBeCloseTo(0.7, 1);
+    } finally {
+      restablecerRegional();
+    }
+  });
+
+  it('retiene el valor de texto de cada iteración, alineado con la muestra', async () => {
+    const r = await simular(5_000, 1_000);
+    const c = r.porSalida.get(k('C1'));
+    const b = r.porSalida.get(k('B1'));
+    expect(c?.muestraTexto).toHaveLength(1_000);
+    for (let i = 0; i < 1_000; i++) {
+      const esperado = { 'Norte (zona)': 100, 'Sur (zona)': 60, 'Este (zona)': 20 }[c?.muestraTexto?.[i] as string];
+      expect(b?.muestra?.[i]).toBe(esperado);
+    }
+  });
+
+  it('una salida numérica no lleva recuento de categorías', async () => {
+    const r = await simular();
+    expect(r.porSalida.get(k('B1'))?.categorias).toBeUndefined();
+  });
+});

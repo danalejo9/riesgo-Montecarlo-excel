@@ -30,7 +30,23 @@ export type DistributionSpec =
   | { type: 'bernoulli'; p: number }
   | { type: 'binomial'; n: number; p: number }
   | { type: 'poisson'; lambda: number }
-  | { type: 'discrete'; values: number[]; weights: number[] };
+  | { type: 'discrete'; values: number[]; weights: number[] }
+  /**
+   * Una entrada de **texto** (T1): «Norte» con peso 20, «Sur» con 25… Se
+   * muestrea como el índice de la categoría (una discreta 0..m−1), y el
+   * motor pone el texto en la celda justo antes de calcular. Así el muestreo,
+   * el hipercubo latino, las correlaciones y la reproducibilidad son los de
+   * siempre.
+   */
+  | { type: 'categorical'; categories: string[]; weights: number[] };
+
+/** Límite de categorías de una entrada de texto: más no se leen en un panel. */
+export const MAXIMO_CATEGORIAS = 200;
+
+/** Las categorías de una entrada de texto, o `undefined` si es numérica. */
+export function categoriasDe(spec: DistributionSpec): readonly string[] | undefined {
+  return spec.type === 'categorical' ? spec.categories : undefined;
+}
 
 const PARAMETRIZACION_A_INGLES: Record<ParametrizacionLognormal, LognormalParametrization> = {
   variable: 'variable',
@@ -62,6 +78,17 @@ export function toDescriptor(spec: DistributionSpec): DescriptorDistribucion {
     case 'binomial': return { tipo: 'binomial', n: spec.n, p: spec.p };
     case 'poisson': return { tipo: 'poisson', lambda: spec.lambda };
     case 'discrete': return { tipo: 'discreta', valores: spec.values, pesos: spec.weights };
+    case 'categorical': {
+      const c = spec.categories;
+      if (!Array.isArray(c) || c.length === 0) throw new Error('CATEGÓRICA: hace falta al menos una categoría');
+      if (c.length > MAXIMO_CATEGORIAS) throw new Error(`CATEGÓRICA: como mucho ${MAXIMO_CATEGORIAS} categorías`);
+      if (!c.every((x) => typeof x === 'string' && x.trim() !== '')) throw new Error('CATEGÓRICA: cada categoría tiene que ser un texto no vacío');
+      if (new Set(c).size !== c.length) throw new Error('CATEGÓRICA: hay categorías repetidas');
+      if (!Array.isArray(spec.weights) || spec.weights.length !== c.length) {
+        throw new Error('CATEGÓRICA: tiene que haber un peso por categoría');
+      }
+      return { tipo: 'discreta', valores: c.map((_, i) => i), pesos: spec.weights };
+    }
     default:
       // `spec` puede venir de JSON sin validar (workbook.settings): a
       // diferencia de un `switch` sobre un tipo ya comprobado por TypeScript,

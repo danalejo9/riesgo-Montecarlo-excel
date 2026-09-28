@@ -28,6 +28,10 @@ export interface ParcialSalida {
    * sensibilidad, que necesita ordenar valores y no solo resumirlos.
    */
   muestra?: Float64Array;
+  /** Salidas de texto o sí/no (T2, T6): valor → iteraciones del bloque. */
+  categorias?: Record<string, number>;
+  /** El valor de texto de cada iteración retenida del bloque, alineado con `muestra`. */
+  muestraTexto?: (string | null)[];
 }
 
 /** clave de celda de salida -> su parcial en un bloque concreto. */

@@ -31,6 +31,7 @@
 import type { Grafo, NodoGrafo } from '../graph/graph.ts';
 import type { Buffer } from '../values/buffer.ts';
 import {
+  crearConstructor,
   desdeEscalar,
   vacioConstante,
   valorEn,
@@ -50,6 +51,8 @@ export function ejecutarPlan(
   plan: Plan,
   entradas: Map<string, Buffer>,
   n: number,
+  /** Entradas de texto (T1): el buffer trae el índice de la categoría y aquí está su texto. */
+  categorias?: ReadonlyMap<string, readonly string[]>,
 ): ResultadoEjecucion {
   const valores = new Map<string, Columna>();
   const salidasSet = new Set(plan.salidas);
@@ -81,7 +84,8 @@ export function ejecutarPlan(
           error: { clave, motivo: `El buffer de entrada tiene ${provista.length} muestras y se esperaban ${n}` },
         };
       }
-      valores.set(clave, vectorNumerico(provista));
+      const textos = categorias?.get(clave);
+      valores.set(clave, textos ? columnaDeCategorias(provista, textos) : vectorNumerico(provista));
       marcarConsumidas(grafo, clave, consumir);
       continue;
     }
@@ -154,4 +158,15 @@ function marcarConsumidas(grafo: Grafo, clave: string, consumir: (clave: string)
   for (const dependencia of grafo.dependencias.get(clave) ?? []) {
     if (dependencia !== clave) consumir(dependencia);
   }
+}
+
+/** Una columna de textos a partir de los índices muestreados de una entrada categórica. */
+export function columnaDeCategorias(indices: Buffer, textos: readonly string[]): Columna {
+  const c = crearConstructor(indices.length);
+  for (let i = 0; i < indices.length; i++) {
+    const t = textos[Math.round(indices[i] as number)];
+    if (t === undefined) c.ponerError(i, '#N/A');
+    else c.ponerTexto(i, t);
+  }
+  return c.terminar();
 }

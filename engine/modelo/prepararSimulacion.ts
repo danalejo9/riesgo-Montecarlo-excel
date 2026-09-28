@@ -25,7 +25,7 @@ import { construirDesdeDescriptor } from '../distributions/index.ts';
 import type { DefinicionEntrada } from '../executor/entradas.ts';
 import { correlacionarImanConover, muestrearLHS, muestrearMonteCarlo } from '../sampling/index.ts';
 import { agruparCorrelaciones } from './correlaciones.ts';
-import { toDescriptor } from './distributionSchema.ts';
+import { categoriasDe, toDescriptor } from './distributionSchema.ts';
 import type { EntradaRiskModel, ModeloRiesgo } from './riskModel.ts';
 
 export type ResultadoPreparacion =
@@ -55,11 +55,18 @@ export function prepararEntradas(
       id: flujo(entrada),
       distribucion: toDescriptor(entrada.dist),
       metodo: modelo.settings.sampling,
+      ...(categoriasDe(entrada.dist) ? { categorias: categoriasDe(entrada.dist) } : {}),
     });
   }
 
   for (const grupo of agrupacion.grupos) {
     const entradasGrupo = grupo.ids.map((id) => porId.get(id) as EntradaRiskModel);
+    // Una correlación de rangos con una lista de textos no significa nada: el
+    // orden de las categorías es arbitrario (T1).
+    const deTexto = entradasGrupo.find((e) => e.dist.type === 'categorical');
+    if (deTexto) {
+      return { ok: false, errores: [`«${deTexto.name}» es una entrada de texto: no se puede correlacionar con otras.`] };
+    }
     const buffers = entradasGrupo.map((entrada) => {
       const dist = construirDesdeDescriptor(toDescriptor(entrada.dist));
       return modelo.settings.sampling === 'lhs'

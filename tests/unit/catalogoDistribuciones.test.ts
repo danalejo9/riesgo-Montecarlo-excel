@@ -35,6 +35,7 @@ const TIPOS: Array<DistributionSpec['type']> = [
   'binomial',
   'poisson',
   'discrete',
+  'categorical',
 ];
 
 describe('catálogo de distribuciones', () => {

@@ -151,6 +151,14 @@ export const CATALOGO_DISTRIBUCIONES: readonly DescripcionDistribucion[] = [
     parametros: [],
     porDefecto: { type: 'discrete', values: [0, 1], weights: [1, 1] },
   },
+  {
+    tipo: 'categorical',
+    nombre: 'Categórica (texto)',
+    cuando: 'Una lista de textos posibles, cada uno con su probabilidad: zona, proveedor, escenario.',
+    // Como la discreta: listas, no números; el panel la edita aparte.
+    parametros: [],
+    porDefecto: { type: 'categorical', categories: ['A', 'B'], weights: [1, 1] },
+  },
 ];
 
 const POR_TIPO = new Map(CATALOGO_DISTRIBUCIONES.map((d) => [d.tipo, d] as const));
@@ -169,6 +177,10 @@ export function resumirDistribucion(spec: DistributionSpec): string {
   if (!desc) return String(spec.type);
 
   if (spec.type === 'discrete') return `Discreta (${spec.values.length} valores)`;
+  if (spec.type === 'categorical') {
+    const lista = spec.categories.slice(0, 4).join(', ');
+    return `Categórica (${lista}${spec.categories.length > 4 ? '…' : ''})`;
+  }
 
   const valores = desc.parametros
     .map((p) => (spec as unknown as Record<string, unknown>)[p.clave])

@@ -11,6 +11,7 @@
  * panel a mitad de una simulación de un millón de iteraciones no deje nada a
  * medias más que estadísticas parciales, descartables sin más.
  */
+import { sumarConteos } from './categorias.ts';
 import type { Plan } from '../compiler/plan.ts';
 import type { Grafo } from '../graph/graph.ts';
 import { combinarTDigest, type TDigest } from '../stats/tdigest.ts';
@@ -70,6 +71,10 @@ export interface SalidaSimulada {
   noNumericas: number;
   /** Las primeras iteraciones, valor a valor, si se pidió `retenerMuestra`. */
   muestra?: Float64Array;
+  /** Salidas de texto o sí/no (T2, T6): valor → iteraciones. */
+  categorias?: Record<string, number>;
+  /** El valor de texto de cada iteración retenida, alineado con `muestra`. */
+  muestraTexto?: (string | null)[];
 }
 
 export type ResultadoSimulacion =
@@ -115,6 +120,8 @@ export async function simularPorBloques(
   const digestsPorSalida = new Map<string, TDigest[]>();
   const noNumericasPorSalida = new Map<string, number>();
   const muestrasPorSalida = new Map<string, Float64Array>();
+  const categoriasPorSalida = new Map<string, Record<string, number>>();
+  const muestrasTextoPorSalida = new Map<string, (string | null)[]>();
   let hayMuestra = false;
   for (const clave of plan.salidas) {
     if (limiteMuestra > 0) muestrasPorSalida.set(clave, new Float64Array(limiteMuestra).fill(NaN));
@@ -152,6 +159,17 @@ export async function simularPorBloques(
           acumuladoWelford.set(clave, combinar(acumuladoWelford.get(clave) as EstadoWelford, p.welford));
           (digestsPorSalida.get(clave) as TDigest[]).push(p.digest);
           noNumericasPorSalida.set(clave, (noNumericasPorSalida.get(clave) as number) + (p.noNumericas ?? 0));
+          if (p.categorias) {
+            categoriasPorSalida.set(clave, sumarConteos(categoriasPorSalida.get(clave) ?? {}, p.categorias));
+          }
+          if (p.muestraTexto && limiteMuestra > 0) {
+            let texto = muestrasTextoPorSalida.get(clave);
+            if (!texto) {
+              texto = new Array<string | null>(limiteMuestra).fill(null);
+              muestrasTextoPorSalida.set(clave, texto);
+            }
+            for (let j = 0; j < p.muestraTexto.length && inicio + j < limiteMuestra; j++) texto[inicio + j] = p.muestraTexto[j] ?? null;
+          }
         }
       });
 
@@ -176,6 +194,8 @@ export async function simularPorBloques(
       digest: combinarTDigest(digestsPorSalida.get(clave) as TDigest[], compresionTDigest),
       noNumericas: noNumericasPorSalida.get(clave) as number,
       ...(muestra ? { muestra } : {}),
+      ...(categoriasPorSalida.has(clave) ? { categorias: categoriasPorSalida.get(clave) as Record<string, number> } : {}),
+      ...(muestrasTextoPorSalida.has(clave) ? { muestraTexto: (muestrasTextoPorSalida.get(clave) as (string | null)[]).slice(0, largoMuestra) } : {}),
     });
   }
 

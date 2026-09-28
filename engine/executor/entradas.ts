@@ -27,12 +27,15 @@ export interface EntradaDistribucion {
   id: string;
   distribucion: DescriptorDistribucion;
   metodo: MetodoMuestreo;
+  /** Entrada de texto (T1): el buffer lleva índices y estos son sus textos. */
+  categorias?: readonly string[];
 }
 
 export interface EntradaBuffer {
   tipo: 'buffer';
   clave: string;
   buffer: Buffer;
+  categorias?: readonly string[];
 }
 
 /** Definición de una variable de entrada, en la forma serializable que puede viajar a un worker. */
@@ -47,7 +50,7 @@ export function resolverEntradas(defs: readonly DefinicionEntrada[], seed: numbe
   return defs.map((d) => {
     if (d.tipo === 'buffer' || d.metodo === 'monte-carlo') return d;
     const dist = construirDesdeDescriptor(d.distribucion);
-    return { tipo: 'buffer', clave: d.clave, buffer: muestrearLHS(dist, d.id, seed, n) };
+    return { tipo: 'buffer', clave: d.clave, buffer: muestrearLHS(dist, d.id, seed, n), ...(d.categorias ? { categorias: d.categorias } : {}) };
   });
 }
 
