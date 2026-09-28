@@ -49,7 +49,7 @@ import {
   compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada,
 } from '../excel/comparacion.ts';
 import type { BinHistograma } from '../engine/stats/index.ts';
-import { probabilidadUmbral } from '../engine/stats/index.ts';
+import { probabilidadUmbral, type MedidasRiesgo } from '../engine/stats/index.ts';
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import { duracion, leerNumero, miles, numero } from './formato.ts';
@@ -333,6 +333,8 @@ export function Resultados({
               </li>
             ))}
           </ul>
+
+          {salida.riesgo && <MedidasDeRiesgo riesgo={salida.riesgo} />}
 
           {salida.muestraOrdenada && salida.muestraOrdenada.length > 0 && (
             <Umbral
@@ -664,6 +666,33 @@ function SalidaDeTexto({
 
       {salida.porCategoria && salida.porCategoria.length > 0 && <TablasPorCategoria bloques={salida.porCategoria} />}
     </section>
+  );
+}
+
+
+/** Medidas de riesgo de una salida (H2): las dos colas y la forma. */
+export function MedidasDeRiesgo({ riesgo }: { riesgo: MedidasRiesgo }) {
+  const forma = riesgo.asimetria > 0.3 ? 'cola larga a la derecha' : riesgo.asimetria < -0.3 ? 'cola larga a la izquierda' : 'casi simétrica';
+  return (
+    <>
+      <h3>Medidas de riesgo</h3>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th></th><th>Cola baja</th><th>Cola alta</th></tr></thead>
+          <tbody>
+            <tr><td title="Valor que solo el 5 % de las iteraciones empeora">VaR 5 %</td><td>{numero(riesgo.varInferior)}</td><td>{numero(riesgo.varSuperior)}</td></tr>
+            <tr><td title="Media del 5 % de las iteraciones más extremas">CVaR 5 %</td><td>{numero(riesgo.cvarInferior)}</td><td>{numero(riesgo.cvarSuperior)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        VaR: el valor que solo el 5 % de las iteraciones empeora. CVaR: la media de ese 5 %.
+        Si la salida es una ganancia, mira la cola baja; si es un coste, la alta.
+        Asimetría {riesgo.asimetria.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ({forma}) ·
+        curtosis {riesgo.curtosis.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ·
+        semidesviación {numero(riesgo.semidesviacion)}.
+      </p>
+    </>
   );
 }
 

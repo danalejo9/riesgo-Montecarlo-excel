@@ -37,3 +37,4 @@ export {
 } from './sensibilidad.ts';
 export { histogramaDeMuestra, ordenarUtiles, probabilidadUmbral } from './muestra.ts';
 export { intervaloPercentil, precisionDeSimulacion, siguienteTanda, type IntervaloPercentil, type Precision } from './convergencia.ts';
+export { medidasDeRiesgo, type MedidasRiesgo } from './riesgo.ts';

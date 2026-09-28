@@ -10,7 +10,8 @@ import { createRoot } from 'react-dom/client';
 
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
 import { duracion, miles, numero } from './formato.ts';
-import { Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
+import {
+  MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -164,6 +165,8 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
       </div>
 
       {s.precision && <PrecisionSalida precision={s.precision} n={s.resumen.n} />}
+
+      {s.riesgo && <MedidasDeRiesgo riesgo={s.riesgo} />}
 
       {s.comparacion && referencia && <TablaComparacion etiqueta={referencia} filas={s.comparacion} />}
 

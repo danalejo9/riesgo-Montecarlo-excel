@@ -16,6 +16,8 @@ import {
   analizarSensibilidad,
   aranaDeSensibilidad,
   histogramaDeMuestra,
+  medidasDeRiesgo,
+  type MedidasRiesgo,
   r2Sensibilidad,
   ordenarUtiles,
   precisionDeSimulacion,
@@ -67,6 +69,8 @@ export interface ResultadoSalida {
   muestraOrdenada?: Float64Array;
   /** Histograma de la muestra retenida. */
   histograma?: BinHistograma[];
+  /** VaR y CVaR de las dos colas, asimetría, curtosis y semidesviación (H2). */
+  riesgo?: MedidasRiesgo;
   /** Salidas de texto o sí/no (T2, T6): cada valor con su frecuencia, de más a menos. */
   categorias?: FilaCategoria[];
   /** El texto de cada iteración retenida. Solo en memoria, como `muestraOrdenada`. */
@@ -164,7 +168,7 @@ export function analisisDeMuestra(
   clavesEntrada: readonly string[],
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
   muestraSalida: ArrayLike<number> | undefined,
-): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2'> {
+): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2' | 'riesgo'> {
   if (!muestraSalida || muestraSalida.length === 0) return {};
   const muestraOrdenada = ordenarUtiles(muestraSalida);
   const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
@@ -173,7 +177,9 @@ export function analisisDeMuestra(
     ...c, nombre: porId.get(c.id)?.name ?? c.id, ref: porId.get(c.id)?.ref ?? '',
   }));
   const r2 = r2Sensibilidad(entradas, muestraSalida);
+  const riesgo = medidasDeRiesgo(muestraOrdenada);
   return {
+    ...(riesgo ? { riesgo } : {}),
     sensibilidad: sensibilidadDeSalida(modelo, clavesEntrada, muestrasPorClave, muestraSalida),
     muestraOrdenada,
     histograma: histogramaDeMuestra(muestraOrdenada),
@@ -512,6 +518,15 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     ];
     if (s.noNumericas > 0) estad.push(['Iteraciones sin valor numérico', s.noNumericas, FORMATO_ENTERO]);
     if (umbral && probUmbral !== undefined) estad.push([describirUmbral(s.nombre, umbral.value, umbral.direction), probUmbral, FORMATO_PORCENTAJE]);
+    if (s.riesgo) {
+      estad.push(['VaR 5 % cola baja (p5)', s.riesgo.varInferior, f]);
+      estad.push(['CVaR 5 % cola baja (media del peor 5 %)', s.riesgo.cvarInferior, f]);
+      estad.push(['VaR 5 % cola alta (p95)', s.riesgo.varSuperior, f]);
+      estad.push(['CVaR 5 % cola alta (media del mayor 5 %)', s.riesgo.cvarSuperior, f]);
+      estad.push(['Semidesviación', s.riesgo.semidesviacion, f]);
+      estad.push(['Asimetría', s.riesgo.asimetria, '0.00']);
+      estad.push(['Curtosis (en exceso)', s.riesgo.curtosis, '0.00']);
+    }
     if (s.precision) {
       estad.push(['Margen de la media (95 %)', s.precision.margenMedia, f]);
       estad.push([`Iteraciones para un margen del ${(s.precision.objetivo * 100).toLocaleString('es-ES')} %`, s.precision.iteracionesParaObjetivo, FORMATO_ENTERO]);

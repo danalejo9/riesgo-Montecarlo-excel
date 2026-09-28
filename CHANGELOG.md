@@ -11,6 +11,10 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - **Vista previa de la distribución** (C5): al editar una entrada, su forma
   (curva, o barras si es discreta o de texto) con las líneas de p5, p50 y p95
   y sus valores debajo (`engine/modelo/vistaPrevia.ts`).
+- **Medidas de riesgo** (H2): VaR y CVaR al 5 % de las dos colas (una salida
+  puede ser una ganancia o un coste), asimetría, curtosis en exceso y
+  semidesviación, en el panel, el PDF y la hoja volcada
+  (`engine/stats/riesgo.ts`).
 
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 
