@@ -282,15 +282,21 @@ p["B3"] = "Las celdas en amarillo claro están vacías a propósito: escribe en 
 p["B3"].font = Font(italic=True, color="666666")
 PARA_ESCRIBIR = PatternFill("solid", fgColor="FFF9E6")
 
-def etiqueta(fila, texto, negrita=False):
+def etiqueta(fila, texto, negrita=False, instruccion=None):
+    """La etiqueta va sola en B (el panel la usa como nombre de la celda) y la
+    instrucción, si hay, en D: antes iban juntas y la entrada acababa llamándose
+    «Demanda — escribe =RIESGO.NORMAL(1000;150)»."""
     c = p.cell(fila, 2, texto)
     if negrita:
         c.font = AZUL
+    if instruccion:
+        d = p.cell(fila, 4, instruccion)
+        d.font = Font(italic=True, color="666666")
 
 # 1. Funciones RIESGO
-etiqueta(4, "1. FUNCIONES RIESGO (prueba E)", True)
-etiqueta(5, "Demanda — escribe =RIESGO.NORMAL(1000;150)")
-etiqueta(6, "Precio — escribe =RIESGO.TRIANGULAR(8;10;14)")
+etiqueta(4, "1. FUNCIONES RIESGO (pruebas F1–F6)", True)
+etiqueta(5, "Demanda", instruccion="escribe =RIESGO.NORMAL(1000;150)")
+etiqueta(6, "Precio", instruccion="escribe =RIESGO.TRIANGULAR(8;10;14)")
 etiqueta(7, "Ingresos = Demanda × Precio")
 for f in (5, 6):
     p.cell(f, 3).fill = PARA_ESCRIBIR
@@ -298,13 +304,13 @@ p["C7"] = "=C5*C6"
 p["C7"].number_format = '#,##0.00'
 
 # 2. LET
-etiqueta(9, "2. LET (prueba F)", True)
+etiqueta(9, "2. LET (prueba G1)", True)
 etiqueta(10, "Margen = ingresos − coste (60 %), con LET")
 p["C10"] = "=_xlfn.LET(_xlpm.coste,C7*0.6,C7-_xlpm.coste)"
 p["C10"].number_format = '#,##0.00'
 
 # 3. Matrices: ventas por zona, proporcionales a la demanda de C5
-etiqueta(12, "3. MATRICES (prueba G) — umbral de ventas:", True)
+etiqueta(12, "3. MATRICES (pruebas G2–G4) — umbral de ventas:", True)
 p["C12"] = 100
 p["E12"] = "Zona"
 p["F12"] = "Ventas"
@@ -314,13 +320,19 @@ for i, (zona, base) in enumerate([("Norte", 120), ("Sur", 80), ("Este", 150), ("
     p.cell(13 + i, 5, zona)
     c = p.cell(13 + i, 6, f"={base}*$C$5/1000")
     c.number_format = '#,##0.0'
-etiqueta(13, "Ventas por encima del umbral — =SUMA(FILTRAR(F13:F17;F13:F17>C12;0))")
-etiqueta(14, "Lo mismo — =SUMAPRODUCTO((F13:F17>C12)*F13:F17)")
-etiqueta(15, "La mayor — =INDICE(ORDENAR(F13:F17;1;-1);1)")
+# Las instrucciones de las matrices van en la columna I: en D-F está la tabla.
+etiqueta(13, "Ventas por encima del umbral")
+etiqueta(14, "Ventas por encima del umbral (SUMAPRODUCTO)")
+etiqueta(15, "La mayor venta")
+for fila, texto in ((13, "escribe =SUMA(FILTRAR(F13:F17;F13:F17>C12;0))"),
+                    (14, "escribe =SUMAPRODUCTO((F13:F17>C12)*F13:F17)"),
+                    (15, "escribe =INDICE(ORDENAR(F13:F17;1;-1);1)")):
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
 for f in (13, 14, 15):
     p.cell(f, 3).fill = PARA_ESCRIBIR
-p["H12"] = "Derrame — escribe en H13: =FILTRAR(E13:E17;F13:F17>C12)"
-p["H12"].font = TOTAL
+p["H11"] = "Derrame — escribe en H13: =FILTRAR(E13:E17;F13:F17>C12)"
+p["H11"].font = TOTAL
 p["H13"].fill = PARA_ESCRIBIR
 
 # 4. Entrada con fórmula (modo compatible)
@@ -331,9 +343,34 @@ etiqueta(22, "Coste total = coste unitario × demanda")
 p["C22"] = "=C21*C5"
 p["C22"].number_format = '#,##0.00'
 
-# 5. Datos históricos para "Ajustar a datos" (prueba D): 40 precios con cola
+# 6. Funciones RIESGO nuevas (B4, I1): discreta, acotada, lognormal por el
+#    logaritmo y empírica. Valores y pesos de la discreta en E25:F27.
+etiqueta(24, "6. FUNCIONES NUEVAS (pruebas F7–F10)", True)
+etiqueta(25, "Plazo de entrega (días)")
+etiqueta(26, "Demanda acotada")
+etiqueta(27, "Precio lognormal")
+etiqueta(28, "Precio según el histórico")
+etiqueta(29, "Suma de control")
+p["E24"] = "Plazo"
+p["F24"] = "Peso"
+p["E24"].font = TOTAL
+p["F24"].font = TOTAL
+for i, (plazo, peso) in enumerate([(3, 0.5), (5, 0.3), (10, 0.2)]):
+    p.cell(25 + i, 5, plazo)
+    p.cell(25 + i, 6, peso).number_format = '0%'
+for fila, texto in ((25, "escribe =RIESGO.DISCRETA(E25:E27;F25:F27)"),
+                    (26, "escribe =RIESGO.TRUNCAR(RIESGO.NORMAL(100;30);50;150)"),
+                    (27, "escribe =RIESGO.LOGNORMAL2(4,6;0,2)"),
+                    (28, "escribe =RIESGO.EMPIRICA(K5:K44)")):
+    p.cell(fila, 3).fill = PARA_ESCRIBIR
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+p["C29"] = "=C25+C26+C27+C28"
+p["C29"].number_format = '#,##0.00'
+
+# 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
-p["K4"] = "5. PRECIOS HISTÓRICOS (prueba D)"
+p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"
 p["K4"].font = AZUL
 import math
 estado = 12345
@@ -346,12 +383,63 @@ for i in range(40):
     p.cell(5 + i, 11, round(118 * math.exp(0.12 * z), 2)).number_format = '#,##0.00'
 
 p.column_dimensions["A"].width = 3
-p.column_dimensions["B"].width = 58
+p.column_dimensions["B"].width = 44
+p.column_dimensions["D"].width = 12
 p.column_dimensions["C"].width = 14
 p.column_dimensions["E"].width = 10
 p.column_dimensions["F"].width = 10
 p.column_dimensions["H"].width = 14
 p.column_dimensions["K"].width = 12
+
+# =========================================================================
+# Hoja 4: variables de texto (bloque T de la guía). Una zona de venta que es
+# un texto («Norte», «Sur», «Este») con su probabilidad, fórmulas que la usan
+# (BUSCARV), y salidas de texto y de sí/no.
+# =========================================================================
+z = wb.create_sheet("Zonas")
+z["B2"] = "Variables de texto — zona de venta"
+z["B2"].font = TITULO
+z["B3"] = "La zona es un texto con su probabilidad. El recargo depende de la zona; la gama y el «¿supera?» son salidas de texto y de sí/no."
+z["B3"].font = Font(italic=True, color="666666")
+
+z["E4"] = "Zona"
+z["F4"] = "Probabilidad"
+z["G4"] = "Recargo"
+for c in ("E4", "F4", "G4"):
+    z[c].font = TOTAL
+for i, (zona, prob, recargo) in enumerate([("Norte", 0.2, 1.10), ("Sur", 0.5, 1.00), ("Este", 0.3, 0.90)]):
+    z.cell(5 + i, 5, zona)
+    z.cell(5 + i, 6, prob).number_format = '0%'
+    z.cell(5 + i, 7, recargo).number_format = '0.00'
+
+filas_z = [
+    (4, "Zona de venta", "Norte", None, "marca como entrada: el panel la propone como texto"),
+    (5, "Recargo por zona", "=VLOOKUP(C4,$E$5:$G$7,3,FALSE)", '0.00', None),
+    (6, "Precio base", 100, '#,##0 €', "marca como entrada"),
+    (7, "Unidades", 1000, '#,##0', "marca como entrada"),
+    (8, "Ingresos", "=C6*C5*C7", '#,##0 €', "salida numérica"),
+    (9, "Gama", '=IF(C8>110000,"Alta",IF(C8>90000,"Media","Baja"))', None, "salida de texto"),
+    (10, "¿Supera 100.000 €?", "=C8>100000", None, "salida de sí/no"),
+    (12, "Zona con función", None, None, "escribe =RIESGO.CATEGORIA(E5:E7;F5:F7)"),
+    (13, "Ingresos con la zona de la función", "=C6*VLOOKUP(C12,$E$5:$G$7,3,FALSE)*C7", '#,##0 €', "salida"),
+]
+for fila, texto, valor, formato, nota in filas_z:
+    z.cell(fila, 2, texto)
+    if valor is not None:
+        c = z.cell(fila, 3, valor)
+        if formato:
+            c.number_format = formato
+    if nota:
+        n = z.cell(fila, 4, nota) if fila not in (4, 6, 7, 8, 9, 10, 12, 13) else z.cell(fila, 9, nota)
+        n.font = Font(italic=True, color="666666")
+z["C12"].fill = PARA_ESCRIBIR
+z.column_dimensions["A"].width = 3
+z.column_dimensions["B"].width = 36
+z.column_dimensions["C"].width = 14
+z.column_dimensions["E"].width = 10
+z.column_dimensions["F"].width = 12
+z.column_dimensions["G"].width = 10
+z.column_dimensions["I"].width = 44
 
 wb.calculation.fullCalcOnLoad = True
 

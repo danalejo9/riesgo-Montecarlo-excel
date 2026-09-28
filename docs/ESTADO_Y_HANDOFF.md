@@ -965,14 +965,24 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     compatible con `ValorLeido`. **Siguiente**: reescribir la guía de pruebas
     desde cero y que el usuario la recorra entera; después, etapa 2.
 
+37. [x] **Antes de la etapa 2 y guía reescrita (2026-09-28)**. Hecho lo que
+    no toca el manifiesto: C5 (vista previa), H2 (VaR, CVaR, forma), C1/C2
+    (resumen de entradas, tornado y araña en la hoja volcada), D1 («Qué tiene
+    que pasar»), B4 (acotar, `RIESGO.TRUNCAR`, `RIESGO.DISCRETA`,
+    `RIESGO.LOGNORMAL2`) e I1 (ajuste explicado, `RIESGO.EMPIRICA`).
+    `docs/GUIA_PRUEBAS_EXCEL.md` reescrita desde cero (bloques 0, A–H, T, J,
+    K, W, I); el libro de demostración tiene la hoja «Zonas» y la sección 6
+    de «Pruebas» para las funciones nuevas. **Siguiente**: el usuario recorre
+    la guía entera; después, etapa 2.
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md`** y reporta por código.
-   Arreglar lo que falle, empezando por B4 (cinta con el panel abierto) y C2
-   (informe en el navegador), que no se pueden probar fuera de Excel.
-2. Tandas 7 y 8 de vuelta de Excel, y las 3 fórmulas de `Caso_practico.xlsx`.
-3. Después, §2.1 del roadmap en su orden: B1–B3 (runtime compartido,
-   modo determinista/probabilístico, cinta que actúa), C1, C2, C5 + I1…
+1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md` (reescrita el 28/09)**
+   entera y reporta por código. Arreglar lo que falle, empezando por B4
+   (cinta con el panel abierto), W5 (RIESGO en la Web) y J3 (iPad).
+2. Tandas 7 y 8 de vuelta de Excel (bloque I de la guía).
+3. Después, etapa 2: B1–B3 (runtime compartido, modo
+   determinista/probabilístico, cinta que actúa); luego B6, I2, T7–T9.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

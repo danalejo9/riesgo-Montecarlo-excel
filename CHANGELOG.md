@@ -5,6 +5,20 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Guía de pruebas reescrita (2026-09-28)
+
+**Cambiado**
+- `docs/GUIA_PRUEBAS_EXCEL.md` reescrita desde cero para recorrer todo el
+  complemento de principio a fin: preparación, lo básico, configuración,
+  informe y hoja volcada, escenarios, ajuste, funciones RIESGO, LET y
+  matrices, modo compatible, variables de texto, compartir, reproducibilidad,
+  Excel para la Web y libros de fidelidad.
+- Libro de demostración: hoja **«Zonas»** (entrada de texto con BUSCARV,
+  salidas de texto y de sí/no, `RIESGO.CATEGORIA`) y sección 6 en «Pruebas»
+  con celdas preparadas para `RIESGO.DISCRETA`, `RIESGO.TRUNCAR`,
+  `RIESGO.LOGNORMAL2` y `RIESGO.EMPIRICA`. Las etiquetas quedan en la columna
+  B y las instrucciones aparte, para que los nombres legibles salgan limpios.
+
 ### Antes de la etapa 2: lo que no toca el manifiesto (2026-09-28)
 
 **Añadido**

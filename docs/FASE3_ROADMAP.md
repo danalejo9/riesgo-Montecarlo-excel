@@ -567,7 +567,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → B6 → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

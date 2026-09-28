@@ -107,19 +107,19 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 12 | C1 | **Hoja «Resumen de entradas y salidas»** al volcar (distribuciones, estadísticos, orden en el tornado) | **Tú** |
-| 13 | C2 | Tornado, araña y comparación de escenarios como gráficos nativos de Excel en el volcado | **Tú** (gráficas) |
-| 14 | C5 | **Vista previa de la distribución** al editarla (su forma y p5/p50/p95) | Plan |
-| 15 | I1 | **Ajuste rápido y explicado**: diagnóstico de los datos, AICc, Cramér–von Mises, histograma con la curva encima (**el gráfico de distribución que pediste en D1**), Q-Q, gamma exacta, distribución empírica y `RIESGO.EMPIRICA` | **Tú** (investigación y D1) |
+| 12 | C1 | ✅ **Hoja «Resumen de entradas y salidas»** al volcar (distribuciones, estadísticos, orden en el tornado) | **Tú** |
+| 13 | C2 | ✅ Tornado, araña y comparación de escenarios como gráficos nativos de Excel en el volcado | **Tú** (gráficas) |
+| 14 | C5 | ✅ **Vista previa de la distribución** al editarla (su forma y p5/p50/p95) | Plan |
+| 15 | I1 | ✅ **Ajuste rápido y explicado**: diagnóstico de los datos, AICc, Cramér–von Mises, histograma con la curva encima (**el gráfico de distribución que pediste en D1**), Q-Q, gamma exacta, distribución empírica y `RIESGO.EMPIRICA` | **Tú** (investigación y D1) |
 
 ### Etapa 4: más funciones y análisis (≈ 8–12 días)
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 17 | B4 | `RIESGO.DISCRETA`, distribuciones truncadas, `RIESGO.LOGNORMAL2` | **Tú** (lista de funciones) |
+| 17 | B4 | ✅ `RIESGO.DISCRETA`, distribuciones truncadas, `RIESGO.LOGNORMAL2` | **Tú** (lista de funciones) |
 | 18 | B6 | `RIESGO.SALIDA()`, y traer resultados a la hoja: `RIESGO.MEDIA`, `RIESGO.PERCENTIL`, `RIESGO.PROB`, `RIESGO.DESV`; correlación desde la fórmula | **Tú** (lista de funciones) |
-| 19 | D1 | **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
-| 20 | H2 | **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
+| 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
+| 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
 | 21 | I2 | **Ajuste orientado al riesgo**: error en percentiles P50–P99, bootstrap, discretas | **Tú** (investigación) |
 | 22 | C3 | Exportar las iteraciones a una hoja | Plan |
 | 23 | C4 | Gráficas nuevas: dispersión entrada × salida, caja y bigotes, abanico por periodos, curvas superpuestas | **Tú** (gráficas) |
