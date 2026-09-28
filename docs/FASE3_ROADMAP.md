@@ -299,10 +299,59 @@ Estimaciones en días de trabajo efectivo.
   p)`, `RIESGO.PROB(celda; umbral)`, `RIESGO.DESV(celda)` para traer a la hoja
   los resultados de la última simulación; correlación declarada desde la
   fórmula (`RIESGO.CORRELACION`, a diseñar).
+  *Revisión del 28/09 (sin cambios de código):*
+  - Las funciones de Excel viven hoy en un runtime propio (`funciones.html`),
+    separado del panel: no ven los resultados en memoria ni los guardados en
+    el libro.
+  - **Sin tocar el manifiesto** se puede hacer así:
+    - El panel, al simular, deja en `OfficeRuntime.storage` los cuantiles y
+      estadísticos de cada salida; las funciones los leen.
+    - La celda se identifica con `requiresParameterAddresses` en los
+      metadatos de las funciones.
+    - El panel fuerza un recálculo al terminar.
+  - **Límites de esa versión:**
+    - Los resultados viven en el equipo, no en el libro. En otro equipo, o
+      tras borrar la caché, la función da «simula primero» hasta volver a
+      simular.
+    - Dos libros con la misma celda comparten clave.
+  - **Con B1** (runtime compartido) las funciones leen los resultados
+    **guardados en el libro** y esos límites desaparecen; el código de las
+    funciones se reutiliza y solo cambia de dónde leen.
+  - **El motor también cambia:** una fórmula que use `RIESGO.MEDIA(…)` debe
+    tratarse como una constante (su valor actual), no forzar el modo
+    compatible.
+  - Estimación: 2–3 d antes de B1, más ≈ 0,5 d para cambiar a leer del libro
+    tras B1.
 - **B7. Argumentos que son celdas**: `=RIESGO.NORMAL(B2;15)` cuando B2 no
   depende de ninguna entrada (se resuelve una vez); y, en una segunda fase,
   distribuciones cuyos parámetros dependen de otras entradas. Permitir la
   función dentro de una operación (`=1+RIESGO.NORMAL(…)`).
+  *Revisión del 28/09 (sin cambios de código):*
+  - **Hoy:** `leerFuncionRiesgo` solo acepta números escritos (`constante()`:
+    ni `C12` ni `10*2`). En Excel la celda sí enseña la media, porque la
+    función recibe el valor, pero al simular se rechaza (prueba E4 de la
+    primera ronda y F5 de la guía nueva). `RIESGO.CATEGORIA`, `DISCRETA` y
+    `EMPIRICA` ya aceptan rangos, pero solo con valores escritos.
+  - **Fase 1** (≈ 1 d): argumentos que son celdas, cálculos o fórmulas que no
+    dependen de ninguna entrada aleatoria. Se comprueba con el grafo, se toma
+    el valor que Excel ya calculó (hay que leer también los valores de las
+    celdas con fórmula) y se construye la distribución una vez. Funciona igual
+    en los dos motores.
+  - **Fase 2** (≈ 2–3 d): parámetros que cambian en cada iteración (la
+    media es otra celda aleatoria) y la función dentro de una operación.
+    - Todas las distribuciones del motor muestrean por transformada inversa
+      (`Distribution.quantile(u)`).
+    - Basta con muestrear el uniforme `u` como hoy (Monte Carlo, hipercubo,
+      correlación y reproducibilidad sin cambios) y calcular
+      `quantile(u; parámetros de esa iteración)` como una función más del
+      evaluador del motor rápido.
+    - En el modo compatible exige un recálculo más por iteración (leer los
+      parámetros, escribir la muestra): más lento. Primero, solo el motor
+      rápido, y en el compatible un aviso claro.
+  - **No toca el manifiesto**: se puede hacer antes de la etapa 2.
+  - Afecta a la guía: F5 deja de ser «error bien explicado» y pasa a
+    comprobar que `=RIESGO.NORMAL(C12;150)` simula. Hay que añadir pruebas con
+    parámetros que dependen de otra entrada y con `=1+RIESGO.NORMAL(…)`.
 
 ### C. Gráficas y exportación — 5–7 d
 - **C1. Hoja «Resumen de entradas y salidas»** al volcar: por cada entrada,
