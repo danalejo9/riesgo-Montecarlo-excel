@@ -23,12 +23,13 @@
 import { useEffect, useState } from 'react';
 
 import { categoriasDeRango } from '../excel/categoriasDeRango.ts';
-import { leerNumero, numeroEditable } from './formato.ts';
+import { leerNumero, numero, numeroEditable } from './formato.ts';
 
 import {
   CATALOGO_DISTRIBUCIONES,
   describirDistribucion,
   problemaDeDistribucion,
+  vistaPrevia,
   type DistributionSpec,
   type TipoDistribucion,
 } from '../engine/modelo/index.ts';
@@ -108,6 +109,8 @@ export function EditorDistribucion({
         </div>
       )}
 
+      {!problema && <VistaPreviaDistribucion spec={actual} />}
+
       {problema && (
         <p className="aviso-linea" role="alert">
           Así todavía no es válida y no se guarda: {problema}. Se sigue usando{' '}
@@ -115,6 +118,56 @@ export function EditorDistribucion({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * La forma de la distribución y sus percentiles mientras se edita (C5): para
+ * no elegir parámetros a ciegas.
+ */
+function VistaPreviaDistribucion({ spec }: { spec: DistributionSpec }) {
+  const v = vistaPrevia(spec);
+  if (!v) return null;
+  const W = 280;
+  const H = 70;
+  const M = 4;
+  let figura: React.ReactNode;
+  if (v.tipo === 'continua') {
+    const xs = v.puntos.map((p) => p.x);
+    const x0 = xs[0] as number;
+    const x1 = xs[xs.length - 1] as number;
+    const yMax = Math.max(...v.puntos.map((p) => p.y), 1e-300);
+    const aX = (x: number) => M + ((x - x0) / (x1 - x0 || 1)) * (W - 2 * M);
+    const aY = (y: number) => H - M - (y / yMax) * (H - 2 * M);
+    const linea = v.puntos.map((p) => `${aX(p.x).toFixed(1)},${aY(p.y).toFixed(1)}`).join(' ');
+    figura = (
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Forma de la distribución">
+        <polygon className="previa-area" points={`${aX(x0)},${H - M} ${linea} ${aX(x1)},${H - M}`} />
+        {[v.p5, v.p95].map((x, i) => <line key={i} className="previa-p" x1={aX(x)} x2={aX(x)} y1={M} y2={H - M} />)}
+        <line className="previa-p50" x1={aX(v.p50)} x2={aX(v.p50)} y1={M} y2={H - M} />
+      </svg>
+    );
+  } else {
+    const pMax = Math.max(...v.barras.map((b) => b.p), 1e-9);
+    const ancho = (W - 2 * M) / v.barras.length;
+    figura = (
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Probabilidad de cada valor">
+        {v.barras.map((b, i) => {
+          const h = (b.p / pMax) * (H - 2 * M);
+          return <rect key={i} className="previa-barra" x={M + i * ancho + 1} y={H - M - h} width={Math.max(1, ancho - 2)} height={h}><title>{`${b.etiqueta}: ${(b.p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</title></rect>;
+        })}
+      </svg>
+    );
+  }
+  return (
+    <figure className="vista-previa">
+      {figura}
+      <figcaption className="tenue">
+        {v.p5 !== undefined && v.p50 !== undefined && v.p95 !== undefined
+          ? `p5 ${numero(v.p5)} · p50 ${numero(v.p50)} · p95 ${numero(v.p95)}${v.media !== undefined ? ` · media ${numero(v.media)}` : ''}`
+          : 'Probabilidad de cada valor (pasa el ratón por una barra).'}
+      </figcaption>
+    </figure>
   );
 }
 

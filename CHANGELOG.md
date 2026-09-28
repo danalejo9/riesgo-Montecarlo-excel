@@ -5,6 +5,13 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Antes de la etapa 2: lo que no toca el manifiesto (2026-09-28)
+
+**Añadido**
+- **Vista previa de la distribución** (C5): al editar una entrada, su forma
+  (curva, o barras si es discreta o de texto) con las líneas de p5, p50 y p95
+  y sus valores debajo (`engine/modelo/vistaPrevia.ts`).
+
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 
 Propuesto por el usuario a raíz de G3: que la simulación trabaje con textos,

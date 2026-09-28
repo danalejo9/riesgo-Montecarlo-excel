@@ -65,3 +65,4 @@ export {
   type FuncionRiesgo,
   type LecturaFuncionRiesgo,
 } from './funcionesRiesgo.ts';
+export { vistaPrevia, type VistaPrevia } from './vistaPrevia.ts';

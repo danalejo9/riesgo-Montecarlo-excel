@@ -412,3 +412,11 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .cat-esperada { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--baja, #e34948); }
 .cat-valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tabla-resumen td.celda-texto { text-align: left; white-space: normal; }
+
+/* C5: vista previa de la distribución en el editor. */
+.vista-previa { margin: 6px 0 0; }
+.vista-previa svg { width: 100%; max-width: 320px; height: auto; display: block; }
+.previa-area { fill: color-mix(in srgb, var(--acento) 30%, transparent); stroke: var(--acento); stroke-width: 1; }
+.previa-p { stroke: var(--tenue); stroke-dasharray: 2 2; stroke-width: 1; }
+.previa-p50 { stroke: var(--texto); stroke-width: 1; }
+.previa-barra { fill: var(--acento); opacity: .75; }
