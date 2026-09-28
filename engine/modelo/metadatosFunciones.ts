@@ -5,7 +5,7 @@
  * puede quedar una descrita en Excel que el motor no sepa simular.
  */
 
-import { FUNCION_CATEGORIA, FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
+import { FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_TRUNCAR, FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
 
 export function metadatosFunciones(): object {
   return {
@@ -30,6 +30,28 @@ export function metadatosFunciones(): object {
         description: p.descripcion,
         type: 'any',
         dimensionality: 'matrix',
+      })),
+    }, {
+      id: FUNCION_DISCRETA.id,
+      name: FUNCION_DISCRETA.id,
+      description: `${FUNCION_DISCRETA.descripcion} Fuera de la simulación devuelve la media.`,
+      result: { type: 'number', dimensionality: 'scalar' },
+      parameters: FUNCION_DISCRETA.parametros.map((p) => ({
+        name: p.nombre,
+        description: p.descripcion,
+        type: 'any',
+        dimensionality: 'matrix',
+      })),
+    }, {
+      id: FUNCION_TRUNCAR.id,
+      name: FUNCION_TRUNCAR.id,
+      description: `${FUNCION_TRUNCAR.descripcion} Fuera de la simulación devuelve el valor de la función interior, dentro de los límites.`,
+      result: { type: 'number', dimensionality: 'scalar' },
+      parameters: FUNCION_TRUNCAR.parametros.map((p) => ({
+        name: p.nombre,
+        description: p.descripcion,
+        type: 'number',
+        dimensionality: 'scalar',
       })),
     }]),
   };

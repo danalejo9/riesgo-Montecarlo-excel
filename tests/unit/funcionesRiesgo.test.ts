@@ -69,7 +69,7 @@ describe('leerFuncionRiesgo', () => {
 
   it('todas las funciones del catálogo construyen una distribución válida del motor', () => {
     const ejemplos: Record<string, number[]> = {
-      NORMAL: [0, 1], LOGNORMAL: [10, 2], UNIFORME: [0, 1], TRIANGULAR: [0, 1, 2], PERT: [0, 1, 2],
+      NORMAL: [0, 1], LOGNORMAL: [10, 2], LOGNORMAL2: [0, 0.5], UNIFORME: [0, 1], TRIANGULAR: [0, 1, 2], PERT: [0, 1, 2],
       BETA: [2, 3], GAMMA: [2, 1], EXPON: [1], WEIBULL: [2, 1], BERNOULLI: [0.3], BINOMIAL: [10, 0.5], POISSON: [3],
     };
     for (const f of FUNCIONES_RIESGO) {
@@ -83,7 +83,7 @@ describe('leerFuncionRiesgo', () => {
 describe('metadatos para Excel (funciones.json)', () => {
   it('uno por función del catálogo, con sus parámetros', () => {
     const m = metadatosFunciones() as { functions: { id: string; parameters: unknown[] }[] };
-    expect(m.functions.map((f) => f.id)).toEqual([...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA']);
+    expect(m.functions.map((f) => f.id)).toEqual([...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA', 'DISCRETA', 'TRUNCAR']);
     expect(m.functions.find((f) => f.id === 'TRIANGULAR')?.parameters).toHaveLength(3);
   });
 });

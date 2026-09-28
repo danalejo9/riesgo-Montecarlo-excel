@@ -55,7 +55,10 @@ export {
 } from './ajuste.ts';
 export {
   categoriaDesdeListas,
+  discretaDesdeListas,
   FUNCION_CATEGORIA,
+  FUNCION_DISCRETA,
+  FUNCION_TRUNCAR,
   FUNCIONES_RIESGO,
   idDeFuncionRiesgo,
   leerFuncionRiesgo,

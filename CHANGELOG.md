@@ -26,6 +26,12 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   mediana de cada entrada frente a la normal, en desviaciones típicas, y en
   las de texto la categoría que más abunda. En el panel, el PDF y la hoja
   (`excel/analisisCola.ts`).
+- **Distribuciones acotadas** (B4): mínimo y máximo opcionales para cualquier
+  distribución numérica («Acotar» en el editor, con la vista previa al día), y
+  `=RIESGO.TRUNCAR(RIESGO.NORMAL(100;20);80;120)` en la celda. El muestreo
+  descarta y reescala la masa de fuera.
+- **`RIESGO.DISCRETA(valores; pesos)`** con listas o rangos, y
+  **`RIESGO.LOGNORMAL2(mu; sigma)`** con los parámetros del logaritmo (B4).
 
 ### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
 

@@ -17,7 +17,12 @@ import { construirDesdeDescriptor, type DescriptorDistribucion, type Parametriza
 
 export type LognormalParametrization = 'variable' | 'log';
 
-export type DistributionSpec =
+export type DistributionSpec = BaseSpec & {
+  /** Acotada (B4): se descarta lo que cae fuera de [min, max]. Cualquiera de los dos puede faltar. */
+  truncate?: { min?: number; max?: number };
+};
+
+type BaseSpec =
   | { type: 'normal'; mean: number; stdDev: number }
   | { type: 'lognormal'; p1: number; p2: number; parametrization?: LognormalParametrization }
   | { type: 'uniform'; min: number; max: number }
@@ -58,6 +63,17 @@ const PARAMETRIZACION_A_ESPANOL: Record<LognormalParametrization, Parametrizacio
 };
 
 export function toDescriptor(spec: DistributionSpec): DescriptorDistribucion {
+  const base = descriptorBase(spec);
+  const t = spec.truncate;
+  if (!t || (t.min === undefined && t.max === undefined)) return base;
+  if (spec.type === 'categorical') throw new Error('Una entrada de texto no se puede acotar');
+  if ((t.min !== undefined && !Number.isFinite(t.min)) || (t.max !== undefined && !Number.isFinite(t.max))) {
+    throw new Error('Los límites de la distribución acotada tienen que ser números');
+  }
+  return { ...base, truncado: { ...(t.min !== undefined ? { min: t.min } : {}), ...(t.max !== undefined ? { max: t.max } : {}) } };
+}
+
+function descriptorBase(spec: DistributionSpec): DescriptorDistribucion {
   switch (spec.type) {
     case 'normal': return { tipo: 'normal', media: spec.mean, desviacion: spec.stdDev };
     case 'lognormal':

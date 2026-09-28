@@ -176,6 +176,10 @@ export function resumirDistribucion(spec: DistributionSpec): string {
   const desc = POR_TIPO.get(spec.type);
   if (!desc) return String(spec.type);
 
+  const acotada = spec.truncate && (spec.truncate.min !== undefined || spec.truncate.max !== undefined)
+    ? ` acotada [${spec.truncate.min ?? '−∞'}; ${spec.truncate.max ?? '∞'}]`
+    : '';
+  if (acotada) return `${resumirDistribucion({ ...spec, truncate: undefined } as DistributionSpec)}${acotada}`;
   if (spec.type === 'discrete') return `Discreta (${spec.values.length} valores)`;
   if (spec.type === 'categorical') {
     const lista = spec.categories.slice(0, 4).join(', ');

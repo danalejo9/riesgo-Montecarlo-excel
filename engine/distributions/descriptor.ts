@@ -25,11 +25,12 @@ import { normal } from './normal.ts';
 import { pert } from './pert.ts';
 import { poisson } from './poisson.ts';
 import { triangular } from './triangular.ts';
+import { truncar } from './truncate.ts';
 import type { Distribution } from './types.ts';
 import { uniform } from './uniform.ts';
 import { weibull } from './weibull.ts';
 
-export type DescriptorDistribucion =
+export type DescriptorBase =
   | { tipo: 'normal'; media: number; desviacion: number }
   | { tipo: 'lognormal'; p1: number; p2: number; parametrizacion?: ParametrizacionLognormal }
   | { tipo: 'uniforme'; min: number; max: number }
@@ -44,7 +45,20 @@ export type DescriptorDistribucion =
   | { tipo: 'poisson'; lambda: number }
   | { tipo: 'discreta'; valores: number[]; pesos: number[] };
 
+/**
+ * Una distribución, opcionalmente **acotada** (B4): la masa fuera de
+ * `[min, max]` se descarta y se reescala (`truncate.ts`). Cualquiera de los
+ * dos límites puede faltar.
+ */
+export type DescriptorDistribucion = DescriptorBase & { truncado?: { min?: number; max?: number } };
+
 export function construirDesdeDescriptor(d: DescriptorDistribucion): Distribution {
+  const base = construirBase(d);
+  if (!d.truncado || (d.truncado.min === undefined && d.truncado.max === undefined)) return base;
+  return truncar(base, d.truncado.min ?? -Infinity, d.truncado.max ?? Infinity);
+}
+
+function construirBase(d: DescriptorBase): Distribution {
   switch (d.tipo) {
     case 'normal': return normal(d.media, d.desviacion);
     case 'lognormal': return lognormal(d.p1, d.p2, d.parametrizacion);

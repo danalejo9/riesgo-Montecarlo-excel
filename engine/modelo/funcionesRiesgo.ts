@@ -45,6 +45,11 @@ export const FUNCIONES_RIESGO: readonly FuncionRiesgo[] = [
     construir: ([p1, p2]) => ({ type: 'lognormal', p1: p1 as number, p2: p2 as number }),
   },
   {
+    id: 'LOGNORMAL2', descripcion: 'Lognormal con los parámetros del logaritmo: mu y sigma de ln(X).',
+    parametros: [{ nombre: 'mu', descripcion: 'Media del logaritmo' }, { nombre: 'sigma', descripcion: 'Desviación típica del logaritmo (> 0)' }],
+    construir: ([p1, p2]) => ({ type: 'lognormal', p1: p1 as number, p2: p2 as number, parametrization: 'log' }),
+  },
+  {
     id: 'UNIFORME', descripcion: 'Uniforme: cualquier valor entre el mínimo y el máximo, con la misma probabilidad.',
     parametros: [{ nombre: 'minimo', descripcion: 'Mínimo' }, { nombre: 'maximo', descripcion: 'Máximo' }],
     construir: ([min, max]) => ({ type: 'uniform', min: min as number, max: max as number }),
@@ -170,8 +175,56 @@ function constante(n: Nodo): number | null {
 }
 
 /**
+ * `RIESGO.DISCRETA(valores; pesos)` y `RIESGO.TRUNCAR(distribución; mín; máx)`
+ * (B4): como `CATEGORIA`, no van en `FUNCIONES_RIESGO` porque sus argumentos
+ * no son solo números.
+ */
+export const FUNCION_DISCRETA = {
+  id: 'DISCRETA',
+  descripcion: 'Discreta: una lista de valores posibles, cada uno con su peso.',
+  parametros: [
+    { nombre: 'valores', descripcion: 'Los valores posibles: un rango o una lista {1;2;3}' },
+    { nombre: 'pesos', descripcion: 'El peso de cada uno, en el mismo orden' },
+  ],
+} as const;
+
+export const FUNCION_TRUNCAR = {
+  id: 'TRUNCAR',
+  descripcion: 'Acota otra función RIESGO: descarta lo que cae fuera de [mínimo, máximo].',
+  parametros: [
+    { nombre: 'distribucion', descripcion: 'Una función RIESGO, p. ej. RIESGO.NORMAL(100;10)' },
+    { nombre: 'minimo', descripcion: 'Límite inferior' },
+    { nombre: 'maximo', descripcion: 'Límite superior' },
+  ],
+} as const;
+
+/** La distribución de `RIESGO.DISCRETA`, a partir de sus dos listas. */
+export function discretaDesdeListas(valores: readonly unknown[], pesos: readonly unknown[]): { spec: DistributionSpec; media: number } | string {
+  if (valores.length !== pesos.length) return 'RIESGO.DISCRETA necesita un peso por cada valor';
+  const values: number[] = [];
+  const weights: number[] = [];
+  for (let i = 0; i < valores.length; i++) {
+    if (valores[i] === null || valores[i] === undefined || valores[i] === '') continue;
+    const v = typeof valores[i] === 'number' ? (valores[i] as number) : Number(String(valores[i]).replace(',', '.'));
+    const p = typeof pesos[i] === 'number' ? (pesos[i] as number) : Number(String(pesos[i] ?? '').replace(',', '.'));
+    if (!Number.isFinite(v)) return 'los valores de RIESGO.DISCRETA tienen que ser números (para textos, RIESGO.CATEGORIA)';
+    if (!Number.isFinite(p) || p < 0) return 'los pesos de RIESGO.DISCRETA tienen que ser números no negativos';
+    values.push(v);
+    weights.push(p);
+  }
+  if (values.length === 0) return 'RIESGO.DISCRETA necesita al menos un valor';
+  const spec: DistributionSpec = { type: 'discrete', values, weights };
+  try {
+    return { spec, media: construirDesdeDescriptor(toDescriptor(spec)).mean() };
+  } catch (e) {
+    return `parámetros no válidos para RIESGO.DISCRETA: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
+/**
  * Convierte la fórmula de una celda en su distribución, o dice por qué no.
- * `lector` resuelve los rangos de `RIESGO.CATEGORIA` con el libro ya leído.
+ * `lector` resuelve los rangos de `RIESGO.CATEGORIA` y `RIESGO.DISCRETA` con
+ * el libro ya leído.
  */
 export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango): LecturaFuncionRiesgo {
   const r = parsear(formula.replace(/^=/, ''));
@@ -180,21 +233,46 @@ export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango): Lect
   if (raiz.tipo !== 'funcion' || idDeFuncionRiesgo(raiz.nombre) === null) {
     return { ok: false, motivo: 'la función RIESGO tiene que ser toda la fórmula de la celda (no parte de una operación)' };
   }
+  return leerNodoRiesgo(raiz, lector);
+}
+
+function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: LectorDeRango): LecturaFuncionRiesgo {
   const id = idDeFuncionRiesgo(raiz.nombre) as string;
-  if (id === FUNCION_CATEGORIA.id) {
-    if (raiz.args.length !== 2) return { ok: false, motivo: 'RIESGO.CATEGORIA necesita 2 argumentos: valores; pesos' };
+  if (id === FUNCION_CATEGORIA.id || id === FUNCION_DISCRETA.id) {
+    if (raiz.args.length !== 2) return { ok: false, motivo: `RIESGO.${id} necesita 2 argumentos: valores; pesos` };
     const valores = listaDe(raiz.args[0] as Nodo, lector);
     const pesos = listaDe(raiz.args[1] as Nodo, lector);
     if (!valores || !pesos) {
-      return { ok: false, motivo: 'los argumentos de RIESGO.CATEGORIA tienen que ser rangos de la hoja con valores escritos, o listas como {"Norte";"Sur"}' };
+      return { ok: false, motivo: `los argumentos de RIESGO.${id} tienen que ser rangos de la hoja con valores escritos, o listas como {1;2;3}` };
+    }
+    if (id === FUNCION_DISCRETA.id) {
+      const d = discretaDesdeListas(valores, pesos);
+      return typeof d === 'string' ? { ok: false, motivo: d } : { ok: true, id, spec: d.spec, media: d.media };
     }
     const c = categoriaDesdeListas(valores, pesos);
     if (typeof c === 'string') return { ok: false, motivo: c };
     return { ok: true, id, spec: c.spec, media: c.masProbable };
   }
+  if (id === FUNCION_TRUNCAR.id) {
+    const [interior, a, b] = raiz.args;
+    if (raiz.args.length !== 3 || !interior || interior.tipo !== 'funcion' || idDeFuncionRiesgo(interior.nombre) === null) {
+      return { ok: false, motivo: 'RIESGO.TRUNCAR necesita 3 argumentos: una función RIESGO; mínimo; máximo' };
+    }
+    const min = constante(a as Nodo);
+    const max = constante(b as Nodo);
+    if (min === null || max === null) return { ok: false, motivo: 'los límites de RIESGO.TRUNCAR tienen que ser números escritos en la fórmula' };
+    const dentro = leerNodoRiesgo(interior, lector);
+    if (!dentro.ok) return dentro;
+    const spec: DistributionSpec = { ...dentro.spec, truncate: { min, max } };
+    try {
+      return { ok: true, id, spec, media: construirDesdeDescriptor(toDescriptor(spec)).mean() };
+    } catch (e) {
+      return { ok: false, motivo: `RIESGO.TRUNCAR: ${e instanceof Error ? e.message : String(e)}` };
+    }
+  }
   const f = POR_ID.get(id);
   if (!f) {
-    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id].join(', ')}` };
+    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_TRUNCAR.id].join(', ')}` };
   }
   if (raiz.args.length !== f.parametros.length) {
     return { ok: false, motivo: `RIESGO.${id} necesita ${f.parametros.length} argumento(s): ${f.parametros.map((p) => p.nombre).join('; ')}` };

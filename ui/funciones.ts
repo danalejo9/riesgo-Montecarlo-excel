@@ -12,7 +12,9 @@
  * en Windows no es un navegador y no sabe importar.
  */
 
-import { categoriaDesdeListas, FUNCION_CATEGORIA, FUNCIONES_RIESGO, mediaDeFuncionRiesgo } from '../engine/modelo/funcionesRiesgo.ts';
+import {
+  categoriaDesdeListas, discretaDesdeListas, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_TRUNCAR, FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
+} from '../engine/modelo/funcionesRiesgo.ts';
 
 declare const CustomFunctions: {
   associate(id: string, f: (...args: never[]) => number | string): void;
@@ -37,4 +39,19 @@ CustomFunctions.associate(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: un
   const r = categoriaDesdeListas(valores.flat(), pesos.flat());
   if (typeof r !== 'string') return r.masProbable;
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+});
+
+// B4: la media de una discreta, y una función RIESGO acotada.
+CustomFunctions.associate(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][]) => {
+  const r = discretaDesdeListas(valores.flat(), pesos.flat());
+  if (typeof r !== 'string') return r.media;
+  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+});
+
+CustomFunctions.associate(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
+  // Fuera de la simulación la función interior ya enseña su media; aquí solo
+  // se mantiene dentro de los límites. La simulación usa la distribución
+  // acotada de verdad.
+  if (!(minimo < maximo)) throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'RIESGO.TRUNCAR: el mínimo tiene que ser menor que el máximo');
+  return Math.min(maximo, Math.max(minimo, valor));
 });

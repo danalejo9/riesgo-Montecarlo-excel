@@ -109,6 +109,21 @@ export function EditorDistribucion({
         </div>
       )}
 
+      {actual.type !== 'categorical' && (
+        <div className="parametros acotar">
+          <CampoOpcional
+            etiqueta="Acotar: mínimo"
+            valor={actual.truncate?.min}
+            alCambiar={(min) => intentar(conLimites(actual, { ...actual.truncate, min }))}
+          />
+          <CampoOpcional
+            etiqueta="Acotar: máximo"
+            valor={actual.truncate?.max}
+            alCambiar={(max) => intentar(conLimites(actual, { ...actual.truncate, max }))}
+          />
+        </div>
+      )}
+
       {!problema && <VistaPreviaDistribucion spec={actual} />}
 
       {problema && (
@@ -268,6 +283,42 @@ function EditorCategorica({
       )}
       {aviso && <p className="aviso-linea">{aviso}</p>}
     </div>
+  );
+}
+
+/** La distribución con otros límites; sin ninguno, deja de estar acotada (B4). */
+function conLimites(spec: DistributionSpec, t: { min?: number | undefined; max?: number | undefined }): DistributionSpec {
+  const limpio: { min?: number; max?: number } = {};
+  if (t.min !== undefined) limpio.min = t.min;
+  if (t.max !== undefined) limpio.max = t.max;
+  const copia = { ...spec };
+  if (limpio.min === undefined && limpio.max === undefined) delete copia.truncate;
+  else copia.truncate = limpio;
+  return copia;
+}
+
+/** Un número que puede quedar vacío (un límite opcional). */
+function CampoOpcional({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: number | undefined; alCambiar: (v: number | undefined) => void }) {
+  const [texto, setTexto] = useState(numeroEditable(valor));
+  useEffect(() => setTexto(numeroEditable(valor)), [valor]);
+  return (
+    <label className="campo">
+      <span className="tenue">{etiqueta}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        placeholder="sin límite"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={() => {
+          if (texto === numeroEditable(valor)) return;
+          if (texto.trim() === '') return alCambiar(undefined);
+          const n = leerNumero(texto);
+          if (n !== null) alCambiar(n);
+          else setTexto(numeroEditable(valor));
+        }}
+      />
+    </label>
   );
 }
 
