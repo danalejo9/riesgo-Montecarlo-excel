@@ -481,7 +481,7 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
-### T. Variables de texto (categóricas) — ≈ 8–11 d *(propuesta, pendiente de respuestas del usuario)*
+### T. Variables de texto (categóricas) — ≈ 9–12 d *(diseño cerrado con el usuario el 28/09)*
 Propuesto por el usuario el 28/09 a raíz de G3: que una simulación pueda
 trabajar con **textos**, no solo con números. Dos mitades:
 
@@ -514,9 +514,40 @@ iteración desde E5, y las funciones de texto están verificadas contra Excel.
 | Informe, volcado, escenarios | Tablas de frecuencias y su comparación entre escenarios |
 | Documentación | Manual (una página de variables de texto), tutorial 3 (el retraso de obra o el proveedor como texto), pruebas de fidelidad del motor con textos |
 
-**Niveles**: T1 entradas de texto · T2 salidas de texto (frecuencias) · T3
-sensibilidad cruzada · T4 función `RIESGO.CATEGORIA` y compartir · T5
-documentación y tutorial.
+**Decisiones del usuario (28/09)**:
+1. **Entradas**: en el panel (valores escritos o leídos de un rango: columna de
+   nombres + columna de probabilidades) **y** con la función
+   `RIESGO.CATEGORIA(valores; pesos)` en la celda.
+2. **Salidas de texto**: las tres cosas — frecuencias con barras y el valor
+   más frecuente; la probabilidad de un valor, como el umbral de las numéricas
+   y comparable entre escenarios; y qué entradas deciden cada valor.
+3. **Cruce salida numérica × entrada de texto**: sí — media y caja (p5–p95)
+   de cada salida numérica por categoría.
+4. **Lugar**: después de la etapa 1b (C8, C9, F5) y antes de la etapa 2.
+
+**Niveles**: T1 entradas de texto (panel y rango) · T2 salidas de texto
+(frecuencias, barras, probabilidad de un valor) · T3 sensibilidad cruzada (qué
+entradas deciden cada valor; salida numérica por categoría) · T4 función
+`RIESGO.CATEGORIA` y «Preparar para compartir» · T5 documentación, tutorial y
+pruebas de fidelidad con textos.
+
+**Ideas del mismo estilo** *(propuestas el 28/09, pendientes de confirmar)*:
+- **T6. Salidas de sí/no** (`VERDADERO`/`FALSO`): «¿se cumple el covenant?»,
+  «¿llega a tiempo?» → probabilidad de que sea verdadero, y qué entradas lo
+  deciden. Sale casi gratis con T2.
+- **T7. Entradas de fecha**: una fecha de inicio o de entrega incierta
+  (triangular entre dos fechas) que se enseña como fecha y no como número de
+  serie, y salidas de fecha («fecha de fin del proyecto») con percentiles en
+  fechas. Muy de gestión de proyectos.
+- **T8. Registro de riesgos**: cada riesgo como probabilidad × impacto (un
+  sí/no y una distribución del coste o del retraso), declarado en una tabla
+  de la hoja, con su propia vista: qué riesgos pesan más en el total. Es como
+  se trabaja el riesgo en obra y en proyectos, y ningún complemento de
+  simulación lo trae hecho de forma sencilla.
+- **T9. Opciones de decisión**: una celda con varias opciones que **no** son
+  aleatorias («proveedor A / B / C», «deuda al 60 / 70 / 80 %»): se simula
+  el modelo con cada una y se comparan lado a lado. Es la versión de texto
+  de H3 (simulaciones en serie).
 
 ### M. Libros tutoriales y manual — lo último, 6–9 d
 Pedido por el usuario el 27/09. Diseño completo en `docs/LIBROS_TUTORIAL.md`.
@@ -535,8 +566,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
   manual de H9 y de E9.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → **C8, C9, F5**
-(pedidos otra vez en la tercera ronda) → **T** (lugar pendiente de decidir
-con el usuario) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+(pedidos otra vez en la tercera ronda) → **T1–T5** (variables de texto) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
 C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G →
 **M (libros tutoriales y manual)** → I3.
 La lista completa, numerada y con su origen, está en
