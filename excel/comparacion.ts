@@ -16,6 +16,7 @@
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
+import { esSalidaDeTexto, probabilidadDeValor } from './analisisTexto.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
 import { restaurarResultados, serializarResultados } from './resultadosGuardados.ts';
 
@@ -38,6 +39,15 @@ export function compararSalida(
   referencia: ResultadoSalida,
   umbral?: { value: number; direction: 'below' | 'above' },
 ): FilaComparacion[] {
+  // Salida de texto o de sí/no (T2): se compara la probabilidad de cada valor.
+  if (esSalidaDeTexto(actual) || esSalidaDeTexto(referencia)) {
+    const valores = [...new Set([...(actual.categorias ?? []), ...(referencia.categorias ?? [])].map((c) => c.valor))];
+    return valores.slice(0, 8).map((v) => {
+      const r = probabilidadDeValor(referencia.categorias, v) ?? 0;
+      const a = probabilidadDeValor(actual.categorias, v) ?? 0;
+      return { medida: `P(«${v}»)`, referencia: r, actual: a, diferencia: a - r, esProbabilidad: true };
+    });
+  }
   const fila = (medida: string, r: number | undefined, a: number | undefined, esProbabilidad?: boolean) =>
     r === undefined || a === undefined || !Number.isFinite(r) || !Number.isFinite(a)
       ? []

@@ -4,6 +4,7 @@
  * hoja A4. "Imprimir → Guardar como PDF" hace el resto.
  */
 
+import { esSalidaDeTexto } from '../excel/analisisTexto.ts';
 import { Fragment, StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -89,6 +90,44 @@ function Informe() {
 }
 
 function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInforme; referencia?: string; primera: boolean }) {
+  if (esSalidaDeTexto(s)) {
+    // Salida de texto o de sí/no (T2): frecuencias, qué la decide y cruce.
+    const objetivo = s.categorias?.[0]?.valor;
+    const decisivas = s.decisivas?.[0]?.filas.filter((f) => f.rango > 0) ?? [];
+    return (
+      <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
+        <h2>{s.nombre} <span className="tenue">({s.ref})</span></h2>
+        {s.lectura && s.lectura.length > 0 && <p className="lectura">{s.lectura.join(' ')}</p>}
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>Valor</th><th>Iteraciones</th><th>Probabilidad</th></tr></thead>
+          <tbody>
+            {(s.categorias ?? []).map((c) => (
+              <tr key={c.valor}><td>{c.valor}</td><td>{miles(c.conteo)}</td><td>{porcentajeTexto(c.proporcion)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        {s.comparacion && referencia && <TablaComparacion etiqueta={referencia} filas={s.comparacion} />}
+        {decisivas.length > 0 && objetivo && (
+          <>
+            <h3>Qué decide que salga «{s.decisivas?.[0]?.valor}»</h3>
+            <table className="comparacion tabla-informe">
+              <thead><tr><th>Entrada</th><th>10 % más bajo</th><th>10 % más alto</th></tr></thead>
+              <tbody>{decisivas.map((f) => <tr key={f.id}><td>{f.nombre}</td><td>{porcentajeTexto(f.bajo)}</td><td>{porcentajeTexto(f.alto)}</td></tr>)}</tbody>
+            </table>
+          </>
+        )}
+        {s.porCategoria?.map((b) => (
+          <div key={b.id}>
+            <h3>Según {b.nombre}</h3>
+            <table className="comparacion tabla-informe">
+              <thead><tr><th>{b.nombre}</th><th>Veces</th><th>Sale más</th><th>Prob.</th></tr></thead>
+              <tbody>{b.filas.map((f) => <tr key={f.categoria}><td>{f.categoria}</td><td>{porcentajeTexto(f.proporcion)}</td><td>{f.masFrecuente ?? ''}</td><td>{f.probabilidad === undefined ? '' : porcentajeTexto(f.probabilidad)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        ))}
+      </section>
+    );
+  }
   if (s.resumen.n === 0) {
     return (
       <section className={primera ? 'salida-informe primera' : 'salida-informe'}>
@@ -146,8 +185,22 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
           <div><h3>Qué pasa si cada entrada se mueve</h3><Arana curvas={s.arana} /></div>
         )}
       </div>
+
+      {s.porCategoria?.map((b) => (
+        <div key={b.id}>
+          <h3>Según {b.nombre}</h3>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>{b.nombre}</th><th>Veces</th><th>Media</th><th>p5</th><th>p95</th></tr></thead>
+            <tbody>{b.filas.map((f) => <tr key={f.categoria}><td>{f.categoria}</td><td>{porcentajeTexto(f.proporcion)}</td><td>{f.media === undefined ? '' : numero(f.media)}</td><td>{f.p5 === undefined ? '' : numero(f.p5)}</td><td>{f.p95 === undefined ? '' : numero(f.p95)}</td></tr>)}</tbody>
+          </table>
+        </div>
+      ))}
     </section>
   );
+}
+
+function porcentajeTexto(p: number): string {
+  return `${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`;
 }
 
 const raiz = document.getElementById('raiz');

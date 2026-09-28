@@ -27,7 +27,8 @@ import {
 } from '../engine/stats/index.ts';
 import type { Decisivas, FilaCategoria, PorCategoria } from './analisisTexto.ts';
 import type { EntradaMuestreada } from './entradasMuestreadas.ts';
-import { lecturaDeSalida } from './lectura.ts';
+import { esSalidaDeTexto } from './analisisTexto.ts';
+import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
 export interface AvanceSimulacion {
@@ -403,6 +404,11 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   titulo('RESUMEN DE LAS SALIDAS');
   cabecera(['Nombre', 'Media', 'p5', 'p50', 'p95', 'Sin valor']);
   for (const s of resultado.salidas) {
+    if (esSalidaDeTexto(s)) {
+      const moda = s.categorias?.[0];
+      linea([s.nombre, moda ? `«${moda.valor}» ${(moda.proporcion * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : '', '', '', '', '']);
+      continue;
+    }
     const p = s.resumen.percentiles;
     formato({ fila, col: 1, filas: 1, cols: 4 }, formatoSalida(s));
     linea([s.nombre, s.resumen.media, p.p5 ?? '', p.p50 ?? '', p.p95 ?? '', s.noNumericas]);
@@ -410,11 +416,67 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   tenue('«Sin valor» son las iteraciones en que la salida no dio un número (por ejemplo, una TIR que no existe).');
   fila++;
 
+  /** La salida en cada categoría de cada entrada de texto (T3). */
+  const escribirPorCategoria = (s: ResultadoSalida, fmt?: string) => {
+    for (const b of s.porCategoria ?? []) {
+      const numerica = b.filas.some((x) => x.media !== undefined);
+      cabecera(numerica ? [`Según ${b.nombre}`, 'Veces', 'Media', 'p5', 'p95'] : [`Según ${b.nombre}`, 'Veces', 'Sale más', 'Probabilidad']);
+      const i0 = fila;
+      for (const x of b.filas) {
+        linea(numerica ? [x.categoria, x.proporcion, x.media ?? '', x.p5 ?? '', x.p95 ?? ''] : [x.categoria, x.proporcion, x.masFrecuente ?? '', x.probabilidad ?? '']);
+      }
+      formato({ fila: i0, col: 1, filas: b.filas.length, cols: 1 }, FORMATO_PORCENTAJE);
+      if (numerica && fmt) formato({ fila: i0, col: 2, filas: b.filas.length, cols: 3 }, fmt);
+      if (!numerica) formato({ fila: i0, col: 3, filas: b.filas.length, cols: 1 }, FORMATO_PORCENTAJE);
+      fila++;
+    }
+  };
+
   for (const s of resultado.salidas) {
     const f = formatoSalida(s);
     bandas.push(fila);
     titulos.push(fila);
     linea([`SALIDA: ${s.nombre} (${s.ref})`]);
+
+    if (esSalidaDeTexto(s)) {
+      const categorias = s.categorias ?? [];
+      const valorDeInteres = modelo.outputs.find((o) => o.id === s.id)?.valueOfInterest;
+      const frases = lecturaDeTexto({ nombre: s.nombre, categorias, ...(valorDeInteres ? { valorDeInteres } : {}), ...(s.decisivas ? { decisivas: s.decisivas } : {}) });
+      if (frases.length > 0) tenue(frases.join(' '));
+      fila++;
+      const inicio = fila;
+      cabecera(['Valor', 'Iteraciones', 'Probabilidad']);
+      const ini = fila;
+      for (const c of categorias) linea([c.valor, c.conteo, c.proporcion]);
+      formato({ fila: ini, col: 1, filas: categorias.length, cols: 1 }, FORMATO_ENTERO);
+      formato({ fila: ini, col: 2, filas: categorias.length, cols: 1 }, FORMATO_PORCENTAJE);
+      graficos.push({
+        tipo: 'columnas', titulo: `${s.nombre} — frecuencia de cada valor`,
+        datos: { fila: inicio, col: 0, filas: categorias.length + 1, cols: 1 }, // se completa abajo con la columna de probabilidades
+        desde: { fila: inicio, col: COL_GRAFICOS }, hasta: { fila: inicio + ALTO_GRAFICO, col: COL_GRAFICOS + 7 },
+      });
+      // Datos del gráfico: nombre y probabilidad en columnas contiguas, en la zona de datos.
+      poner(filaDatos++, COL_DATOS, [`${s.nombre}: frecuencias`]);
+      const filaCab = filaDatos;
+      cabeceras.push({ fila: filaCab, col: COL_DATOS, filas: 1, cols: 2 });
+      poner(filaDatos++, COL_DATOS, ['Valor', 'Probabilidad']);
+      for (const c of categorias) poner(filaDatos++, COL_DATOS, [c.valor, c.proporcion]);
+      formato({ fila: filaCab + 1, col: COL_DATOS + 1, filas: categorias.length, cols: 1 }, FORMATO_PORCENTAJE);
+      (graficos[graficos.length - 1] as GraficoInforme).datos = { fila: filaCab, col: COL_DATOS, filas: categorias.length + 1, cols: 2 };
+      filaDatos++;
+      fila++;
+      const d = s.decisivas?.find((x) => x.valor === (valorDeInteres ?? categorias[0]?.valor))?.filas.filter((f) => f.rango > 0) ?? [];
+      if (d.length > 0) {
+        cabecera([`Qué decide que salga «${valorDeInteres ?? categorias[0]?.valor}»`, '10 % más bajo', '10 % más alto']);
+        const i0 = fila;
+        for (const f of d) linea([f.nombre, f.bajo, f.alto]);
+        formato({ fila: i0, col: 1, filas: d.length, cols: 2 }, FORMATO_PORCENTAJE);
+        fila++;
+      }
+      escribirPorCategoria(s);
+      fila = Math.max(fila, inicio + ALTO_GRAFICO) + 2;
+      continue;
+    }
 
     if (s.resumen.n === 0) {
       tenue('Ninguna iteración dio un número en esta celda (devuelve un texto o un error de Excel): no hay estadísticas.');
@@ -488,6 +550,8 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
       );
     }
     tenue('Percentiles aproximados: se calculan con un t-digest, no ordenando todos los valores.');
+    fila++;
+    escribirPorCategoria(s, f);
 
     // Los datos de los gráficos, a la derecha, y los gráficos junto al bloque.
     const altoGraficos = s.histograma && s.histograma.length > 0 ? 2 * ALTO_GRAFICO + 1 : ALTO_GRAFICO;

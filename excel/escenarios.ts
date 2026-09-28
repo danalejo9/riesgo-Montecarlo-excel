@@ -20,6 +20,7 @@ import type { ReferenciaGuardada } from './comparacion.ts';
 import { restaurarReferencia } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
 import { restaurarResultados, serializarResultados } from './resultadosGuardados.ts';
+import { esSalidaDeTexto, probabilidadDeValor } from './analisisTexto.ts';
 
 /** Cuántos escenarios caben: cada uno ocupa unos 20 kB por salida en el libro. */
 export const MAXIMO_ESCENARIOS = 10;
@@ -146,11 +147,19 @@ export interface FilaEscenario {
   p5?: number;
   p50?: number;
   p95?: number;
-  /** Probabilidad del umbral de la salida, si tiene. */
+  /** Probabilidad del umbral de la salida (o del valor de interés, si es de texto). */
   probabilidad?: number;
+  /** Salidas de texto: el valor que más sale en ese escenario. */
+  masFrecuente?: string;
 }
 
-function filaDe(etiqueta: string, esActual: boolean, s: ResultadoSalida, umbral?: { value: number; direction: 'below' | 'above' }): FilaEscenario {
+function filaDe(etiqueta: string, esActual: boolean, s: ResultadoSalida, umbral?: { value: number; direction: 'below' | 'above' }, valorDeInteres?: string): FilaEscenario {
+  if (esSalidaDeTexto(s)) {
+    // Salida de texto (T2): el valor más frecuente y la probabilidad del de interés.
+    const objetivo = valorDeInteres ?? s.categorias?.[0]?.valor;
+    const p = objetivo ? probabilidadDeValor(s.categorias, objetivo) : undefined;
+    return { etiqueta, esActual, media: NaN, masFrecuente: s.categorias?.[0]?.valor ?? '', ...(p !== undefined ? { probabilidad: p } : {}) };
+  }
   const p = s.resumen.percentiles;
   return {
     etiqueta,
@@ -175,6 +184,7 @@ export function tablaEscenarios(
   actual: SimulacionCompletada,
   a: AlmacenEscenarios,
   umbral?: { value: number; direction: 'below' | 'above' },
+  valorDeInteres?: string,
 ): FilaEscenario[] {
   const filas: FilaEscenario[] = [];
   let actualYaEsta = false;
@@ -183,8 +193,8 @@ export function tablaEscenarios(
     if (!s) continue;
     const mismo = Boolean(actual.idSimulacion) && e.resultado.idSimulacion === actual.idSimulacion;
     if (mismo) actualYaEsta = true;
-    filas.push(filaDe(mismo ? `${e.etiqueta} (esta simulación)` : e.etiqueta, mismo, mismo ? salidaActual : s, umbral));
+    filas.push(filaDe(mismo ? `${e.etiqueta} (esta simulación)` : e.etiqueta, mismo, mismo ? salidaActual : s, umbral, valorDeInteres));
   }
-  if (!actualYaEsta) filas.push(filaDe('Esta simulación', true, salidaActual, umbral));
+  if (!actualYaEsta) filas.push(filaDe('Esta simulación', true, salidaActual, umbral, valorDeInteres));
   return filas;
 }

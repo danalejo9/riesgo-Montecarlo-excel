@@ -211,4 +211,23 @@ describe('construirInforme', () => {
     }
     expect(informe.anchos[0]).toBeLessThanOrEqual(40);
   });
+
+  it('una salida de texto se vuelca por frecuencias, con su gráfico y su cruce (T2)', () => {
+    const texto: SimulacionCompletada = {
+      ...RESULTADO,
+      salidas: [{
+        ...RESULTADO.salidas[0]!,
+        nombre: 'Zona', noNumericas: 100,
+        resumen: { ...RESULTADO.salidas[0]!.resumen, n: 0 },
+        categorias: [{ valor: 'Sur', conteo: 60, proporcion: 0.6 }, { valor: 'Norte', conteo: 40, proporcion: 0.4 }],
+        decisivas: [{ valor: 'Sur', filas: [{ id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', bajo: 0.2, alto: 0.9, rango: 0.7 }] }],
+      }],
+    };
+    const informe = construirInforme(MODELO, texto);
+    const t = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(t).toContain('«Sur» 60 %');
+    expect(t).toContain('Sur\t60\t0.6');
+    expect(t).toContain('Qué decide que salga «Sur»\t10 % más bajo\t10 % más alto');
+    expect(informe.graficos.some((g) => g.titulo.includes('frecuencia'))).toBe(true);
+  });
 });

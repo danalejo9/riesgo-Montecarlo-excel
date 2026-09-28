@@ -19,9 +19,10 @@ import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.t
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
-import { lecturaDeSalida } from './lectura.ts';
+import { esSalidaDeTexto } from './analisisTexto.ts';
+import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 
-export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada'> {
+export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' | 'muestraTexto'> {
   umbral?: { texto: string; probabilidad: number };
   comparacion?: FilaComparacion[];
   cdfReferencia?: ResultadoSalida['cdf'];
@@ -87,16 +88,22 @@ export function datosDelInforme(
       })),
     ],
     ...(ref ? { referencia: ref.etiqueta } : {}),
-    salidas: resultado.salidas.map(({ muestraOrdenada, ...s }) => {
+    salidas: resultado.salidas.map(({ muestraOrdenada, ...conTexto }) => {
+      // La muestra de textos (hasta 100.000) no viaja: el informe no la enseña.
+      const s = { ...conTexto };
+      delete s.muestraTexto;
       const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;
       const deRef = ref ? salidaDeReferencia(ref, s.id) : undefined;
       const probabilidad = umbral && muestraOrdenada && muestraOrdenada.length > 0
         ? probabilidadUmbral(muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima')
         : undefined;
-      const lectura = lecturaDeSalida({
-        ...s,
-        ...(umbral && probabilidad !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad } } : {}),
-      });
+      const valorDeInteres = modelo.outputs.find((o) => o.id === s.id)?.valueOfInterest;
+      const lectura = esSalidaDeTexto(s)
+        ? lecturaDeTexto({ nombre: s.nombre, categorias: s.categorias ?? [], ...(valorDeInteres ? { valorDeInteres } : {}), ...(s.decisivas ? { decisivas: s.decisivas } : {}) })
+        : lecturaDeSalida({
+          ...s,
+          ...(umbral && probabilidad !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad } } : {}),
+        });
       return {
         ...s,
         ...(lectura.length > 0 ? { lectura } : {}),

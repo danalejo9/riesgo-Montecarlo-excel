@@ -28,7 +28,7 @@
  * derecho a saber por qué, y qué función del libro lo obligó.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
 import type { EntradaMuestreada } from '../excel/entradasMuestreadas.ts';
@@ -264,6 +264,16 @@ export function Resultados({
         <SalidaDeTexto
           key={salida.id}
           salida={salida}
+          comparaciones={<>
+            {comparando && (() => {
+              const ref = salidaDeReferencia(comparando, salida.id);
+              return ref ? <TablaComparacion etiqueta={comparando.etiqueta} filas={compararSalida(salida, ref)} /> : null;
+            })()}
+            {escenarios && escenarios.escenarios.length > 0 && (() => {
+              const filas = tablaEscenarios(salida, resultado, escenarios, undefined, modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest);
+              return filas.length > 1 ? <TablaEscenarios filas={filas} conUmbral={false} /> : null;
+            })()}
+          </>}
           valorDeInteres={modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest}
           alCambiarValor={(v) =>
             alCambiarModelo?.({
@@ -585,10 +595,13 @@ function SalidaDeTexto({
   salida,
   valorDeInteres,
   alCambiarValor,
+  comparaciones,
 }: {
   salida: ResultadoSalida;
   valorDeInteres?: string;
   alCambiarValor: (v: string | null) => void;
+  /** La comparación con el escenario marcado y la tabla de escenarios, si los hay. */
+  comparaciones?: ReactNode;
 }) {
   const categorias = salida.categorias ?? [];
   const elegido = valorDeInteres && categorias.some((c) => c.valor === valorDeInteres) ? valorDeInteres : undefined;
@@ -646,6 +659,8 @@ function SalidaDeTexto({
           <p className="tenue">Con qué probabilidad sale «{objetivo}» cuando cada entrada está en su 10 % más bajo y en su 10 % más alto.</p>
         </>
       )}
+
+      {comparaciones}
 
       {salida.porCategoria && salida.porCategoria.length > 0 && <TablasPorCategoria bloques={salida.porCategoria} />}
     </section>
@@ -1193,6 +1208,28 @@ function Escenarios({
 
 /** Una salida en todos los escenarios a la vez (E7). */
 function TablaEscenarios({ filas, conUmbral }: { filas: readonly FilaEscenario[]; conUmbral: boolean }) {
+  if (filas.some((f) => f.masFrecuente !== undefined)) {
+    // Salida de texto (T2): el valor que más sale y la probabilidad del de interés.
+    return (
+      <>
+        <h3>En todos los escenarios</h3>
+        <div className="tabla-desplazable">
+          <table className="tabla-resumen sin-clic">
+            <thead><tr><th>Escenario</th><th>Sale más</th><th>Probabilidad</th></tr></thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr key={f.etiqueta} className={f.esActual ? 'elegida' : undefined}>
+                  <td>{f.etiqueta}</td>
+                  <td className="celda-texto">{f.masFrecuente ?? ''}</td>
+                  <td>{f.probabilidad === undefined ? '' : `${(f.probabilidad * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <h3>En todos los escenarios</h3>
