@@ -106,8 +106,10 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
   });
 
   it('todo lo implementado está clasificado en alguna parte del catálogo', () => {
+    // Las internas (empiezan por `_`, como `_RIESGO.CUANTIL` de B7) las escribe
+    // el propio motor al reescribir una fórmula: nunca aparecen en un libro.
     const sinClasificar = [...implementadas].filter(
-      (f) => !NIVEL_0.has(f) && !NIVEL_1.has(f) && !NIVEL_2.has(f) && !NO_SOPORTADAS.has(f),
+      (f) => !f.startsWith('_') && !NIVEL_0.has(f) && !NIVEL_1.has(f) && !NIVEL_2.has(f) && !NO_SOPORTADAS.has(f),
     );
     expect(sinClasificar).toEqual([]);
   });

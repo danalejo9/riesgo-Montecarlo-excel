@@ -68,11 +68,22 @@ const LIBRO: Record<string, Celda> = {
   D12: { valor: 'Norte' }, E12: { valor: 20 },
   D13: { valor: 'Sur' }, E13: { valor: 50 },
   D14: { valor: 'Este' }, E14: { valor: 30 },
+  // Funciones RIESGO con celdas como argumentos (B7) y de resultados (B6).
+  A18: { valor: 'Desviación del coste' },
+  B18: { valor: 100 },
+  A19: { valor: 'Coste con RIESGO' },
+  B19: { formula: 'RIESGO.NORMAL(B3,B18)' },
+  A20: { valor: 'Imprevistos' },
+  B20: { formula: '1000+RIESGO.NORMAL(0,B18)' },
+  A21: { valor: 'Coste con funciones' },
+  B21: { formula: 'B19*B4+B20' },
+  A22: { valor: 'Media del precio' },
+  B22: { formula: 'RIESGO.MEDIA(B10)' },
 };
 
 /** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
 const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
-const FILAS_USADAS = 16;
+const FILAS_USADAS = 22;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -93,14 +104,19 @@ function recalcular(): void {
   }
 
   const { grafo } = construirGrafo(formulas, valores);
-  const salidas = formulas.map((f) => claveCelda(f.hoja, f.col, f.fila));
-  const r = evaluarModelo(grafo, new Map(), salidas, 1);
-  if (!r.ok) return;
 
+  // Celda a celda: las funciones RIESGO no las calcula el motor (en Excel las
+  // calcula el complemento), y una sola no debe dejar sin recalcular el resto.
   for (const [ref, celda] of Object.entries(LIBRO)) {
     if (!celda.formula) continue;
     const { col, fila } = refDe(ref);
-    const columna = r.valores.get(claveCelda(HOJA, col, fila));
+    const clave = claveCelda(HOJA, col, fila);
+    const r = evaluarModelo(grafo, new Map(), [clave], 1);
+    if (!r.ok) {
+      celda.valor = '#NAME?';
+      continue;
+    }
+    const columna = r.valores.get(clave);
     if (!columna) continue;
     const tipo = tipoEn(columna, 0);
     celda.valor = tipo === NUMERO ? numeroEn(columna, 0)

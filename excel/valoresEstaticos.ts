@@ -17,7 +17,7 @@
 import type { ValorCelda } from '../engine/graph/index.ts';
 import { ERROR, LOGICO, NUMERO, TEXTO, type ValorEscalar } from '../engine/values/index.ts';
 import type { ErrorExcel } from '../engine/parser/index.ts';
-import type { ValorEstatico } from './lectorLibro.ts';
+import type { ValorEstatico } from './tiposLectura.ts';
 
 /**
  * Los errores de Excel, tal como los devuelve Office.js en `values`. La

@@ -63,6 +63,12 @@ export {
   FUNCION_TRUNCAR,
   FUNCIONES_RIESGO,
   idDeFuncionRiesgo,
+  construirSpecRiesgo,
+  esFuncionDeResultado,
+  esFuncionParametrica,
+  FUNCIONES_RESULTADO,
+  leerNodoRiesgo,
+  type EvaluadorDeArgumento,
   leerFuncionRiesgo,
   type LectorDeRango,
   mediaDeFuncionRiesgo,
@@ -71,3 +77,15 @@ export {
   type LecturaFuncionRiesgo,
 } from './funcionesRiesgo.ts';
 export { vistaPrevia, type VistaPrevia } from './vistaPrevia.ts';
+export {
+  analizarRiesgoEnGrafo,
+  aplicarReescrituras,
+  contieneDistribucion,
+  contieneFuncionResultado,
+  esLlamadaDistribucion,
+  PREFIJO_DINAMICA,
+  PREFIJO_FUNCION,
+  type ConversionRiesgo,
+  type OpcionesRiesgoEnGrafo,
+  type RiesgoEnGrafo,
+} from './riesgoEnGrafo.ts';

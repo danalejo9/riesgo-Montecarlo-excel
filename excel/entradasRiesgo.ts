@@ -12,55 +12,58 @@
  * suelta en una hoja que no afecta a nada no debe llenar el tornado de ceros.
  */
 
-import { clausuraDependencias, type FormulaCelda, type Grafo } from '../engine/graph/index.ts';
-import { claveCelda } from '../engine/parser/ast.ts';
-import { leerFuncionRiesgo, mencionaRiesgo, type EntradaRiskModel } from '../engine/modelo/index.ts';
-import { lectorDeLibro } from './lectorRangos.ts';
-import type { ValorEstatico } from './tiposLectura.ts';
+import type { FormulaCelda, Grafo } from '../engine/graph/index.ts';
+import type { Nodo } from '../engine/parser/ast.ts';
+import { analizarRiesgoEnGrafo, type EntradaRiskModel } from '../engine/modelo/index.ts';
 
 export interface EntradasDeFunciones {
   entradas: EntradaRiskModel[];
+  /** La clave del grafo de cada entrada (una celda, o una celda virtual en los casos de B7). */
   claves: string[];
   /** Celdas con `RIESGO.*` que no se pueden usar, con el motivo. */
   errores: string[];
   /** Celdas que están en el panel y además tienen `RIESGO.*`: se usa el panel. */
   duplicadas: string[];
+  /** Referencia de cada entrada → su clave en el grafo. */
+  claveDeRef: Map<string, string>;
+  /** La celda del libro de cada entrada, por id. */
+  celdaDeEntrada: Map<string, string>;
+  /** Cómo contar la distribución de las entradas de apoyo (parámetros que cambian). */
+  descripciones: Map<string, string>;
+  /** Celdas cuya fórmula se reescribió (RIESGO dentro de una operación o con parámetros aleatorios). */
+  reescritas: string[];
+  /** Las fórmulas nuevas de esas celdas, para aplicarlas al grafo antes de simular. */
+  reescrituras: Map<string, Nodo>;
+  /** Por qué se reescribió cada una. */
+  motivosReescritura: Map<string, string>;
 }
 
+/**
+ * Las entradas que declaran las funciones RIESGO de las que depende alguna
+ * salida. Toda la lógica está en `engine/modelo/riesgoEnGrafo.ts`; `formulas`
+ * ya están en el grafo y se mantiene por compatibilidad.
+ */
 export function entradasDeFunciones(
-  formulas: readonly FormulaCelda[],
+  _formulas: readonly FormulaCelda[],
   grafo: Grafo,
   clavesEntradaPanel: readonly string[],
   clavesSalida: readonly string[],
   /** El nombre legible de la celda (E5); sin él, la entrada se llama como su clave. */
   nombrar?: (clave: string, hoja: string, col: number, fila: number) => string,
-  /** Los valores escritos del libro, para los rangos de `RIESGO.CATEGORIA` (T4). */
-  valores?: readonly ValorEstatico[],
 ): EntradasDeFunciones {
-  const out: EntradasDeFunciones = { entradas: [], claves: [], errores: [], duplicadas: [] };
-  const candidatas = formulas.filter((f) => mencionaRiesgo(f.formula));
-  if (candidatas.length === 0) return out;
-
-  const necesarias = clausuraDependencias(grafo, clavesSalida);
-  const delPanel = new Set(clavesEntradaPanel);
-
-  for (const f of candidatas) {
-    const clave = claveCelda(f.hoja, f.col, f.fila);
-    if (!necesarias.has(clave)) continue;
-    if (delPanel.has(clave)) {
-      out.duplicadas.push(clave);
-      continue;
-    }
-    const r = leerFuncionRiesgo(f.formula, valores ? lectorDeLibro(valores, f.hoja) : undefined);
-    if (!r.ok) {
-      out.errores.push(`${clave}: ${r.motivo}`);
-      continue;
-    }
-    const name = nombrar?.(clave, f.hoja, f.col, f.fila) ?? clave;
-    out.entradas.push({ id: `rf_${clave}`, name, ref: clave, dist: r.spec, correlations: [] });
-    out.claves.push(clave);
-  }
-  return out;
+  const r = analizarRiesgoEnGrafo(grafo, { clavesEntradaPanel, clavesSalida, ...(nombrar ? { nombrar } : {}) });
+  return {
+    entradas: r.entradas,
+    claves: r.claves,
+    errores: r.errores,
+    duplicadas: r.duplicadas,
+    claveDeRef: r.claveDeRef,
+    celdaDeEntrada: r.celdaDeEntrada,
+    descripciones: r.descripciones,
+    reescritas: r.reescritas,
+    reescrituras: r.reescrituras,
+    motivosReescritura: r.motivosReescritura,
+  };
 }
 
 /**
@@ -74,9 +77,9 @@ export function entradasDeFunciones(
  */
 export function resolverConFunciones(
   resolver: (ref: string) => string,
-  deFunciones: Pick<EntradasDeFunciones, 'claves'>,
+  deFunciones: Pick<EntradasDeFunciones, 'claves'> & Partial<Pick<EntradasDeFunciones, 'claveDeRef'>>,
 ): (ref: string) => string {
   if (deFunciones.claves.length === 0) return resolver;
-  const propias = new Set(deFunciones.claves);
-  return (ref) => (propias.has(ref) ? ref : resolver(ref));
+  const propias = deFunciones.claveDeRef ?? new Map(deFunciones.claves.map((c) => [c, c] as const));
+  return (ref) => propias.get(ref) ?? resolver(ref);
 }

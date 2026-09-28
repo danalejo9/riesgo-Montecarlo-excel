@@ -16,12 +16,18 @@
  * originales se guardan para poder volver a ellas («Restaurar»).
  */
 
-import type { FormulaCelda } from '../engine/graph/index.ts';
-import { generarId, leerFuncionRiesgo, mencionaRiesgo, type DistributionSpec, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { construirGrafo, type FormulaCelda } from '../engine/graph/index.ts';
+import {
+  analizarRiesgoEnGrafo,
+  contieneFuncionResultado,
+  generarId,
+  type DistributionSpec,
+  type ModeloRiesgo,
+} from '../engine/modelo/index.ts';
 import { claveCelda, letrasDeColumna } from '../engine/parser/ast.ts';
 import { componerDireccion } from './direcciones.ts';
-import { lectorDeLibro } from './lectorRangos.ts';
 import type { ValorEstatico } from './tiposLectura.ts';
+import { aValorCelda } from './valoresEstaticos.ts';
 
 export interface ConversionCompartir {
   /** Dirección para Office.js y para el modelo: `Pruebas!C5`, `'Mi hoja'!C5`. */
@@ -33,29 +39,57 @@ export interface ConversionCompartir {
   spec: DistributionSpec;
 }
 
+/** Una celda que se fija en su valor actual (y se puede restaurar), sin entrada en el panel. */
+export interface CongelacionCompartir {
+  direccion: string;
+  clave: string;
+  formula: string;
+}
+
 export interface PlanCompartir {
   conversiones: ConversionCompartir[];
+  /**
+   * Celdas con RIESGO que no se pueden convertir en una entrada —una función
+   * dentro de una operación, con parámetros de otras celdas aleatorias (B7), o
+   * una función de resultados como `RIESGO.MEDIA` (B6)— y que, para no dar
+   * `#¿NOMBRE?` sin el complemento, se quedan con su valor actual.
+   */
+  congelar: CongelacionCompartir[];
   /** Celdas con `RIESGO.*` que no se pueden convertir, con el motivo: no se tocan. */
   noConvertibles: string[];
 }
 
-export function planificarCompartir(formulas: readonly FormulaCelda[], valores: readonly ValorEstatico[] = []): PlanCompartir {
-  const plan: PlanCompartir = { conversiones: [], noConvertibles: [] };
-  for (const f of formulas) {
-    if (!mencionaRiesgo(f.formula)) continue;
-    const clave = claveCelda(f.hoja, f.col, f.fila);
-    const r = leerFuncionRiesgo(f.formula, lectorDeLibro(valores, f.hoja));
-    if (!r.ok) {
-      plan.noConvertibles.push(`${clave}: ${r.motivo}`);
-      continue;
-    }
-    plan.conversiones.push({
-      direccion: componerDireccion(f.hoja, `${letrasDeColumna(f.col)}${f.fila}`),
-      clave,
-      formula: f.formula.startsWith('=') ? f.formula : `=${f.formula}`,
-      valorBase: r.media,
-      spec: r.spec,
-    });
+export function planificarCompartir(
+  formulas: readonly FormulaCelda[],
+  valores: readonly ValorEstatico[] = [],
+  /** Las celdas de las entradas del panel: una RIESGO que dependa de ellas no es fija. */
+  clavesEntradaPanel: readonly string[] = [],
+): PlanCompartir {
+  const plan: PlanCompartir = { conversiones: [], congelar: [], noConvertibles: [] };
+  const { grafo } = construirGrafo([...formulas], valores.map(aValorCelda));
+  const r = analizarRiesgoEnGrafo(grafo, { clavesEntradaPanel, clavesSalida: [], todas: true });
+  const porClave = new Map(formulas.map((f) => [claveCelda(f.hoja, f.col, f.fila), f] as const));
+  const texto = (f: FormulaCelda) => (f.formula.startsWith('=') ? f.formula : `=${f.formula}`);
+  const direccion = (f: FormulaCelda) => componerDireccion(f.hoja, `${letrasDeColumna(f.col)}${f.fila}`);
+
+  for (const c of r.conversiones) {
+    const f = porClave.get(c.clave);
+    if (!f) continue;
+    plan.conversiones.push({ direccion: direccion(f), clave: c.clave, formula: texto(f), valorBase: c.media, spec: c.spec });
+  }
+  const tocadas = new Set([...r.conversiones.map((c) => c.clave), ...r.duplicadas]);
+  for (const clave of r.reescritas) {
+    const f = porClave.get(clave);
+    if (!f) continue;
+    tocadas.add(clave);
+    plan.congelar.push({ direccion: direccion(f), clave, formula: texto(f) });
+  }
+  plan.noConvertibles.push(...r.errores);
+  for (const e of r.errores) tocadas.add(e.slice(0, e.indexOf(': ')));
+  for (const [clave, nodo] of grafo.nodos) {
+    if (tocadas.has(clave) || !nodo.ast || !contieneFuncionResultado(nodo.ast)) continue;
+    const f = porClave.get(clave);
+    if (f) plan.congelar.push({ direccion: direccion(f), clave, formula: texto(f) });
   }
   return plan;
 }

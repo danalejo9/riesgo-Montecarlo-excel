@@ -26,6 +26,7 @@ import { generarTramoDeEntrada, resolverEntradas, type DefinicionEntrada } from 
 import { compilarPlan } from '../engine/compiler/plan.ts';
 import { construirGrafo } from '../engine/graph/index.ts';
 import {
+  aplicarReescrituras,
   describirMotivo,
   elegirMotor,
   prepararEntradas,
@@ -121,7 +122,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
 
   // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
   const textos = indiceDeTextos(libro.valores);
-  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre, libro.valores);
+  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre);
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
   }
@@ -129,6 +130,9 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     modelo = { ...modelo, inputs: [...modelo.inputs, ...deFunciones.entradas] };
     clavesEntrada.push(...deFunciones.claves);
   }
+  // RIESGO dentro de una operación o con parámetros que cambian (B7): la
+  // fórmula se reescribe con celdas virtuales antes de elegir motor.
+  aplicarReescrituras(grafo, deFunciones);
   // Las entradas de funciones se descubrieron después de resolver: su `ref`
   // ya es la clave de la celda.
   const resolver = resolverConFunciones(resolucion.resolver, deFunciones);
@@ -146,6 +150,16 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     return fallo('celdas', 'Hay celdas del modelo que no están en el libro leído.', [
       ...eleccion.celdasDesconocidas,
       'Puede ser una hoja oculta: el lector las omite salvo que se le pidan.',
+    ]);
+  }
+
+  if (eleccion.motor === 'compatible' && deFunciones.reescritas.length > 0) {
+    return fallo('modelo', 'Hay funciones RIESGO que solo puede simular el motor rápido.', [
+      ...deFunciones.reescritas.map((c) => `${c} ${deFunciones.motivosReescritura.get(c) ?? 'tiene una función RIESGO que no es toda la fórmula'}.`),
+      ...(modelo.settings.engine === 'compatible'
+        ? ['En Configuración está elegido el motor compatible: pon «Automático» o «Rápido».']
+        : ['El modelo necesita el motor compatible por esto:', ...motivosLegibles(eleccion)]),
+      'Con Excel en el bucle, esas funciones solo devolverían su media. Pon la función sola en su celda con argumentos fijos, o haz que el resto del modelo lo pueda calcular el motor rápido.',
     ]);
   }
 
@@ -215,7 +229,11 @@ function conEntradasDeFunciones(
   if (!r.ok || (d.entradas.length === 0 && d.duplicadas.length === 0)) return r;
   return {
     ...r,
-    entradasDeFunciones: d.entradas.map((e) => ({ ref: e.ref, nombre: e.name, distribucion: resumirDistribucion(e.dist) })),
+    entradasDeFunciones: d.entradas.map((e) => ({
+      ref: d.celdaDeEntrada.get(e.id) ?? e.ref,
+      nombre: e.name,
+      distribucion: d.descripciones.get(e.id) ?? resumirDistribucion(e.dist),
+    })),
     ...(d.duplicadas.length > 0 ? { funcionesIgnoradas: d.duplicadas } : {}),
   };
 }

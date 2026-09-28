@@ -217,7 +217,7 @@ export function Resultados({
           <>
             <h3>Entradas con funciones RIESGO del libro</h3>
             <ul className="motivos">
-              {resultado.entradasDeFunciones.map((e) => <li key={e.ref}>{e.nombre && e.nombre !== e.ref ? `${e.nombre} (${e.ref})` : e.ref}: {e.distribucion}</li>)}
+              {resultado.entradasDeFunciones.map((e, i) => <li key={`${e.ref}-${i}`}>{e.nombre && e.nombre !== e.ref ? `${e.nombre} (${e.ref})` : e.ref}: {e.distribucion}</li>)}
             </ul>
             <p className="aviso-linea">
               Antes de enviar este libro a alguien sin el complemento, usa «Preparar para compartir»

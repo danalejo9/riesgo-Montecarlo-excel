@@ -44,12 +44,19 @@ export function Compartir({
     try {
       const r = await prepararParaCompartir(modelo);
       const n = r.plan.conversiones.length;
+      const fijadas = r.plan.congelar.length;
       if (n > 0) alCambiar(r.modelo);
-      setGuardadas((g) => (g ?? 0) + n);
+      setGuardadas((g) => (g ?? 0) + n + fijadas);
+      const partes = [
+        n > 0 ? `Convertidas ${miles(n)} funciones RIESGO en entradas del panel; sus celdas tienen ahora la media.` : '',
+        fijadas > 0
+          ? `${miles(fijadas)} celdas con RIESGO dentro de una operación, con parámetros de otras celdas aleatorias o con funciones de resultados (RIESGO.MEDIA…) se quedan con su valor actual: mientras el libro esté preparado no variarán al simular.`
+          : '',
+      ].filter(Boolean);
       setMensaje({
-        texto: n === 0
+        texto: partes.length === 0
           ? 'El libro no tiene funciones RIESGO que convertir: ya se puede compartir tal cual.'
-          : `Convertidas ${miles(n)} funciones RIESGO en entradas del panel; sus celdas tienen ahora la media. Guarda el libro (Ctrl+S) antes de enviarlo.`,
+          : `${partes.join(' ')} Guarda el libro (Ctrl+S) antes de enviarlo.`,
         ...(r.plan.noConvertibles.length > 0
           ? { detalles: r.plan.noConvertibles, aviso: true }
           : {}),
@@ -81,8 +88,9 @@ export function Compartir({
       <h2>{preparado ? 'Libro preparado para compartir' : 'Compartir el libro'}</h2>
       {preparado && (
         <p>
-          {miles(guardadas)} funciones RIESGO están convertidas en entradas del panel. Para volver a
-          trabajar con ellas en sus celdas, pulsa <strong>Restaurar</strong>.
+          {miles(guardadas)} celdas con funciones RIESGO están preparadas: convertidas en entradas del
+          panel o fijadas en su valor. Para volver a trabajar con ellas en sus celdas, pulsa{' '}
+          <strong>Restaurar</strong>.
         </p>
       )}
       <p className="tenue">

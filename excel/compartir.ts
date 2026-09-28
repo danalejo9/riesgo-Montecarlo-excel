@@ -11,6 +11,7 @@
 import { leerLibro } from './lectorLibro.ts';
 import { modeloParaCompartir, modeloRestaurado, planificarCompartir, type PlanCompartir } from './compartirPuro.ts';
 import { rangoDesdeDireccion } from './rangos.ts';
+import { cargarResolverRef } from './resolverRef.ts';
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
 
 export const CLAVE_FORMULAS_COMPARTIDAS = 'riesgoMontecarlo.sharedFormulas';
@@ -22,18 +23,38 @@ export interface ResultadoPreparar {
 
 export async function prepararParaCompartir(modelo: ModeloRiesgo): Promise<ResultadoPreparar> {
   const libro = await leerLibro();
-  const plan = planificarCompartir(libro.formulas, libro.valores);
-  if (plan.conversiones.length === 0) return { modelo, plan };
+  // Las entradas del panel, como claves: una RIESGO que dependa de ellas no es fija.
+  const resolucion = modelo.inputs.length > 0 ? await cargarResolverRef(modelo.inputs.map((e) => e.ref)) : null;
+  const clavesPanel = modelo.inputs.flatMap((e) => {
+    try {
+      return resolucion ? [resolucion.resolver(e.ref)] : [];
+    } catch {
+      return [];
+    }
+  });
+  const plan = planificarCompartir(libro.formulas, libro.valores, clavesPanel);
+  if (plan.conversiones.length === 0 && plan.congelar.length === 0) return { modelo, plan };
 
   await Excel.run(async (context) => {
     // Las fórmulas guardadas se suman a las de una preparación anterior.
     const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_FORMULAS_COMPARTIDAS);
     ajuste.load(['value', 'isNullObject']);
+    // Las que se fijan en su valor actual: hay que leerlo antes de escribir.
+    const congeladas = plan.congelar.map((c) => {
+      const rango = rangoDesdeDireccion(context, c.direccion);
+      rango.load('values');
+      return { c, rango };
+    });
     await context.sync();
     const previas: Record<string, string> = ajuste.isNullObject ? {} : leerRegistro(ajuste.value);
     for (const c of plan.conversiones) {
       previas[c.direccion] = c.formula;
       rangoDesdeDireccion(context, c.direccion).values = [[c.valorBase]];
+    }
+    for (const { c, rango } of congeladas) {
+      previas[c.direccion] = c.formula;
+      const actuales = rango.values;
+      rango.values = actuales;
     }
     context.workbook.settings.add(CLAVE_FORMULAS_COMPARTIDAS, JSON.stringify(previas));
     await context.sync();

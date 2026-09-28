@@ -37,6 +37,7 @@ import {
   UPPER, VALUE,
 } from './texto.ts';
 import { REGISTRO_MATRICIAL } from './matriciales.ts';
+import { NOMBRE_CUANTIL, RIESGO_CUANTIL } from './riesgo.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -67,6 +68,8 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   TEXT,
   // Nivel 2: agregados que no cuentan dos veces los subtotales intermedios.
   SUBTOTAL, AGGREGATE,
+  // Interna (B7): la escribe la reescritura de las funciones RIESGO, nunca el usuario.
+  [NOMBRE_CUANTIL]: RIESGO_CUANTIL,
 };
 
 /**

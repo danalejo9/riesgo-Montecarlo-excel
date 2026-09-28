@@ -128,7 +128,8 @@ describe('entradasDeFunciones', () => {
   });
 
   it('una RIESGO mal escrita que afecta a la salida es un error con su celda', () => {
-    const f = celdas({ A1: 'RIESGO.NORMAL(C1,10)', B1: 'A1+1' });
+    // Desde B7 una celda como argumento vale (C1 vacía es 0); una desviación negativa no.
+    const f = celdas({ A1: 'RIESGO.NORMAL(C1,-10)', B1: 'A1+1' });
     const r = entradasDeFunciones(f, construirGrafo(f).grafo, [], [k('B1')]);
     expect(r.errores[0]).toContain(k('A1'));
   });

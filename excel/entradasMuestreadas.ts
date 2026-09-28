@@ -10,7 +10,7 @@
  */
 
 import { construirDesdeDescriptor } from '../engine/distributions/index.ts';
-import { resumirDistribucion, toDescriptor, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { PREFIJO_DINAMICA, resumirDistribucion, toDescriptor, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { histogramaDeMuestra, ordenarUtiles, type BinHistograma, type PuntoCDF } from '../engine/stats/index.ts';
 
 export interface EntradaMuestreada {
@@ -49,6 +49,9 @@ export function entradasMuestreadas(
 ): EntradaMuestreada[] {
   const out: EntradaMuestreada[] = [];
   modelo.inputs.forEach((e, i) => {
+    // Las entradas de apoyo de B7 son un uniforme técnico (0,1): enseñarlo
+    // como «lo que se muestreó» confundiría más que aclarar.
+    if (e.id.startsWith(PREFIJO_DINAMICA)) return;
     const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
     if (!muestras || muestras.length === 0) return;
     if (e.dist.type === 'categorical') {

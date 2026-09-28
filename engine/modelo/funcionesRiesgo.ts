@@ -12,12 +12,15 @@
  * simulación, cada función devuelve **la media** de su distribución (ver
  * `ui/funciones.ts`), así que el libro sigue calculando con normalidad.
  *
- * **Solo argumentos constantes**, y la función tiene que ser toda la fórmula.
- * `=RIESGO.NORMAL(B2; 15)` o `=1+RIESGO.NORMAL(…)` se rechazan con la celda y
- * el motivo: un parámetro que depende de otra celda puede cambiar durante la
- * simulación, y esa semántica (distribuciones que dependen de otras) es otra
- * cosa que no se va a fingir. Se aceptan también los nombres `RISK.*`, que es
- * el prefijo que ya reconoce el escáner.
+ * Los argumentos pueden ser números escritos o, con un `evaluar` (B7),
+ * cualquier expresión que no dependa de nada aleatorio: `=RIESGO.NORMAL(B2;
+ * 15)` con B2 fija. Los parámetros que cambian en cada iteración y la función
+ * dentro de una operación los resuelve `riesgoEnGrafo.ts`. Se aceptan también
+ * los nombres `RISK.*`, que es el prefijo que ya reconoce el escáner.
+ *
+ * Además de las distribuciones están las **funciones de resultados** (B6):
+ * `RIESGO.MEDIA(celda)`, `RIESGO.PERCENTIL(celda; p)`… no declaran nada
+ * incierto; traen a la hoja lo que dio la última simulación.
  */
 
 import { parsear } from '../parser/parse.ts';
@@ -110,6 +113,36 @@ export function idDeFuncionRiesgo(nombre: string): string | null {
   return m ? (m[1] as string) : null;
 }
 
+/**
+ * Las funciones de resultados (B6): traen a la hoja un estadístico de una
+ * salida en la última simulación. No son distribuciones.
+ */
+export const FUNCIONES_RESULTADO = [
+  { id: 'MEDIA', descripcion: 'La media de una salida en la última simulación.', parametros: [{ nombre: 'celda', descripcion: 'Una celda marcada como salida' }] },
+  { id: 'DESV', descripcion: 'La desviación típica de una salida en la última simulación.', parametros: [{ nombre: 'celda', descripcion: 'Una celda marcada como salida' }] },
+  {
+    id: 'PERCENTIL', descripcion: 'El percentil p de una salida en la última simulación (p entre 0 y 1: 0,05 es el p5).',
+    parametros: [{ nombre: 'celda', descripcion: 'Una celda marcada como salida' }, { nombre: 'p', descripcion: 'Entre 0 y 1 (0,05 = p5, 0,95 = p95)' }],
+  },
+  {
+    id: 'PROB', descripcion: 'La probabilidad de que una salida quede por debajo de un umbral (o por encima, si el tercer argumento es VERDADERO). En una salida de texto, la probabilidad de un valor.',
+    parametros: [
+      { nombre: 'celda', descripcion: 'Una celda marcada como salida' },
+      { nombre: 'umbral', descripcion: 'El valor de corte, o el texto cuya probabilidad se quiere' },
+      { nombre: 'por_encima', descripcion: 'Opcional: VERDADERO para «por encima del umbral»' },
+    ],
+  },
+  { id: 'MIN', descripcion: 'El mínimo de una salida en la última simulación.', parametros: [{ nombre: 'celda', descripcion: 'Una celda marcada como salida' }] },
+  { id: 'MAX', descripcion: 'El máximo de una salida en la última simulación.', parametros: [{ nombre: 'celda', descripcion: 'Una celda marcada como salida' }] },
+] as const;
+
+const IDS_RESULTADO: ReadonlySet<string> = new Set(FUNCIONES_RESULTADO.map((f) => f.id));
+
+/** ¿Es `RIESGO.<id>` una función de resultados (B6) y no una distribución? */
+export function esFuncionDeResultado(id: string): boolean {
+  return IDS_RESULTADO.has(id);
+}
+
 /** ¿Menciona la fórmula alguna función `RIESGO.*`? Barato, sin parsear. */
 export function mencionaRiesgo(formula: string): boolean {
   return /\b(?:_xludf\.)?(?:RIESGO|RISK)\.[A-Z]/i.test(formula);
@@ -136,6 +169,12 @@ export const FUNCION_CATEGORIA = {
 
 /** Lee los valores de un rango de la hoja (lo pone quien tiene el libro leído). */
 export type LectorDeRango = (rango: Extract<Nodo, { tipo: 'rango' | 'celda' }>) => unknown[] | null;
+
+/**
+ * Calcula un argumento que no es un número escrito (`B2`, `10*2`), si no
+ * depende de nada aleatorio (B7). `null` si no se puede.
+ */
+export type EvaluadorDeArgumento = (nodo: Nodo) => number | null;
 
 function listaDe(n: Nodo, lector?: LectorDeRango): unknown[] | null {
   if (n.tipo === 'matriz') {
@@ -243,18 +282,22 @@ export function discretaDesdeListas(valores: readonly unknown[], pesos: readonly
  * `lector` resuelve los rangos de `RIESGO.CATEGORIA` y `RIESGO.DISCRETA` con
  * el libro ya leído.
  */
-export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango): LecturaFuncionRiesgo {
+export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango, evaluar?: EvaluadorDeArgumento): LecturaFuncionRiesgo {
   const r = parsear(formula.replace(/^=/, ''));
   if (!r.ok) return { ok: false, motivo: `la fórmula no se entiende: ${r.error.mensaje}` };
   const raiz = r.ast;
   if (raiz.tipo !== 'funcion' || idDeFuncionRiesgo(raiz.nombre) === null) {
     return { ok: false, motivo: 'la función RIESGO tiene que ser toda la fórmula de la celda (no parte de una operación)' };
   }
-  return leerNodoRiesgo(raiz, lector);
+  return leerNodoRiesgo(raiz, lector, evaluar);
 }
 
-function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: LectorDeRango): LecturaFuncionRiesgo {
+export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: LectorDeRango, evaluar?: EvaluadorDeArgumento): LecturaFuncionRiesgo {
   const id = idDeFuncionRiesgo(raiz.nombre) as string;
+  const numero = (n: Nodo | undefined): number | null => (n === undefined ? null : constante(n) ?? evaluar?.(n) ?? null);
+  if (esFuncionDeResultado(id)) {
+    return { ok: false, motivo: `RIESGO.${id} trae resultados de la simulación: no es una distribución` };
+  }
   if (id === FUNCION_CATEGORIA.id || id === FUNCION_DISCRETA.id) {
     if (raiz.args.length !== 2) return { ok: false, motivo: `RIESGO.${id} necesita 2 argumentos: valores; pesos` };
     const valores = listaDe(raiz.args[0] as Nodo, lector);
@@ -281,10 +324,12 @@ function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: Lecto
     if (raiz.args.length !== 3 || !interior || interior.tipo !== 'funcion' || idDeFuncionRiesgo(interior.nombre) === null) {
       return { ok: false, motivo: 'RIESGO.TRUNCAR necesita 3 argumentos: una función RIESGO; mínimo; máximo' };
     }
-    const min = constante(a as Nodo);
-    const max = constante(b as Nodo);
-    if (min === null || max === null) return { ok: false, motivo: 'los límites de RIESGO.TRUNCAR tienen que ser números escritos en la fórmula' };
-    const dentro = leerNodoRiesgo(interior, lector);
+    const min = numero(a);
+    const max = numero(b);
+    if (min === null || max === null) {
+      return { ok: false, motivo: evaluar ? 'los límites de RIESGO.TRUNCAR tienen que ser números o celdas con números' : 'los límites de RIESGO.TRUNCAR tienen que ser números escritos en la fórmula' };
+    }
+    const dentro = leerNodoRiesgo(interior, lector, evaluar);
     if (!dentro.ok) return dentro;
     const spec: DistributionSpec = { ...dentro.spec, truncate: { min, max } };
     try {
@@ -302,9 +347,14 @@ function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: Lecto
   }
   const valores: number[] = [];
   for (const a of raiz.args) {
-    const v = constante(a);
+    const v = numero(a);
     if (v === null) {
-      return { ok: false, motivo: `los argumentos de RIESGO.${id} tienen que ser números escritos en la fórmula, no referencias ni cálculos` };
+      return {
+        ok: false,
+        motivo: evaluar
+          ? `los argumentos de RIESGO.${id} tienen que dar números (un número escrito, una celda con un número o un cálculo)`
+          : `los argumentos de RIESGO.${id} tienen que ser números escritos en la fórmula, no referencias ni cálculos`,
+      };
     }
     valores.push(v);
   }
@@ -315,6 +365,23 @@ function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: Lecto
   } catch (e) {
     return { ok: false, motivo: `parámetros no válidos para RIESGO.${id}: ${e instanceof Error ? e.message : String(e)}` };
   }
+}
+
+/**
+ * La distribución de `RIESGO.<id>(args)` con los argumentos ya calculados, o
+ * el motivo si no son válidos. La usa el motor en cada iteración cuando los
+ * parámetros cambian (B7): solo las funciones de parámetros numéricos.
+ */
+export function construirSpecRiesgo(id: string, args: readonly number[]): DistributionSpec | string {
+  const f = POR_ID.get(id);
+  if (!f) return `RIESGO.${id} no admite parámetros que cambian en cada iteración`;
+  if (args.length !== f.parametros.length) return `RIESGO.${id} necesita ${f.parametros.length} argumento(s)`;
+  return f.construir([...args]);
+}
+
+/** ¿Tiene `RIESGO.<id>` solo parámetros numéricos (NORMAL, TRIANGULAR…)? */
+export function esFuncionParametrica(id: string): boolean {
+  return POR_ID.has(id);
 }
 
 /** La media de una distribución `RIESGO.*`, para lo que la celda enseña fuera de la simulación. */
