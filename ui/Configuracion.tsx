@@ -21,9 +21,11 @@ import {
 } from '../engine/modelo/index.ts';
 import { leerNumero, miles } from './formato.ts';
 import {
+  guardarCongelarPantalla,
   guardarPreferenciaHilos,
   hilosAutomaticos,
   hilosEfectivos,
+  leerCongelarPantalla,
   leerPreferenciaHilos,
   nucleosDelEquipo,
   type PreferenciaHilos,
@@ -153,6 +155,7 @@ export function Configuracion({
 
 function Rendimiento({ hilosUltimaSimulacion }: { hilosUltimaSimulacion?: number }) {
   const [pref, setPref] = useState<PreferenciaHilos>(() => leerPreferenciaHilos());
+  const [congelar, setCongelar] = useState(() => leerCongelarPantalla());
   const nucleos = nucleosDelEquipo();
   const cambiar = (p: PreferenciaHilos) => {
     setPref(p);
@@ -182,6 +185,20 @@ function Rendimiento({ hilosUltimaSimulacion }: { hilosUltimaSimulacion?: number
           </span>
         </label>
       </div>
+      <label className="campo casilla">
+        <input
+          type="checkbox"
+          checked={congelar}
+          onChange={(e) => {
+            setCongelar(e.target.checked);
+            guardarCongelarPantalla(e.target.checked);
+          }}
+        />
+        <span>
+          Congelar la pantalla al simular con Excel en el bucle
+          <span className="tenue ayuda"> Las celdas no cambian a la vista mientras simula, y suele ir más rápido. Si la ventana parpadea, desmárcalo.</span>
+        </span>
+      </label>
     </section>
   );
 }

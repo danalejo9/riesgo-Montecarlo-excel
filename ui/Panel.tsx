@@ -43,7 +43,7 @@ import { Diagnostico } from './Diagnostico.tsx';
 import { Configuracion } from './Configuracion.tsx';
 import { crearPoolNavegador } from './motor/poolNavegador.ts';
 import { compensanHilos } from '../engine/executor/pool.ts';
-import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
+import { hilosEfectivos, leerCongelarPantalla, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
@@ -209,6 +209,7 @@ export function Panel() {
         modelo,
         progreso: setAvance,
         debeCancelar: () => cancelado.current,
+        congelarPantalla: leerCongelarPantalla(),
         crearPool: (contexto, { iteraciones }) => {
           const preferencia = leerPreferenciaHilos();
           // F4: en automático, una simulación pequeña va en un hilo (arrancar

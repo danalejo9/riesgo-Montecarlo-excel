@@ -48,3 +48,26 @@ export function guardarPreferenciaHilos(p: PreferenciaHilos): void {
 export function hilosEfectivos(p: PreferenciaHilos): number {
   return p === 'auto' ? hilosAutomaticos() : Math.max(1, Math.min(nucleosDelEquipo(), p));
 }
+
+const CLAVE_CONGELAR = 'riesgoMontecarlo.congelarPantalla';
+
+/**
+ * Congelar la pantalla al simular con Excel en el bucle (F5). También es de
+ * este equipo: si parpadea, parpadea en esta versión de Excel. Por defecto,
+ * sí: es lo que pidió el usuario (dos veces).
+ */
+export function leerCongelarPantalla(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_CONGELAR) !== 'no';
+  } catch {
+    return true;
+  }
+}
+
+export function guardarCongelarPantalla(si: boolean): void {
+  try {
+    localStorage.setItem(CLAVE_CONGELAR, si ? 'si' : 'no');
+  } catch {
+    // Sin almacenamiento: vale para esta sesión.
+  }
+}

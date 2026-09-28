@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 1b: lo que se pidió dos veces (2026-09-28)
+
+**Añadido**
+- **Congelar la pantalla en el modo compatible** (F5): como `ScreenUpdating =
+  False` en VBA (`suspendScreenUpdatingUntilNextSync`, ExcelApi 1.9). Casilla en
+  ⚙ → Rendimiento, marcada por defecto; se guarda en el equipo. Si en alguna
+  versión de Excel parpadea, se desmarca.
+
 ### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7), escenarios (E7), color RIESGO (E8) y núcleos (F4) (2026-09-27)
 
 **Añadido**

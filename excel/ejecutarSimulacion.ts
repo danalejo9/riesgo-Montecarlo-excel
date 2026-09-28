@@ -70,6 +70,8 @@ export interface PeticionSimulacion {
    * del panel, que es correcto pero lo congela mientras dura.
    */
   crearPool?: (contexto: ContextoHilo, info: { iteraciones: number }) => Pool | null;
+  /** Modo compatible: no repintar la hoja en cada iteración (F5). */
+  congelarPantalla?: boolean;
 }
 
 /**
@@ -158,6 +160,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     const r = await porElCompatible({
       ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
+      congelarPantalla: peticion.congelarPantalla ?? false,
     });
     // Con Excel en el bucle, repetir tandas costaría minutos cada una: se
     // simulan las iteraciones fijadas y se dice que el modo automático no se
@@ -235,6 +238,7 @@ interface Comun {
   semilla: number;
   progreso?: (avance: AvanceSimulacion) => void;
   debeCancelar?: () => boolean;
+  congelarPantalla?: boolean;
 }
 
 function porElRapido(
@@ -355,6 +359,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     salidas: clavesSalida,
     iteraciones: n,
     retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
+    congelarPantalla: args.congelarPantalla ?? false,
     progreso: (a) =>
       progreso?.({
         fase: 'simulando',

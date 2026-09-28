@@ -50,6 +50,8 @@ export interface PeticionCompatible {
   compresionTDigest?: number;
   cadaCuantas?: number;
   retenerMuestra?: number;
+  /** No repintar la hoja en cada iteración (F5). */
+  congelarPantalla?: boolean;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }
@@ -88,7 +90,7 @@ export async function simularEnExcel(peticion: PeticionCompatible): Promise<Resp
     await almacen.aplicar();
 
     try {
-      const libro = crearLibroCalculable(context, refs, peticion.salidas);
+      const libro = crearLibroCalculable(context, refs, peticion.salidas, { congelarPantalla: peticion.congelarPantalla ?? false });
       return await simularCompatible({ libro, ...peticion });
     } finally {
       restaurarDesdeRecuperacion(almacen);

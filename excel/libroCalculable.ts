@@ -47,7 +47,13 @@ export function crearLibroCalculable(
   context: Excel.RequestContext,
   direccionesEntrada: readonly string[],
   direccionesSalida: readonly string[],
+  opciones: { congelarPantalla?: boolean } = {},
 ): LibroCalculable {
+  // F5: como `ScreenUpdating = False` en VBA. Existe desde ExcelApi 1.9; la
+  // documentación avisa de que llamarlo en bucle puede hacer parpadear la
+  // ventana en algunas versiones, por eso es una opción que se puede quitar.
+  const congelar = Boolean(opciones.congelarPantalla) &&
+    typeof Office !== 'undefined' && Office.context?.requirements?.isSetSupported?.('ExcelApi', '1.9') === true;
   // Resueltos una sola vez: dentro del bucle, volver a pedirlos añadiría
   // trabajo por iteración sin cambiar nada.
   const entradas = direccionesEntrada.map((d) => rangoDesdeDireccion(context, d));
@@ -60,7 +66,9 @@ export function crearLibroCalculable(
         (entradas[i] as Excel.Range).values = [[valoresDeEntrada[i] as number]];
       }
 
-      context.workbook.application.calculate(Excel.CalculationType.recalculate);
+      const app = context.workbook.application;
+      if (congelar && typeof app.suspendScreenUpdatingUntilNextSync === 'function') app.suspendScreenUpdatingUntilNextSync();
+      app.calculate(Excel.CalculationType.recalculate);
 
       for (const salida of salidas) salida.load(['values', 'valueTypes']);
 
