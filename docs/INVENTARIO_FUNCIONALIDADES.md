@@ -72,6 +72,25 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 7 | E8 | ✅ **Color propio para las celdas con `RIESGO.*`** | **Tú** |
 | 8 | F4 | ✅ Núcleos en automático según el tamaño (con poco trabajo, 1 núcleo es más rápido) | Pruebas |
 
+### Etapa 1b: lo que pediste en la tercera ronda (≈ 3–5 días)
+
+| # | Código | Funcionalidad | Origen |
+|---|---|---|---|
+| 8a | C8 | **Hoja volcada legible** (sube desde la etapa 3: la pediste dos veces) | **Tú** |
+| 8b | C9 | **Ver cómo se muestreó cada entrada**: histograma, acumulada y estadísticos de los valores generados, con la distribución teórica encima | **Tú** |
+| 8c | F5 | **Congelar la pantalla en el modo compatible** (la pediste dos veces) | **Tú** |
+| 8d | F6 | Comprobar la reproducibilidad del modo compatible con tus datos | Pruebas |
+
+### Bloque T: variables de texto (≈ 8–11 días) — propuesta, lugar por decidir
+
+| # | Código | Funcionalidad | Origen |
+|---|---|---|---|
+| T1 | T1 | **Entradas de texto**: «Norte» 20 %, «Sur» 25 %… | **Tú** |
+| T2 | T2 | **Salidas de texto**: frecuencia de cada valor, cuál sale más, probabilidad de un valor | **Tú** |
+| T3 | T3 | Sensibilidad cruzada: salida numérica por categoría; qué entradas deciden una salida de texto | **Tú** |
+| T4 | T4 | `RIESGO.CATEGORIA` y «Preparar para compartir» | **Tú** |
+| T5 | T5 | Manual, tutorial y pruebas con textos | **Tú** |
+
 ### Etapa 2: funciones RIESGO completas y la cinta (≈ 6–8 días)
 
 | # | Código | Funcionalidad | Origen |
@@ -88,7 +107,6 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 13 | C2 | Tornado, araña y comparación de escenarios como gráficos nativos de Excel en el volcado | **Tú** (gráficas) |
 | 14 | C5 | **Vista previa de la distribución** al editarla (su forma y p5/p50/p95) | Plan |
 | 15 | I1 | **Ajuste rápido y explicado**: diagnóstico de los datos, AICc, Cramér–von Mises, histograma con la curva encima (**el gráfico de distribución que pediste en D1**), Q-Q, gamma exacta, distribución empírica y `RIESGO.EMPIRICA` | **Tú** (investigación y D1) |
-| 16 | C8 | **Hoja volcada legible** (secciones por salida, formato de tabla) | **Tú** |
 
 ### Etapa 4: más funciones y análisis (≈ 8–12 días)
 
@@ -188,7 +206,10 @@ Cálculo en la nube, cualquier uso de IA externa (quitado a petición tuya el
 | Elegir la salida en Resultados | E6 |
 | Administrador de escenarios | E7 |
 | PDF que hable del proyecto | C7 (+ E5) |
-| Hoja volcada difícil de leer (C3) | C8 |
+| Hoja volcada difícil de leer (C3, y otra vez en L3) | C8, sube a la etapa 1b |
+| Ver la distribución generada de cada entrada tras simular | C9, etapa 1b |
+| Que no se muevan las celdas al simular con Excel (otra vez) | F5, etapa 1b |
+| Estadísticas de variables de texto (entradas y salidas) | Bloque T |
 | Cinta más rápida (B4 tarda una fracción de segundo) | B1 debería mejorarlo |
 | Congelar la pantalla en el modo compatible (G3) | F5 |
 | `npm start` hay que repetirlo (C4) | Desaparece con la instalación real (E9) |

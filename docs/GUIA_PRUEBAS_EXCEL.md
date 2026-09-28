@@ -266,8 +266,9 @@ defecto (triangular alrededor de 8) vale: no hace falta cambiarla.
 
 Necesita las funciones RIESGO del bloque E escritas en `Pruebas!C5` y `C6`.
 
-**J1. Preparar.** Pestaña Modelo → sección **Compartir el libro** → **Preparar
-para compartir**.
+**J1. Preparar.** Pestaña Modelo → baja hasta el final, a la sección
+**«Compartir el libro»** (justo encima del botón Simular) → pulsa **«Preparar
+para compartir»**.
 - Esperado: «Convertidas 2 funciones RIESGO…». En la hoja, **C5 vale 1000 y
   C6 vale 10,67 como números** (la barra de fórmulas ya no muestra
   `=RIESGO…`). En el panel aparecen dos entradas nuevas, `Pruebas!C5` y
@@ -277,9 +278,11 @@ para compartir**.
 - Esperado: media de C7 en torno a **10.670**, como en E3. Ahora las entradas
   vienen del panel, no de las funciones.
 
-**J3. Sin el complemento (opcional, pero es lo importante).** Guarda el libro
-y ábrelo donde no esté el complemento: otro ordenador, o Excel para la Web
-sin cargarlo.
+**J3. Sin el complemento (opcional, pero es lo importante).** **Después de
+J1** (con el libro ya preparado), guarda el libro y ábrelo donde no esté el
+complemento: otro ordenador, **el iPad** o Excel para la Web sin cargarlo. Si
+lo abres sin haberlo preparado, verás `=_xldudf_RIESGO_NORMAL(…)`: es justo
+lo que «Preparar para compartir» evita.
 - Esperado: **ningún #¿NOMBRE?**; C5, C6 y C7 muestran números.
 
 **J4. Restaurar.** Vuelve a Modelo → **Restaurar las 2 funciones RIESGO**.

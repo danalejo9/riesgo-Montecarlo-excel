@@ -269,6 +269,12 @@ Estimaciones en días de trabajo efectivo.
   «∞», y «Restaurar» arriba cuando el libro está preparado (J4). Pendiente
   del usuario: K, y repetir W5, J4 y G3. Excel para la Web: ExcelApi 1.12,
   8 hilos, 757 ms para 10.000 iteraciones.
+- **Tercera ronda (28/09, K, J, L, G3).** Pasaron K1–K2 (mismos números al
+  volver a marcar, motor rápido), J2, L1–L6 y G3. J1 no quedó claro en la guía
+  (el botón «Preparar para compartir» está al final de la pestaña Modelo). J3
+  en Excel para la Web sin preparar el libro enseña `_xldudf_RIESGO_NORMAL`,
+  que es lo esperado: hay que repetirlo **después** de preparar. Nuevas
+  peticiones: C8 (otra vez), C9, F5 (otra vez), F6 y el bloque T.
 
 ### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
 - **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
@@ -329,6 +335,16 @@ Estimaciones en días de trabajo efectivo.
 - **C8. Hoja volcada más legible** *(usuario, 27/09: «desorganizada y difícil
   de leer»)*: una sección por salida con título, estadísticas arriba y
   gráficos al lado, tablas con formato de tabla de Excel; va con C1.
+  **Segunda queja el 28/09** (captura de L3): números sin formato (sin
+  separador de miles, 15 decimales, porcentajes como 0,214), todo en una
+  columna larga, salidas constantes con sensibilidad a cero. Sube de
+  prioridad: formato numérico según la celda de origen, un bloque por salida
+  con sus gráficos al lado, y esconder lo que no aporta.
+- **C9. Ver cómo se muestreó cada entrada** *(usuario, 28/09)*: después de
+  simular, en cada entrada, su histograma y su curva acumulada con los valores
+  que de verdad se generaron, sus estadísticos y, encima, la distribución
+  teórica elegida, para comprobar que el modelo usó lo que se quería. Barato:
+  las entradas ya se guardan para el tornado.
 
 ### D. Análisis que faltan — 3–5 d
 - **D1. Análisis de escenarios por cola** (el de @RISK; su versión iteración a
@@ -386,7 +402,15 @@ Estimaciones en días de trabajo efectivo.
   `application.suspendScreenUpdatingUntilNextSync()` (ExcelApi 1.9), pero la
   documentación avisa de parpadeo si se llama en bucle, que es justo lo que
   hace el modo compatible. Probarlo en Excel con una opción antes de dejarlo
-  por defecto; medir si acelera.
+  por defecto; medir si acelera. **Pedido otra vez el 28/09**: sube de
+  prioridad.
+- **F6. Reproducibilidad del modo compatible** *(28/09)*: el usuario vio un p95
+  distinto al repetir K1/K2 con el motor de Excel. En el banco los dos dan
+  exactamente lo mismo (media, desviación y todos los percentiles). Sospecha:
+  la entrada C5 se volvió a marcar con la triangular por defecto (108/120/132)
+  en vez de 105/120/140. Pendiente de los datos del usuario; si se confirma que
+  Excel da números distintos con las mismas entradas, investigar el orden de
+  recálculo.
 
 ### G. Producto (E9–E11)
 Mac, instalación sin `npm start`, manifiesto de producción, licencias,
@@ -457,6 +481,43 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   Pareto generalizada (GPD); ajuste robusto a atípicos; datos truncados o
   censurados; mezclas de distribuciones. Ampliar familias ajustables va con B5.
 
+### T. Variables de texto (categóricas) — ≈ 8–11 d *(propuesta, pendiente de respuestas del usuario)*
+Propuesto por el usuario el 28/09 a raíz de G3: que una simulación pueda
+trabajar con **textos**, no solo con números. Dos mitades:
+
+- **Entradas de texto**: una celda que vale «Norte» con un 20 %, «Sur» con un
+  25 %, «Este»… en cada iteración, y el resto del libro formulado sobre ella
+  (`BUSCARV`, `SI`, `INDICE/COINCIDIR`…). Hoy solo se puede con un truco: una
+  discreta de números 1..5 y un `INDICE` en la hoja.
+- **Salidas de texto**: una celda cuyo resultado es un texto (la zona elegida,
+  «Aprobado / Rechazado», el proveedor más barato…). Hoy cuenta como «no dio
+  un número» y no enseña nada (G3). Lo que tendría que enseñar: con qué
+  frecuencia sale cada valor, cuál sale más, y qué entradas lo deciden.
+
+**Por qué merece la pena**: hasta donde sé, los complementos del mercado solo
+simulan números (las salidas de @RISK tienen que ser numéricas; los textos se
+simulan con índices a mano). Es una diferencia real, y el motor ya está
+preparado a medias: el canal de valores (`Columna`) lleva textos por
+iteración desde E5, y las funciones de texto están verificadas contra Excel.
+
+**Qué cambia en la aplicación** (borrador, se cierra con las respuestas):
+
+| Parte | Cambio |
+|---|---|
+| Modelo guardado | Nueva distribución `categorical` con valores (texto) y pesos, o leída de un rango del libro |
+| Motor rápido | Entradas que inyectan una columna de textos en vez de números; recuento de categorías por salida en cada bloque (sin límite de iteraciones, con tope de categorías distintas) |
+| Modo compatible | Escribir textos en las celdas de entrada y leer textos de las salidas |
+| Estadísticas | Frecuencias y moda para salidas de texto; «probabilidad de que salga X» como el umbral de las numéricas |
+| Sensibilidad | Salida numérica × entrada de texto: media (y caja) de la salida por categoría. Salida de texto × entradas: cómo cambia la probabilidad de cada categoría según cada entrada |
+| Panel | Editor de la distribución de texto (escrita o desde un rango); resultados con barras por categoría |
+| Funciones | `RIESGO.CATEGORIA(valores; pesos)` que muestra el más probable fuera de la simulación; «Preparar para compartir» también la convierte |
+| Informe, volcado, escenarios | Tablas de frecuencias y su comparación entre escenarios |
+| Documentación | Manual (una página de variables de texto), tutorial 3 (el retraso de obra o el proveedor como texto), pruebas de fidelidad del motor con textos |
+
+**Niveles**: T1 entradas de texto · T2 salidas de texto (frecuencias) · T3
+sensibilidad cruzada · T4 función `RIESGO.CATEGORIA` y compartir · T5
+documentación y tutorial.
+
 ### M. Libros tutoriales y manual — lo último, 6–9 d
 Pedido por el usuario el 27/09. Diseño completo en `docs/LIBROS_TUTORIAL.md`.
 Va **al final** porque enseña las funcionalidades de los demás bloques.
@@ -473,8 +534,9 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
   Botón «Ayuda» en el panel que abre la sección de la pestaña. Absorbe el
   manual de H9 y de E9.
 
-**Orden propuesto**: A → **E5, E6, C7, E7, E8, F4** (lo que pidió el usuario
-en las pruebas) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
+**Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → **C8, C9, F5**
+(pedidos otra vez en la tercera ronda) → **T** (lugar pendiente de decidir
+con el usuario) → B1–B3 → C1, C2, C5 + **I1** → B4, B6 → D1 → H2 → I2 →
 C3, C4 → resto de B, D (con D4), E, H, U1 → F según los libros → G →
 **M (libros tutoriales y manual)** → I3.
 La lista completa, numerada y con su origen, está en
