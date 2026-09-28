@@ -12,6 +12,13 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   False` en VBA (`suspendScreenUpdatingUntilNextSync`, ExcelApi 1.9). Casilla en
   ⚙ → Rendimiento, marcada por defecto; se guarda en el equipo. Si en alguna
   versión de Excel parpadea, se desmarca.
+- **Hoja volcada legible** (C8, pedida dos veces): cada salida con el formato
+  numérico de su celda de origen (€, %, miles; si es «General», uno razonable,
+  y porcentaje para una TIR); un bloque por salida con banda de color, la
+  lectura en palabras, estadísticos y percentiles lado a lado, sensibilidad
+  debajo y los dos gráficos a la derecha; los datos de los gráficos en su
+  propia zona («Datos de los gráficos»); las salidas constantes en una línea;
+  anchos de columna fijos (antes una nota larga ensanchaba la columna A).
 
 ### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7), escenarios (E7), color RIESGO (E8) y núcleos (F4) (2026-09-27)
 

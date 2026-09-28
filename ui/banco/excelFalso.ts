@@ -260,7 +260,9 @@ export function instalarExcelFalso(): void {
 
   g.Excel = {
     run: <T>(fn: (c: typeof contexto) => Promise<T>) => fn(contexto),
-    ChartType: { line: 'Line' },
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered' },
+    BorderIndex: { edgeBottom: 'EdgeBottom' },
+    BorderLineStyle: { continuous: 'Continuous' },
     ChartSeriesBy: { columns: 'Columns' },
     CalculationType: { recalculate: 'Recalculate', full: 'Full' },
     RangeValueType: { double: 'Double', integer: 'Integer', boolean: 'Boolean', string: 'String', error: 'Error', empty: 'Empty' },
@@ -296,9 +298,11 @@ export const hojaVolcada: {
       set values(v: unknown[][]) {
         hojaVolcada.filas = v;
       },
-      format: { font: {}, autofitColumns: () => {} },
+      set numberFormat(_v: unknown[][]) {},
+      format: { font: {}, fill: {}, borders: { getItem: () => ({}) }, autofitColumns: () => {} },
       _dims: [fila, col, filas, cols],
     }),
+    freezePanes: { freezeRows: () => {} },
     getUsedRange: () => ({ format: { autofitColumns: () => {} } }),
     charts: {
       add: () => {

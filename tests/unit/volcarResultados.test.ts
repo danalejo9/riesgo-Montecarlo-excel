@@ -115,9 +115,12 @@ describe('construirInforme', () => {
     // La cabecera más los tres puntos.
     expect(curva?.puntos).toBe(4);
 
-    const cabecera = informe.filas[curva?.filaInicio as number];
+    // Los datos del gráfico van en su zona, a la derecha del cuerpo (C8).
+    const grafico = informe.graficos.find((g) => g.tipo === 'linea');
+    const col = grafico?.datos.col as number;
+    const cabecera = informe.filas[curva?.filaInicio as number]?.slice(col, col + 2);
     expect(cabecera).toEqual(['Valor', 'Probabilidad acumulada']);
-    expect(informe.filas[(curva?.filaInicio as number) + 1]).toEqual([-1178777, 0.005]);
+    expect(informe.filas[(curva?.filaInicio as number) + 1]?.slice(col, col + 2)).toEqual([-1178777, 0.005]);
   });
 
   it('las filas de título apuntan a filas que existen y tienen texto', () => {
@@ -152,14 +155,14 @@ describe('construirInforme', () => {
       })),
     };
     const texto = construirInforme(MODELO, conSensibilidad).filas.map((f) => f.join('\t')).join('\n');
-    expect(texto).toContain('Sensibilidad: entrada\tCelda\tSpearman (ρ)');
+    expect(texto).toContain('Qué la mueve: entrada\tCelda\tSpearman (ρ)');
     expect(texto).toContain('Precio\tModelo!C5\t0.81\t0.7');
     expect(texto).toContain('Coste\tModelo!C6\t-0.52\t0.3');
     expect(texto).toContain('sobre 10000 iteraciones');
   });
 
   it('sin sensibilidad no escribe una tabla vacía', () => {
-    expect(comoTexto()).not.toContain('Sensibilidad');
+    expect(comoTexto()).not.toContain('Qué la mueve');
   });
 
   it('escribe el histograma y el umbral guardado en el modelo', () => {
@@ -178,5 +181,34 @@ describe('construirInforme', () => {
     expect(texto).toContain('Histograma: desde\tHasta\tTramo\tIteraciones');
     expect(texto).toContain('-2\t0\t-2 a 0\t2');
     expect(informe.histogramas).toEqual([{ nombre: 'VAN', filaInicio: expect.any(Number), barras: 3 }]);
+  });
+
+  it('los números llevan el formato de su celda de origen, o uno razonable (C8)', () => {
+    const conFormato = construirInforme(MODELO, RESULTADO, { formatoDe: () => '#,##0 "€"' });
+    expect(conFormato.formatos.some((f) => f.formato === '#,##0 "€"')).toBe(true);
+    const sinFormato = construirInforme(MODELO, RESULTADO, { formatoDe: () => 'General' });
+    expect(sinFormato.formatos.some((f) => f.formato === '#,##0')).toBe(true);
+    // Una TIR sin formato conocido va en porcentaje.
+    const tir = { ...RESULTADO, salidas: RESULTADO.salidas.map((x) => ({ ...x, nombre: 'TIR del proyecto', resumen: { ...x.resumen, media: 0.2, min: -0.4, max: 0.6 } })) };
+    expect(construirInforme(MODELO, tir).formatos.some((f) => f.formato === '0.0%')).toBe(true);
+  });
+
+  it('una salida constante ocupa una línea, sin gráficos ni sensibilidad en cero (C8)', () => {
+    const constante: SimulacionCompletada = {
+      ...RESULTADO,
+      eleccion: { ...RESULTADO.eleccion, salidasConstantes: ['Modelo!C32'] },
+    };
+    const informe = construirInforme(MODELO, constante);
+    expect(informe.graficos).toHaveLength(0);
+    expect(informe.filas.map((f) => f.join('\t')).join('\n')).toContain('Valor (no depende de ninguna entrada)');
+  });
+
+  it('los gráficos van a la derecha del cuerpo y no encima de sus datos', () => {
+    const informe = construirInforme(MODELO, RESULTADO);
+    for (const g of informe.graficos) {
+      expect(g.desde.col).toBeGreaterThanOrEqual(6);
+      expect(g.hasta.col).toBeLessThan(g.datos.col);
+    }
+    expect(informe.anchos[0]).toBeLessThanOrEqual(40);
   });
 });

@@ -25,6 +25,7 @@ import {
   type PuntoCDF,
   type ResumenEstadistico,
 } from '../engine/stats/index.ts';
+import { lecturaDeSalida } from './lectura.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
 export interface AvanceSimulacion {
@@ -237,16 +238,51 @@ export type ResultadoSimulacionPanel = SimulacionCompletada | FalloSimulacion;
 /** Una fila de la hoja, como la escribe Office.js: valores sueltos. */
 type Fila = (string | number | boolean)[];
 
-interface Informe {
+/** Un rectángulo de la hoja, en índices desde 0. */
+export interface Zona {
+  fila: number;
+  col: number;
+  filas: number;
+  cols: number;
+}
+
+export interface GraficoInforme {
+  tipo: 'linea' | 'columnas';
+  titulo: string;
+  /** Los datos: la primera fila son las cabeceras. */
+  datos: Zona;
+  /** Dónde se coloca: de la esquina superior izquierda a la inferior derecha. */
+  desde: { fila: number; col: number };
+  hasta: { fila: number; col: number };
+}
+
+export interface Informe {
   filas: Fila[];
   /** Índices (base 0) de las filas que son títulos de sección. */
   titulos: number[];
   /** Índices de las filas de texto secundario. */
   tenues: number[];
+  /** Bandas de color de cada salida: la fila entera del bloque. */
+  bandas: number[];
+  /** Filas de cabecera de tabla (negrita con borde inferior). */
+  cabeceras: Zona[];
+  /** Formatos numéricos de Excel por zona (`#,##0`, `0.0%`…). */
+  formatos: Array<Zona & { formato: string }>;
+  graficos: GraficoInforme[];
   curvas: { nombre: string; filaInicio: number; puntos: number }[];
-  /** Tablas de histograma: la cabecera está en `filaInicio`; columnas 2 y 3. */
   histogramas: { nombre: string; filaInicio: number; barras: number }[];
+  /** Anchos de columna sugeridos, en caracteres. */
+  anchos: number[];
 }
+
+/** Columnas del cuerpo (A..F), de los gráficos (H..O) y de sus datos (Q en adelante). */
+const COL_GRAFICOS = 7;
+const COL_DATOS = 16;
+const ALTO_GRAFICO = 15;
+
+export const FORMATO_ENTERO = '#,##0';
+export const FORMATO_PORCENTAJE = '0.0%';
+const FORMATO_RHO = '0.00';
 
 /** Cuatro cifras significativas, para las etiquetas de los tramos. */
 function redondear(x: number): string {
@@ -254,162 +290,244 @@ function redondear(x: number): string {
 }
 
 /**
- * Arma el informe como datos puros, sin tocar Excel. Separado para poder
- * razonar sobre el contenido —y probarlo— sin un libro abierto.
+ * El formato con el que se escribe una salida si no se sabe el de su celda:
+ * enteros con miles si son grandes, dos decimales si no, y porcentaje si
+ * todo cae entre −1 y 1 y se llama como una tasa (TIR, margen…).
  */
-export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionCompletada): Informe {
+export function formatoPorDefecto(s: Pick<ResultadoSalida, 'nombre' | 'resumen'>): string {
+  const { min, max, media } = s.resumen;
+  const pareceTasa = /\b(tir|irr|tasa|margen|%|rentabilidad|porcentaje)\b/i.test(s.nombre) || /%/.test(s.nombre);
+  if (pareceTasa && Number.isFinite(min) && Number.isFinite(max) && min >= -1.5 && max <= 1.5) return FORMATO_PORCENTAJE;
+  return Math.abs(media) >= 100 ? FORMATO_ENTERO : '#,##0.00';
+}
+
+/** Un formato «General» no dice nada: se trata como si no hubiera. */
+function formatoUtil(f: string | undefined): string | undefined {
+  return f && f.trim() !== '' && f.trim().toLowerCase() !== 'general' && f.trim() !== '@' ? f : undefined;
+}
+
+export interface OpcionesInforme {
+  /** El formato numérico de la celda de origen (leído de Excel), si se conoce. */
+  formatoDe?: (ref: string) => string | undefined;
+  ahora?: Date;
+}
+
+/**
+ * Arma la hoja del informe como datos puros, sin tocar Excel (C8). Un bloque
+ * por salida: banda con el nombre, la lectura en palabras, estadísticos y
+ * percentiles lado a lado, sensibilidad debajo y los dos gráficos a la
+ * derecha. Los datos de los gráficos van aparte, en columnas propias, para que
+ * el cuerpo se lea sin ellos. Los números llevan el formato de su celda de
+ * origen (o uno razonable), no quince decimales.
+ */
+export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionCompletada, opciones: OpcionesInforme = {}): Informe {
   const filas: Fila[] = [];
   const titulos: number[] = [];
   const tenues: number[] = [];
+  const bandas: number[] = [];
+  const cabeceras: Zona[] = [];
+  const formatos: Informe['formatos'] = [];
+  const graficos: GraficoInforme[] = [];
   const curvas: Informe['curvas'] = [];
   const histogramas: Informe['histogramas'] = [];
 
-  const añadir = (...f: Fila[]) => filas.push(...f);
-  const titulo = (texto: string) => {
-    titulos.push(filas.length);
-    filas.push([texto]);
+  const poner = (fila: number, col: number, valores: Fila) => {
+    while (filas.length <= fila) filas.push([]);
+    const f = filas[fila] as Fila;
+    while (f.length < col) f.push('');
+    for (let k = 0; k < valores.length; k++) f[col + k] = valores[k] as string | number | boolean;
   };
-  const tenue = (texto: string) => {
-    tenues.push(filas.length);
-    filas.push([texto]);
-  };
+  let fila = 0;
+  const linea = (valores: Fila) => poner(fila++, 0, valores);
+  const titulo = (texto: string) => { titulos.push(fila); linea([texto]); };
+  const tenue = (texto: string) => { tenues.push(fila); linea([texto]); };
+  const cabecera = (valores: Fila, col = 0) => { cabeceras.push({ fila, col, filas: 1, cols: valores.length }); poner(fila++, col, valores); };
+  const formato = (z: Zona, f: string) => formatos.push({ ...z, formato: f });
+
+  // Los datos de los gráficos, en su propia zona a la derecha.
+  let filaDatos = 0;
+  poner(filaDatos, COL_DATOS, ['DATOS DE LOS GRÁFICOS']);
+  titulos.push(filaDatos);
+  filaDatos += 2;
 
   titulo(modelo.project?.title.trim() || 'Análisis de riesgo — simulación Monte Carlo');
-  if (modelo.project?.description?.trim()) añadir([modelo.project.description.trim()]);
-  tenue(new Date().toLocaleString('es-ES'));
-  añadir([]);
+  if (modelo.project?.description?.trim()) linea([modelo.project.description.trim()]);
+  tenue((opciones.ahora ?? new Date()).toLocaleString('es-ES'));
+  fila++;
 
   titulo('CÓMO SE CALCULÓ');
-  añadir(
-    ['Motor', resultado.motor === 'fast' ? 'Rápido (en memoria)' : 'Compatible (Excel en el bucle)'],
-    ['Iteraciones', resultado.iteracionesCompletadas],
-    ...(resultado.hilos ? [['Hilos de cálculo', resultado.hilos] as Fila] : []),
-    ['Tiempo', `${(resultado.milisegundos / 1000).toFixed(1)} s`],
-    ['Semilla', modelo.settings.seed],
-    ['Muestreo', modelo.settings.sampling === 'lhs' ? 'Hipercubo latino' : 'Monte Carlo'],
-    ['Celdas del modelo', resultado.eleccion.celdasNecesarias],
-  );
-  if (resultado.cancelada) {
-    tenue('La simulación se canceló antes de completar las iteraciones pedidas.');
-  }
-  if (resultado.eleccion.motivos.length > 0) {
-    tenue('El motor rápido no pudo con este modelo; se usó el compatible.');
-  }
-  añadir([]);
+  const inicioAjustes = fila;
+  linea(['Motor', resultado.motor === 'fast' ? 'Rápido (en memoria)' : 'Compatible (Excel en el bucle)']);
+  linea(['Iteraciones', resultado.iteracionesCompletadas]);
+  if (resultado.hilos) linea(['Hilos de cálculo', resultado.hilos]);
+  linea(['Tiempo', `${(resultado.milisegundos / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} s`]);
+  linea(['Semilla', modelo.settings.seed]);
+  linea(['Muestreo', modelo.settings.sampling === 'lhs' ? 'Hipercubo latino' : 'Monte Carlo']);
+  linea(['Celdas del modelo', resultado.eleccion.celdasNecesarias]);
+  formato({ fila: inicioAjustes, col: 1, filas: fila - inicioAjustes, cols: 1 }, FORMATO_ENTERO);
+  if (resultado.cancelada) tenue('La simulación se canceló antes de completar las iteraciones pedidas.');
+  if (resultado.eleccion.motivos.length > 0) tenue('El motor rápido no pudo con este modelo; se usó el compatible.');
+  fila++;
 
   titulo('ENTRADAS INCIERTAS');
-  añadir(['Nombre', 'Celda', 'Distribución', 'Correlaciones']);
+  cabecera(['Nombre', 'Celda', 'Distribución', 'Correlaciones']);
   const nombrePorId = new Map(modelo.inputs.map((e) => [e.id, e.name] as const));
   for (const e of modelo.inputs) {
-    const correlaciones = e.correlations
-      .map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`)
-      .join('; ');
-    añadir([e.name, e.ref, resumirDistribucion(e.dist), correlaciones]);
+    const correlaciones = e.correlations.map((c) => `${nombrePorId.get(c.with) ?? c.with}: ${c.coefficient}`).join('; ');
+    linea([e.name, e.ref, resumirDistribucion(e.dist), correlaciones]);
   }
   for (const e of resultado.entradasDeFunciones ?? []) {
-    añadir([`${e.nombre && e.nombre !== e.ref ? e.nombre : e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
+    linea([`${e.nombre && e.nombre !== e.ref ? e.nombre : e.ref} (función RIESGO)`, e.ref, e.distribucion, '']);
   }
-  añadir([]);
+  fila++;
+
+  const formatoSalida = (s: ResultadoSalida) => formatoUtil(opciones.formatoDe?.(s.ref)) ?? formatoPorDefecto(s);
+  const constantes = new Set(resultado.eleccion.salidasConstantes);
+  const esConstante = (s: ResultadoSalida) => constantes.has(s.ref) || (s.resumen.n > 0 && s.resumen.desviacion === 0);
 
   titulo('RESUMEN DE LAS SALIDAS');
-  añadir(['Nombre', 'Celda', 'Media', 'Desviación', 'Mínimo', 'Máximo', 'p5', 'p50', 'p95', 'Sin valor']);
+  cabecera(['Nombre', 'Media', 'p5', 'p50', 'p95', 'Sin valor']);
   for (const s of resultado.salidas) {
-    añadir([
-      s.nombre,
-      s.ref,
-      s.resumen.media,
-      s.resumen.desviacion,
-      s.resumen.min,
-      s.resumen.max,
-      s.resumen.percentiles.p5 ?? '',
-      s.resumen.percentiles.p50 ?? '',
-      s.resumen.percentiles.p95 ?? '',
-      s.noNumericas,
-    ]);
+    const p = s.resumen.percentiles;
+    formato({ fila, col: 1, filas: 1, cols: 4 }, formatoSalida(s));
+    linea([s.nombre, s.resumen.media, p.p5 ?? '', p.p50 ?? '', p.p95 ?? '', s.noNumericas]);
   }
   tenue('«Sin valor» son las iteraciones en que la salida no dio un número (por ejemplo, una TIR que no existe).');
-  añadir([]);
+  fila++;
 
   for (const s of resultado.salidas) {
-    detallarSalida(s, { añadir, titulo, tenue });
+    const f = formatoSalida(s);
+    bandas.push(fila);
+    titulos.push(fila);
+    linea([`SALIDA: ${s.nombre} (${s.ref})`]);
+
+    if (s.resumen.n === 0) {
+      tenue('Ninguna iteración dio un número en esta celda (devuelve un texto o un error de Excel): no hay estadísticas.');
+      fila++;
+      continue;
+    }
+    if (esConstante(s)) {
+      formato({ fila, col: 1, filas: 1, cols: 1 }, f);
+      linea(['Valor (no depende de ninguna entrada)', s.resumen.media]);
+      fila++;
+      continue;
+    }
+
     const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;
-    if (umbral && s.muestraOrdenada && s.muestraOrdenada.length > 0) {
-      const p = probabilidadUmbral(s.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima');
-      añadir([describirUmbral(s.nombre, umbral.value, umbral.direction), p]);
-      añadir([]);
-    }
+    const probUmbral = umbral && s.muestraOrdenada && s.muestraOrdenada.length > 0
+      ? probabilidadUmbral(s.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima')
+      : undefined;
+    const lectura = lecturaDeSalida({
+      ...s,
+      ...(umbral && probUmbral !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad: probUmbral } } : {}),
+    });
+    if (lectura.length > 0) tenue(lectura.join(' '));
+    fila++;
+
+    // Estadísticos (A:B) y percentiles (D:E), lado a lado.
+    const inicio = fila;
+    const estad: Array<[string, number, string]> = [
+      ['Iteraciones con valor', s.resumen.n, FORMATO_ENTERO],
+      ['Media', s.resumen.media, f],
+      ['Desviación típica', s.resumen.desviacion, f],
+      ['Mínimo', s.resumen.min, f],
+      ['Máximo', s.resumen.max, f],
+    ];
+    if (s.noNumericas > 0) estad.push(['Iteraciones sin valor numérico', s.noNumericas, FORMATO_ENTERO]);
+    if (umbral && probUmbral !== undefined) estad.push([describirUmbral(s.nombre, umbral.value, umbral.direction), probUmbral, FORMATO_PORCENTAJE]);
     if (s.precision) {
-      añadir(
-        ['Margen de la media (95 %)', s.precision.margenMedia],
-        [`Iteraciones para un margen del ${s.precision.objetivo * 100} %`, s.precision.iteracionesParaObjetivo],
-      );
-      for (const iv of s.precision.percentiles) {
-        añadir([`p${Math.round(iv.p * 100)} (intervalo 95 %)`, iv.inferior, iv.superior]);
-      }
-      añadir([]);
+      estad.push(['Margen de la media (95 %)', s.precision.margenMedia, f]);
+      estad.push([`Iteraciones para un margen del ${(s.precision.objetivo * 100).toLocaleString('es-ES')} %`, s.precision.iteracionesParaObjetivo, FORMATO_ENTERO]);
     }
+    cabecera(['Estadístico', 'Valor']);
+    estad.forEach(([etq, v, fmt], k) => {
+      poner(inicio + 1 + k, 0, [etq, v]);
+      formato({ fila: inicio + 1 + k, col: 1, filas: 1, cols: 1 }, fmt);
+    });
+    const percentiles = Object.entries(s.resumen.percentiles);
+    cabeceras.push({ fila: inicio, col: 3, filas: 1, cols: 2 });
+    poner(inicio, 3, ['Percentil', 'Valor']);
+    percentiles.forEach(([clave, valor], k) => poner(inicio + 1 + k, 3, [clave, valor]));
+    formato({ fila: inicio + 1, col: 4, filas: percentiles.length, cols: 1 }, f);
+    const intervalos = s.precision?.percentiles ?? [];
+    intervalos.forEach((iv, k) => {
+      poner(inicio + 2 + percentiles.length + k, 3, [`p${Math.round(iv.p * 100)} (intervalo 95 %)`, iv.inferior, iv.superior]);
+      formato({ fila: inicio + 2 + percentiles.length + k, col: 4, filas: 1, cols: 2 }, f);
+    });
+    const altoTablas = 1 + Math.max(estad.length, percentiles.length + (intervalos.length > 0 ? 1 + intervalos.length : 0));
+    fila = inicio + altoTablas + 1;
+
     if (s.sensibilidad && s.sensibilidad.length > 0) {
-      añadir(['Sensibilidad: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ² normalizado)', 'Contribución a la varianza']);
-      for (const f of s.sensibilidad) añadir([f.nombre, f.ref, f.spearman, f.peso, f.contribucion ?? '']);
-      if (s.r2 !== undefined) añadir(['Varianza explicada por las entradas (R², rangos)', s.r2]);
+      cabecera(['Qué la mueve: entrada', 'Celda', 'Spearman (ρ)', 'Peso (ρ²)', 'Contribución a la varianza']);
+      const ini = fila;
+      for (const x of s.sensibilidad) linea([x.nombre, x.ref, x.spearman, x.peso, x.contribucion ?? '']);
+      formato({ fila: ini, col: 2, filas: s.sensibilidad.length, cols: 1 }, FORMATO_RHO);
+      formato({ fila: ini, col: 3, filas: s.sensibilidad.length, cols: 2 }, FORMATO_PORCENTAJE);
+      if (s.r2 !== undefined) {
+        formato({ fila, col: 1, filas: 1, cols: 1 }, FORMATO_PORCENTAJE);
+        linea(['Varianza explicada por las entradas (R²)', s.r2]);
+      }
       tenue(
         `Correlación de rangos sobre ${resultado.muestraSensibilidad ?? resultado.iteracionesCompletadas} ` +
           'iteraciones. ρ > 0: la salida sube con la entrada; ρ < 0: baja. El peso es aproximado si las entradas están correlacionadas.',
       );
-      añadir([]);
     }
+    tenue('Percentiles aproximados: se calculan con un t-digest, no ordenando todos los valores.');
 
-    // La curva, como datos: dos columnas que el gráfico de Excel usa y que el
-    // usuario puede reutilizar para hacer el suyo.
-    añadir(['Valor', 'Probabilidad acumulada']);
-    const filaInicio = filas.length - 1; // la cabecera entra en la serie como nombre
-    for (const p of s.cdf) añadir([p.x, p.p]);
-    curvas.push({ nombre: s.nombre, filaInicio, puntos: s.cdf.length + 1 });
-    añadir([]);
+    // Los datos de los gráficos, a la derecha, y los gráficos junto al bloque.
+    const altoGraficos = s.histograma && s.histograma.length > 0 ? 2 * ALTO_GRAFICO + 1 : ALTO_GRAFICO;
+    let filaGrafico = inicio;
+    if (s.histograma && s.histograma.length > 0) {
+      poner(filaDatos++, COL_DATOS, [`${s.nombre}: histograma`]);
+      cabeceras.push({ fila: filaDatos, col: COL_DATOS, filas: 1, cols: 4 });
+      poner(filaDatos++, COL_DATOS, ['Histograma: desde', 'Hasta', 'Tramo', 'Iteraciones']);
+      const filaCab = filaDatos - 1;
+      for (const b of s.histograma) poner(filaDatos++, COL_DATOS, [b.x0, b.x1, `${redondear(b.x0)} a ${redondear(b.x1)}`, b.count]);
+      formato({ fila: filaCab + 1, col: COL_DATOS, filas: s.histograma.length, cols: 2 }, f);
+      histogramas.push({ nombre: s.nombre, filaInicio: filaCab, barras: s.histograma.length + 1 });
+      graficos.push({
+        tipo: 'columnas', titulo: `${s.nombre} — histograma`,
+        datos: { fila: filaCab, col: COL_DATOS + 2, filas: s.histograma.length + 1, cols: 2 },
+        desde: { fila: filaGrafico, col: COL_GRAFICOS }, hasta: { fila: filaGrafico + ALTO_GRAFICO, col: COL_GRAFICOS + 7 },
+      });
+      filaGrafico += ALTO_GRAFICO + 1;
+      filaDatos++;
+    }
+    poner(filaDatos++, COL_DATOS, [`${s.nombre}: probabilidad acumulada`]);
+    cabeceras.push({ fila: filaDatos, col: COL_DATOS, filas: 1, cols: 2 });
+    poner(filaDatos++, COL_DATOS, ['Valor', 'Probabilidad acumulada']);
+    const filaCabCurva = filaDatos - 1;
+    for (const p of s.cdf) poner(filaDatos++, COL_DATOS, [p.x, p.p]);
+    formato({ fila: filaCabCurva + 1, col: COL_DATOS, filas: s.cdf.length, cols: 1 }, f);
+    formato({ fila: filaCabCurva + 1, col: COL_DATOS + 1, filas: s.cdf.length, cols: 1 }, FORMATO_PORCENTAJE);
+    curvas.push({ nombre: s.nombre, filaInicio: filaCabCurva, puntos: s.cdf.length + 1 });
+    graficos.push({
+      tipo: 'linea', titulo: `${s.nombre} — probabilidad acumulada`,
+      datos: { fila: filaCabCurva, col: COL_DATOS, filas: s.cdf.length + 1, cols: 2 },
+      desde: { fila: filaGrafico, col: COL_GRAFICOS }, hasta: { fila: filaGrafico + ALTO_GRAFICO, col: COL_GRAFICOS + 7 },
+    });
+    filaDatos++;
 
     if (s.arana && s.arana.length > 0) {
-      añadir(['Araña: media de la salida por decil de la entrada', ...Array.from({ length: 10 }, (_, i) => `D${i + 1}`), 'Rango']);
-      for (const c of s.arana) añadir([c.nombre, ...c.medias, c.rango]);
-      añadir([]);
+      poner(filaDatos++, COL_DATOS, [`${s.nombre}: araña (media de la salida por decil de la entrada)`]);
+      cabeceras.push({ fila: filaDatos, col: COL_DATOS, filas: 1, cols: 12 });
+      poner(filaDatos++, COL_DATOS, ['Entrada', ...Array.from({ length: 10 }, (_, i) => `D${i + 1}`), 'Rango']);
+      const ini = filaDatos;
+      for (const c of s.arana) poner(filaDatos++, COL_DATOS, [c.nombre, ...c.medias, c.rango]);
+      formato({ fila: ini, col: COL_DATOS + 1, filas: s.arana.length, cols: 11 }, f);
+      filaDatos++;
     }
 
-    if (s.histograma && s.histograma.length > 0) {
-      // El tramo como texto va justo antes del conteo para que el gráfico de
-      // columnas tome las dos columnas contiguas: etiqueta y altura.
-      añadir(['Histograma: desde', 'Hasta', 'Tramo', 'Iteraciones']);
-      const filaInicio = filas.length - 1;
-      for (const b of s.histograma) {
-        añadir([b.x0, b.x1, `${redondear(b.x0)} a ${redondear(b.x1)}`, b.count]);
-      }
-      histogramas.push({ nombre: s.nombre, filaInicio, barras: s.histograma.length + 1 });
-      añadir([]);
-    }
+    // El bloque siguiente empieza por debajo del cuerpo y de los gráficos.
+    fila = Math.max(fila, inicio + altoGraficos) + 2;
   }
 
-  return { filas, titulos, tenues, curvas, histogramas };
-}
+  // Todas las filas con el mismo ancho, para escribirlas de una vez.
+  const ancho = Math.max(1, ...filas.map((f) => f.length));
+  for (const f of filas) while (f.length < ancho) f.push('');
 
-function detallarSalida(
-  s: ResultadoSalida,
-  io: { añadir: (...f: Fila[]) => void; titulo: (t: string) => void; tenue: (t: string) => void },
-): void {
-  io.titulo(`SALIDA: ${s.nombre} (${s.ref})`);
-  io.añadir(
-    ['Iteraciones con valor', s.resumen.n],
-    ['Media', s.resumen.media],
-    ['Desviación típica', s.resumen.desviacion],
-    ['Mínimo', s.resumen.min],
-    ['Máximo', s.resumen.max],
+  const anchos = Array.from({ length: ancho }, (_, c) =>
+    c === 0 ? 34 : c < COL_GRAFICOS ? 16 : c < COL_DATOS ? 10 : c === COL_DATOS ? 28 : 14,
   );
-  if (s.noNumericas > 0) {
-    io.añadir(['Iteraciones sin valor numérico', s.noNumericas]);
-  }
-  io.añadir([]);
-
-  io.añadir(['Percentil', 'Valor']);
-  for (const [clave, valor] of Object.entries(s.resumen.percentiles)) {
-    io.añadir([clave, valor]);
-  }
-  io.tenue('Percentiles aproximados: se calculan con un t-digest, no ordenando todos los valores.');
-  io.añadir([]);
+  return { filas, titulos, tenues, bandas, cabeceras, formatos, graficos, curvas, histogramas, anchos };
 }
