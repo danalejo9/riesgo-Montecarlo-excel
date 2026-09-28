@@ -32,6 +32,7 @@ import {
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
+import { publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
@@ -137,6 +138,8 @@ export function Panel() {
               if (!r.ok) return;
               setResultado((actual) => actual ?? r.resultado);
               recordarCeldasRiesgo((r.resultado.entradasDeFunciones ?? []).map((e) => e.ref));
+              // B6: que RIESGO.MEDIA y compañía tengan los resultados también en otro equipo.
+              void publicarRestaurados(r.resultado).catch(() => {});
             })
             .catch(() => {
               // Sin resultados guardados legibles se abre como un libro sin simular.
@@ -226,6 +229,10 @@ export function Panel() {
         // E8: las celdas con RIESGO.* se conocen ahora; se pintan con su color.
         recordarCeldasRiesgo((conHuella.entradasDeFunciones ?? []).map((e) => e.ref));
         void aplicarResaltado(modelo).catch(() => {});
+        // B6: los resultados, para las funciones RIESGO.MEDIA, PERCENTIL…
+        void publicarResultados(conHuella)
+          .then(() => refrescarCeldas(conHuella.celdasConResultados ?? []))
+          .catch(() => {});
         // Guardarlos no puede estropear la simulación: si falla, se dice y ya.
         void guardarResultados(serializarResultados(modelo, conHuella)).catch((e: unknown) =>
           setError(`Los resultados no se pudieron guardar en el libro: ${mensajeDe(e)}`),

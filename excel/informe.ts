@@ -49,6 +49,8 @@ export interface ResultadoSalida {
   id: string;
   nombre: string;
   ref: string;
+  /** La celda de verdad (`Modelo!C32`), también si `ref` es un nombre definido. */
+  clave?: string;
   resumen: ResumenEstadistico;
   cdf: PuntoCDF[];
   /**
@@ -242,6 +244,8 @@ export interface SimulacionCompletada {
   entradas?: EntradaMuestreada[];
   /** Celdas con RIESGO.* que también están en el panel: se usó lo del panel. */
   funcionesIgnoradas?: string[];
+  /** Celdas con funciones de resultados (`RIESGO.MEDIA`…, B6): se recalculan al terminar. */
+  celdasConResultados?: string[];
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
   /**

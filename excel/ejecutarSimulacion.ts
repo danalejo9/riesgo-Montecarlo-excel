@@ -61,6 +61,10 @@ import { desdeLocaleDelModelo } from './regional.ts';
 import { cargarResolverRef } from './resolverRef.ts';
 import { simularEnExcel } from './simulacionCompatible.ts';
 import { aValorCelda } from './valoresEstaticos.ts';
+import { leerAlmacenPublicado } from './almacenResultadosHoja.ts';
+import { celdasConFuncionesResultado, sustituirFuncionesResultado } from './resultadosEnGrafo.ts';
+import { componerDireccion } from './direcciones.ts';
+import { letrasDeColumna } from '../engine/parser/ast.ts';
 
 export interface PeticionSimulacion {
   modelo: ModeloRiesgo;
@@ -119,6 +123,17 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       progreso?.({ fase: 'leyendo', mensaje: `Leyendo hojas… ${hechas} de ${total}` }),
   });
   const { grafo } = construirGrafo(libro.formulas, libro.valores.map(aValorCelda));
+
+  // B6: las funciones de resultados (`RIESGO.MEDIA(C32)`…) valen lo que dio la
+  // simulación anterior durante toda esta; se sustituyen por ese número.
+  const conResultados = celdasConFuncionesResultado(grafo);
+  if (conResultados.length > 0) {
+    sustituirFuncionesResultado(grafo, conResultados, await leerAlmacenPublicado().catch(() => null));
+  }
+  const celdasConResultados = conResultados.map((c) => {
+    const nodo = grafo.nodos.get(c);
+    return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : c;
+  });
 
   // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
   const textos = indiceDeTextos(libro.valores);
@@ -184,7 +199,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     if (r.ok && conv?.untilConverged) {
       r.convergencia = { objetivo, tandas: [n], alcanzada: r.salidas.every((s) => s.precision?.suficiente !== false), tope: conv.maxIterations, noDisponible: true };
     }
-    return conEntradasDeFunciones(r, deFunciones);
+    return conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados);
   }
 
   // Motor rápido: iteraciones fijas, o por tandas hasta la precisión pedida.
@@ -218,7 +233,11 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       alcanzada: final.salidas.every((s) => s.precision?.suficiente !== false),
     };
   }
-  return conEntradasDeFunciones(final, deFunciones);
+  return conCeldasConResultados(conEntradasDeFunciones(final, deFunciones), celdasConResultados);
+}
+
+function conCeldasConResultados(r: ResultadoSimulacionPanel, celdas: string[]): ResultadoSimulacionPanel {
+  return r.ok && celdas.length > 0 ? { ...r, celdasConResultados: celdas } : r;
 }
 
 /** Anota en el resultado qué entradas vinieron de funciones RIESGO.* del libro. */
@@ -348,6 +367,7 @@ function porElRapido(
           id: salida.id,
           nombre: salida.name,
           ref: salida.ref,
+          clave: clavesSalida[i] as string,
           resumen: resumenEstadistico(
             s?.welford ?? { n: 0, media: 0, m2: 0, min: Infinity, max: -Infinity },
             s?.digest ?? { compresion: 100, centroides: [], pesoTotal: 0, min: Infinity, max: -Infinity },
@@ -421,6 +441,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         id: salida.id,
         nombre: salida.name,
         ref: salida.ref,
+        clave: clavesSalida[i] as string,
         resumen: resumenEstadistico(
           s?.welford ?? { n: 0, media: 0, m2: 0, min: Infinity, max: -Infinity },
           s?.digest ?? { compresion: 100, centroides: [], pesoTotal: 0, min: Infinity, max: -Infinity },

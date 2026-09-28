@@ -7,6 +7,10 @@
  * simulación el complemento ni las llama: la celda es una entrada y su valor
  * lo pone el muestreo (`excel/entradasRiesgo.ts`).
  *
+ * Las funciones de resultados (B6: `RIESGO.MEDIA(C32)`…) leen lo que el
+ * panel publicó al simular (`excel/resultadosEnHoja.ts`). Excel les pasa la
+ * dirección de la celda (`requiresParameterAddresses`) además de su valor.
+ *
  * Este archivo se empaqueta aparte, en un solo archivo sin módulos
  * (`vite.funciones.config.ts`): el motor de funciones personalizadas de Excel
  * en Windows no es un navegador y no sabe importar.
@@ -14,13 +18,16 @@
 
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
-  FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
+  FUNCIONES_RESULTADO, FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
 } from '../engine/modelo/funcionesRiesgo.ts';
+import {
+  buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, valorFuncionResultado, type AlmacenResultadosHoja,
+} from '../excel/resultadosEnHoja.ts';
 
 declare const CustomFunctions: {
-  associate(id: string, f: (...args: never[]) => number | string): void;
+  associate(id: string, f: (...args: never[]) => number | string | Promise<number>): void;
   Error: new (codigo: unknown, mensaje?: string) => Error;
-  ErrorCode: { invalidNumber: unknown; invalidName: unknown };
+  ErrorCode: { invalidNumber: unknown; invalidName: unknown; invalidValue: unknown; notAvailable: unknown };
 };
 
 for (const f of FUNCIONES_RIESGO) {
@@ -63,3 +70,51 @@ CustomFunctions.associate(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
   if (typeof r !== 'string') return r.media;
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
 });
+
+// B6: los resultados de la última simulación. El almacén se relee en cada
+// llamada (el panel lo cambia al simular), pero solo se vuelve a interpretar
+// si su texto cambió.
+let ultimoTexto: string | null = null;
+let ultimoAlmacen: AlmacenResultadosHoja | null = null;
+
+async function almacen(): Promise<AlmacenResultadosHoja | null> {
+  const g = globalThis as unknown as { OfficeRuntime?: { storage?: { getItem(c: string): Promise<string | null> } } };
+  let texto: string | null;
+  try {
+    texto = g.OfficeRuntime?.storage ? await g.OfficeRuntime.storage.getItem(CLAVE_ALMACEN_RESULTADOS) : null;
+  } catch {
+    texto = null;
+  }
+  if (texto === null) {
+    try {
+      texto = globalThis.localStorage?.getItem(CLAVE_ALMACEN_RESULTADOS) ?? null;
+    } catch {
+      texto = null;
+    }
+  }
+  if (texto !== ultimoTexto) {
+    ultimoTexto = texto;
+    ultimoAlmacen = leerAlmacen(texto);
+  }
+  return ultimoAlmacen;
+}
+
+interface Invocacion {
+  parameterAddresses?: string[];
+}
+
+for (const f of FUNCIONES_RESULTADO) {
+  CustomFunctions.associate(f.id, (async (...args: unknown[]) => {
+    // Excel añade la invocación como último argumento.
+    const invocacion = (args[args.length - 1] ?? {}) as Invocacion;
+    const [valorCelda, ...resto] = args.slice(0, f.parametros.length);
+    const direccion = invocacion.parameterAddresses?.[0];
+    const salida = buscarSalida(await almacen(), direccion, valorCelda);
+    const r = valorFuncionResultado(f.id, salida, resto);
+    if (r.ok) return r.valor;
+    const codigo = r.error === 'na' ? CustomFunctions.ErrorCode.notAvailable
+      : r.error === 'num' ? CustomFunctions.ErrorCode.invalidNumber
+      : CustomFunctions.ErrorCode.invalidValue;
+    throw new CustomFunctions.Error(codigo, r.mensaje);
+  }) as (...args: never[]) => Promise<number>);
+}
