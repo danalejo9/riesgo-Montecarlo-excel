@@ -117,7 +117,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
 | 17 | B4 | ✅ `RIESGO.DISCRETA`, distribuciones truncadas, `RIESGO.LOGNORMAL2` | **Tú** (lista de funciones) |
-| 18 | B6 | `RIESGO.SALIDA()`, y traer resultados a la hoja: `RIESGO.MEDIA`, `RIESGO.PERCENTIL`, `RIESGO.PROB`, `RIESGO.DESV`; correlación desde la fórmula | **Tú** (lista de funciones) |
+| 18 | B6 | ✅ (28/09, parcial) **Traer resultados a la hoja**: `RIESGO.MEDIA`, `RIESGO.DESV`, `RIESGO.PERCENTIL`, `RIESGO.PROB` (también de un texto), `RIESGO.MIN`, `RIESGO.MAX`, sin tocar el manifiesto (resultados guardados en el equipo hasta B1). Pendientes: `RIESGO.SALIDA()` y la correlación desde la fórmula | **Tú** (lista de funciones) |
 | 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
 | 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
 | 21 | I2 | **Ajuste orientado al riesgo**: error en percentiles P50–P99, bootstrap, discretas | **Tú** (investigación) |
@@ -129,7 +129,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
 | 24 | B5 | Distribuciones nuevas: t de Student, logística, log-logística, Pareto, geométrica, binomial negativa, hipergeométrica, uniforme entera, Trigen, general/histograma | **Tú** (lista de funciones) |
-| 25 | B7 | `RIESGO.*` con celdas como argumentos (`=RIESGO.NORMAL(B2;15)`) y dentro de operaciones | Plan |
+| 25 | B7 | ✅ (28/09) `RIESGO.*` con celdas o cálculos como argumentos (`=RIESGO.NORMAL(B2;15)`), dentro de operaciones y con parámetros que dependen de otra celda aleatoria (los dos últimos, solo con el motor rápido) | **Tú** (prueba E4) |
 | 26 | C6 | Percentiles configurables | Plan |
 | 27 | D2 | Análisis de estrés: fijar una entrada en un percentil | Plan |
 | 28 | D3 | Salidas que son un rango (C28:H28 como una salida por periodos) | Plan |

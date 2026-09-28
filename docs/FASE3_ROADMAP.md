@@ -294,7 +294,11 @@ Estimaciones en días de trabajo efectivo.
   hipergeométrica, uniforme entera, triangular por percentiles (Trigen),
   general/histograma (a partir de puntos). Cada una con sus pruebas de
   momentos y de Kolmogorov–Smirnov, como las actuales.
-- **B6. Funciones que no son distribuciones**: `RIESGO.SALIDA()` (marcar una
+- **B6. Funciones que no son distribuciones** — ✅ **hecho el 28/09** lo de
+  traer resultados (`MEDIA`, `DESV`, `PERCENTIL`, `PROB`, `MIN`, `MAX`), con el
+  diseño de abajo (`excel/resultadosEnHoja.ts`, `almacenResultadosHoja.ts`,
+  `resultadosEnGrafo.ts`). Quedan `RIESGO.SALIDA()` y `RIESGO.CORRELACION`,
+  y con B1, leer los resultados del libro: `RIESGO.SALIDA()` (marcar una
   salida desde la fórmula); `RIESGO.MEDIA(celda)`, `RIESGO.PERCENTIL(celda;
   p)`, `RIESGO.PROB(celda; umbral)`, `RIESGO.DESV(celda)` para traer a la hoja
   los resultados de la última simulación; correlación declarada desde la
@@ -322,7 +326,8 @@ Estimaciones en días de trabajo efectivo.
     compatible.
   - Estimación: 2–3 d antes de B1, más ≈ 0,5 d para cambiar a leer del libro
     tras B1.
-- **B7. Argumentos que son celdas**: `=RIESGO.NORMAL(B2;15)` cuando B2 no
+- **B7. Argumentos que son celdas** — ✅ **hecho el 28/09**, fases 1 y 2
+  (`engine/modelo/riesgoEnGrafo.ts`, `engine/functions/riesgo.ts`): `=RIESGO.NORMAL(B2;15)` cuando B2 no
   depende de ninguna entrada (se resuelve una vez); y, en una segunda fase,
   distribuciones cuyos parámetros dependen de otras entradas. Permitir la
   función dentro de una operación (`=1+RIESGO.NORMAL(…)`).
@@ -616,7 +621,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → B6 → I2 →
+pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

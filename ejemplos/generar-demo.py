@@ -368,6 +368,42 @@ for fila, texto in ((25, "escribe =RIESGO.DISCRETA(E25:E27;F25:F27)"),
 p["C29"] = "=C25+C26+C27+C28"
 p["C29"].number_format = '#,##0.00'
 
+# 7. RIESGO con celdas como argumentos (B7): fijos, dentro de una operación
+#    y con parámetros que dependen de otra celda aleatoria.
+etiqueta(31, "7. RIESGO CON CELDAS (pruebas F12–F15)", True)
+etiqueta(32, "Media de la demanda")
+p["C32"] = 1000
+etiqueta(33, "Desviación de la demanda")
+p["C33"] = 150
+etiqueta(34, "Demanda con celdas")
+etiqueta(35, "Precio con imprevisto")
+etiqueta(36, "Demanda del mes siguiente")
+etiqueta(37, "Ingresos con celdas")
+p["C37"] = "=C36*C35"
+p["C37"].number_format = '#,##0.00'
+for fila, texto in ((34, "escribe =RIESGO.NORMAL(C32;C33)"),
+                    (35, "escribe =10+RIESGO.NORMAL(0;1)"),
+                    (36, "escribe =RIESGO.NORMAL(C34;50)")):
+    p.cell(fila, 3).fill = PARA_ESCRIBIR
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+
+# 8. Resultados de la simulación en la hoja (B6).
+etiqueta(39, "8. RESULTADOS EN LA HOJA (pruebas F16–F19)", True)
+etiqueta(40, "Media de los ingresos")
+etiqueta(41, "p5 de los ingresos")
+etiqueta(42, "Probabilidad de ingresos < 8.000")
+etiqueta(43, "Desviación de los ingresos")
+for fila, texto, formato in ((40, "escribe =RIESGO.MEDIA(C37)", '#,##0.00'),
+                             (41, "escribe =RIESGO.PERCENTIL(C37;0,05)", '#,##0.00'),
+                             (42, "escribe =RIESGO.PROB(C37;8000)", '0.0%'),
+                             (43, "escribe =RIESGO.DESV(C37)", '#,##0.00')):
+    c3 = p.cell(fila, 3)
+    c3.fill = PARA_ESCRIBIR
+    c3.number_format = formato
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+
 # 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
 p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"
@@ -390,6 +426,7 @@ p.column_dimensions["E"].width = 10
 p.column_dimensions["F"].width = 10
 p.column_dimensions["H"].width = 14
 p.column_dimensions["K"].width = 12
+p.column_dimensions["I"].width = 50
 
 # =========================================================================
 # Hoja 4: variables de texto (bloque T de la guía). Una zona de venta que es

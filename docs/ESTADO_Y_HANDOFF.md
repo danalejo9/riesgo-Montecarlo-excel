@@ -975,6 +975,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     de «Pruebas» para las funciones nuevas. **Siguiente**: el usuario recorre
     la guía entera; después, etapa 2.
 
+38. [x] **B7 y B6 sin tocar el manifiesto (2026-09-28)**. B7: argumentos que
+    son celdas o cálculos (caso 1, se resuelven una vez con el motor), RIESGO
+    dentro de una operación (caso 2, celda virtual) y parámetros aleatorios
+    (caso 3, uniforme + `_RIESGO.CUANTIL`); casos 2 y 3 solo motor rápido.
+    B6: `RIESGO.MEDIA/DESV/PERCENTIL/PROB/MIN/MAX` leen un almacén en
+    `OfficeRuntime.storage` que publica el panel (`excel/resultadosEnHoja.ts`,
+    `almacenResultadosHoja.ts`); el motor sustituye esas llamadas por el valor
+    anterior (`resultadosEnGrafo.ts`). Compartir fija en su valor lo que no
+    puede ser entrada. Guía: F5 nueva, F12–F19, T8, W7. **Pendiente de B6**:
+    `RIESGO.SALIDA`, `RIESGO.CORRELACION` y, con B1, leer del libro.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md` (reescrita el 28/09)**

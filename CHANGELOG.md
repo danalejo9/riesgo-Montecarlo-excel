@@ -5,6 +5,48 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### B7 y B6: RIESGO con celdas y resultados en la hoja (2026-09-28)
+
+Pedido por el usuario tras la revisión: poder escribir `=RIESGO.NORMAL(50;
+B3)` y sacar a la hoja la media o el p5 de una salida. Los dos, **sin tocar
+el manifiesto**, para probarlos en la misma ronda que todo lo demás.
+
+**Añadido**
+- **Funciones RIESGO con celdas como argumentos** (B7): cualquier argumento
+  puede ser una celda o un cálculo. Si no depende de nada aleatorio, se
+  calcula una vez con el motor y la celda es una entrada como siempre (vale
+  para los dos motores).
+- **Una función RIESGO dentro de una operación** (`=1000+RIESGO.NORMAL(0;
+  50)`) y **con parámetros que dependen de otra celda aleatoria**
+  (`=RIESGO.NORMAL(C34;50)`): la fórmula se reescribe antes de simular con
+  celdas virtuales. En el segundo caso se muestrea un uniforme y se pasa por
+  el cuantil con los parámetros de cada iteración (`_RIESGO.CUANTIL`), así
+  que el hipercubo, la semilla y la reproducibilidad no cambian. Solo con el
+  motor rápido; con el compatible, un error que dice por qué y qué hacer.
+  (`engine/modelo/riesgoEnGrafo.ts`, `engine/functions/riesgo.ts`.)
+- **Resultados en la hoja** (B6): `RIESGO.MEDIA`, `RIESGO.DESV`,
+  `RIESGO.PERCENTIL(celda; p)`, `RIESGO.PROB(celda; umbral; [por encima])`
+  —también `RIESGO.PROB(celda; "Alta")` en una salida de texto—,
+  `RIESGO.MIN` y `RIESGO.MAX`. Al simular, el panel publica un resumen de
+  cada salida (1.001 cuantiles) en `OfficeRuntime.storage`, que comparte con
+  las funciones; estas reciben la dirección de la celda
+  (`requiresParameterAddresses`). Las celdas que las usan se recalculan al
+  terminar. Una salida que dependa de ellas sigue en el motor rápido: valen lo
+  de la simulación anterior.
+
+**Cambiado**
+- «Preparar para compartir» convierte en entradas las funciones con
+  argumentos fijos (también si son celdas) y **fija en su valor actual** las
+  que no pueden ser una entrada y las de resultados, para que nadie vea
+  `#¿NOMBRE?`; «Restaurar» las devuelve todas.
+- Libro de demostración: secciones 7 (RIESGO con celdas) y 8 (resultados en
+  la hoja) en «Pruebas». Guía: F5 cambiada (ya no es un error usar una
+  celda) y pruebas nuevas F12–F19, T8 y W7.
+
+**Límite conocido** (hasta la etapa 2, B1): los resultados de las funciones
+de B6 se guardan en el equipo, no en el libro. En otro equipo dan `#N/D`
+hasta abrir el panel o simular.
+
 ### Guía de pruebas reescrita (2026-09-28)
 
 **Cambiado**

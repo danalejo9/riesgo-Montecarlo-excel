@@ -8,10 +8,10 @@ import { describe, expect, it } from 'vitest';
 import { compilarPlan } from '../../engine/compiler/plan.ts';
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
 import { simularPorBloques, type DefinicionEntrada } from '../../engine/executor/index.ts';
-import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
-import { elegirMotor, toDescriptor } from '../../engine/modelo/index.ts';
-import { entradasDeFunciones } from '../../excel/entradasRiesgo.ts';
-import { numeroEn, type Columna } from '../../engine/values/columna.ts';
+import { claveDeReferencia, construirGrafo, type FormulaCelda, type ValorCelda } from '../../engine/graph/index.ts';
+import { aplicarReescrituras, elegirMotor, modeloVacio, prepararEntradas, toDescriptor } from '../../engine/modelo/index.ts';
+import { entradasDeFunciones, resolverConFunciones } from '../../excel/entradasRiesgo.ts';
+import { NUMERO, numeroEn, type Columna } from '../../engine/values/columna.ts';
 
 const H = 'Pruebas';
 const k = (ref: string) => claveDeReferencia(H, ref);
@@ -89,5 +89,53 @@ describe('hoja «Pruebas» del libro de demostración', () => {
     // Media de C13 medida: ≈ 462 (la guía de pruebas lo usa).
     expect(r.porSalida.get(k('C13'))?.welford.media).toBeGreaterThan(440);
     expect(r.porSalida.get(k('C13'))?.welford.media).toBeLessThan(485);
+  });
+});
+
+describe('secciones 7 y 8 de «Pruebas»: RIESGO con celdas (B7) y resultados en la hoja (B6)', () => {
+  const HOJA_B7: Record<string, string> = {
+    C34: 'RIESGO.NORMAL(C32,C33)',
+    C35: '10+RIESGO.NORMAL(0,1)',
+    C36: 'RIESGO.NORMAL(C34,50)',
+    C37: 'C36*C35',
+    C40: 'RIESGO.MEDIA(C37)',
+  };
+  const valores: ValorCelda[] = [
+    { hoja: H, col: 3, fila: 32, valor: { tipo: NUMERO, numero: 1000 } },
+    { hoja: H, col: 3, fila: 33, valor: { tipo: NUMERO, numero: 150 } },
+  ];
+
+  it('C34 es una entrada fija; C35 (en una suma) y C36 (media aleatoria) se reescriben', () => {
+    const formulas = celdas(HOJA_B7);
+    const { grafo } = construirGrafo(formulas, valores);
+    const d = entradasDeFunciones(formulas, grafo, [], [k('C37')]);
+    expect(d.errores).toEqual([]);
+    expect(d.entradas.find((e) => e.ref === k('C34'))?.dist).toEqual({ type: 'normal', mean: 1000, stdDev: 150 });
+    expect(d.reescritas.sort()).toEqual([k('C35'), k('C36')]);
+  });
+
+  it('simulado, C37 da una media en torno a 10.000 y una desviación en torno a 1.875 (lo que dice la guía)', async () => {
+    const formulas = celdas(HOJA_B7);
+    const { grafo } = construirGrafo(formulas, valores);
+    const d = entradasDeFunciones(formulas, grafo, [], [k('C37')]);
+    aplicarReescrituras(grafo, d);
+    const base = modeloVacio();
+    const n = 50_000;
+    const modelo = { ...base, inputs: d.entradas, outputs: [{ id: 's', name: 'C37', ref: 'C37' }], settings: { ...base.settings, iterations: n } };
+    const p = prepararEntradas(modelo, resolverConFunciones((ref) => k(ref), d), 12345);
+    if (!p.ok) throw new Error(p.errores.join('; '));
+    const c = compilarPlan(grafo, new Set(d.claves), [k('C37')]);
+    if (!c.ok) throw new Error(c.error.motivo);
+    const r = await simularPorBloques(grafo, c.plan, p.entradas, 12345, n, { retenerMuestra: n });
+    if (!r.ok) throw new Error(r.error.motivo);
+    const s = r.porSalida.get(k('C37'));
+    const w = s?.welford;
+    expect(w?.media).toBeCloseTo(10_000, -2);
+    expect(Math.sqrt((w?.m2 ?? 0) / ((w?.n ?? 2) - 1))).toBeGreaterThan(1_800);
+    expect(Math.sqrt((w?.m2 ?? 0) / ((w?.n ?? 2) - 1))).toBeLessThan(1_950);
+    const muestra = Float64Array.from(s?.muestra ?? []).sort();
+    const bajo8000 = muestra.filter((x) => x < 8000).length / muestra.length;
+    expect(bajo8000).toBeGreaterThan(0.12);
+    expect(bajo8000).toBeLessThan(0.16);
   });
 });

@@ -12,6 +12,11 @@ de principio a fin, incluido lo nuevo desde tu última ronda:
   - «Qué tiene que pasar».
   - Funciones DISCRETA, TRUNCAR, LOGNORMAL2 y EMPIRICA.
   - Ajuste explicado.
+  - **B7**: funciones RIESGO con celdas como argumentos
+    (`=RIESGO.NORMAL(C32;C33)`), dentro de una operación y con parámetros que
+    dependen de otra celda aleatoria.
+  - **B6**: traer resultados a la hoja con `RIESGO.MEDIA`, `RIESGO.PERCENTIL`,
+    `RIESGO.PROB`, `RIESGO.DESV`, `RIESGO.MIN` y `RIESGO.MAX`.
 
 Las guías anteriores quedan sustituidas por esta.
 
@@ -61,7 +66,10 @@ npm start
   falta.
 - Abre **el libro recién descargado**
   (`ejemplos\demo-proyecto-aurora.xlsx`), no una copia vieja: ha cambiado
-  (hoja «Zonas» nueva y sección 6 en «Pruebas»).
+  (hoja «Zonas» nueva y secciones 6, 7 y 8 en «Pruebas»).
+- Las funciones de Excel del complemento han cambiado (hay seis nuevas). Si
+  al escribir `=RIESGO.MEDIA` Excel no la propone, cierra Excel, repite
+  `npm run stop` y `npm start` y vuelve a abrir el libro.
 
 **P0.** En la cinta, la pestaña **Riesgo** tiene cuatro botones: Modelo,
 Resultados, Configuración y Diagnóstico. Al pulsar Modelo se abre el panel
@@ -307,11 +315,13 @@ Demanda × Precio»). Sin entradas. Simula.
 **F4. Color de las celdas RIESGO.** Tras simular, C5 y C6 quedan pintadas de
 **melocotón**, distinto del amarillo de las entradas del panel.
 
-**F5. Error bien explicado.** En C5 escribe `=RIESGO.NORMAL(C12;150)` y
-simula.
-- Esperado: no simula; dice que los argumentos tienen que ser números
-  escritos y nombra Pruebas!C5.
+**F5. Error bien explicado.** En C5 escribe `=RIESGO.NORMAL(1000;-150)` (una
+desviación negativa) y simula.
+- Esperado: no simula; dice «Hay funciones RIESGO que no se pueden usar tal
+  como están» y nombra Pruebas!C5 con el motivo (parámetros no válidos).
 - Vuelve a poner `=RIESGO.NORMAL(1000;150)`.
+- *Cambiado el 28/09:* antes esta prueba usaba `=RIESGO.NORMAL(C12;150)`, que
+  ya **no es un error**: desde B7 una celda puede ser argumento (bloque F12–F15).
 
 **F6. Una RIESGO dentro del modelo grande.** Cierra sin guardar y reabre. En
 **Modelo!C5** escribe `=RIESGO.NORMAL(120;10)`. Quita todo del panel, añade
@@ -344,6 +354,93 @@ C28 y simula.
   | **C26** | **Mínimo ≥ 50 y máximo ≤ 150**: nada se sale de los límites. Media en torno a 100. |
   | **C27** | Cola a la derecha. Mediana en torno a **99,5** y media en torno a **101,5**. |
   | **C28** | Mínimo **90,79** y máximo **165,8**: solo salen valores que están en los datos. Media en torno a 119. |
+
+**RIESGO con celdas (B7, sección 7 de «Pruebas», filas 32–37).** C32 (1.000)
+y C33 (150) son la media y la desviación de la demanda, escritas en celdas.
+
+**F12. Escribir.** En las celdas amarillas:
+
+| Celda | Fórmula | Qué caso es | Valor en la celda |
+|---|---|---|---|
+| C34 | `=RIESGO.NORMAL(C32;C33)` | argumentos que son celdas | **1.000** |
+| C35 | `=10+RIESGO.NORMAL(0;1)` | dentro de una operación | **10** |
+| C36 | `=RIESGO.NORMAL(C34;50)` | la media es otra celda aleatoria (C34) | **1.000** |
+
+C37 (ya escrita, `=C36*C35`) vale **10.000**.
+
+**F13. Simular.** Quita todo del panel, añade **C37** como salida y simula.
+- Esperado:
+  - **Motor rápido**, sin errores.
+  - En «Cómo se calculó», «Entradas con funciones RIESGO del libro»:
+    - «Demanda con celdas (Pruebas!C34): Normal(1000; 150)», con los números
+      leídos de C32 y C33.
+    - «Precio con imprevisto (Pruebas!C35): Normal(0; 1)».
+    - «Demanda del mes siguiente (Pruebas!C36): RIESGO.NORMAL con parámetros
+      que cambian en cada iteración».
+  - C37: media en torno a **10.000** y desviación en torno a **1.875**.
+  - En el tornado, arriba «Demanda con celdas», luego «Precio con
+    imprevisto» y, con poco peso, «Demanda del mes siguiente».
+  - C34, C35 y C36 se pintan de melocotón.
+
+**F14. Los argumentos se leen al simular.** Cambia **C33** a `300` y vuelve a
+simular.
+- Esperado: C34 pasa a Normal(1000; 300) y la desviación de C37 sube a unos
+  **3.200**.
+- Vuelve a poner C33 en `150`.
+
+**F15. Solo con el motor rápido.** En ⚙, motor **Compatible**, y simula.
+- Esperado: no simula; dice «Hay funciones RIESGO que solo puede simular el
+  motor rápido»:
+  - Pruebas!C35 tiene una función RIESGO dentro de una operación.
+  - Pruebas!C36 tiene una función RIESGO con parámetros que cambian en cada
+    iteración.
+  - En Configuración está elegido el motor compatible: pon «Automático» o
+    «Rápido».
+- Vuelve el motor a **Automático**.
+
+**Resultados en la hoja (B6, sección 8 de «Pruebas», filas 40–43).** Traen a
+la hoja lo que dio la última simulación de C37.
+
+**F16. Escribir.** Escribe las fórmulas de la sección 8:
+
+| Celda | Fórmula | Tras simular F17, en torno a |
+|---|---|---|
+| C40 | `=RIESGO.MEDIA(C37)` | **10.000** |
+| C41 | `=RIESGO.PERCENTIL(C37;0,05)` | **7.050** |
+| C42 | `=RIESGO.PROB(C37;8000)` | **14 %** |
+| C43 | `=RIESGO.DESV(C37)` | **1.875** |
+
+- Esperado nada más escribirlas: ya dan números, los de la **última
+  simulación** de C37, que fue la de F14 (con C33 = 300). Por eso C43 dice
+  unos **3.200** y no 1.875.
+- Si sale #¿NOMBRE?, Excel no ha cargado las funciones nuevas: mira la
+  preparación (cerrar Excel, `npm run stop`, `npm start`).
+
+**F17. Simular.** Con C37 como salida (y C33 otra vez en 150), simula.
+- Esperado:
+  - Al terminar, C40–C43 cambian solos a los valores de la tabla (C43 baja
+    de unos 3.200 a unos 1.875).
+  - C40 y C43 son **exactamente** la media y la desviación que enseña el panel.
+  - C41 es casi igual al p5 del panel (el panel lo calcula con toda la muestra; la función, con 1.001 cuantiles).
+- Vuelve a simular: cambian con la simulación nueva.
+
+**F18. Variantes.** Escribe en celdas vacías (por ejemplo, E40 y E41):
+- `=RIESGO.PROB(C37;8000;VERDADERO)`: la probabilidad **por encima**, en torno
+  a **86 %** (C42 + E40 = 100 %).
+- `=RIESGO.PERCENTIL(C37;95)`: el p95, en torno a **13.200** (el 95 se entiende
+  como 0,95).
+- `=RIESGO.MIN(C37)` y `=RIESGO.MAX(C37)`: el mínimo y el máximo del panel.
+- `=RIESGO.MEDIA(C32)`: C32 no es una salida, así que da **#N/D**. Al pasar
+  el ratón por el aviso de la celda se lee «Sin resultados de esta celda:
+  márcala como salida y simula».
+
+**F19. Cerrar y reabrir.** Guarda, cierra Excel, ejecuta `npm start` y vuelve
+a abrir el libro.
+- Esperado: C40–C43 siguen con sus números, y al abrir el panel siguen igual.
+- **Límite conocido de esta versión** (hasta la etapa 2): los resultados de
+  estas funciones se guardan en el equipo, no en el libro. En otro equipo
+  darán #N/D hasta abrir el panel (que los publica de nuevo desde los
+  resultados guardados en el libro) o simular.
 
 ---
 
@@ -446,6 +543,10 @@ precio y simula.
   puede correlacionar con otras.
 - Quita la correlación.
 
+**T8. RIESGO.PROB con texto.** Tras simular T2, escribe en una celda vacía
+`=RIESGO.PROB(C9;"Alta")`.
+- Esperado: en torno a **12 %**, lo mismo que dice el panel para «Alta».
+
 ---
 
 ## J. Compartir el libro sin romperlo (hoja «Pruebas»)
@@ -456,6 +557,10 @@ Necesita `Pruebas!C5` y `C6` con las funciones de F1–F2.
 libro»** → **«Preparar para compartir»**.
 - Esperado:
   - «Convertidas N funciones RIESGO…».
+  - Si tienes escritas las secciones 7 y 8 (F12–F19), además: «N celdas con
+    RIESGO dentro de una operación, con parámetros de otras celdas aleatorias
+    o con funciones de resultados (RIESGO.MEDIA…) se quedan con su valor
+    actual». Son C35, C36 y C40–C43; C34 se convierte en entrada.
   - C5 y C6 pasan a ser números (la barra de fórmulas ya no muestra
     `=RIESGO…`).
   - En el panel aparecen como entradas.
@@ -469,8 +574,8 @@ en **el iPad**, o donde no esté el complemento.
 - Esperado: **ningún #¿NOMBRE?**; C5, C6 y C7 muestran números.
 
 **J4. Restaurar.** Pulsa **Restaurar las N funciones RIESGO**.
-- Esperado: C5 y C6 vuelven a tener sus funciones y las entradas desaparecen
-  del panel.
+- Esperado: C5 y C6 (y C34–C36, C40–C43 si estaban) vuelven a tener sus
+  funciones, y las entradas creadas al preparar desaparecen del panel.
 
 ---
 
@@ -520,6 +625,12 @@ el libro.
   (**F12 → Consola**) y mándame una captura de los errores en rojo.
 
 **W6.** En «Zonas», repite T1–T3: la entrada de texto y la gama.
+
+**W7. Resultados en la hoja en la Web.** En «Pruebas», repite F12, F16 y F17
+(RIESGO con celdas y `RIESGO.MEDIA`).
+- Esperado: como en Windows. Si las funciones de la sección 8 se quedan en
+  #N/D después de simular, dímelo: es la parte que más depende de la
+  plataforma.
 
 **Mac:** lo mismo, cargando el manifiesto en Excel para Mac. Si no tienes,
 sáltalo.
