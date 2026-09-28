@@ -154,7 +154,12 @@ function AvisoCompatible({
   );
 }
 
-function distribucionInicial(valor: number | undefined): DistributionSpec {
+function distribucionInicial(valor: number | undefined, texto?: unknown): DistributionSpec {
+  // Una celda con texto («Norte») es una entrada de texto (T1): se empieza con
+  // esa categoría y el usuario añade las demás o las lee de la hoja.
+  if (typeof texto === 'string' && texto.trim() !== '') {
+    return { type: 'categorical', categories: [texto.trim()], weights: [1] };
+  }
   if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
   const margen = Math.abs(valor) * 0.1;
   return { type: 'triangular', min: limpiar(valor - margen), mode: valor, max: limpiar(valor + margen) };
@@ -253,7 +258,7 @@ export function Modelo({
       id: generarId('in'),
       name: await nombreLegible(ref),
       ref,
-      dist: distribucionInicial(sel.valor),
+      dist: distribucionInicial(sel.valor, sel.valores?.[0]?.[0]),
       correlations: [],
     };
     alCambiar({ ...modelo, inputs: [...modelo.inputs, entrada] });
@@ -359,6 +364,7 @@ export function Modelo({
                   <EditorDistribucion
                     spec={entrada.dist}
                     alCambiar={(dist) => cambiarEntrada(entrada.id, { dist })}
+                    leerSeleccion={async () => (await leerSeleccion()).valores}
                   />
                   <AjusteDatos
                     decimal={modelo.settings.locale?.decimalSeparator ?? ','}

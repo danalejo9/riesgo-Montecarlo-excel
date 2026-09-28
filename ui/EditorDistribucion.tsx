@@ -22,6 +22,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { categoriasDeRango } from '../excel/categoriasDeRango.ts';
 import { leerNumero, numeroEditable } from './formato.ts';
 
 import {
@@ -35,9 +36,12 @@ import {
 export function EditorDistribucion({
   spec,
   alCambiar,
+  leerSeleccion,
 }: {
   spec: DistributionSpec;
   alCambiar: (nueva: DistributionSpec) => void;
+  /** Lee los valores de la selección de la hoja (para las categorías de una entrada de texto). */
+  leerSeleccion?: () => Promise<unknown[][]>;
 }) {
   // Lo que el usuario ha escrito y todavía no es una distribución válida.
   const [borrador, setBorrador] = useState<DistributionSpec | null>(null);
@@ -86,7 +90,9 @@ export function EditorDistribucion({
 
       {desc && <p className="tenue">{desc.cuando}</p>}
 
-      {actual.type === 'discrete' ? (
+      {actual.type === 'categorical' ? (
+        <EditorCategorica spec={actual} alCambiar={intentar} {...(leerSeleccion ? { leerSeleccion } : {})} />
+      ) : actual.type === 'discrete' ? (
         <EditorDiscreta spec={actual} alCambiar={intentar} />
       ) : (
         <div className="parametros">
@@ -138,6 +144,76 @@ function EditorDiscreta({
         valores={spec.weights}
         alCambiar={(weights) => alCambiar({ ...spec, weights })}
       />
+    </div>
+  );
+}
+
+/**
+ * Una entrada de texto (T1): las categorías y sus pesos, escritos separados
+ * por punto y coma, o leídos de la selección (nombres en la primera columna,
+ * probabilidades en la segunda).
+ */
+function EditorCategorica({
+  spec,
+  alCambiar,
+  leerSeleccion,
+}: {
+  spec: Extract<DistributionSpec, { type: 'categorical' }>;
+  alCambiar: (nueva: DistributionSpec) => void;
+  leerSeleccion?: () => Promise<unknown[][]>;
+}) {
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [texto, setTexto] = useState(spec.categories.join('; '));
+  useEffect(() => setTexto(spec.categories.join('; ')), [spec.categories]);
+
+  const leer = async () => {
+    if (!leerSeleccion) return;
+    setAviso(null);
+    try {
+      const r = categoriasDeRango(await leerSeleccion());
+      if (!r.ok) {
+        setAviso(r.motivo);
+        return;
+      }
+      alCambiar({ type: 'categorical', categories: r.categories, weights: r.weights });
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div className="parametros">
+      <label className="campo ancho">
+        <span className="tenue">Categorías</span>
+        <input
+          type="text"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={() => {
+            const nombres = texto.split(';').map((x) => x.trim()).filter((x) => x.length > 0);
+            if (nombres.length === 0 || nombres.join('; ') === spec.categories.join('; ')) {
+              setTexto(spec.categories.join('; '));
+              return;
+            }
+            // Cada nombre conserva su peso si ya existía; los nuevos, peso 1.
+            const peso = new Map(spec.categories.map((c, i) => [c, spec.weights[i] ?? 1] as const));
+            alCambiar({ type: 'categorical', categories: nombres, weights: nombres.map((n) => peso.get(n) ?? 1) });
+          }}
+        />
+        <span className="tenue ayuda">Separadas por punto y coma: Norte; Sur; Este.</span>
+      </label>
+      <CampoLista
+        etiqueta="Pesos"
+        ayuda="Uno por categoría, en el mismo orden. No hace falta que sumen 1 ni 100."
+        valores={spec.weights}
+        alCambiar={(weights) => alCambiar({ ...spec, weights })}
+      />
+      {leerSeleccion && (
+        <button type="button" className="plano" onClick={() => void leer()}>
+          Leer de la selección (nombres y probabilidades)
+        </button>
+      )}
+      {aviso && <p className="aviso-linea">{aviso}</p>}
     </div>
   );
 }

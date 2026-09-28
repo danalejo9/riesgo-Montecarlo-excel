@@ -113,3 +113,47 @@ describe('salidas de texto y de sí/no (T2, T6)', () => {
     expect(r.porSalida.get(k('B1'))?.categorias).toBeUndefined();
   });
 });
+
+describe('análisis de texto (T3)', async () => {
+  const { analisisDeTexto, esSalidaDeTexto, probabilidadDeValor, frecuenciasDe } = await import('../../excel/analisisTexto.ts');
+  const { lecturaDeTexto } = await import('../../excel/lectura.ts');
+
+  // Precio (numérico) decide la zona: con precio alto sale «Caro».
+  const n = 2_000;
+  const precio = Float64Array.from({ length: n }, (_, i) => i);
+  const zonaIdx = Float64Array.from({ length: n }, (_, i) => i % 3);
+  const texto = Array.from({ length: n }, (_, i) => (i >= n / 2 ? 'Caro' : 'Barato'));
+  const ventas = Float64Array.from({ length: n }, (_, i) => [100, 60, 20][i % 3] as number);
+  const m = modeloVacio();
+  m.inputs.push(
+    { id: 'p', name: 'Precio', ref: 'A1', dist: { type: 'uniform', min: 0, max: 1 }, correlations: [] },
+    { id: 'z', name: 'Zona', ref: 'A2', dist: { type: 'categorical', categories: ['Norte', 'Sur', 'Este'], weights: [1, 1, 1] }, correlations: [] },
+  );
+  const muestras = new Map<string, ArrayLike<number>>([['A1', precio], ['A2', zonaIdx]]);
+
+  it('frecuencias, qué entradas deciden y lectura en palabras', () => {
+    const a = analisisDeTexto(m, ['A1', 'A2'], muestras, { categorias: { Caro: 1000, Barato: 1000 }, muestraTexto: texto });
+    expect(a.categorias?.map((c) => c.valor).sort()).toEqual(['Barato', 'Caro']);
+    const caro = a.decisivas?.find((d) => d.valor === 'Caro');
+    expect(caro?.filas[0]?.nombre).toBe('Precio'); // la de texto no entra
+    expect(caro?.filas[0]?.bajo).toBe(0);
+    expect(caro?.filas[0]?.alto).toBe(1);
+    const frases = lecturaDeTexto({ nombre: 'Gama', categorias: a.categorias ?? [], valorDeInteres: 'Caro', decisivas: a.decisivas ?? [] });
+    expect(frases.join(' ')).toContain('Lo que más decide que salga «Caro» es Precio');
+  });
+
+  it('cruce: la salida numérica en cada categoría de la entrada de texto', () => {
+    const a = analisisDeTexto(m, ['A1', 'A2'], muestras, { muestra: ventas });
+    const zona = a.porCategoria?.find((x) => x.nombre === 'Zona');
+    expect(zona?.filas.map((f) => [f.categoria, f.media])).toEqual([['Norte', 100], ['Sur', 60], ['Este', 20]]);
+    expect(zona?.filas[0]?.proporcion).toBeCloseTo(1 / 3, 2);
+  });
+
+  it('salida de texto frente a numérica con algún texto; probabilidad de un valor', () => {
+    const f = frecuenciasDe({ Sí: 70, No: 30 });
+    expect(esSalidaDeTexto({ categorias: f, resumen: { n: 100 } })).toBe(true);
+    expect(esSalidaDeTexto({ categorias: [{ valor: 'x', conteo: 3, proporcion: 1 }], resumen: { n: 100 } })).toBe(false);
+    expect(probabilidadDeValor(f, 'No')).toBe(0.3);
+    expect(probabilidadDeValor(f, 'Quizá')).toBe(0);
+  });
+});

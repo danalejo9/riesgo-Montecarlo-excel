@@ -30,6 +30,8 @@ export interface SeleccionLeida {
   valor?: number;
   /** Todos los valores numéricos de la selección, por filas. Para ajustar distribuciones a datos. */
   numeros: number[];
+  /** Los valores tal cual, en su rejilla: para leer las categorías de una entrada de texto (T1). */
+  valores: unknown[][];
 }
 
 export async function leerSeleccion(): Promise<SeleccionLeida> {
@@ -63,6 +65,7 @@ export async function leerSeleccion(): Promise<SeleccionLeida> {
     return {
       valor: unaSola && typeof crudo === 'number' ? crudo : undefined,
       numeros,
+      valores: (rango.values as unknown[][]) ?? [],
       direccion: rango.address,
       hoja: hoja.name,
       filas: rango.rowCount,

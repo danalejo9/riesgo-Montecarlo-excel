@@ -31,6 +31,8 @@ export interface EntradaMuestreada {
   /** Iteraciones que la distribución teórica esperaba en cada barra. */
   esperado?: number[];
   cdf: PuntoCDF[];
+  /** Entradas de texto (T1): cada categoría, cuántas veces salió y cuántas se esperaban. */
+  frecuencias?: { valor: string; conteo: number; proporcion: number; esperada: number }[];
 }
 
 const PUNTOS_CDF = 51;
@@ -49,6 +51,26 @@ export function entradasMuestreadas(
   modelo.inputs.forEach((e, i) => {
     const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
     if (!muestras || muestras.length === 0) return;
+    if (e.dist.type === 'categorical') {
+      const nombres = e.dist.categories;
+      const pesos = e.dist.weights;
+      const totalPesos = pesos.reduce((a, b) => a + b, 0) || 1;
+      const conteos = nombres.map(() => 0);
+      for (let k = 0; k < muestras.length; k++) {
+        const c = Math.round(muestras[k] as number);
+        if (c >= 0 && c < conteos.length) conteos[c] = (conteos[c] as number) + 1;
+      }
+      const n = muestras.length;
+      out.push({
+        id: e.id, nombre: e.name, ref: e.ref, distribucion: resumirDistribucion(e.dist),
+        n, media: NaN, desviacion: NaN, min: NaN, max: NaN, percentiles: { p5: NaN, p50: NaN, p95: NaN },
+        histograma: [], cdf: [],
+        frecuencias: nombres.map((valor, c) => ({
+          valor, conteo: conteos[c] as number, proporcion: (conteos[c] as number) / n, esperada: (pesos[c] ?? 0) / totalPesos,
+        })),
+      });
+      return;
+    }
     const ordenada = ordenarUtiles(muestras);
     const n = ordenada.length;
     if (n === 0) return;

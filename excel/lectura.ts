@@ -87,3 +87,32 @@ export function lecturaDeSalida(d: DatosLectura): string[] {
   }
   return frases;
 }
+
+/** La lectura de una salida de texto o de sí/no (T2, T6), con las mismas reglas. */
+export function lecturaDeTexto(d: {
+  nombre: string;
+  categorias: readonly { valor: string; proporcion: number }[];
+  valorDeInteres?: string;
+  decisivas?: readonly { valor: string; filas: readonly { nombre: string; bajo: number; alto: number; rango: number }[] }[];
+}): string[] {
+  const [primera, ...resto] = d.categorias;
+  if (!primera) return [];
+  const frases: string[] = [];
+  let f = `${d.nombre} sale «${primera.valor}» el ${porcentaje(primera.proporcion)} de las veces`;
+  const siguientes = resto.slice(0, 2);
+  if (siguientes.length > 0) f += `, seguido de ${siguientes.map((c) => `«${c.valor}» (${porcentaje(c.proporcion)})`).join(' y ')}`;
+  frases.push(`${f}.`);
+  if (d.valorDeInteres && d.valorDeInteres !== primera.valor) {
+    const p = d.categorias.find((c) => c.valor === d.valorDeInteres)?.proporcion ?? 0;
+    frases.push(`La probabilidad de «${d.valorDeInteres}» es del ${porcentaje(p)}.`);
+  }
+  const objetivo = d.valorDeInteres ?? primera.valor;
+  const fila = d.decisivas?.find((x) => x.valor === objetivo)?.filas[0];
+  if (fila && fila.rango >= 0.05) {
+    frases.push(
+      `Lo que más decide que salga «${objetivo}» es ${fila.nombre}: sale el ${porcentaje(fila.bajo)} de las veces ` +
+        `cuando está en su 10 % más bajo y el ${porcentaje(fila.alto)} cuando está en su 10 % más alto.`,
+    );
+  }
+  return frases;
+}

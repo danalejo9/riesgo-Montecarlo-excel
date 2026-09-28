@@ -400,3 +400,15 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 
 /* C9: la distribución teórica sobre el histograma de lo muestreado. */
 .curva-teorica { fill: none; stroke: var(--baja, #e34948); stroke-width: 1.5; }
+
+/* T2: barras de frecuencia de las variables de texto. */
+.barras-categorias { list-style: none; padding: 0; margin: 6px 0; }
+.barras-categorias li { display: grid; grid-template-columns: minmax(60px, 34%) 1fr auto; gap: 8px; align-items: center; padding: 2px 0; font-size: 12px; }
+.barras-categorias li.resaltada .cat-nombre { font-weight: 600; }
+.cat-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-barra { position: relative; height: 12px; background: color-mix(in srgb, var(--borde) 40%, transparent); border-radius: 2px; }
+.cat-relleno { position: absolute; inset: 0 auto 0 0; background: var(--acento); border-radius: 2px; }
+.barras-categorias li:not(.resaltada) .cat-relleno { opacity: .55; }
+.cat-esperada { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--baja, #e34948); }
+.cat-valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla-resumen td.celda-texto { text-align: left; white-space: normal; }

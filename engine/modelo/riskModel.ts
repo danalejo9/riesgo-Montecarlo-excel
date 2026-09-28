@@ -52,6 +52,12 @@ export interface SalidaRiskModel {
    * anteriores no lo traen y siguen siendo válidos.
    */
   threshold?: UmbralRiskModel;
+  /**
+   * Para una salida de texto o de sí/no (T2): el valor cuya probabilidad se
+   * vigila («¿qué probabilidad hay de que salga Norte?»). Es el umbral de las
+   * salidas que no son números. Opcional.
+   */
+  valueOfInterest?: string;
 }
 
 export interface UmbralRiskModel {
@@ -322,10 +328,15 @@ function validarSalida(v: unknown, ctx: string, errores: string[]): SalidaRiskMo
       threshold = { value: t.value, direction: t.direction };
     }
   }
+  if (s.valueOfInterest !== undefined && (typeof s.valueOfInterest !== 'string' || s.valueOfInterest.length > 200)) {
+    errores.push(`${ctx}.valueOfInterest debe ser un texto de hasta 200 caracteres.`);
+    ok = false;
+  }
   if (!ok) return undefined;
   return {
     id: s.id as string, name: s.name as string, ref: s.ref as string,
     ...(threshold ? { threshold } : {}),
+    ...(typeof s.valueOfInterest === 'string' ? { valueOfInterest: s.valueOfInterest } : {}),
   };
 }
 

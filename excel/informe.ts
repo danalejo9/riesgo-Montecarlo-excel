@@ -25,6 +25,7 @@ import {
   type PuntoCDF,
   type ResumenEstadistico,
 } from '../engine/stats/index.ts';
+import type { Decisivas, FilaCategoria, PorCategoria } from './analisisTexto.ts';
 import type { EntradaMuestreada } from './entradasMuestreadas.ts';
 import { lecturaDeSalida } from './lectura.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
@@ -65,6 +66,14 @@ export interface ResultadoSalida {
   muestraOrdenada?: Float64Array;
   /** Histograma de la muestra retenida. */
   histograma?: BinHistograma[];
+  /** Salidas de texto o sí/no (T2, T6): cada valor con su frecuencia, de más a menos. */
+  categorias?: FilaCategoria[];
+  /** El texto de cada iteración retenida. Solo en memoria, como `muestraOrdenada`. */
+  muestraTexto?: (string | null)[];
+  /** Qué entradas deciden cada valor de una salida de texto (T3). */
+  decisivas?: Decisivas[];
+  /** La salida en cada categoría de cada entrada de texto (T3). */
+  porCategoria?: PorCategoria[];
   /**
    * `true` si `muestraOrdenada` no es la muestra sino sus cuantiles guardados
    * en el libro (resultados restaurados): las probabilidades son aproximadas y
@@ -178,6 +187,9 @@ function entradasDeSensibilidad(
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
 ) {
   return modelo.inputs.flatMap((e, i) => {
+    // Las entradas de texto no entran en la correlación de rangos: el orden
+    // de sus categorías es arbitrario. Tienen su propio análisis (T3).
+    if (e.dist.type === 'categorical') return [];
     const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
     return muestras ? [{ id: e.id, muestras }] : [];
   });

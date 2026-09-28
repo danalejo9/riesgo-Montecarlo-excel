@@ -62,7 +62,7 @@ export function reducirACuantiles(ordenada: Float64Array, n = CUANTILES_GUARDADO
 /** Diez cifras significativas: sobra para leer, y el JSON ocupa la mitad. */
 const recortar = (x: number) => (Number.isFinite(x) ? Number(x.toPrecision(10)) : x);
 
-type SalidaGuardada = Omit<ResultadoSalida, 'muestraOrdenada'> & { cuantiles?: number[] };
+type SalidaGuardada = Omit<ResultadoSalida, 'muestraOrdenada' | 'muestraTexto'> & { cuantiles?: number[] };
 
 interface ResultadosGuardados {
   version: typeof VERSION_RESULTADOS;
@@ -85,10 +85,14 @@ export function serializarResultados(
     resultado: {
       ...resto,
       huellaModelo: huellaModelo(modelo),
-      salidas: salidas.map(({ muestraOrdenada, ...s }) => ({
-        ...s,
-        ...(muestraOrdenada ? { cuantiles: reducirACuantiles(muestraOrdenada).map(recortar) } : {}),
-      })),
+      salidas: salidas.map(({ muestraOrdenada, ...conTexto }) => {
+        const s = { ...conTexto };
+        delete s.muestraTexto; // solo en memoria: 100.000 textos no caben en el libro
+        return {
+          ...s,
+          ...(muestraOrdenada ? { cuantiles: reducirACuantiles(muestraOrdenada).map(recortar) } : {}),
+        };
+      }),
     },
   };
   return JSON.stringify(guardado);

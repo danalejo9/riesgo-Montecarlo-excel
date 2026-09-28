@@ -53,6 +53,7 @@ export type {
   SimulacionCompletada,
 } from './informe.ts';
 import { entradasDeFunciones, resolverConFunciones } from './entradasRiesgo.ts';
+import { analisisDeTexto } from './analisisTexto.ts';
 import { entradasMuestreadas } from './entradasMuestreadas.ts';
 import { indiceDeTextos } from './nombreSugerido.ts';
 import { desdeLocaleDelModelo } from './regional.ts';
@@ -336,6 +337,7 @@ function porElRapido(
           cdf: s ? curvaCDF(s.digest) : [],
           noNumericas: s?.noNumericas ?? 0,
           ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
+          ...(s ? analisisDeTexto(args.modelo, clavesEntrada, muestrasEntrada, s) : {}),
         };
       }).map(conPrecision(args.objetivo)),
     };
@@ -406,6 +408,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
         cdf: s ? curvaCDF(s.digest) : [],
         noNumericas: s?.noNumericas ?? 0,
         ...analisisDeMuestra(args.modelo, clavesEntrada, muestrasEntrada, s?.muestra),
+        ...(s ? analisisDeTexto(args.modelo, clavesEntrada, muestrasEntrada, s) : {}),
       };
     }).map(conPrecision(args.objetivo)),
   };

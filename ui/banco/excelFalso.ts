@@ -54,7 +54,25 @@ const LIBRO: Record<string, Celda> = {
   B9: { formula: 'B8*0.08' },
   A10: { valor: 'Precio de venta' },
   B10: { formula: 'B8+B9' },
+  // Variables de texto (T1, T2): una zona que cambia el precio, y una salida de texto.
+  A12: { valor: 'Zona' },
+  B12: { valor: 'Norte' },
+  A13: { valor: 'Recargo por zona' },
+  B13: { formula: 'IF(B12="Norte",1.1,IF(B12="Sur",1,0.9))' },
+  A14: { valor: 'Precio en la zona' },
+  B14: { formula: 'B10*B13' },
+  A15: { valor: 'Gama' },
+  B15: { formula: 'IF(B14>75000,"Cara","Normal")' },
+  A16: { valor: '¿Supera 80.000?' },
+  B16: { formula: 'B14>80000' },
+  D12: { valor: 'Norte' }, E12: { valor: 20 },
+  D13: { valor: 'Sur' }, E13: { valor: 50 },
+  D14: { valor: 'Este' }, E14: { valor: 30 },
 };
+
+/** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
+const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
+const FILAS_USADAS = 16;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -106,7 +124,35 @@ function tipoDeValor(v: Celda['valor']): string {
   return 'Empty';
 }
 
+/** Un rango de varias celdas (D12:E14), solo para leer: las categorías de una entrada de texto. */
+function rangoMultiple(ref: string) {
+  const [a, b] = ref.split(':') as [string, string];
+  const ia = refDe(a);
+  const ib = refDe(b);
+  const filas = ib.fila - ia.fila + 1;
+  const cols = ib.col - ia.col + 1;
+  const letra = (c: number) => String.fromCharCode(64 + c);
+  const valores = Array.from({ length: filas }, (_, f) =>
+    Array.from({ length: cols }, (_, c) => LIBRO[`${letra(ia.col + c)}${ia.fila + f}`]?.valor ?? ''),
+  );
+  return {
+    address: `${HOJA}!${ref}`,
+    rowCount: filas,
+    columnCount: cols,
+    cellCount: filas * cols,
+    values: valores,
+    formulas: valores,
+    worksheet: { name: HOJA, load: () => {} },
+    load: () => {},
+  };
+}
+
 function rangoFalso(ref: string) {
+  if (ref.includes(':')) return rangoMultiple(ref) as unknown as ReturnType<typeof rangoSimple>;
+  return rangoSimple(ref);
+}
+
+function rangoSimple(ref: string) {
   const objetivo = celda(ref);
   return {
     format: {
@@ -170,11 +216,11 @@ export function instalarExcelFalso(): void {
     }),
     getUsedRangeOrNullObject: () => ({
       isNullObject: false,
-      address: `${HOJA}!A1:B10`,
+      address: `${HOJA}!A1:E${FILAS_USADAS}`,
       rowIndex: 0,
       columnIndex: 0,
-      rowCount: 10,
-      columnCount: 2,
+      rowCount: FILAS_USADAS,
+      columnCount: COLUMNAS_USADAS.length,
       load: () => {},
       get formulas() {
         return rejilla((c) => (c.formula ? `=${c.formula}` : (c.valor ?? '')));
@@ -186,8 +232,8 @@ export function instalarExcelFalso(): void {
   };
 
   const rejilla = (de: (c: Celda) => unknown): unknown[][] =>
-    Array.from({ length: 10 }, (_, f) =>
-      ['A', 'B'].map((col) => de(LIBRO[`${col}${f + 1}`] ?? {})),
+    Array.from({ length: FILAS_USADAS }, (_, f) =>
+      COLUMNAS_USADAS.map((col) => de(LIBRO[`${col}${f + 1}`] ?? {})),
     );
 
   const contexto = {
@@ -315,4 +361,4 @@ export const hojaVolcada: {
 };
 
 /** Las celdas del libro falso, para el desplegable de selección. */
-export const CELDAS = Object.keys(LIBRO).filter((r) => r.startsWith('B'));
+export const CELDAS = [...Object.keys(LIBRO).filter((r) => r.startsWith('B')), 'D12:E14'];

@@ -35,7 +35,8 @@ import type { EntradaMuestreada } from '../excel/entradasMuestreadas.ts';
 import {
   escenarioActivo, MAXIMO_ESCENARIOS, tablaEscenarios, type AlmacenEscenarios, type FilaEscenario,
 } from '../excel/escenarios.ts';
-import { lecturaDeSalida } from '../excel/lectura.ts';
+import { esSalidaDeTexto, probabilidadDeValor, type PorCategoria } from '../excel/analisisTexto.ts';
+import { lecturaDeSalida, lecturaDeTexto } from '../excel/lectura.ts';
 import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
 
@@ -259,7 +260,25 @@ export function Resultados({
         )}
       </section>
 
-      {salidasVisibles.map((salida) => salida.resumen.n === 0 ? (
+      {salidasVisibles.map((salida) => esSalidaDeTexto(salida) ? (
+        <SalidaDeTexto
+          key={salida.id}
+          salida={salida}
+          valorDeInteres={modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest}
+          alCambiarValor={(v) =>
+            alCambiarModelo?.({
+              ...modelo,
+              outputs: modelo.outputs.map((o) => {
+                if (o.id !== salida.id) return o;
+                const copia = { ...o };
+                if (v) copia.valueOfInterest = v;
+                else delete copia.valueOfInterest;
+                return copia;
+              }),
+            })
+          }
+        />
+      ) : salida.resumen.n === 0 ? (
         // Ninguna iteración dio un número (una celda que devuelve texto, como
         // un FILTRAR de nombres, o un error en todas): no hay nada que medir, y
         // enseñar «mínimo ∞» o un tornado de ceros solo confunde (prueba G3).
@@ -363,6 +382,10 @@ export function Resultados({
               <h3>Qué la mueve más</h3>
               <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} r2={salida.r2} />
             </>
+          )}
+
+          {salida.porCategoria && salida.porCategoria.length > 0 && (
+            <TablasPorCategoria bloques={salida.porCategoria} />
           )}
 
           {salida.arana && salida.arana.length > 0 && (
@@ -484,6 +507,151 @@ export function CurvaAcumulada({
 const VISIBLES_TORNADO = 10;
 
 /** Coma decimal y signo explícito: "+0,82", "−0,15". */
+
+/** Barras de frecuencia de una salida o entrada de texto (T2). */
+function BarrasCategorias({ filas, resaltar }: { filas: readonly { valor: string; proporcion: number; conteo: number; esperada?: number }[]; resaltar?: string }) {
+  const mayor = Math.max(...filas.map((f) => Math.max(f.proporcion, f.esperada ?? 0)), 0.0001);
+  return (
+    <ul className="barras-categorias">
+      {filas.map((f) => (
+        <li key={f.valor} className={f.valor === resaltar ? 'resaltada' : undefined}>
+          <span className="cat-nombre" title={f.valor}>{f.valor}</span>
+          <span className="cat-barra">
+            <span className="cat-relleno" style={{ width: `${(f.proporcion / mayor) * 100}%` }} />
+            {f.esperada !== undefined && <span className="cat-esperada" style={{ left: `${(f.esperada / mayor) * 100}%` }} title="Lo esperado" />}
+          </span>
+          <span className="cat-valor">
+            {(f.proporcion * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %
+            <span className="tenue"> ({miles(f.conteo)})</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** La salida en cada categoría de cada entrada de texto (T3). */
+function TablasPorCategoria({ bloques }: { bloques: readonly PorCategoria[] }) {
+  return (
+    <>
+      {bloques.map((b) => {
+        const numerica = b.filas.some((f) => f.media !== undefined);
+        return (
+          <div key={b.id}>
+            <h3>Según {b.nombre}</h3>
+            <div className="tabla-desplazable">
+              <table className="tabla-resumen sin-clic">
+                <thead>
+                  <tr>
+                    <th>{b.nombre}</th>
+                    <th>Veces</th>
+                    {numerica ? (<><th>Media</th><th>p5</th><th>p95</th></>) : (<><th>Sale más</th><th>Prob.</th></>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {b.filas.map((f) => (
+                    <tr key={f.categoria}>
+                      <td>{f.categoria}</td>
+                      <td>{(f.proporcion * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</td>
+                      {numerica ? (
+                        <>
+                          <td>{f.media === undefined ? '' : numero(f.media)}</td>
+                          <td>{f.p5 === undefined ? '' : numero(f.p5)}</td>
+                          <td>{f.p95 === undefined ? '' : numero(f.p95)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{f.masFrecuente ?? ''}</td>
+                          <td>{f.probabilidad === undefined ? '' : `${(f.probabilidad * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Una salida de texto o de sí/no (T2, T6): con qué frecuencia sale cada valor,
+ * la probabilidad del valor que interesa y qué entradas lo deciden (T3).
+ */
+function SalidaDeTexto({
+  salida,
+  valorDeInteres,
+  alCambiarValor,
+}: {
+  salida: ResultadoSalida;
+  valorDeInteres?: string;
+  alCambiarValor: (v: string | null) => void;
+}) {
+  const categorias = salida.categorias ?? [];
+  const elegido = valorDeInteres && categorias.some((c) => c.valor === valorDeInteres) ? valorDeInteres : undefined;
+  const objetivo = elegido ?? categorias[0]?.valor;
+  const p = objetivo ? probabilidadDeValor(categorias, objetivo) : undefined;
+  const decisivas = salida.decisivas?.find((d) => d.valor === objetivo)?.filas.filter((f) => f.rango > 0) ?? [];
+  const frases = lecturaDeTexto({
+    nombre: salida.nombre,
+    categorias,
+    ...(elegido ? { valorDeInteres: elegido } : {}),
+    ...(salida.decisivas ? { decisivas: salida.decisivas } : {}),
+  });
+  return (
+    <section>
+      <h2 className="titulo-salida">{salida.nombre}</h2>
+      <p className="tenue">{salida.ref} · salida de {categorias.length <= 2 ? 'sí/no o texto' : 'texto'}</p>
+      {frases.length > 0 && <p className="lectura">{frases.join(' ')}</p>}
+
+      <h3>Valores que salen</h3>
+      <BarrasCategorias filas={categorias} {...(objetivo ? { resaltar: objetivo } : {})} />
+
+      <div className="umbral">
+        <label className="umbral-pregunta">
+          <span>Probabilidad de que salga</span>
+          <select value={elegido ?? ''} onChange={(e) => alCambiarValor(e.target.value || null)}>
+            <option value="">{categorias[0] ? `${categorias[0].valor} (el más frecuente)` : '—'}</option>
+            {categorias.map((c) => <option key={c.valor} value={c.valor}>{c.valor}</option>)}
+          </select>
+        </label>
+        {p !== undefined && (
+          <p className="umbral-respuesta">
+            <strong>{(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</strong>
+            <span className="tenue"> de las iteraciones</span>
+          </p>
+        )}
+      </div>
+
+      {decisivas.length > 0 && (
+        <>
+          <h3>Qué decide que salga «{objetivo}»</h3>
+          <div className="tabla-desplazable">
+            <table className="tabla-resumen sin-clic">
+              <thead><tr><th>Entrada</th><th>10 % más bajo</th><th>10 % más alto</th></tr></thead>
+              <tbody>
+                {decisivas.map((f) => (
+                  <tr key={f.id}>
+                    <td>{f.nombre}</td>
+                    <td>{(f.bajo * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</td>
+                    <td>{(f.alto * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="tenue">Con qué probabilidad sale «{objetivo}» cuando cada entrada está en su 10 % más bajo y en su 10 % más alto.</p>
+        </>
+      )}
+
+      {salida.porCategoria && salida.porCategoria.length > 0 && <TablasPorCategoria bloques={salida.porCategoria} />}
+    </section>
+  );
+}
+
 const TODAS = '__todas__';
 
 /**
@@ -509,6 +677,12 @@ function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestread
         </select>
       </label>
       <p className="tenue">{e.ref} · {e.distribucion}</p>
+      {e.frecuencias ? (
+        <>
+          <BarrasCategorias filas={e.frecuencias} />
+          <p className="tenue">La marca de cada barra es la probabilidad que se le dio a esa categoría.</p>
+        </>
+      ) : (<>
       <div className="tabla-desplazable">
         <table className="tabla-resumen sin-clic">
           <thead>
@@ -533,6 +707,7 @@ function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestread
       )}
       <h3>Probabilidad acumulada</h3>
       <CurvaAcumulada puntos={e.cdf} />
+      </>)}
     </section>
   );
 }
@@ -597,6 +772,18 @@ function ResumenSalidas({
                 ? probabilidadUmbral(s.muestraOrdenada, u.value, u.direction === 'below' ? 'debajo' : 'encima')
                 : null;
               const sinDatos = s.resumen.n === 0;
+              if (esSalidaDeTexto(s)) {
+                const moda = s.categorias?.[0];
+                return (
+                  <tr key={s.id} className={s.id === vista ? 'elegida' : undefined} onClick={() => alElegir(s.id)} title="Ver esta salida">
+                    <td>{s.nombre}</td>
+                    <td colSpan={4} className="celda-texto">
+                      {moda ? `«${moda.valor}» ${(moda.proporcion * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : '—'}
+                    </td>
+                    {conUmbral && <td></td>}
+                  </tr>
+                );
+              }
               return (
                 <tr
                   key={s.id}
