@@ -461,6 +461,11 @@ export function Panel() {
           modelo={modelo}
           resultado={resultado}
           alCambiarModelo={cambiarModelo}
+          alBuscarObjetivo={async (busqueda, alAvanzar) => {
+            const r = await ejecutarSimulacion({ modelo, busqueda, progreso: (a) => alAvanzar(a.mensaje) });
+            if (!r.ok) return [r.mensaje, ...r.detalles].join(' ');
+            return r.busqueda ?? 'La búsqueda no devolvió resultado.';
+          }}
           escenarios={escenarios}
           alCambiarEscenarios={(accion) => {
             let nuevo: AlmacenEscenarios;

@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### H4: búsqueda de objetivo con riesgo (2026-09-29)
+
+**Añadido**
+- **Buscar objetivo**, en cada salida con umbral: qué valor de una celda deja
+  la probabilidad del umbral en la que se quiere («¿qué precio deja
+  P(VAN < 0) en el 10 %?»). Bisección sobre simulaciones completas con los
+  mismos números aleatorios; sin tocar el libro. Solo motor rápido.
+
 ### U1: asistente del primer modelo y plantillas (2026-09-29)
 
 **Añadido**

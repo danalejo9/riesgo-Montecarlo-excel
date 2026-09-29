@@ -1150,6 +1150,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     panel. Banco: la hoja nueva admite `getRange`. **Siguiente**: H4, H5,
     H8; después F según los libros, G y M.
 
+58. [x] **H4 (2026-09-29)**. `excel/busquedaObjetivo.ts` (`biseccion`,
+    pura, parada a 0,1 puntos), `busqueda` en `PeticionSimulacion`: tras
+    preparar, cada punto fija la celda (`reemplazarAst`) y simula con
+    `porElRapido` y la misma semilla; el resultado lleva `busqueda`.
+    `BuscarObjetivo` en Resultados (con umbral) y `alBuscarObjetivo` en
+    Panel (no toca los resultados actuales). Banco: 16 simulaciones en
+    19 s antes de la parada anticipada. **Siguiente**: H5, H8.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

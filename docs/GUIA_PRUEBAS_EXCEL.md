@@ -263,6 +263,14 @@ dispersión). Prueba también **Presupuesto de obra** (coste total en torno a
 año en torno a **105.500 €**; cambia la correlación de B9 a 0 y el p5
 mejora).
 
+**N28. Buscar objetivo** (H4 del plan, nuevo). Simula la demo con el VAN y
+pon el umbral «por debajo de 0». Abre **«Buscar objetivo»**: celda C5 (el
+precio; «Leer de la selección»), desde 105 hasta 140, probabilidad 10 %, y
+**Buscar**. Tarda unas diez simulaciones y dice qué precio deja P(VAN < 0)
+en el 10 %, con la lista de lo probado. Un rango que no contiene esa
+probabilidad lo dice. La celda se fija solo durante la búsqueda: el libro no
+cambia. Solo con el motor rápido.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

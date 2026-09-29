@@ -282,6 +282,8 @@ export interface SimulacionCompletada {
   funcionesIgnoradas?: string[];
   /** Celdas con funciones de resultados (`RIESGO.MEDIA`…, B6): se recalculan al terminar. */
   celdasConResultados?: string[];
+  /** Resultado de una búsqueda de objetivo (H4), si la simulación era eso. */
+  busqueda?: import('./busquedaObjetivo.ts').ResultadoBusqueda;
   /** Avisos de coherencia del modelo (H6): entradas sin efecto, distribuciones con negativos… */
   avisosCoherencia?: string[];
   /** Por dónde llega cada entrada a cada salida (H7). */

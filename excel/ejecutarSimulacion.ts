@@ -24,7 +24,7 @@
 import { simularPorBloques, type ContextoHilo, type Pool } from '../engine/executor/index.ts';
 import { generarTramoDeEntrada, resolverEntradas, type DefinicionEntrada } from '../engine/executor/entradas.ts';
 import { compilarPlan } from '../engine/compiler/plan.ts';
-import { construirGrafo } from '../engine/graph/index.ts';
+import { construirGrafo, reemplazarAst } from '../engine/graph/index.ts';
 import {
   aplicarReescrituras,
   PREFIJO_DINAMICA,
@@ -50,6 +50,7 @@ import { registroDeRiesgos } from './registroRiesgos.ts';
 import { combinaciones, etiquetaCombinacion, fijarCombinacion, leerDecisiones, type ResultadoDecisiones, type SalidaEnOpcion } from './decisiones.ts';
 import type { IteracionesSimuladas } from './iteraciones.ts';
 import { avisosDeCoherencia, trazarDependencias } from './coherencia.ts';
+import { biseccion, type PeticionBusqueda } from './busquedaObjetivo.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -86,6 +87,8 @@ export interface PeticionSimulacion {
   crearPool?: (contexto: ContextoHilo, info: { iteraciones: number }) => Pool | null;
   /** Modo compatible: no repintar la hoja en cada iteración (F5). */
   congelarPantalla?: boolean;
+  /** H4: en vez de una simulación, buscar el valor de una celda que da una probabilidad. */
+  busqueda?: PeticionBusqueda;
 }
 
 /**
@@ -104,7 +107,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
 
   // 1. Referencias -> claves de celda.
   progreso?.({ fase: 'resolviendo', mensaje: 'Resolviendo las celdas del modelo…' });
-  const refs = [...modelo.inputs.map((e) => e.ref), ...modelo.outputs.map((s) => s.ref)];
+  const refs = [...modelo.inputs.map((e) => e.ref), ...modelo.outputs.map((s) => s.ref), ...(peticion.busqueda ? [peticion.busqueda.ref] : [])];
   const resolucion = await cargarResolverRef(refs);
   if (resolucion.sinResolver.length > 0) {
     return fallo(
@@ -274,6 +277,9 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
 
+  if (peticion.busqueda && eleccion.motor === 'compatible') {
+    return fallo('modelo', 'La búsqueda de objetivo solo funciona con el motor rápido.', motivosLegibles(eleccion));
+  }
   if (decisiones.length > 0 && eleccion.motor === 'compatible') {
     return fallo('modelo', 'Las decisiones (RIESGO.DECISION) solo se comparan con el motor rápido.', [
       ...(modelo.settings.engine === 'compatible'
@@ -297,6 +303,34 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       r.convergencia = { objetivo, tandas: [n], alcanzada: r.salidas.every((s) => s.precision?.suficiente !== false), tope: conv.maxIterations, noDisponible: true };
     }
     return terminar(r);
+  }
+
+  // H4: búsqueda de objetivo. Cada punto, una simulación completa con la misma
+  // semilla y la celda fijada en ese valor; no sustituye a los resultados.
+  if (peticion.busqueda) {
+    const b = peticion.busqueda;
+    const clave = resolucion.resolver(b.ref);
+    const i = modelo.outputs.findIndex((s) => s.id === b.idSalida);
+    if (!grafo.nodos.has(clave) || i < 0) return fallo('modelo', 'La búsqueda de objetivo no encuentra la celda o la salida.', [b.ref]);
+    let paso = 0;
+    let ultimo: ResultadoSimulacionPanel | null = null;
+    const r = await biseccion(async (x) => {
+      if (debeCancelar?.()) return NaN;
+      paso++;
+      reemplazarAst(grafo, clave, { tipo: 'numero', valor: x, pos: 0 });
+      const preparadas = prepararEntradas(modelo, resolver, semilla);
+      if (!preparadas.ok) return NaN;
+      const s = await porElRapido({
+        ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, debeCancelar, crearPool,
+        ...(progreso ? { progreso: (a: AvanceSimulacion) => progreso({ ...a, mensaje: `Búsqueda, simulación ${paso}: ${b.ref} = ${x.toLocaleString('es-ES', { maximumFractionDigits: 4 })}…` }) } : {}),
+      });
+      ultimo = s;
+      const m = s.ok ? s.salidas[i]?.muestraOrdenada : undefined;
+      return m && m.length > 0 ? probabilidadUmbral(m, b.umbral.valor, b.umbral.sentido === 'below' ? 'debajo' : 'encima') : NaN;
+    }, b.desde, b.hasta, b.objetivo);
+    const final = ultimo as ResultadoSimulacionPanel | null;
+    if (final && !final.ok) return final;
+    return final ? { ...final, busqueda: r } : fallo('modelo', 'La búsqueda de objetivo no llegó a simular.', []);
   }
 
   // T9: cada otra opción (o combinación) de las decisiones, con la misma

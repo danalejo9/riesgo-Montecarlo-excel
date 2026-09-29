@@ -46,6 +46,8 @@ import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
 import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
+import type { PeticionBusqueda, ResultadoBusqueda } from '../excel/busquedaObjetivo.ts';
+import { leerSeleccion } from '../excel/seleccion.ts';
 import type { ResultadoDecisiones, SalidaEnOpcion } from '../excel/decisiones.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
@@ -67,6 +69,7 @@ export function Resultados({
   alCambiarModelo,
   escenarios,
   alCambiarEscenarios,
+  alBuscarObjetivo,
 }: {
   modelo: ModeloRiesgo;
   resultado: SimulacionCompletada;
@@ -75,6 +78,8 @@ export function Resultados({
   /** Los escenarios guardados en el libro (E7); el activo es con el que se compara. */
   escenarios?: AlmacenEscenarios;
   alCambiarEscenarios?: (accion: AccionEscenarios) => void;
+  /** H4: buscar el valor de una celda que da una probabilidad; devuelve el resultado o el motivo del fallo. */
+  alBuscarObjetivo?: (b: PeticionBusqueda, alAvanzar: (mensaje: string) => void) => Promise<ResultadoBusqueda | string>;
 }) {
   const referencia: ReferenciaGuardada | null = escenarios ? escenarioActivo(escenarios) : null;
   const motivos = motivosLegibles(resultado.eleccion);
@@ -350,6 +355,17 @@ export function Resultados({
                 })
               }
             />
+          )}
+
+          {alBuscarObjetivo && umbralDe(salida.id) && (
+            <Plegable id="objetivo" titulo="Buscar objetivo" resumen="¿qué valor da esa probabilidad?">
+              <BuscarObjetivo
+                salida={salida}
+                umbral={umbralDe(salida.id) as UmbralRiskModel}
+                decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+                alBuscar={alBuscarObjetivo}
+              />
+            </Plegable>
           )}
 
           {comparando && (() => {
@@ -878,6 +894,77 @@ export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly 
 }
 
 const TODAS = '__todas__';
+
+/**
+ * Búsqueda de objetivo (H4): qué valor de una celda deja la probabilidad del
+ * umbral en la que se quiere. Cada punto, una simulación entera.
+ */
+function BuscarObjetivo({
+  salida, umbral, decimal, alBuscar,
+}: {
+  salida: ResultadoSalida;
+  umbral: UmbralRiskModel;
+  decimal: string;
+  alBuscar: (b: PeticionBusqueda, alAvanzar: (m: string) => void) => Promise<ResultadoBusqueda | string>;
+}) {
+  const [ref, setRef] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [objetivo, setObjetivo] = useState('10');
+  const [avance, setAvance] = useState<string | null>(null);
+  const [r, setR] = useState<ResultadoBusqueda | string | null>(null);
+  const d = leerNumero(desde, decimal);
+  const h = leerNumero(hasta, decimal);
+  const o = leerNumero(objetivo, decimal);
+  const listo = ref.trim() !== '' && d !== null && h !== null && d !== h && o !== null && o > 0 && o < 100;
+  const deLaSeleccion = async () => {
+    try {
+      const s = await leerSeleccion();
+      setRef(s.direccion);
+    } catch (e) {
+      setR(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const buscar = async () => {
+    if (!listo) return;
+    setR(null);
+    setAvance('Empezando…');
+    try {
+      setR(await alBuscar({ ref: ref.trim(), desde: d as number, hasta: h as number, idSalida: salida.id, umbral: { valor: umbral.value, sentido: umbral.direction }, objetivo: (o as number) / 100 }, setAvance));
+    } catch (e) {
+      setR(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAvance(null);
+    }
+  };
+  const texto = `P(${salida.nombre} ${umbral.direction === 'below' ? '<' : '>'} ${numero(umbral.value)})`;
+  return (
+    <div className="buscar-objetivo">
+      <p className="tenue">Qué valor de una celda deja {texto} en la probabilidad que quieras. Cada paso es una simulación entera (unas 15).</p>
+      <div className="parametros">
+        <label className="campo ancho">
+          <span className="tenue">Celda que se ajusta</span>
+          <input type="text" value={ref} placeholder="Modelo!C5" onChange={(e) => setRef(e.target.value)} />
+        </label>
+        <button type="button" className="secundario" onClick={() => void deLaSeleccion()}>Leer de la selección</button>
+        <label className="campo"><span className="tenue">Desde</span><input type="text" inputMode="decimal" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
+        <label className="campo"><span className="tenue">Hasta</span><input type="text" inputMode="decimal" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
+        <label className="campo"><span className="tenue">Probabilidad (%)</span><input type="text" inputMode="decimal" value={objetivo} onChange={(e) => setObjetivo(e.target.value)} /></label>
+      </div>
+      <button type="button" onClick={() => void buscar()} disabled={!listo || avance !== null}>{avance !== null ? 'Buscando…' : 'Buscar'}</button>
+      {avance && <p className="tenue">{avance}</p>}
+      {typeof r === 'string' && <p className="aviso-linea">{r}</p>}
+      {r && typeof r !== 'string' && (
+        <>
+          {r.solucion !== undefined
+            ? <p className="aviso-ok">Con <strong>{ref}</strong> = <strong>{numero(r.solucion)}</strong>, {texto} es del {pct(r.probSolucion ?? NaN)}.</p>
+            : <p className="aviso-linea">{r.motivo}</p>}
+          <p className="tenue">Probado: {r.puntos.map((p) => `${numero(p.valor)} → ${pct(p.prob)}`).join(' · ')}</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 /** «Qué la mueve más»: por correlación (el tornado de siempre) o por cambio en la salida (D4). */
 function Sensibilidad({ salida, muestra }: { salida: ResultadoSalida; muestra?: number }) {
