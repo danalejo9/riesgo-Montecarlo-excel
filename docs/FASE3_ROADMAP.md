@@ -561,7 +561,7 @@ Añadido en la segunda revisión con el usuario (25/09).
   pronto**.
 - **H2. Más medidas de riesgo**: VaR y CVaR (pérdida media en la peor cola),
   asimetría, curtosis, semidesviación. En el panel, el informe y el volcado.
-- **H3. Simulaciones en serie (paramétricas)**: repetir la simulación
+- **H3. Simulaciones en serie (paramétricas)** ✅ 29/09, cubierta por `RIESGO.DECISION` (T9) con opciones numéricas: repetir la simulación
   variando un parámetro (precio 100 / 110 / 120) y comparar los resultados
   lado a lado. Reutiliza la comparación de escenarios.
 - **H4. Búsqueda de objetivo con riesgo**: «¿qué valor de esta celda hace que
@@ -569,11 +569,11 @@ Añadido en la segunda revisión con el usuario (25/09).
 - **H5. Series temporales**: entradas que evolucionan periodo a periodo de
   forma aleatoria (paseo aleatorio, crecimiento con ruido, reversión a la
   media), declaradas sobre un rango (C7:H7). Enlaza con D3 y el abanico C4.
-- **H6. Avisos de coherencia**: distribuciones que dan negativos en
+- **H6. Avisos de coherencia** ✅ 29/09 (`excel/coherencia.ts`: entradas sin efecto y negativos en celdas positivas): distribuciones que dan negativos en
   cantidades que no pueden serlo, correlaciones que apuntan a celdas que ya
   no existen, salidas que no dependen de ninguna entrada (ya existe) o
   entradas que no afectan a ninguna salida.
-- **H7. Trazado de dependencias**: qué salidas dependen de cada entrada y por
+- **H7. Trazado de dependencias** ✅ 29/09 (camino más corto, en «Cómo se calculó»): qué salidas dependen de cada entrada y por
   qué celdas intermedias pasa, para detectar entradas mal conectadas.
 - **H8. Migración del modelo guardado**: cuando cambie el esquema de
   `RiskModel`, que los libros de versiones anteriores se abran sin perder

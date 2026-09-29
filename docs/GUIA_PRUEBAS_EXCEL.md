@@ -243,6 +243,16 @@ escribiendo en un campo. Hasta 30 cambios; se pierde al cerrar el panel.
 dentro de cada sección: explica en dos o tres frases qué es cada número y
 cada gráfico. Dime si falta en algún sitio o si algo no se entiende.
 
+**N26. Avisos de coherencia y trazado** (H6 y H7 del plan, nuevo).
+- Marca como entrada una celda que el modelo no usa (por ejemplo, una celda
+  de la hoja «Pruebas» con un número) y simula la demo: arriba en Resultados,
+  «La entrada … no afecta a ninguna salida».
+- Pon a las unidades (C6) una **Normal(20.000; 12.000)** y simula: aviso de
+  que da negativos alrededor del **5 %** de las veces. Vuelve a dejarla como
+  estaba.
+- En «Cómo se calculó», **«Por dónde llega cada entrada»**: para cada
+  entrada, el camino de celdas hasta cada salida (p. ej. C5 → … → C32).
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

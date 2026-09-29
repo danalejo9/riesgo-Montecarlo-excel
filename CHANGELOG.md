@@ -5,6 +5,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### H6 y H7: avisos de coherencia y trazado de dependencias (2026-09-29)
+
+**Añadido**
+- **Avisos de coherencia** al simular: una entrada que no afecta a ninguna
+  salida, y una distribución que da negativos (más del 1 %) en una celda que
+  hoy es positiva.
+- **Por dónde llega cada entrada** (en «Cómo se calculó»): el camino de
+  celdas más corto de cada entrada a cada salida.
+
 ### E1–E4: todas las entradas, matriz de correlaciones, deshacer y ayuda (2026-09-29)
 
 **Añadido**

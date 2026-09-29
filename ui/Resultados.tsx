@@ -190,6 +190,9 @@ export function Resultados({
       </p>,
     );
   }
+  for (const a of resultado.avisosCoherencia ?? []) {
+    avisos.push(<p key={a} className="aviso-linea">{a}</p>);
+  }
   if (resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0) {
     avisos.push(
       <p key="compartir" className="aviso-linea">
@@ -501,6 +504,22 @@ export function Resultados({
                 ? `«Simular hasta alcanzar la precisión» no se aplica con Excel en el bucle: se simularon las ${miles(resultado.iteracionesCompletadas)} iteraciones fijadas.`
                 : `Precisión buscada ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} %: ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones.`}
             </p>
+          )}
+
+          {resultado.trazado && resultado.trazado.length > 0 && (
+            <>
+              <h3>Por dónde llega cada entrada</h3>
+              <ul className="motivos trazado">
+                {resultado.trazado.map((t) => (
+                  <li key={t.entrada}>
+                    <strong>{t.entrada}</strong>
+                    {t.salidas.length === 0
+                      ? <span className="aviso-linea"> no llega a ninguna salida.</span>
+                      : t.salidas.map((s) => <div key={s.salida} className="tenue">→ {s.salida}: {s.camino.join(' → ')}</div>)}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           {motivos.length > 0 && (

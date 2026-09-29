@@ -143,11 +143,11 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 32 | E3 | ✅ (29/09) Deshacer el último cambio del modelo | Plan |
 | 33 | E4 | ✅ (29/09) Ayuda contextual (qué es cada distribución, gráfico y número) | Estudio |
 | 34 | U1 | **Asistente del primer modelo y plantillas** (proyecto de inversión, presupuesto…): paso a paso para quien empieza | **Nuevo** (el estudio pedía «asistentes») |
-| 35 | H3 | Simulaciones en serie (precio 100 / 110 / 120, lado a lado) | Plan |
+| 35 | H3 | ✅ (29/09, con `RIESGO.DECISION`) Simulaciones en serie (precio 100 / 110 / 120, lado a lado) | Plan |
 | 36 | H4 | Búsqueda de objetivo con riesgo («¿qué precio deja P(VAN<0) bajo el 10 %?») | Plan |
 | 37 | H5 | Series temporales (paseo aleatorio, reversión a la media) | Plan |
-| 38 | H6 | Avisos de coherencia del modelo | Plan |
-| 39 | H7 | Trazado de dependencias (qué salidas dependen de cada entrada) | Plan |
+| 38 | H6 | ✅ (29/09) Avisos de coherencia del modelo | Plan |
+| 39 | H7 | ✅ (29/09) Trazado de dependencias (qué salidas dependen de cada entrada) | Plan |
 | 40 | H8 | Migración del modelo guardado entre versiones | Plan |
 | 41 | H9 | Manual de usuario en español y más libros de ejemplo | Plan |
 | 42 | H10 | Libros compartidos en OneDrive/SharePoint (coautoría) | Estudio |

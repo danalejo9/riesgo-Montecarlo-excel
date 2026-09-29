@@ -1134,6 +1134,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (triángulo superior, escribe los dos lados; errores con nombres). E4:
     `ui/ayuda.tsx` (`AYUDA`, `Ayuda`). **Siguiente**: H (resto) y U1.
 
+56. [x] **H6, H7 (2026-09-29)**. `excel/coherencia.ts`:
+    `avisosDeCoherencia` (lo que necesitan las salidas sin cruzar las
+    entradas; `cdf(0)` > 1 % en celdas positivas) y `trazarDependencias`
+    (anchura por `dependientes`, camino más corto, virtuales ocultas). En el
+    resultado, `avisosCoherencia` (arriba en Resultados) y `trazado` («Cómo
+    se calculó»). H3 queda cubierta por `RIESGO.DECISION`. **Siguiente**:
+    U1 (asistente y plantillas), H4, H5, H8.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

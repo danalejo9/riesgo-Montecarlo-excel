@@ -282,6 +282,10 @@ export interface SimulacionCompletada {
   funcionesIgnoradas?: string[];
   /** Celdas con funciones de resultados (`RIESGO.MEDIA`…, B6): se recalculan al terminar. */
   celdasConResultados?: string[];
+  /** Avisos de coherencia del modelo (H6): entradas sin efecto, distribuciones con negativos… */
+  avisosCoherencia?: string[];
+  /** Por dónde llega cada entrada a cada salida (H7). */
+  trazado?: import('./coherencia.ts').TrazaEntrada[];
   /** Entradas y salidas de las primeras iteraciones, emparejadas (C3). Solo en memoria. */
   iteraciones?: import('./iteraciones.ts').IteracionesSimuladas;
   /** Cada opción de las decisiones (`RIESGO.DECISION`, T9), con sus salidas. */

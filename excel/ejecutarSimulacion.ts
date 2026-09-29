@@ -49,6 +49,7 @@ import { celdasConFormatoFecha } from './formatoCeldas.ts';
 import { registroDeRiesgos } from './registroRiesgos.ts';
 import { combinaciones, etiquetaCombinacion, fijarCombinacion, leerDecisiones, type ResultadoDecisiones, type SalidaEnOpcion } from './decisiones.ts';
 import type { IteracionesSimuladas } from './iteraciones.ts';
+import { avisosDeCoherencia, trazarDependencias } from './coherencia.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -256,9 +257,18 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const dirSalidas = clavesSalida.map(direccionDe);
   const dirEntradas = modelo.inputs.map((e, i) => direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)));
   const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])]).catch(() => new Set<string>());
+  // H6 y H7: avisos de coherencia y por dónde llega cada entrada a cada salida.
+  const avisosCoherencia = avisosDeCoherencia(grafo, modelo.inputs, clavesEntrada, clavesSalida, direccionDe);
+  const trazado = trazarDependencias(grafo, modelo.inputs, clavesEntrada, modelo.outputs.map((s, i) => ({ nombre: s.name, clave: clavesSalida[i] as string })), direccionDe);
   const terminar = (r: ResultadoSimulacionPanel) => {
     const f = conFechas(conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados), modelo, dirSalidas, dirEntradas, fechas);
-    return f.ok && registro.length > 0 ? { ...f, registroRiesgos: registro } : f;
+    if (!f.ok) return f;
+    return {
+      ...f,
+      ...(registro.length > 0 ? { registroRiesgos: registro } : {}),
+      ...(avisosCoherencia.length > 0 ? { avisosCoherencia } : {}),
+      trazado,
+    };
   };
 
   // 4. Simular.
