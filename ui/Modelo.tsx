@@ -20,16 +20,12 @@ import { useCallback, useState } from 'react';
 import { leerNombresSugeridos } from '../excel/etiquetasEnExcel.ts';
 import { nombreUnico } from '../excel/nombreSugerido.ts';
 import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
-import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 import {
-  describirDistribucion,
-  generarId,
   resumirDistribucion,
-  type DistributionSpec,
   type EntradaRiskModel,
   type ModeloRiesgo,
-  type SalidaRiskModel,
 } from '../engine/modelo/index.ts';
+import { leerSeleccion } from '../excel/seleccion.ts';
 import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
 import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
@@ -38,26 +34,8 @@ import { Compartir, useFormulasCompartidas } from './Compartir.tsx';
 import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
+import { marcarSeleccion } from './marcar.ts';
 
-const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangular')?.porDefecto ?? {
-  type: 'triangular',
-  min: 0,
-  mode: 1,
-  max: 2,
-};
-
-/**
- * La distribución que se propone al marcar una celda: una triangular de ±10 %
- * **alrededor del valor que ya tiene**.
- *
- * No es una estimación de nada —el usuario tiene que ajustarla— pero es un
- * punto de partida con el orden de magnitud correcto. Proponer (0; 1; 2) sobre
- * una celda que vale 1.200 obliga a borrar tres campos antes de poder pensar,
- * y con diez entradas eso es treinta campos.
- *
- * Con un cero o con una celda que no sea un número no hay magnitud de la que
- * partir, así que se deja la genérica en vez de inventar una.
- */
 /**
  * Lo que tarda el modo compatible, **antes** de pulsar Simular.
  *
@@ -154,27 +132,6 @@ function AvisoCompatible({
   );
 }
 
-function distribucionInicial(valor: number | undefined, texto?: unknown): DistributionSpec {
-  // Una celda con texto («Norte») es una entrada de texto (T1): se empieza con
-  // esa categoría y el usuario añade las demás o las lee de la hoja.
-  if (typeof texto === 'string' && texto.trim() !== '') {
-    return { type: 'categorical', categories: [texto.trim()], weights: [1] };
-  }
-  if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
-  const margen = Math.abs(valor) * 0.1;
-  return { type: 'triangular', min: limpiar(valor - margen), mode: valor, max: limpiar(valor + margen) };
-}
-
-/**
- * Quita la basura binaria de una multiplicación: `0,1 × 1,1` da
- * `0,11000000000000001` en coma flotante, y ese número aparecería tal cual en
- * el campo y en el resumen de la entrada. No cambia nada del cálculo; cambia
- * que el panel no parezca roto nada más marcar una celda.
- */
-function limpiar(v: number): number {
-  return Number(v.toPrecision(12));
-}
-
 export function Modelo({
   modelo,
   alCambiar,
@@ -201,32 +158,6 @@ export function Modelo({
     <Compartir modelo={modelo} alCambiar={alCambiar} guardadas={compartidas} setGuardadas={setCompartidas} />
   );
 
-  /** La celda seleccionada, o un aviso de por qué no vale. */
-  const celdaSeleccionada = useCallback(async (): Promise<SeleccionLeida | null> => {
-    setAviso(null);
-    const sel = await leerSeleccion();
-    if (sel.filas * sel.columnas !== 1) {
-      setAviso(`Has seleccionado ${sel.filas} × ${sel.columnas} celdas. Selecciona una sola.`);
-      return null;
-    }
-    return sel;
-  }, []);
-
-  /**
-   * El nombre con el que nace una celda marcada: el texto de su izquierda
-   * («Precio unitario»), no «Modelo!C5» (E5). Si Excel no lo puede leer, la
-   * referencia: un nombre feo no puede impedir marcar la celda.
-   */
-  const nombreLegible = useCallback(async (ref: string): Promise<string> => {
-    const usados = [...modelo.inputs, ...modelo.outputs].map((x) => x.name);
-    try {
-      const nombre = (await leerNombresSugeridos([ref])).get(ref) ?? ref;
-      return nombreUnico(nombre, ref, usados);
-    } catch {
-      return ref;
-    }
-  }, [modelo]);
-
   /** Para los modelos marcados antes del 27/09: nombrar desde la hoja lo que aún se llama como su celda. */
   const sinNombre = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name === x.ref);
   const nombrarDesdeLaHoja = useCallback(async () => {
@@ -246,36 +177,18 @@ export function Modelo({
     }
   }, [modelo, alCambiar]);
 
-  const anadirEntrada = useCallback(async () => {
-    const sel = await celdaSeleccionada();
-    if (!sel) return;
-    const ref = sel.direccion;
-    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
-      setAviso(`${ref} ya está en el modelo.`);
+  const anadir = useCallback(async (como: 'entrada' | 'salida') => {
+    setAviso(null);
+    const r = await marcarSeleccion(modelo, como);
+    if (!r.ok) {
+      setAviso(r.aviso);
       return;
     }
-    const entrada: EntradaRiskModel = {
-      id: generarId('in'),
-      name: await nombreLegible(ref),
-      ref,
-      dist: distribucionInicial(sel.valor, sel.valores?.[0]?.[0]),
-      correlations: [],
-    };
-    alCambiar({ ...modelo, inputs: [...modelo.inputs, entrada] });
-    setAbierta(entrada.id);
-  }, [modelo, alCambiar, celdaSeleccionada, nombreLegible]);
-
-  const anadirSalida = useCallback(async () => {
-    const sel = await celdaSeleccionada();
-    if (!sel) return;
-    const ref = sel.direccion;
-    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
-      setAviso(`${ref} ya está en el modelo.`);
-      return;
-    }
-    const salida: SalidaRiskModel = { id: generarId('out'), name: await nombreLegible(ref), ref };
-    alCambiar({ ...modelo, outputs: [...modelo.outputs, salida] });
-  }, [modelo, alCambiar, celdaSeleccionada, nombreLegible]);
+    alCambiar(r.modelo);
+    if (como === 'entrada') setAbierta(r.id);
+  }, [modelo, alCambiar]);
+  const anadirEntrada = useCallback(() => anadir('entrada'), [anadir]);
+  const anadirSalida = useCallback(() => anadir('salida'), [anadir]);
 
   const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
     alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === id ? { ...e, ...cambio } : e)) });

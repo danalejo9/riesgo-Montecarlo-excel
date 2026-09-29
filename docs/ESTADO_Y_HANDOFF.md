@@ -1014,6 +1014,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Grupo «Modo del libro» en el manifiesto (`modoFijo`, `modoAleatorio`).
     Funciones de distribución volátiles. **Siguiente**: B3, B1b.
 
+42. [x] **B3, cinta que actúa (2026-09-29)**. `ui/marcar.ts` (marcar la
+    selección, compartido con Modelo.tsx), manejadores del panel registrados
+    con `manejarDesdeLaCinta` y llamados por `pedirAlPanel`. Grupo
+    «Acciones» en el manifiesto. En el banco, `window.__cinta(accion)`.
+    **Siguiente**: B1b.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

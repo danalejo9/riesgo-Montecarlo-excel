@@ -17,7 +17,7 @@ import { createRoot } from 'react-dom/client';
 
 import { ErrorPanel } from './ErrorPanel.tsx';
 import { Panel } from './Panel.tsx';
-import { registrarAcciones } from './acciones.ts';
+import { pedirAlPanel, registrarAcciones } from './acciones.ts';
 import { aplicarModo } from '../excel/modoLibro.ts';
 import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import './estilos.css';
@@ -46,6 +46,11 @@ if (typeof Office === 'undefined') {
     // B2: el modo del libro, sin tocar el valor fijo elegido.
     modoFijo: () => aplicarModo({ ...modoLibroEnMemoria(), modo: 'fijo' }),
     modoAleatorio: () => aplicarModo({ ...modoLibroEnMemoria(), modo: 'aleatorio' }),
+    // B3: actúan sin abrir el panel (lo hace el panel, montado aunque no se vea).
+    marcarEntrada: () => pedirAlPanel('marcarEntrada'),
+    marcarSalida: () => pedirAlPanel('marcarSalida'),
+    simular: () => pedirAlPanel('simular'),
+    quitarResaltado: () => pedirAlPanel('quitarResaltado'),
   });
   void Office.onReady(() => {
     montar(

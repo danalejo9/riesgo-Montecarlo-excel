@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 2 — B3: la cinta actúa sin abrir el panel (2026-09-29)
+
+**Añadido**
+- Grupo **«Acciones»** en la cinta: *Marcar entrada*, *Marcar salida*,
+  *Simular* y *Quitar resaltado*. Marcar pinta la celda sin abrir el panel
+  (solo se abre si hay algo que avisar); Simular abre el panel para el
+  progreso y los resultados. Iconos nuevos con los colores del resaltado.
+
 ### Etapa 2 — B2: modo del libro (2026-09-29)
 
 **Añadido**

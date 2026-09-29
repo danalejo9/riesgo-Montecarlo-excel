@@ -133,6 +133,21 @@ la pantalla».
 - Guarda, cierra y reabre: el libro sigue en Aleatorio. Vuelve a **Valores
   fijos** al terminar.
 
+**N8. La cinta actúa sin abrir el panel** (B3, nuevo). Cierra el panel. En
+la cinta hay un grupo **«Acciones»**: Marcar entrada, Marcar salida,
+Simular y Quitar resaltado. En la hoja «Modelo», con un modelo vacío (quita
+todo antes desde el panel y ciérralo):
+- Selecciona **C5** y pulsa **Marcar entrada**: C5 se pinta de amarillo y el
+  panel **no** se abre. Igual con C6.
+- Selecciona **C32** y pulsa **Marcar salida**: se pinta de verde.
+- Pulsa otra vez **Marcar salida** con C32: ahora sí se abre el panel, con el
+  aviso «Modelo!C32 ya está en el modelo».
+- Pulsa **Simular**: se abre el panel, se ve el progreso y acaba en
+  Resultados (C5 y C6 con la triangular que propone el panel).
+- **Quitar resaltado**: las celdas vuelven a su relleno.
+- Abre el panel: C5 y C6 están en Entradas con su nombre legible («Precio
+  unitario»…) y C32 en Salidas.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

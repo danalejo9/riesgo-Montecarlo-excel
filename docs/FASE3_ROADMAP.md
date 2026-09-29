@@ -305,6 +305,12 @@ Estimaciones en días de trabajo efectivo.
   **Falta Excel real** (N6, N7).
 - **B3. Cinta que actúa sin abrir el panel**: «Marcar como entrada», «Marcar
   como salida», «Simular», «Quitar resaltado».
+  ✅ **Hecho el 29/09**: grupo «Acciones» en la cinta; el panel, montado en
+  el runtime compartido aunque no se vea, registra los manejadores
+  (`manejarDesdeLaCinta` en `ui/acciones.ts`; `ui/marcar.ts` compartido con
+  los botones del panel). Marcar no abre el panel (la celda se pinta); si hay
+  un aviso, sí. Simular abre el panel para el progreso. **Falta Excel real**
+  (N8).
 - **B1b. Funciones RIESGO que sortean en el motor compatible** (decidido el
   28/09; va después de B1, B2 y B3, dentro de la etapa 2). Con el runtime
   compartido, durante una simulación con Excel en el bucle el panel dice a

@@ -31,7 +31,9 @@ import {
 } from '../excel/escenarios.ts';
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
-import { aplicarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
+import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
+import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
+import { marcarSeleccion } from './marcar.ts';
 import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
 import { aplicarModo, leerModoGuardado } from '../excel/modoLibro.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
@@ -271,6 +273,37 @@ export function Panel() {
       setSimulando(false);
     }
   }, [modelo]);
+
+  // B3: la cinta actúa sin abrir el panel. Se registran con lo último del
+  // estado (refs), para no volver a registrarlos en cada cambio.
+  const ultimo = useRef({ modelo, cambiarModelo, simular });
+  ultimo.current = { modelo, cambiarModelo, simular };
+  useEffect(() => {
+    const marcar = (como: 'entrada' | 'salida') => async () => {
+      const { modelo: m, cambiarModelo: cambiar } = ultimo.current;
+      if (!m) return mostrarPanel();
+      const r = await marcarSeleccion(m, como);
+      if (!r.ok) {
+        // Solo si algo no cuadra hace falta ver el panel, y es para leer por qué.
+        setError(r.aviso);
+        setPestana('modelo');
+        return mostrarPanel();
+      }
+      setError(null);
+      cambiar(r.modelo); // pinta la celda y guarda el modelo: esa es la señal
+    };
+    const quitas = [
+      manejarDesdeLaCinta('marcarEntrada', marcar('entrada')),
+      manejarDesdeLaCinta('marcarSalida', marcar('salida')),
+      manejarDesdeLaCinta('simular', async () => {
+        // El progreso y los resultados se ven en el panel.
+        void mostrarPanel();
+        await ultimo.current.simular();
+      }),
+      manejarDesdeLaCinta('quitarResaltado', () => quitarResaltado()),
+    ];
+    return () => quitas.forEach((q) => q());
+  }, []);
 
   return (
     <main>

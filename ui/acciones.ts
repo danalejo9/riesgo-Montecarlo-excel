@@ -71,3 +71,33 @@ export async function mostrar(pestana: Pestana): Promise<void> {
     // estará abierto si el usuario lo abrió antes.
   }
 }
+
+/**
+ * B3: lo que la cinta pide al panel sin abrirlo (marcar la selección, simular,
+ * quitar el resaltado). El panel, que en el runtime compartido está montado
+ * aunque no se vea, registra aquí cómo hacerlo; la cinta lo llama por nombre.
+ */
+const manejadores = new Map<string, () => Promise<void>>();
+
+export function manejarDesdeLaCinta(nombre: string, hacer: () => Promise<void>): () => void {
+  manejadores.set(nombre, hacer);
+  return () => {
+    if (manejadores.get(nombre) === hacer) manejadores.delete(nombre);
+  };
+}
+
+export async function pedirAlPanel(nombre: string): Promise<void> {
+  const hacer = manejadores.get(nombre);
+  // Si el panel aún no ha arrancado, se muestra: es donde se ve qué pasa.
+  if (!hacer) return mostrarPanel();
+  return hacer();
+}
+
+/** Muestra el panel sin cambiar de pestaña. */
+export async function mostrarPanel(): Promise<void> {
+  try {
+    await entorno().Office?.addin?.showAsTaskpane?.();
+  } catch {
+    // sin runtime compartido: nada que hacer desde aquí
+  }
+}

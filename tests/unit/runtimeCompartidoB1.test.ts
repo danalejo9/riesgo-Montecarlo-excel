@@ -125,3 +125,43 @@ describe('resultados en memoria entre panel y funciones', () => {
     expect(m.functions.find((f) => f.id === 'MEDIA')?.options).toEqual({ requiresParameterAddresses: true, requiresAddress: true });
   });
 });
+
+describe('B3: la cinta actúa sin abrir el panel', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it('el manifiesto tiene el grupo «Acciones» con sus cuatro botones', () => {
+    expect(sinComentarios).toMatch(/<Group id="GrupoAcciones">/);
+    for (const accion of ['marcarEntrada', 'marcarSalida', 'simular', 'quitarResaltado']) {
+      expect(sinComentarios).toContain(`<FunctionName>${accion}</FunctionName>`);
+    }
+  });
+
+  it('la cinta llama a lo que el panel registró; si el panel no está, lo muestra', async () => {
+    const mostrar = vi.fn(async () => {});
+    vi.stubGlobal('Office', { addin: { showAsTaskpane: mostrar } });
+    const { manejarDesdeLaCinta, pedirAlPanel } = await import('../../ui/acciones.ts');
+    await pedirAlPanel('marcarEntrada');
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    const hacer = vi.fn(async () => {});
+    const quitar = manejarDesdeLaCinta('marcarEntrada', hacer);
+    await pedirAlPanel('marcarEntrada');
+    expect(hacer).toHaveBeenCalledTimes(1);
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    quitar();
+    await pedirAlPanel('marcarEntrada');
+    expect(hacer).toHaveBeenCalledTimes(1);
+  });
+
+  it('las acciones extra se registran y siempre avisan a Office de que terminaron, aunque fallen', async () => {
+    const acciones = new Map<string, (e: { completed(): void }) => void>();
+    vi.stubGlobal('Office', { actions: { associate: (id: string, f: (e: { completed(): void }) => void) => acciones.set(id, f) } });
+    const { registrarAcciones } = await import('../../ui/acciones.ts');
+    registrarAcciones({ simular: async () => { throw new Error('falló'); } });
+    const completado = vi.fn();
+    acciones.get('simular')?.({ completed: completado });
+    await vi.waitFor(() => expect(completado).toHaveBeenCalled());
+  });
+});

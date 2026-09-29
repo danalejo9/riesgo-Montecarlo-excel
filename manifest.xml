@@ -185,6 +185,80 @@
                 </Control>
               </Group>
               <!--
+                B3: actúan sin abrir el panel. Marcar la celda seleccionada
+                como entrada o salida (se pinta en la hoja: esa es la señal),
+                simular (el panel se abre para enseñar el progreso y los
+                resultados) y quitar el resaltado.
+              -->
+              <Group id="GrupoAcciones">
+                <Label resid="GrupoAcciones.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnMarcarEntrada">
+                  <Label resid="btnMarcarEntrada.Label" />
+                  <Supertip>
+                    <Title resid="btnMarcarEntrada.Label" />
+                    <Description resid="btnMarcarEntrada.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoEntrada.16" />
+                    <bt:Image size="32" resid="IconoEntrada.32" />
+                    <bt:Image size="80" resid="IconoEntrada.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>marcarEntrada</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnMarcarSalida">
+                  <Label resid="btnMarcarSalida.Label" />
+                  <Supertip>
+                    <Title resid="btnMarcarSalida.Label" />
+                    <Description resid="btnMarcarSalida.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoSalida.16" />
+                    <bt:Image size="32" resid="IconoSalida.32" />
+                    <bt:Image size="80" resid="IconoSalida.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>marcarSalida</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnSimular">
+                  <Label resid="btnSimular.Label" />
+                  <Supertip>
+                    <Title resid="btnSimular.Label" />
+                    <Description resid="btnSimular.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoSimular.16" />
+                    <bt:Image size="32" resid="IconoSimular.32" />
+                    <bt:Image size="80" resid="IconoSimular.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>simular</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnQuitarResaltado">
+                  <Label resid="btnQuitarResaltado.Label" />
+                  <Supertip>
+                    <Title resid="btnQuitarResaltado.Label" />
+                    <Description resid="btnQuitarResaltado.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoQuitar.16" />
+                    <bt:Image size="32" resid="IconoQuitar.32" />
+                    <bt:Image size="80" resid="IconoQuitar.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>quitarResaltado</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+              <!--
                 B2: el modo del libro. Qué enseñan las celdas RIESGO fuera de
                 la simulación: un valor fijo (la media, u otro elegido en
                 Configuración) o uno al azar que cambia con F9. El botón del
@@ -250,6 +324,18 @@
         <bt:Image id="IconoConfiguracion.16" DefaultValue="https://localhost:9090/icon-settings-16.png" />
         <bt:Image id="IconoConfiguracion.32" DefaultValue="https://localhost:9090/icon-settings-32.png" />
         <bt:Image id="IconoConfiguracion.80" DefaultValue="https://localhost:9090/icon-settings-80.png" />
+        <bt:Image id="IconoEntrada.16" DefaultValue="https://localhost:9090/icon-entrada-16.png" />
+        <bt:Image id="IconoEntrada.32" DefaultValue="https://localhost:9090/icon-entrada-32.png" />
+        <bt:Image id="IconoEntrada.80" DefaultValue="https://localhost:9090/icon-entrada-80.png" />
+        <bt:Image id="IconoSalida.16" DefaultValue="https://localhost:9090/icon-salida-16.png" />
+        <bt:Image id="IconoSalida.32" DefaultValue="https://localhost:9090/icon-salida-32.png" />
+        <bt:Image id="IconoSalida.80" DefaultValue="https://localhost:9090/icon-salida-80.png" />
+        <bt:Image id="IconoSimular.16" DefaultValue="https://localhost:9090/icon-simulate-16.png" />
+        <bt:Image id="IconoSimular.32" DefaultValue="https://localhost:9090/icon-simulate-32.png" />
+        <bt:Image id="IconoSimular.80" DefaultValue="https://localhost:9090/icon-simulate-80.png" />
+        <bt:Image id="IconoQuitar.16" DefaultValue="https://localhost:9090/icon-quitar-16.png" />
+        <bt:Image id="IconoQuitar.32" DefaultValue="https://localhost:9090/icon-quitar-32.png" />
+        <bt:Image id="IconoQuitar.80" DefaultValue="https://localhost:9090/icon-quitar-80.png" />
         <bt:Image id="IconoFijo.16" DefaultValue="https://localhost:9090/icon-config-16.png" />
         <bt:Image id="IconoFijo.32" DefaultValue="https://localhost:9090/icon-config-32.png" />
         <bt:Image id="IconoFijo.80" DefaultValue="https://localhost:9090/icon-config-80.png" />
@@ -271,6 +357,11 @@
         <bt:String id="btnResultados.Label" DefaultValue="Resultados" />
         <bt:String id="btnConfiguracion.Label" DefaultValue="Configuración" />
         <bt:String id="btnDiagnostico.Label" DefaultValue="Diagnóstico" />
+        <bt:String id="GrupoAcciones.Label" DefaultValue="Acciones" />
+        <bt:String id="btnMarcarEntrada.Label" DefaultValue="Marcar entrada" />
+        <bt:String id="btnMarcarSalida.Label" DefaultValue="Marcar salida" />
+        <bt:String id="btnSimular.Label" DefaultValue="Simular" />
+        <bt:String id="btnQuitarResaltado.Label" DefaultValue="Quitar resaltado" />
         <bt:String id="GrupoModo.Label" DefaultValue="Modo del libro" />
         <bt:String id="btnFijo.Label" DefaultValue="Valores fijos" />
         <bt:String id="btnAleatorio.Label" DefaultValue="Aleatorio" />
@@ -280,6 +371,10 @@
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
         <bt:String id="btnResultados.Tooltip" DefaultValue="Resultados de la última simulación: probabilidades, histograma, curva acumulada y sensibilidad." />
         <bt:String id="btnConfiguracion.Tooltip" DefaultValue="Iteraciones, semilla, muestreo, motor, precisión objetivo y núcleos del equipo." />
+        <bt:String id="btnMarcarEntrada.Tooltip" DefaultValue="Marca la celda seleccionada como entrada incierta, con una distribución alrededor de su valor. Se pinta de amarillo." />
+        <bt:String id="btnMarcarSalida.Tooltip" DefaultValue="Marca la celda seleccionada como salida: lo que se quiere medir. Se pinta de verde." />
+        <bt:String id="btnSimular.Tooltip" DefaultValue="Simula el modelo con la configuración guardada y enseña los resultados en el panel." />
+        <bt:String id="btnQuitarResaltado.Tooltip" DefaultValue="Devuelve a cada celda marcada el relleno que tenía antes." />
         <bt:String id="btnFijo.Tooltip" DefaultValue="Las celdas con funciones RIESGO enseñan un valor fijo: la media, o la mediana, la moda o un percentil (se elige en Configuración)." />
         <bt:String id="btnAleatorio.Tooltip" DefaultValue="Las celdas con funciones RIESGO enseñan un valor al azar; F9 vuelve a sortear. No cambia los resultados de la simulación." />
         <bt:String id="btnDiagnostico.Tooltip" DefaultValue="Estado del complemento, lo guardado en el libro y la configuración regional." />
