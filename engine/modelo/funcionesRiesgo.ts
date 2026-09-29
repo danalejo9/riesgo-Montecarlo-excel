@@ -138,6 +138,34 @@ export const FUNCIONES_RESULTADO = [
 
 const IDS_RESULTADO: ReadonlySet<string> = new Set(FUNCIONES_RESULTADO.map((f) => f.id));
 
+/**
+ * Funciones que **declaran** algo del modelo desde la fórmula (resto de B6):
+ * `RIESGO.SALIDA("nombre")` marca la celda como salida (vale 0: se escribe
+ * sumada a la fórmula, `=RIESGO.SALIDA("Beneficio")+C10-C11`) y
+ * `RIESGO.CORRELACION(celda1; celda2; coef)` correlaciona dos entradas (vale
+ * el coeficiente). Tampoco son distribuciones.
+ */
+export const FUNCION_SALIDA = {
+  id: 'SALIDA',
+  descripcion: 'Marca la celda como salida de la simulación. Vale 0: súmala a la fórmula, =RIESGO.SALIDA("Beneficio")+C10-C11.',
+  parametros: [{ nombre: 'nombre', descripcion: 'Opcional: el nombre de la salida en los resultados' }],
+} as const;
+
+export const FUNCION_CORRELACION = {
+  id: 'CORRELACION',
+  descripcion: 'Correlaciona dos entradas inciertas (correlación de rangos entre -1 y 1). Devuelve el coeficiente.',
+  parametros: [
+    { nombre: 'entrada1', descripcion: 'Una celda con una función RIESGO o marcada como entrada' },
+    { nombre: 'entrada2', descripcion: 'Otra celda con una función RIESGO o marcada como entrada' },
+    { nombre: 'coeficiente', descripcion: 'Entre -1 y 1 (0,8: suben juntas; -0,5: una sube cuando la otra baja)' },
+  ],
+} as const;
+
+/** ¿Es `RIESGO.<id>` una función que declara algo (salida, correlación)? */
+export function esFuncionDeDeclaracion(id: string): boolean {
+  return id === FUNCION_SALIDA.id || id === FUNCION_CORRELACION.id;
+}
+
 /** ¿Es `RIESGO.<id>` una función de resultados (B6) y no una distribución? */
 export function esFuncionDeResultado(id: string): boolean {
   return IDS_RESULTADO.has(id);
@@ -297,6 +325,9 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
   const numero = (n: Nodo | undefined): number | null => (n === undefined ? null : constante(n) ?? evaluar?.(n) ?? null);
   if (esFuncionDeResultado(id)) {
     return { ok: false, motivo: `RIESGO.${id} trae resultados de la simulación: no es una distribución` };
+  }
+  if (esFuncionDeDeclaracion(id)) {
+    return { ok: false, motivo: `RIESGO.${id} declara algo del modelo: no es una distribución` };
   }
   if (id === FUNCION_CATEGORIA.id || id === FUNCION_DISCRETA.id) {
     if (raiz.args.length !== 2) return { ok: false, motivo: `RIESGO.${id} necesita 2 argumentos: valores; pesos` };

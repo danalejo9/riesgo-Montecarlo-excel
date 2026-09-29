@@ -19,7 +19,7 @@
 
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
-  construirSpecRiesgo, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
 import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
 import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
@@ -161,3 +161,19 @@ for (const f of FUNCIONES_RESULTADO) {
     throw new CustomFunctions.Error(codigo, r.mensaje);
   }) as (...args: never[]) => Promise<number>);
 }
+
+// Resto de B6: declaran algo del modelo; en la hoja valen lo que el motor
+// pone en su lugar al simular (0 la salida, el coeficiente la correlación).
+asociar(FUNCION_SALIDA.id, (nombre?: unknown) => {
+  if (nombre !== undefined && nombre !== null && typeof nombre !== 'string') {
+    throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidValue, 'El nombre de RIESGO.SALIDA tiene que ser un texto');
+  }
+  return 0;
+});
+
+asociar(FUNCION_CORRELACION.id, (_a: unknown, _b: unknown, coeficiente: unknown) => {
+  if (typeof coeficiente !== 'number' || !(coeficiente >= -1 && coeficiente <= 1)) {
+    throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'El coeficiente de RIESGO.CORRELACION tiene que estar entre -1 y 1');
+  }
+  return coeficiente;
+});

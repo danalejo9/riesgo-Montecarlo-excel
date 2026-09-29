@@ -5,6 +5,23 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### B6 (resto): RIESGO.SALIDA y RIESGO.CORRELACION (2026-09-29)
+
+**Añadido**
+- `=RIESGO.SALIDA("nombre")+fórmula` marca la celda como **salida** sin
+  pasar por el panel (vale 0, así que no cambia el resultado de la fórmula).
+  *Simular* ya no exige salidas en el panel.
+- `=RIESGO.CORRELACION(celda1; celda2; coeficiente)` en cualquier celda
+  **correlaciona** dos entradas (con función RIESGO o del panel); la celda
+  enseña el coeficiente. Si el panel ya las correlacionaba, manda la fórmula.
+  Errores claros si una celda no es entrada o el coeficiente no está entre -1
+  y 1.
+- «Preparar para compartir» deja las celdas con `RIESGO.SALIDA` calculando
+  (la llamada pasa a ser un 0) y lleva al panel las salidas y correlaciones
+  declaradas; «Restaurar» lo deshace.
+- Libro de demostración: sección 9 de «Pruebas» (filas 46–49). Guía: F20,
+  F21 y N12.
+
 ### U2: Resultados más fáciles de leer (2026-09-29)
 
 **Cambiado**

@@ -37,6 +37,7 @@ import { coercionNumerica } from '../values/coercion.ts';
 import { desdeEscalar, valorEn, vacioConstante, NUMERO, TEXTO, LOGICO, type Columna } from '../values/columna.ts';
 import type { DistributionSpec } from './distributionSchema.ts';
 import {
+  esFuncionDeDeclaracion,
   esFuncionDeResultado,
   esFuncionParametrica,
   FUNCION_TRUNCAR,
@@ -106,7 +107,7 @@ export interface RiesgoEnGrafo {
 export function esLlamadaDistribucion(n: Nodo): n is Extract<Nodo, { tipo: 'funcion' }> {
   if (n.tipo !== 'funcion') return false;
   const id = idDeFuncionRiesgo(n.nombre);
-  return id !== null && !esFuncionDeResultado(id);
+  return id !== null && !esFuncionDeResultado(id) && !esFuncionDeDeclaracion(id);
 }
 
 /** ¿Contiene el AST alguna llamada a una distribución RIESGO? */

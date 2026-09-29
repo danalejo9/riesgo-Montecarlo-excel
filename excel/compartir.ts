@@ -35,6 +35,7 @@ export async function prepararParaCompartir(modelo: ModeloRiesgo): Promise<Resul
   });
   const plan = planificarCompartir(libro.formulas, libro.valores, clavesPanel);
   if (plan.conversiones.length === 0 && plan.congelar.length === 0) return { modelo, plan };
+  const direccionesConNombre = [...plan.conversiones.map((c) => c.direccion), ...plan.salidas.filter((s) => !s.nombre).map((s) => s.direccion)];
 
   await Excel.run(async (context) => {
     // Las fórmulas guardadas se suman a las de una preparación anterior.
@@ -54,15 +55,19 @@ export async function prepararParaCompartir(modelo: ModeloRiesgo): Promise<Resul
     }
     for (const { c, rango } of congeladas) {
       previas[c.direccion] = c.formula;
-      const actuales = rango.values;
-      rango.values = actuales;
+      if (c.formulaNueva) {
+        rango.formulas = [[c.formulaNueva]];
+      } else {
+        const actuales = rango.values;
+        rango.values = actuales;
+      }
     }
     context.workbook.settings.add(CLAVE_FORMULAS_COMPARTIDAS, JSON.stringify(previas));
     await context.sync();
   });
 
   // Con nombre legible («Demanda», no «Pruebas!C5»): prueba J1 del 29/09.
-  const nombres = await leerNombresSugeridos(plan.conversiones.map((c) => c.direccion)).catch(() => new Map<string, string>());
+  const nombres = await leerNombresSugeridos(direccionesConNombre).catch(() => new Map<string, string>());
   return { modelo: modeloParaCompartir(modelo, plan, nombres), plan };
 }
 

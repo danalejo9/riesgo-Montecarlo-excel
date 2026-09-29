@@ -404,6 +404,22 @@ for fila, texto, formato in ((40, "escribe =RIESGO.MEDIA(C37)", '#,##0.00'),
     c = p.cell(fila, 9, texto)
     c.font = Font(italic=True, color="666666")
 
+# 9. Salida y correlación declaradas desde la fórmula (resto de B6).
+etiqueta(45, "9. SALIDA Y CORRELACIÓN CON FUNCIONES (pruebas F20–F21)", True)
+etiqueta(46, "Coste de materiales")
+etiqueta(47, "Coste de transporte")
+etiqueta(48, "Correlación materiales-transporte")
+etiqueta(49, "Coste total")
+for fila, texto, formato in ((46, "escribe =RIESGO.NORMAL(100;10)", '#,##0.00'),
+                             (47, "escribe =RIESGO.NORMAL(50;5)", '#,##0.00'),
+                             (48, "escribe =RIESGO.CORRELACION(C46;C47;0,9)", '0.00'),
+                             (49, 'escribe =RIESGO.SALIDA("Coste total")+C46+C47', '#,##0.00')):
+    c3 = p.cell(fila, 3)
+    c3.fill = PARA_ESCRIBIR
+    c3.number_format = formato
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+
 # 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
 p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"

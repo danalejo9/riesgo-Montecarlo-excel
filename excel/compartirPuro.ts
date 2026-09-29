@@ -26,6 +26,7 @@ import {
 } from '../engine/modelo/index.ts';
 import { claveCelda, letrasDeColumna } from '../engine/parser/ast.ts';
 import { componerDireccion } from './direcciones.ts';
+import { formulaSinSalida, leerDeclaraciones, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
 import type { ValorEstatico } from './tiposLectura.ts';
 import { aValorCelda } from './valoresEstaticos.ts';
 
@@ -44,6 +45,11 @@ export interface CongelacionCompartir {
   direccion: string;
   clave: string;
   formula: string;
+  /**
+   * En vez del valor, esta fórmula: la de una celda con `RIESGO.SALIDA`, sin
+   * la llamada (vale 0), sigue calculando en un Excel sin el complemento.
+   */
+  formulaNueva?: string;
 }
 
 export interface PlanCompartir {
@@ -57,6 +63,10 @@ export interface PlanCompartir {
   congelar: CongelacionCompartir[];
   /** Celdas con `RIESGO.*` que no se pueden convertir, con el motivo: no se tocan. */
   noConvertibles: string[];
+  /** Las salidas declaradas con `RIESGO.SALIDA`: pasan al panel. */
+  salidas: { direccion: string; nombre?: string }[];
+  /** Las correlaciones de `RIESGO.CORRELACION`: pasan al panel, entre las entradas de esas celdas. */
+  correlaciones: { direccionA: string; direccionB: string; coeficiente: number }[];
 }
 
 export function planificarCompartir(
@@ -65,8 +75,18 @@ export function planificarCompartir(
   /** Las celdas de las entradas del panel: una RIESGO que dependa de ellas no es fija. */
   clavesEntradaPanel: readonly string[] = [],
 ): PlanCompartir {
-  const plan: PlanCompartir = { conversiones: [], congelar: [], noConvertibles: [] };
+  const plan: PlanCompartir = { conversiones: [], congelar: [], noConvertibles: [], salidas: [], correlaciones: [] };
   const { grafo } = construirGrafo([...formulas], valores.map(aValorCelda));
+  // RIESGO.SALIDA y RIESGO.CORRELACION: lo que declaran pasa al panel.
+  const declaraciones = leerDeclaraciones(grafo);
+  sustituirDeclaraciones(grafo, declaraciones.celdas);
+  const legible = (clave: string) => {
+    const nodo = grafo.nodos.get(clave);
+    return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : clave;
+  };
+  plan.salidas = declaraciones.salidas.map((s) => ({ direccion: s.direccion, ...(s.nombre ? { nombre: s.nombre } : {}) }));
+  plan.correlaciones = declaraciones.correlaciones.map((c) => ({ direccionA: legible(c.claveA), direccionB: legible(c.claveB), coeficiente: c.coeficiente }));
+  plan.noConvertibles.push(...declaraciones.errores);
   const r = analizarRiesgoEnGrafo(grafo, { clavesEntradaPanel, clavesSalida: [], todas: true });
   const porClave = new Map(formulas.map((f) => [claveCelda(f.hoja, f.col, f.fila), f] as const));
   const texto = (f: FormulaCelda) => (f.formula.startsWith('=') ? f.formula : `=${f.formula}`);
@@ -86,6 +106,13 @@ export function planificarCompartir(
   }
   plan.noConvertibles.push(...r.errores);
   for (const e of r.errores) tocadas.add(e.slice(0, e.indexOf(': ')));
+  for (const clave of declaraciones.celdas) {
+    const f = porClave.get(clave);
+    if (!f || tocadas.has(clave)) continue;
+    tocadas.add(clave);
+    const sin = formulaSinSalida(texto(f));
+    plan.congelar.push({ direccion: direccion(f), clave, formula: texto(f), ...(sin !== texto(f) && !/RIESGO\.|RISK\./i.test(sin) ? { formulaNueva: sin } : {}) });
+  }
   for (const [clave, nodo] of grafo.nodos) {
     if (tocadas.has(clave) || !nodo.ast || !contieneFuncionResultado(nodo.ast)) continue;
     const f = porClave.get(clave);
@@ -118,7 +145,33 @@ export function modeloParaCompartir(
       dist: c.spec,
       correlations: [],
     }));
-  return { ...modelo, inputs: [...modelo.inputs, ...nuevas] };
+  const inputs = [...modelo.inputs, ...nuevas];
+  const norm = (d: string) => d.replace(/'/g, '').toUpperCase();
+  // Las correlaciones de RIESGO.CORRELACION, entre las entradas de esas celdas.
+  const idPorRef = new Map(inputs.map((e) => [norm(e.ref), e.id] as const));
+  const extra = new Map<string, { with: string; coefficient: number }[]>();
+  for (const c of plan.correlaciones) {
+    const a = idPorRef.get(norm(c.direccionA));
+    const b = idPorRef.get(norm(c.direccionB));
+    if (!a || !b) continue;
+    extra.set(a, [...(extra.get(a) ?? []), { with: b, coefficient: c.coeficiente }]);
+  }
+  const par = (x: string, y: string) => [x, y].sort().join('\u0000');
+  const nuevosPares = new Set([...extra].flatMap(([a, ls]) => ls.map((l) => par(a, l.with))));
+  const salidasYa = new Set(modelo.outputs.map((s) => norm(s.ref)));
+  return {
+    ...modelo,
+    inputs: inputs.map((e) => ({
+      ...e,
+      correlations: [...e.correlations.filter((k) => !nuevosPares.has(par(e.id, k.with))), ...(extra.get(e.id) ?? [])],
+    })),
+    outputs: [
+      ...modelo.outputs,
+      ...plan.salidas
+        .filter((s) => !salidasYa.has(norm(s.direccion)))
+        .map((s) => ({ id: `${PREFIJO_COMPARTIR}${generarId('out').slice(4)}`, name: s.nombre ?? nombres?.get(s.direccion) ?? s.direccion, ref: s.direccion })),
+    ],
+  };
 }
 
 /** El modelo sin las entradas que creó «Preparar para compartir» (al restaurar las fórmulas). */
@@ -132,5 +185,7 @@ export function modeloRestaurado(modelo: ModeloRiesgo, direcciones: readonly str
     inputs: modelo.inputs
       .filter((e) => !ids.has(e.id))
       .map((e) => ({ ...e, correlations: e.correlations.filter((c) => !ids.has(c.with)) })),
+    // Las salidas que venían de RIESGO.SALIDA: la función vuelve a declararlas.
+    outputs: modelo.outputs.filter((s) => !(s.id.startsWith(PREFIJO_COMPARTIR) && quitar.has(s.ref.replace(/'/g, '').toUpperCase()))),
   };
 }

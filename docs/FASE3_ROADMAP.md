@@ -353,7 +353,9 @@ Estimaciones en días de trabajo efectivo.
 - **B6. Funciones que no son distribuciones** — ✅ **hecho el 28/09** lo de
   traer resultados (`MEDIA`, `DESV`, `PERCENTIL`, `PROB`, `MIN`, `MAX`), con el
   diseño de abajo (`excel/resultadosEnHoja.ts`, `almacenResultadosHoja.ts`,
-  `resultadosEnGrafo.ts`). Quedan `RIESGO.SALIDA()` y `RIESGO.CORRELACION`,
+  `resultadosEnGrafo.ts`). ✅ **29/09**: `RIESGO.SALIDA("nombre")` (vale 0,
+  se suma a la fórmula) y `RIESGO.CORRELACION(celda1; celda2; coef)` (vale el
+  coeficiente), en `excel/declaracionesEnGrafo.ts`. Antes quedaban `RIESGO.SALIDA()` y `RIESGO.CORRELACION`,
   y con B1, leer los resultados del libro: `RIESGO.SALIDA()` (marcar una
   salida desde la fórmula); `RIESGO.MEDIA(celda)`, `RIESGO.PERCENTIL(celda;
   p)`, `RIESGO.PROB(celda; umbral)`, `RIESGO.DESV(celda)` para traer a la hoja
@@ -700,7 +702,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
+pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

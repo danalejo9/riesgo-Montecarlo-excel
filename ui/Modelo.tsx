@@ -385,12 +385,14 @@ export function Modelo({
       )}
 
       <section>
-        <button type="button" className="principal" onClick={alSimular} disabled={ocupado || !listo}>
+        {/* Sin salidas en el panel también: el libro puede declararlas con RIESGO.SALIDA. */}
+        <button type="button" className="principal" onClick={alSimular} disabled={ocupado}>
           {ocupado ? 'Simulando…' : 'Simular'}
         </button>
         {!listo && (
           <p className="tenue">
-            Hace falta al menos una salida. Las entradas pueden ser celdas marcadas aquí o celdas
+            Hace falta al menos una salida: márcala aquí o súmale a su fórmula
+            =RIESGO.SALIDA("nombre"). Las entradas pueden ser celdas marcadas aquí o celdas
             con una función como =RIESGO.NORMAL(100; 15).
           </p>
         )}

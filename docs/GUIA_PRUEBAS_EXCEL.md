@@ -185,6 +185,9 @@ simular la demo:
   abrirlo: sigue abierta.
 - Dime si ahora se lee mejor y si cambiarías qué va abierto o a la vista.
 
+**N12. Salida y correlación desde la fórmula** (resto de B6, nuevo): haz
+F20 y F21 (sección 9 de «Pruebas»).
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -555,6 +558,33 @@ a abrir el libro.
   estas funciones se guardan en el equipo, no en el libro. En otro equipo
   darán #N/D hasta abrir el panel (que los publica de nuevo desde los
   resultados guardados en el libro) o simular.
+
+**Salida y correlación con funciones (sección 9 de «Pruebas», filas
+46–49).** Escribe:
+
+| Celda | Fórmula | Enseña |
+|---|---|---|
+| C46 | `=RIESGO.NORMAL(100;10)` | 100 |
+| C47 | `=RIESGO.NORMAL(50;5)` | 50 |
+| C48 | `=RIESGO.CORRELACION(C46;C47;0,9)` | 0,90 |
+| C49 | `=RIESGO.SALIDA("Coste total")+C46+C47` | 150 |
+
+**F20. RIESGO.SALIDA.** Sin marcar C49 como salida en el panel, simula.
+- Esperado: en Resultados aparece una salida **«Coste total»** (Pruebas!C49),
+  con media en torno a **150**. Si quitas todas las salidas del panel,
+  *Simular* sigue funcionando: basta la de la fórmula.
+
+**F21. RIESGO.CORRELACION.** Mira la desviación de «Coste total».
+- Esperado: unos **14,7** (con la correlación de 0,9). Cambia C48 a
+  `=RIESGO.CORRELACION(C46;C47;0)` y vuelve a simular: baja a unos **11,2**;
+  con `-0,9`, a unos **5,9**. Deja 0,9.
+- Errores claros: un coeficiente de 1,5 (en la celda da #¡NUM!; al simular,
+  «tiene que estar entre -1 y 1»), o una celda que no es entrada (p. ej.
+  `=RIESGO.CORRELACION(C46;C45;0,5)`: «Pruebas!C45 no es una entrada»).
+- Con el motor **Compatible** da lo mismo (más despacio).
+- «Preparar para compartir»: C49 queda como `=0+C46+C47` (sigue calculando
+  sin el complemento), C48 con su valor, y el panel gana la salida «Coste
+  total» y la correlación entre C46 y C47. «Restaurar» lo deshace.
 
 ---
 

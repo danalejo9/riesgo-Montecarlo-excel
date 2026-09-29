@@ -84,11 +84,20 @@ const LIBRO: Record<string, Celda> = {
   B21: { formula: 'B19*B4+B20' },
   A22: { valor: 'Media del precio' },
   B22: { formula: 'RIESGO.MEDIA(B10)' },
+  // Salida y correlación declaradas desde la fórmula (resto de B6).
+  A24: { valor: 'Materiales' },
+  B24: { formula: 'RIESGO.NORMAL(100,10)' },
+  A25: { valor: 'Transporte' },
+  B25: { formula: 'RIESGO.NORMAL(50,5)' },
+  A26: { valor: 'Correlación' },
+  B26: { formula: 'RIESGO.CORRELACION(B24,B25,0.9)' },
+  A27: { valor: 'Coste total' },
+  B27: { formula: 'RIESGO.SALIDA("Coste total")+B24+B25' },
 };
 
 /** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
 const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
-const FILAS_USADAS = 22;
+const FILAS_USADAS = 27;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -181,6 +190,16 @@ function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): 
           args: [{ tipo: 'texto', valor: clave, pos: x.pos }, { tipo: 'texto', valor: idDeFuncionRiesgo(x.nombre) ?? '', pos: x.pos }, ...x.args],
         };
       }
+      // Las que declaran algo valen lo que en Excel: 0 la salida, el coeficiente la correlación.
+      const id = x.tipo === 'funcion' ? idDeFuncionRiesgo(x.nombre) : null;
+      if (x.tipo === 'funcion' && id === 'SALIDA') {
+        hay = true;
+        return { tipo: 'numero', valor: 0, pos: x.pos };
+      }
+      if (x.tipo === 'funcion' && id === 'CORRELACION' && x.args[2]) {
+        hay = true;
+        return x.args[2];
+      }
       if (x.tipo === 'funcion') return { ...x, args: x.args.map(cambiar) };
       if (x.tipo === 'binaria') return { ...x, izq: cambiar(x.izq), der: cambiar(x.der) };
       if (x.tipo === 'unaria' || x.tipo === 'porcentaje') return { ...x, arg: cambiar(x.arg) };
@@ -268,11 +287,23 @@ function rangoSimple(ref: string) {
       return [[(foto ? foto.valor : objetivo.valor) ?? '']];
     },
     set values(v: unknown[][]) {
+      // Como en Excel: escribir un valor quita la fórmula (se restaura con `formulas`).
+      delete objetivo.formula;
       objetivo.valor = v[0]?.[0] as number;
       foto = null;
     },
     get formulas() {
       return [[objetivo.formula ? `=${objetivo.formula}` : (objetivo.valor ?? '')]];
+    },
+    // Reescribir la fórmula (refrescar las celdas de B6, restaurar): como en Excel.
+    set formulas(v: unknown[][]) {
+      const x = v[0]?.[0];
+      if (typeof x === 'string' && x.startsWith('=')) objetivo.formula = x.slice(1);
+      else {
+        delete objetivo.formula;
+        objetivo.valor = x as number;
+      }
+      foto = null;
     },
     get valueTypes() {
       return [[tipoDeValor(foto ? foto.valor : objetivo.valor)]];

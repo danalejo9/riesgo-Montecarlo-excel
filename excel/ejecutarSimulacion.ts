@@ -44,6 +44,7 @@ import {
   type FalloSimulacion,
   type ResultadoSimulacionPanel,
 } from './informe.ts';
+import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNCION, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -96,12 +97,6 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   let modelo = peticion.modelo;
   const arranque = performance.now();
 
-  if (modelo.outputs.length === 0) {
-    return fallo('modelo', 'El modelo no tiene ninguna salida.', [
-      'Marca al menos una celda como salida: es lo que se va a medir.',
-    ]);
-  }
-
   // 1. Referencias -> claves de celda.
   progreso?.({ fase: 'resolviendo', mensaje: 'Resolviendo las celdas del modelo…' });
   const refs = [...modelo.inputs.map((e) => e.ref), ...modelo.outputs.map((s) => s.ref)];
@@ -136,8 +131,38 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : c;
   });
 
-  // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
+  // RIESGO.SALIDA y RIESGO.CORRELACION (resto de B6): declaran salidas y
+  // correlaciones desde la fórmula; en el motor valen lo que en Excel.
   const textos = indiceDeTextos(libro.valores);
+  const declaraciones = leerDeclaraciones(grafo);
+  if (declaraciones.errores.length > 0) {
+    return fallo('modelo', 'Hay funciones RIESGO.SALIDA o RIESGO.CORRELACION que no se pueden usar tal como están.', declaraciones.errores);
+  }
+  sustituirDeclaraciones(grafo, declaraciones.celdas);
+  const yaSalidas = new Set(clavesSalida);
+  const salidasDeFunciones = declaraciones.salidas.filter((s) => !yaSalidas.has(s.clave));
+  if (salidasDeFunciones.length > 0) {
+    modelo = {
+      ...modelo,
+      outputs: [
+        ...modelo.outputs,
+        ...salidasDeFunciones.map((s) => {
+          const nodo = grafo.nodos.get(s.clave);
+          const nombre = s.nombre ?? (nodo ? textos.nombre(s.direccion, nodo.hoja, nodo.col, nodo.fila) : s.direccion);
+          return { id: `${PREFIJO_SALIDA_FUNCION}${s.clave}`, name: nombre, ref: s.direccion };
+        }),
+      ],
+    };
+    clavesSalida.push(...salidasDeFunciones.map((s) => s.clave));
+  }
+  if (modelo.outputs.length === 0) {
+    return fallo('modelo', 'El modelo no tiene ninguna salida.', [
+      'Marca al menos una celda como salida: es lo que se va a medir,',
+      'o súmale a su fórmula =RIESGO.SALIDA("nombre").',
+    ]);
+  }
+
+  // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
   const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre);
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
@@ -145,6 +170,16 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   if (deFunciones.entradas.length > 0) {
     modelo = { ...modelo, inputs: [...modelo.inputs, ...deFunciones.entradas] };
     clavesEntrada.push(...deFunciones.claves);
+  }
+  if (declaraciones.correlaciones.length > 0) {
+    const celdas = modelo.inputs.map((e, i) => deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string));
+    const legible = (clave: string) => {
+      const nodo = grafo.nodos.get(clave);
+      return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : clave;
+    };
+    const c = aplicarCorrelacionesDeFunciones(modelo.inputs, celdas, declaraciones.correlaciones, legible);
+    if (c.errores.length > 0) return fallo('modelo', 'Hay funciones RIESGO.CORRELACION que no se pueden usar tal como están.', c.errores);
+    modelo = { ...modelo, inputs: c.entradas };
   }
   // RIESGO dentro de una operación o con parámetros que cambian (B7): la
   // fórmula se reescribe con celdas virtuales antes de elegir motor.

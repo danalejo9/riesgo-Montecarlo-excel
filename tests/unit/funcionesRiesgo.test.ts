@@ -85,7 +85,7 @@ describe('metadatos para Excel (funciones.json)', () => {
     const m = metadatosFunciones() as { functions: { id: string; parameters: unknown[] }[] };
     expect(m.functions.map((f) => f.id)).toEqual([
       ...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA', 'DISCRETA', 'EMPIRICA', 'TRUNCAR',
-      'MEDIA', 'DESV', 'PERCENTIL', 'PROB', 'MIN', 'MAX',
+      'MEDIA', 'DESV', 'PERCENTIL', 'PROB', 'MIN', 'MAX', 'SALIDA', 'CORRELACION',
     ]);
     expect(m.functions.find((f) => f.id === 'TRIANGULAR')?.parameters).toHaveLength(3);
   });

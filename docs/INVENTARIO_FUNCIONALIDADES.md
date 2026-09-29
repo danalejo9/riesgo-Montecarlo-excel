@@ -121,7 +121,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
 | 17 | B4 | ✅ `RIESGO.DISCRETA`, distribuciones truncadas, `RIESGO.LOGNORMAL2` | **Tú** (lista de funciones) |
-| 18 | B6 | ✅ (28/09, parcial) **Traer resultados a la hoja**: `RIESGO.MEDIA`, `RIESGO.DESV`, `RIESGO.PERCENTIL`, `RIESGO.PROB` (también de un texto), `RIESGO.MIN`, `RIESGO.MAX`, sin tocar el manifiesto (resultados guardados en el equipo hasta B1). Pendientes: `RIESGO.SALIDA()` y la correlación desde la fórmula | **Tú** (lista de funciones) |
+| 18 | B6 | ✅ (28–29/09, falta Excel real de lo último) **Traer resultados a la hoja**: `RIESGO.MEDIA`, `RIESGO.DESV`, `RIESGO.PERCENTIL`, `RIESGO.PROB` (también de un texto), `RIESGO.MIN`, `RIESGO.MAX`; y **declarar desde la fórmula**: `RIESGO.SALIDA("nombre")` y `RIESGO.CORRELACION(celda1; celda2; coef)` | **Tú** (lista de funciones) |
 | 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
 | 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
 | 21 | I2 | **Ajuste orientado al riesgo**: error en percentiles P50–P99, bootstrap, discretas | **Tú** (investigación) |

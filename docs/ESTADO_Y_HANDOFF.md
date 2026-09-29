@@ -1039,6 +1039,19 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `MedidasDeRiesgo` y `QueTieneQuePasar` con `conTitulo`. Guía N11.
     **Siguiente**: RIESGO.SALIDA y RIESGO.CORRELACION (resto de B6).
 
+46. [x] **B6 completo (2026-09-29)**. `excel/declaracionesEnGrafo.ts`:
+    `leerDeclaraciones` (salidas y correlaciones del grafo, con errores por
+    celda), `sustituirDeclaraciones` (0 / coeficiente), `formulaSinSalida`
+    (compartir), `aplicarCorrelacionesDeFunciones` (por la celda real de cada
+    entrada; manda la fórmula). En `ejecutarSimulacion.ts` las salidas
+    declaradas se añaden con id `rs_` y la comprobación «sin salidas» va
+    después de leer el libro; *Simular* siempre activo. Compartir:
+    `formulaNueva` en `CongelacionCompartir`, salidas y correlaciones al
+    panel. Banco: celdas B24–B27; el rango falso admite `formulas =` y
+    escribir un valor quita la fórmula, como Excel. Límite: el umbral de una
+    salida declarada con la función no se guarda (no está en el panel).
+    **Siguiente**: I2.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

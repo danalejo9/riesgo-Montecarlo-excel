@@ -5,7 +5,9 @@
  * puede quedar una descrita en Excel que el motor no sepa simular.
  */
 
-import { FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
+import {
+  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+} from './funcionesRiesgo.ts';
 
 /** Lo que enseñan fuera de la simulación (B2). */
 const FUERA = 'Fuera de la simulación devuelve la media, u otro valor fijo o uno al azar según el modo del libro.';
@@ -100,6 +102,23 @@ export function metadatosFunciones(): object {
         dimensionality: 'scalar',
         ...(f.id === 'PROB' && i === 2 ? { optional: true } : {}),
       })),
-    })))),
+    }))).concat([{
+      // Resto de B6: declaran una salida o una correlación desde la fórmula.
+      id: FUNCION_SALIDA.id,
+      name: FUNCION_SALIDA.id,
+      description: FUNCION_SALIDA.descripcion,
+      result: { type: 'number', dimensionality: 'scalar' },
+      parameters: FUNCION_SALIDA.parametros.map((p) => ({
+        name: p.nombre, description: p.descripcion, type: 'any', dimensionality: 'scalar', optional: true,
+      })),
+    }, {
+      id: FUNCION_CORRELACION.id,
+      name: FUNCION_CORRELACION.id,
+      description: FUNCION_CORRELACION.descripcion,
+      result: { type: 'number', dimensionality: 'scalar' },
+      parameters: FUNCION_CORRELACION.parametros.map((p, i) => ({
+        name: p.nombre, description: p.descripcion, type: i === 2 ? 'number' : 'any', dimensionality: 'scalar',
+      })),
+    }])),
   };
 }
