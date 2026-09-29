@@ -23,6 +23,7 @@ import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
 import {
   agruparCorrelaciones,
   resumirDistribucion,
+  resumirDistribucionFecha,
   type EntradaRiskModel,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
@@ -147,6 +148,7 @@ export function Modelo({
   alAbrirConfiguracion,
   alDeshacer,
   entradasDelLibro,
+  idsFecha,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
@@ -160,6 +162,8 @@ export function Modelo({
   alDeshacer?: () => void;
   /** Las entradas que declaran funciones RIESGO del libro, de la última simulación (E1). */
   entradasDelLibro?: readonly { ref: string; distribucion: string; nombre?: string }[];
+  /** Entradas cuya celda tiene formato de fecha, según la última simulación (T7). */
+  idsFecha?: ReadonlySet<string>;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -326,7 +330,7 @@ export function Modelo({
                     <tr key={e.id} onClick={() => setAbierta(e.id)} title="Abrir para editarla">
                       <td>{e.name}</td>
                       <td className="tenue">{e.ref}</td>
-                      <td>{resumirDistribucion(e.dist)}</td>
+                      <td>{idsFecha?.has(e.id) ? resumirDistribucionFecha(e.dist) : resumirDistribucion(e.dist)}</td>
                       <td>{e.correlations.length || ''}</td>
                     </tr>
                   ))}

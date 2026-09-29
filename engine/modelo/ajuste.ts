@@ -64,7 +64,7 @@ export interface AjusteCandidato {
   errorGeneral: number;
   errorSuperior: number;
   errorInferior: number;
-  /** Poisson o binomial (I2): su verosimilitud es una probabilidad, no una densidad; el AIC no se compara con las continuas. */
+  /** Poisson, binomial o binomial negativa (I2): su verosimilitud es una probabilidad, no una densidad; el AIC no se compara con las continuas. */
   discreta?: boolean;
 }
 
@@ -222,6 +222,13 @@ export function logDensidad(spec: DistributionSpec): { f: (x: number) => number;
       return { k: 2, f: (x) => (x <= 0 ? -Infinity : Math.log(k / l) + (k - 1) * Math.log(x / l) - (x / l) ** k) };
     }
     // Discretas (I2): el logaritmo de la probabilidad de cada valor.
+    case 'negbin': {
+      const { r, p: q } = spec;
+      return {
+        k: 2,
+        f: (x) => (x < 0 || !Number.isInteger(x) ? -Infinity : lgamma(x + r) - lgamma(r) - lgamma(x + 1) + r * Math.log(q) + (x === 0 ? 0 : x * Math.log(1 - q))),
+      };
+    }
     case 'poisson': {
       const l = spec.lambda;
       return { k: 1, f: (x) => (x < 0 || !Number.isInteger(x) ? -Infinity : x * Math.log(l) - l - lgamma(x + 1)) };
@@ -280,11 +287,16 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
     errorGeneral: errorDe('general'),
     errorSuperior: errorDe('superior'),
     errorInferior: errorDe('inferior'),
-    ...(spec.type === 'poisson' || spec.type === 'binomial' ? { discreta: true } : {}),
+    ...(esDiscretaDeConteo(spec) ? { discreta: true } : {}),
   };
 }
 
 /** Percentil `p` de unos datos ordenados (interpolación lineal, la de PERCENTIL.INC de Excel). */
+/** Las discretas que propone el ajuste para conteos (I2). */
+function esDiscretaDeConteo(spec: DistributionSpec): boolean {
+  return spec.type === 'poisson' || spec.type === 'binomial' || spec.type === 'negbin';
+}
+
 export function percentilDatos(ordenados: ArrayLike<number>, p: number): number {
   const n = ordenados.length;
   const h = (n - 1) * p;
@@ -532,6 +544,12 @@ function specsDe(x: Float64Array, discretas: boolean, solo?: DistributionSpec['t
       const p = media / ensayos;
       if (p > 0 && p < 1) specs.push({ type: 'binomial', n: ensayos, p });
     }
+    // Conteos más dispersos que una Poisson (varianza mayor que la media): binomial negativa por momentos.
+    if (quiere('negbin') && v > media && media > 0) {
+      const p = media / v;
+      const r = (media * media) / (v - media);
+      if (p > 0 && p < 1 && r > 0) specs.push({ type: 'negbin', r, p });
+    }
   }
   return specs;
 }
@@ -577,7 +595,7 @@ export function bootstrapAjuste(
   const x = Float64Array.from(datos.filter(Number.isFinite)).sort();
   const n = x.length;
   if (n < 5) return null;
-  const discretas = spec.type === 'poisson' || spec.type === 'binomial';
+  const discretas = esDiscretaDeConteo(spec);
   const claves = Object.keys(spec).filter((k) => k !== 'type' && typeof (spec as unknown as Record<string, unknown>)[k] === 'number');
   const porClave = new Map(claves.map((k) => [k, [] as number[]]));
   const porPercentil = percentiles.map(() => [] as number[]);

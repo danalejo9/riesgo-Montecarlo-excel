@@ -3,7 +3,7 @@
 > **Ronda del 29/09 (la que toca ahora): qué hacer, en orden.**
 > 1. **Preparación** (sección 0, más abajo): actualizar, reinstalar y abrir
 >    el libro de demostración **recién descargado**.
-> 2. **Bloque N entero, de N1 a N31** (sección N, justo después de la 0).
+> 2. **Bloque N entero, de N1 a N32** (sección N, justo después de la 0).
 >    Es todo lo nuevo desde tu última ronda. Lo demás (bloques A–K, T, J, W,
 >    I) ya pasó; no hace falta repetirlo salvo N5, que es un repaso rápido.
 > 3. **N30 y N31** son con **tus propios libros** (el de humedales de 132
@@ -336,6 +336,22 @@ poner varios libros seguidos). Hazlo con el de humedales y con los libros
 que pienses simular de verdad. Pásame el informe que sale en pantalla: dice
 qué funciones faltan (por ejemplo `LAMBDA`, `DESREF` con desplazamientos
 calculados o `INDIRECTO`) y así desarrollo solo lo que tus libros usan.
+
+**N32. Binomial negativa, umbral de RIESGO.SALIDA y fechas en la tabla**
+(nuevo).
+- **Ajuste**: en una hoja vacía escribe en A1:A20 estos conteos:
+  `0 1 1 2 2 2 3 3 4 4 5 5 6 7 8 9 11 13 16 20` (uno por celda). Selecciónalos
+  y ajusta. Esperado: aparece la **binomial negativa** (r ≈ 1,64; p ≈ 0,21),
+  marcada como discreta, y es la **primera por error general**; la Poisson
+  (λ = 6,1) queda muy por detrás.
+- **Umbral**: tras F20 (C49 con `RIESGO.SALIDA("Coste total")`, sin marcarla
+  en el panel), en Resultados elige «Coste total» y pon un umbral. Esperado:
+  sale su probabilidad y **no** aparece el aviso de resultados
+  desactualizados. Cierra y abre el panel: el umbral sigue ahí.
+- **Fechas en la tabla**: tras T9 (C52 con fecha incierta), pestaña Modelo,
+  «Todas las entradas»: la distribución de C52 se lee en **fechas** (y la
+  desviación en días), no en números de serie como 46.388. Lo mismo en la
+  hoja volcada.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

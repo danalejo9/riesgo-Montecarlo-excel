@@ -204,7 +204,7 @@ export function AjusteDatos({
           </table>
           {candidatos.some((c) => c.discreta) && (
             <p className="tenue">
-              Las discretas (Poisson, binomial) dan la probabilidad de cada valor, no una densidad:
+              Las discretas (Poisson, binomial, binomial negativa) dan la probabilidad de cada valor, no una densidad:
               su AICc y su BIC no se comparan con los de las continuas. Compáralas por el error en
               percentiles o por la curva.
             </p>

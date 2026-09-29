@@ -15,6 +15,7 @@
  * 2026-09-19): lo que se guarda y lo que se lee no tienen por qué coincidir.
  */
 import type { DistributionSpec } from './distributionSchema.ts';
+import { textoFecha } from './fechas.ts';
 
 export type TipoDistribucion = DistributionSpec['type'];
 
@@ -285,4 +286,26 @@ export function resumirDistribucion(spec: DistributionSpec): string {
     .map((v) => String(v));
 
   return valores.length > 0 ? `${desc.nombre}(${valores.join('; ')})` : desc.nombre;
+}
+
+/** Parámetros que son una posición (se escriben como fecha) y los que son una dispersión (en días). */
+const POSICION = new Set(['min', 'mode', 'max', 'mean', 'loc', 'low', 'high']);
+const DISPERSION = new Set(['stdDev', 'scale']);
+
+/**
+ * El resumen de una distribución de una celda con formato de fecha (T7):
+ * «Triangular(01/01/2027; 01/02/2027; 01/04/2027)», con la dispersión en días.
+ */
+export function resumirDistribucionFecha(spec: DistributionSpec): string {
+  const desc = POR_TIPO.get(spec.type);
+  if (!desc || desc.parametros.length === 0) return resumirDistribucion(spec);
+  const esLognormalVariable = spec.type === 'lognormal' && spec.parametrization !== 'log';
+  const valores = desc.parametros.map((p) => {
+    const v = (spec as unknown as Record<string, unknown>)[p.clave];
+    if (typeof v !== 'number') return null;
+    if (POSICION.has(p.clave) || (esLognormalVariable && p.clave === 'p1')) return textoFecha(v);
+    if (DISPERSION.has(p.clave) || (esLognormalVariable && p.clave === 'p2')) return `${Number(v.toPrecision(4)).toLocaleString('es-ES')} días`;
+    return String(v);
+  }).filter((x): x is string => x !== null);
+  return `${desc.nombre}(${valores.join('; ')})`;
 }

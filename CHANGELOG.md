@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Binomial negativa en el ajuste, umbral de RIESGO.SALIDA y fechas en la tabla (2026-09-29)
+
+**Añadido**
+- El ajuste propone la **binomial negativa** (por momentos) cuando los datos
+  son conteos más dispersos que su media; con Poisson y binomial, entra en
+  la bondad y en el bootstrap como discreta.
+- Las salidas declaradas con `RIESGO.SALIDA` admiten **umbral** en
+  Resultados: se guarda en el modelo sin marcar los resultados como
+  desactualizados (la simulación no cambia).
+- «Todas las entradas» (pestaña Modelo) y la hoja volcada escriben las
+  distribuciones de las entradas de fecha **en fechas**, con la dispersión
+  en días: «Triangular(01/01/2027; 01/02/2027; 01/04/2027)».
+
 ### F2 (preparación): tiempo de lectura separado (2026-09-29)
 
 **Añadido**

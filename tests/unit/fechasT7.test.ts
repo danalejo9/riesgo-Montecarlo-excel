@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { esFormatoFecha, fechaDeSerie, leerFecha, serieDeFecha, textoFecha } from '../../engine/modelo/fechas.ts';
+import { resumirDistribucionFecha } from '../../engine/modelo/index.ts';
 import { lecturaDeSalida } from '../../excel/lectura.ts';
 import { formatoDe } from '../../ui/formato.ts';
 
@@ -52,5 +53,13 @@ describe('en los resultados', () => {
     expect(f.leer('15/03/2027')).toBe(46461);
     expect(f.leer('46461')).toBe(46461);
     expect(formatoDe(false).valor(12345)).toBe('12.345');
+  });
+});
+
+describe('en la tabla de entradas', () => {
+  it('posiciones como fecha y dispersión en días', () => {
+    const d = serieDeFecha(2027, 1, 1) as number;
+    expect(resumirDistribucionFecha({ type: 'triangular', min: d, mode: d + 31, max: d + 90 })).toBe('Triangular(01/01/2027; 01/02/2027; 01/04/2027)');
+    expect(resumirDistribucionFecha({ type: 'normal', mean: d, stdDev: 21.5 })).toMatch(/^Normal\(01\/01\/2027; 21,5 días\)$/);
   });
 });

@@ -30,7 +30,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 
-import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import type { ModeloRiesgo, SalidaRiskModel } from '../engine/modelo/index.ts';
 import type { AnalisisCola } from '../excel/analisisCola.ts';
 import type { EntradaMuestreada } from '../excel/entradasMuestreadas.ts';
 import {
@@ -163,6 +163,20 @@ export function Resultados({
       : null;
 
   const umbralDe = (id: string) => modelo.outputs.find((o) => o.id === id)?.threshold;
+  /**
+   * Cambia una salida del modelo (su umbral, su valor de interés). Una salida
+   * declarada con RIESGO.SALIDA no está en el panel: pasa a él (con su id `rs_`)
+   * para que lo que se le pone se guarde en el libro.
+   */
+  const cambiarSalida = (salida: ResultadoSalida, cambio: (o: SalidaRiskModel) => SalidaRiskModel) => {
+    const esta = modelo.outputs.some((o) => o.id === salida.id);
+    alCambiarModelo?.({
+      ...modelo,
+      outputs: esta
+        ? modelo.outputs.map((o) => (o.id === salida.id ? cambio(o) : o))
+        : [...modelo.outputs, cambio({ id: salida.id, name: salida.nombre, ref: salida.ref })],
+    });
+  };
   // U2: los avisos que importan, arriba y a la vista; el detalle, plegado abajo.
   const avisos: ReactNode[] = [];
   if (resultado.restaurado) {
@@ -279,15 +293,11 @@ export function Resultados({
           </>}
           valorDeInteres={modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest}
           alCambiarValor={(v) =>
-            alCambiarModelo?.({
-              ...modelo,
-              outputs: modelo.outputs.map((o) => {
-                if (o.id !== salida.id) return o;
-                const copia = { ...o };
-                if (v) copia.valueOfInterest = v;
-                else delete copia.valueOfInterest;
-                return copia;
-              }),
+            cambiarSalida(salida, (o) => {
+              const copia = { ...o };
+              if (v) copia.valueOfInterest = v;
+              else delete copia.valueOfInterest;
+              return copia;
             })
           }
         />
@@ -343,15 +353,11 @@ export function Resultados({
               exacto={(resultado.muestraSensibilidad ?? 0) >= resultado.iteracionesCompletadas}
               decimal={modelo.settings.locale?.decimalSeparator ?? ','}
               alCambiar={(u) =>
-                alCambiarModelo?.({
-                  ...modelo,
-                  outputs: modelo.outputs.map((o) => {
-                    if (o.id !== salida.id) return o;
-                    if (u) return { ...o, threshold: u };
-                    const copia = { ...o };
-                    delete copia.threshold;
-                    return copia;
-                  }),
+                cambiarSalida(salida, (o) => {
+                  if (u) return { ...o, threshold: u };
+                  const copia = { ...o };
+                  delete copia.threshold;
+                  return copia;
                 })
               }
             />

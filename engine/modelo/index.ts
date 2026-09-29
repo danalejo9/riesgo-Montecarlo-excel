@@ -2,6 +2,7 @@ export {
   CATALOGO_DISTRIBUCIONES,
   describirDistribucion,
   esDiscretaEntera,
+  resumirDistribucionFecha,
   resumirDistribucion,
   type DescripcionDistribucion,
   type ParametroDistribucion,

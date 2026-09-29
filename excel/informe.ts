@@ -275,7 +275,7 @@ export interface SimulacionCompletada {
    */
   huellaModelo?: string;
   /** Entradas declaradas en el libro con funciones RIESGO.*, además de las del panel. */
-  entradasDeFunciones?: { ref: string; distribucion: string; nombre?: string }[];
+  entradasDeFunciones?: { id?: string; ref: string; distribucion: string; nombre?: string }[];
   /** Cómo se muestreó cada entrada (C9), con los valores generados. */
   entradas?: EntradaMuestreada[];
   /** Celdas con RIESGO.* que también están en el panel: se usó lo del panel. */

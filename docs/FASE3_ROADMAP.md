@@ -601,7 +601,7 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   - **Gamma por MLE exacto** (Newton sobre la aproximación de Minka).
   - **Distribución empírica** como candidata en el ajuste y como función
     `RIESGO.EMPIRICA(datos)` (enlaza con «general/histograma» de B5).
-- **I2. Ajuste orientado al riesgo** ✅ 29/09 (salvo la binomial negativa, que espera a B5: el motor aún no la muestrea):
+- **I2. Ajuste orientado al riesgo** ✅ 29/09 (la binomial negativa, también el 29/09, tras B5):
   - **Error en percentiles** P50, P80, P90, P95 y P99 (ajustado frente a
     empírico), con un objetivo elegible: *general*, *cola superior* o *cola
     inferior*. Cada criterio se muestra por separado; **sin puntuación combinada
@@ -706,6 +706,9 @@ pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ES
 ~~T7, T8, T9, C3, C4, B5, D2–D4, E1–E4, H6, H7, U1, H4, H5, H8~~ ✅ 29/09 → F según los libros, G, M, E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
+**Versión 2 (decidido con el usuario el 29/09)**: opciones de decisión (T9) y
+búsqueda de objetivo (H4) con el **motor compatible**. Hoy solo van con el
+rápido y el panel lo dice; los libros que lo necesiten se verán en la ronda.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por
 separado. Se consolidan varios (etapa 1b y bloque T como mínimo), se
 **reescribe la guía de pruebas desde cero** y el usuario la recorre entera

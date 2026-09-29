@@ -434,6 +434,7 @@ export function Panel() {
             alCambiar={cambiarModelo}
             {...(puedeDeshacer ? { alDeshacer: deshacer } : {})}
             {...(resultado?.ok && resultado.entradasDeFunciones ? { entradasDelLibro: resultado.entradasDeFunciones } : {})}
+            {...(resultado?.ok && resultado.entradas ? { idsFecha: new Set(resultado.entradas.filter((e) => e.fecha).map((e) => e.id)) } : {})}
             alSimular={() => void simular()}
             ocupado={simulando}
             ritmo={ritmo}

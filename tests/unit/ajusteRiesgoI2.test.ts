@@ -77,6 +77,18 @@ describe('discretas para conteos', () => {
     expect((b?.n ?? 0) * (b?.p ?? 0)).toBeCloseTo(6, 0);
   });
 
+  it('conteos más dispersos que su media: binomial negativa por momentos', () => {
+    const datos = cuantiles({ type: 'negbin', r: 3, p: 0.4 }, 400);
+    const r = ajustarDistribuciones(datos);
+    const nb = r?.candidatos.find((c) => c.spec.type === 'negbin');
+    expect(nb?.discreta).toBe(true);
+    const s = nb?.spec as { r: number; p: number };
+    // Media r(1−p)/p = 4,5 y varianza r(1−p)/p² = 11,25.
+    expect((s.r * (1 - s.p)) / s.p).toBeCloseTo(4.5, 0);
+    expect(r?.candidatos.some((c) => c.spec.type === 'binomial')).toBe(false);
+    expect(ordenarCandidatos(r?.candidatos ?? [], 'errorGeneral')[0]?.spec.type).toBe('negbin');
+  });
+
   it('importes enteros grandes y distintos no se tratan como conteos', () => {
     const datos = cuantiles({ type: 'normal', mean: 5000, stdDev: 800 }, 200).map(Math.round);
     const r = ajustarDistribuciones(datos);

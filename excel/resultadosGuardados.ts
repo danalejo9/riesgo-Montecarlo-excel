@@ -38,12 +38,16 @@ function fnv1a(texto: string): string {
   return (h >>> 0).toString(16).padStart(8, '0');
 }
 
-/** La huella de lo que determina una simulación. El umbral no entra. */
+/**
+ * La huella de lo que determina una simulación. El umbral no entra, ni las
+ * salidas que declara `RIESGO.SALIDA` y que pasaron al panel solo para guardar
+ * su umbral (id `rs_`): la simulación ya las tenía.
+ */
 export function huellaModelo(m: ModeloRiesgo): string {
   return fnv1a(
     JSON.stringify({
       inputs: m.inputs,
-      outputs: m.outputs.map((o) => ({ id: o.id, name: o.name, ref: o.ref })),
+      outputs: m.outputs.filter((o) => !o.id.startsWith('rs_')).map((o) => ({ id: o.id, name: o.name, ref: o.ref })),
       settings: m.settings,
     }),
   );

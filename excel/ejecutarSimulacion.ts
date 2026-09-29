@@ -32,6 +32,7 @@ import {
   elegirMotor,
   prepararEntradas,
   resumirDistribucion,
+  resumirDistribucionFecha,
   OBJETIVO_PRECISION_POR_DEFECTO,
   type EleccionMotor,
   type ModeloRiesgo,
@@ -436,6 +437,15 @@ function conFechas(
     ...r,
     salidas: r.salidas.map((s, i) => (fechas.has(dirSalidas[i] as string) ? { ...s, fecha: true } : s)),
     ...(r.entradas ? { entradas: r.entradas.map((e) => (entradaFecha.has(e.id) ? { ...e, fecha: true } : e)) } : {}),
+    // Las funciones RIESGO de celdas con fecha, con sus parámetros en fechas.
+    ...(r.entradasDeFunciones
+      ? {
+          entradasDeFunciones: r.entradasDeFunciones.map((e) => {
+            const entrada = e.id && entradaFecha.has(e.id) ? modelo.inputs.find((x) => x.id === e.id) : undefined;
+            return entrada && !e.distribucion.includes('cambian') ? { ...e, distribucion: resumirDistribucionFecha(entrada.dist) } : e;
+          }),
+        }
+      : {}),
     ...(r.iteraciones
       ? {
           iteraciones: {
@@ -461,6 +471,7 @@ function conEntradasDeFunciones(
   return {
     ...r,
     entradasDeFunciones: d.entradas.map((e) => ({
+      id: e.id,
       ref: d.celdaDeEntrada.get(e.id) ?? e.ref,
       nombre: e.name,
       distribucion: d.descripciones.get(e.id) ?? resumirDistribucion(e.dist),

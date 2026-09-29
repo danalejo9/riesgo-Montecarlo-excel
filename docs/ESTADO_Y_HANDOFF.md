@@ -1183,6 +1183,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     **Siguiente**: esperar la ronda; con sus cifras, optimizar lectura o
     cálculo (F2) y desarrollar solo las funciones que salgan en N31.
 
+63. [x] **Tres pendientes pequeños (2026-09-29)**. Binomial negativa en
+    `specsDe` y `logDensidad` (`engine/modelo/ajuste.ts`, discreta vía
+    `esDiscretaDeConteo`); umbral de las salidas `rs_` (`cambiarSalida` en
+    `ui/Resultados.tsx`; `huellaModelo` ignora las `rs_`); fechas en
+    «Todas las entradas» y la hoja volcada (`resumirDistribucionFecha` en el
+    catálogo, `idsFecha` de Panel a Modelo). Decisiones y búsqueda de
+    objetivo con el motor compatible: **versión 2**. **Siguiente**: registro
+    de riesgos en la hoja volcada y el PDF; libro de prueba con LAMBDA
+    (Peng-Robinson) y soporte de LAMBDA en el motor.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

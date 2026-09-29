@@ -91,7 +91,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | T4 | T4 | ✅ `RIESGO.CATEGORIA` y «Preparar para compartir» | **Tú** |
 | T5 | T5 | Manual, tutorial y pruebas con textos | **Tú** |
 | T6 | T6 | ✅ Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Tú** (confirmado 28/09) |
-| T7 | T7 | ✅ (29/09, falta Excel real) Entradas y salidas de fecha (percentiles en fechas, dispersión en días), según el formato de la celda | Después de la etapa 2 |
+| T7 | T7 | ✅ (29/09, falta Excel real) Entradas y salidas de fecha (percentiles en fechas, dispersión en días), según el formato de la celda; también en «Todas las entradas» y en la hoja volcada | Después de la etapa 2 |
 | T8 | T8 | ✅ (29/09, falta Excel real) Registro de riesgos: `RIESGO.EVENTO(p; impacto)` en una tabla de la hoja y su vista en Resultados (valor esperado y parte del total). Falta en la hoja volcada y el informe PDF | Después de la etapa 2 |
 | T9 | T9 | ✅ (29/09, falta Excel real) Opciones de decisión (A / B / C) simuladas y comparadas lado a lado: `RIESGO.DECISION`, mismos números aleatorios, hasta 16 combinaciones, solo motor rápido | Después de la etapa 2 |
 
@@ -124,7 +124,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 18 | B6 | ✅ (28–29/09, falta Excel real de lo último) **Traer resultados a la hoja**: `RIESGO.MEDIA`, `RIESGO.DESV`, `RIESGO.PERCENTIL`, `RIESGO.PROB` (también de un texto), `RIESGO.MIN`, `RIESGO.MAX`; y **declarar desde la fórmula**: `RIESGO.SALIDA("nombre")` y `RIESGO.CORRELACION(celda1; celda2; coef)` | **Tú** (lista de funciones) |
 | 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
 | 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
-| 21 | I2 | ✅ (29/09, falta Excel real) **Ajuste orientado al riesgo**: error en percentiles por objetivo (general, cola alta, cola baja), tabla percentil a percentil, bootstrap, Poisson y binomial (la binomial negativa, con B5) | **Tú** (investigación) |
+| 21 | I2 | ✅ (29/09, falta Excel real) **Ajuste orientado al riesgo**: error en percentiles por objetivo (general, cola alta, cola baja), tabla percentil a percentil, bootstrap, Poisson, binomial y binomial negativa | **Tú** (investigación) |
 | 22 | C3 | ✅ (29/09, falta Excel real) Exportar las iteraciones a una hoja (entradas y salidas emparejadas, hasta 100.000) | Plan |
 | 23 | C4 | ✅ (29/09, falta Excel real) Gráficas nuevas: dispersión entrada × salida, caja y bigotes, abanico por periodos, curvas superpuestas | **Tú** (gráficas) |
 
