@@ -1169,6 +1169,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     abre, tipo → 4,2 %). **Siguiente**: F (según los libros del usuario),
     G, M (tutoriales y manual), I3; y la ronda del usuario (bloque N).
 
+61. [x] **F1 (DESREF, 2026-09-29)**. `resolverDesrefConstantes`
+    (`engine/parser/desref.ts`) en `construirGrafo`, tras parsear: OFFSET con
+    enteros escritos → celda o rango (o #¡REF! fuera de la hoja). El escáner
+    sigue contando OFFSET como no cubierta (prudente: solo lo está con
+    constantes). **Siguiente**: la ronda del usuario (bloque N, N1–N29);
+    luego LAMBDA si la piden los libros, G (decisiones del usuario), M.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

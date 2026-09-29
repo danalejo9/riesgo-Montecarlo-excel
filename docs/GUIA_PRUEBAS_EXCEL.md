@@ -273,6 +273,12 @@ en el 10 %, con la lista de lo probado. Un rango que no contiene esa
 probabilidad lo dice. La celda se fija solo durante la búsqueda: el libro no
 cambia. Solo con el motor rápido.
 
+**N29. DESREF** (F1 del plan, nuevo). En «Pruebas», escribe en una celda
+vacía `=SUMA(DESREF(C5;0;0;3;1))` (suma C5:C7) y márcala como salida junto a
+lo demás: simula con el motor **rápido** (antes DESREF lo mandaba al
+compatible) y da lo mismo que `=SUMA(C5:C7)`. Con un desplazamiento
+calculado (`DESREF(C5;C32/1000;0)`) sigue yendo al compatible.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

@@ -14,6 +14,7 @@
 import { claveCelda, columnaDeLetras, recorrer, type Nodo, type RefCelda, type RefRango } from '../parser/ast.ts';
 import type { ValorEscalar } from '../values/columna.ts';
 import { parsear } from '../parser/parse.ts';
+import { resolverDesrefConstantes } from '../parser/desref.ts';
 
 export interface FormulaCelda {
   hoja: string;
@@ -102,7 +103,8 @@ export function construirGrafo(
     const nodo = obtenerNodo(clave, c.hoja, c.col, c.fila);
     const r = parsear(c.formula);
     if (r.ok) {
-      nodo.ast = r.ast;
+      // F1: DESREF con desplazamientos escritos es una referencia fija.
+      nodo.ast = resolverDesrefConstantes(r.ast);
     } else {
       nodo.errorParseo = r.error;
     }

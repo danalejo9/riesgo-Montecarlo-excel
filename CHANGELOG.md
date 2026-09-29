@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### F1: DESREF con desplazamientos constantes (2026-09-29)
+
+**Añadido**
+- `DESREF` (OFFSET) con todos sus desplazamientos escritos como números se
+  resuelve al leer el libro (`DESREF(A1;2;1)` es B3; `DESREF(A1;0;0;3;1)`,
+  A1:A3): el motor rápido ya puede con esas fórmulas. Con desplazamientos
+  calculados sigue yendo al modo compatible.
+
 ### H5: series temporales (2026-09-29)
 
 **Añadido**

@@ -514,7 +514,7 @@ Estimaciones en días de trabajo efectivo.
   Va antes del manual (M2), para que las capturas sean las definitivas.
 
 ### F. Motor y cobertura — según lo que pidan los libros
-- **F1.** `DESREF` con desplazamientos constantes; `LAMBDA`.
+- **F1.** `DESREF` con desplazamientos constantes ✅ 29/09 (`engine/parser/desref.ts`); `LAMBDA`, pendiente.
 - **F2.** Medir con libros grandes (el de 132 hojas) el tiempo de lectura y de
   simulación, y optimizar donde se vea.
 - **F3.** Modo compatible más rápido (lotes de iteraciones por sincronización).

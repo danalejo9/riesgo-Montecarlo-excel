@@ -111,7 +111,7 @@ describe('elegirMotor — las cinco cosas que el evaluador rechaza', () => {
 describe('elegirMotor — lo que mira y lo que avisa', () => {
   it('una función que falta en una celda constante bloquea igual', () => {
     // C1 no depende de A1, pero hay que evaluarla una vez para tener B1.
-    const g = grafoDe({ B1: 'A1+C1', C1: 'OFFSET(A1,1,0)' });
+    const g = grafoDe({ B1: 'A1+C1', C1: 'OFFSET(D1,D2,0)' });
     const e = elegirMotor(g, [k('A1')], [k('B1')]);
 
     expect(e.motor).toBe('compatible');
