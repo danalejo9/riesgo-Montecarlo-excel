@@ -54,6 +54,7 @@ import { probabilidadUmbral, type MedidasRiesgo } from '../engine/stats/index.ts
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import { duracion, leerNumero, miles, numero } from './formato.ts';
+import { Plegable } from './Plegable.tsx';
 
 export function Resultados({
   modelo,
@@ -136,25 +137,69 @@ export function Resultados({
       ? referencia
       : null;
 
+  const umbralDe = (id: string) => modelo.outputs.find((o) => o.id === id)?.threshold;
+  // U2: los avisos que importan, arriba y a la vista; el detalle, plegado abajo.
+  const avisos: ReactNode[] = [];
+  if (resultado.restaurado) {
+    avisos.push(
+      <p key="restaurado" className="tenue">
+        Resultados guardados en el libro el {fecha(resultado.restaurado.guardadoEn)} (los umbrales son
+        aproximados: ±0,1 puntos).
+      </p>,
+    );
+  }
+  if (desactualizados) {
+    avisos.push(
+      <p key="desactualizados" className="aviso-linea">
+        El modelo ha cambiado desde esta simulación: vuelve a simular para actualizar estos resultados.
+      </p>,
+    );
+  }
+  if (resultado.convergencia && !resultado.convergencia.alcanzada && !resultado.convergencia.noDisponible) {
+    avisos.push(
+      <p key="convergencia" className="aviso-linea">
+        No se alcanzó el ±{(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} % de precisión sin pasar
+        del tope ({miles(resultado.convergencia.tope)} iteraciones). Sube el tope o relaja el margen en Configuración.
+      </p>,
+    );
+  }
+  if (resultado.eleccion.salidasConstantes.length > 0) {
+    avisos.push(
+      <p key="constantes" className="aviso-linea">
+        Estas salidas no dependen de ninguna entrada (dan siempre lo mismo): {resultado.eleccion.salidasConstantes.join(', ')}.
+      </p>,
+    );
+  }
+  if (resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0) {
+    avisos.push(
+      <p key="compartir" className="aviso-linea">
+        El libro tiene funciones RIESGO: antes de enviarlo a alguien sin el complemento, usa «Preparar para
+        compartir» (pestaña Modelo).
+      </p>,
+    );
+  }
+  const resumenCalculo =
+    `${resultado.motor === 'fast' ? 'Rápido' : 'Compatible'} · ${miles(resultado.iteracionesCompletadas)} iteraciones · ${duracion(resultado.milisegundos)}` +
+    (resultado.cancelada ? ' · cancelada' : '');
+
   return (
     <>
-      {(resultado.restaurado || desactualizados) && (
-        <section>
-          {resultado.restaurado && (
-            <p className="tenue">
-              Resultados guardados en el libro el {fecha(resultado.restaurado.guardadoEn)}. Las
-              probabilidades de los umbrales son aproximadas (±0,1 puntos): se guardan
-              1.001 cuantiles, no todas las iteraciones.
-            </p>
-          )}
-          {desactualizados && (
-            <p className="aviso-linea">
-              El modelo ha cambiado desde esta simulación: estos resultados ya no le
-              corresponden. Vuelve a simular para actualizarlos.
-            </p>
-          )}
-        </section>
-      )}
+      <section className="barra-resultados">
+        <p className="resumen-calculo">{resumenCalculo}</p>
+        {avisos}
+        <div className="fila-botones">
+          <button type="button" className="secundario" onClick={() => void volcar()} disabled={volcando}
+            title="Escribe el informe en una hoja del libro (se rehace en cada volcado), con gráficos de Excel.">
+            {volcando ? 'Escribiendo…' : 'Volcar a una hoja'}
+          </button>
+          <button type="button" className="secundario" onClick={() => void abrirInforme()}
+            title="Abre el informe en el navegador, listo para imprimir o guardar como PDF. Los datos no salen del equipo.">
+            Informe PDF
+          </button>
+        </div>
+        {volcado && <p className="tenue">{volcado}</p>}
+        {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
+      </section>
 
       {varias && (
         <ResumenSalidas
@@ -164,102 +209,6 @@ export function Resultados({
           alElegir={setVista}
         />
       )}
-
-      <section>
-        <h2>Guardar en el libro</h2>
-        <p className="tenue">
-          Escribe el informe en una hoja: el modelo que se usó, los
-          estadísticos, los percentiles y los puntos de la curva, con un
-          gráfico de Excel encima de ellos. Así se puede guardar, imprimir y
-          enviar. La hoja se rehace en cada volcado.
-        </p>
-        <div className="fila-botones">
-          <button type="button" onClick={() => void volcar()} disabled={volcando}>
-            {volcando ? 'Escribiendo…' : 'Volcar a una hoja'}
-          </button>
-          <button type="button" onClick={() => void abrirInforme()}>Informe PDF</button>
-        </div>
-        <p className="tenue">
-          «Informe PDF» abre el informe en tu navegador, listo para imprimir o
-          guardar como PDF. Los datos viajan en la propia dirección y no salen del equipo.
-        </p>
-        {volcado && <p className="tenue">{volcado}</p>}
-        {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
-      </section>
-
-      {alCambiarEscenarios && (
-        <Escenarios
-          escenarios={escenarios ?? { escenarios: [] }}
-          idSimulacion={resultado.idSimulacion}
-          alCambiar={alCambiarEscenarios}
-        />
-      )}
-
-      <section>
-        <h2>Cómo se calculó</h2>
-        <dl>
-          <dt>Motor</dt>
-          <dd>{resultado.motor === 'fast' ? 'Rápido (en memoria)' : 'Compatible (Excel en el bucle)'}</dd>
-          <dt>Iteraciones</dt>
-          <dd>
-            {miles(resultado.iteracionesCompletadas)}
-            {resultado.cancelada && ' · cancelada antes de terminar'}
-          </dd>
-          <dt>Tiempo</dt>
-          <dd>
-            {duracion(resultado.milisegundos)}
-            {resultado.hilos !== undefined && ` · ${resultado.hilos === 1 ? 'un hilo' : `${resultado.hilos} hilos`}`}
-          </dd>
-          <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
-        </dl>
-
-        {resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0 && (
-          <>
-            <h3>Entradas con funciones RIESGO del libro</h3>
-            <ul className="motivos">
-              {resultado.entradasDeFunciones.map((e, i) => <li key={`${e.ref}-${i}`}>{e.nombre && e.nombre !== e.ref ? `${e.nombre} (${e.ref})` : e.ref}: {e.distribucion}</li>)}
-            </ul>
-            <p className="aviso-linea">
-              Antes de enviar este libro a alguien sin el complemento, usa «Preparar para compartir»
-              (pestaña Modelo): si no, verá #¿NOMBRE? en esas celdas.
-            </p>
-          </>
-        )}
-        {resultado.funcionesIgnoradas && resultado.funcionesIgnoradas.length > 0 && (
-          <p className="tenue">
-            Estas celdas tienen una función RIESGO y también están en el panel; se usó la distribución
-            del panel: {resultado.funcionesIgnoradas.join(', ')}.
-          </p>
-        )}
-
-        {resultado.convergencia && (
-          <p className={resultado.convergencia.alcanzada ? 'tenue' : 'aviso-linea'}>
-            {resultado.convergencia.noDisponible
-              ? `«Simular hasta alcanzar la precisión» no se aplica con Excel en el bucle: se simularon las ${miles(resultado.iteracionesCompletadas)} iteraciones fijadas.`
-              : resultado.convergencia.alcanzada
-                ? `Simulado hasta ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} % de precisión: ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones.`
-                : `No se alcanzó el ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} % sin pasar del tope (${miles(resultado.convergencia.tope)}): ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones. Sube el tope o relaja el margen en Configuración.`}
-          </p>
-        )}
-
-        {motivos.length > 0 && (
-          <>
-            <h3>Por qué no pudo el motor rápido</h3>
-            <ul className="motivos">
-              {motivos.map((m) => (
-                <li key={m}>{m}</li>
-              ))}
-            </ul>
-          </>
-        )}
-
-        {resultado.eleccion.salidasConstantes.length > 0 && (
-          <p className="aviso-linea">
-            Estas salidas no dependen de ninguna entrada, así que su valor es el
-            mismo en todas las iteraciones: {resultado.eleccion.salidasConstantes.join(', ')}.
-          </p>
-        )}
-      </section>
 
       {salidasVisibles.map((salida) => esSalidaDeTexto(salida) ? (
         <SalidaDeTexto
@@ -305,18 +254,16 @@ export function Resultados({
         </section>
       ) : (
         <section key={salida.id}>
-          <h2 className="titulo-salida">{salida.nombre}</h2>
-          <p className="tenue">{salida.ref}</p>
-          <LecturaSalida salida={salida} umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold} />
+          <h2 className="titulo-salida">{salida.nombre} <span className="ref-salida">{salida.ref}</span></h2>
 
-          <dl>
-            <dt>Media</dt><dd>{numero(salida.resumen.media)}</dd>
-            <dt>Desviación</dt><dd>{numero(salida.resumen.desviacion)}</dd>
-            <dt>Mínimo</dt><dd>{numero(salida.resumen.min)}</dd>
-            <dt>Máximo</dt><dd>{numero(salida.resumen.max)}</dd>
-          </dl>
+          <div className="cifras">
+            <div><span className="cifra">{numero(salida.resumen.media)}</span><span className="cifra-nombre">media</span></div>
+            <div><span className="cifra">{numero(salida.resumen.percentiles.p5 ?? NaN)}</span><span className="cifra-nombre">p5</span></div>
+            <div><span className="cifra">{numero(salida.resumen.percentiles.p95 ?? NaN)}</span><span className="cifra-nombre">p95</span></div>
+            <div><span className="cifra">{numero(salida.resumen.desviacion)}</span><span className="cifra-nombre">desviación</span></div>
+          </div>
 
-          {salida.precision && <PrecisionSalida precision={salida.precision} n={salida.resumen.n} />}
+          <LecturaSalida salida={salida} umbral={umbralDe(salida.id)} />
 
           {salida.noNumericas !== undefined && salida.noNumericas > 0 && (
             <p className="aviso-linea">
@@ -325,22 +272,19 @@ export function Resultados({
             </p>
           )}
 
-          <h3>Percentiles <span className="tenue">(aproximados)</span></h3>
-          <ul className="percentiles">
-            {Object.entries(salida.resumen.percentiles).map(([clave, valor]) => (
-              <li key={clave}>
-                <span className="tenue">{clave}</span>
-                <span>{numero(valor)}</span>
-              </li>
-            ))}
-          </ul>
-
-          {salida.riesgo && <MedidasDeRiesgo riesgo={salida.riesgo} />}
+          {salida.histograma && salida.histograma.length > 0 && (
+            <Histograma
+              barras={salida.histograma}
+              umbral={umbralDe(salida.id)}
+              marcas={{ media: salida.resumen.media, ...(salida.resumen.percentiles.p50 !== undefined ? { mediana: salida.resumen.percentiles.p50 } : {}) }}
+              {...(salida.muestraOrdenada ? { muestraOrdenada: salida.muestraOrdenada } : {})}
+            />
+          )}
 
           {salida.muestraOrdenada && salida.muestraOrdenada.length > 0 && (
             <Umbral
               salida={salida}
-              umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold}
+              umbral={umbralDe(salida.id)}
               exacto={(resultado.muestraSensibilidad ?? 0) >= resultado.iteracionesCompletadas}
               decimal={modelo.settings.locale?.decimalSeparator ?? ','}
               alCambiar={(u) =>
@@ -358,61 +302,143 @@ export function Resultados({
             />
           )}
 
-          {salida.histograma && salida.histograma.length > 0 && (
-            <>
-              <h3>Histograma</h3>
-              <Histograma
-                barras={salida.histograma}
-                umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold}
-                marcas={{ media: salida.resumen.media, ...(salida.resumen.percentiles.p50 !== undefined ? { mediana: salida.resumen.percentiles.p50 } : {}) }}
-                {...(salida.muestraOrdenada ? { muestraOrdenada: salida.muestraOrdenada } : {})}
-              />
-            </>
-          )}
-
           {comparando && (() => {
             const ref = salidaDeReferencia(comparando, salida.id);
             if (!ref) {
               return <p className="tenue">Esta salida no estaba en «{comparando.etiqueta}»: no se compara.</p>;
             }
-            const filas = compararSalida(salida, ref, modelo.outputs.find((o) => o.id === salida.id)?.threshold);
+            const filas = compararSalida(salida, ref, umbralDe(salida.id));
             return <TablaComparacion etiqueta={comparando.etiqueta} filas={filas} />;
           })()}
 
           {escenarios && escenarios.escenarios.length > 0 && (() => {
-            const umbral = modelo.outputs.find((o) => o.id === salida.id)?.threshold;
+            const umbral = umbralDe(salida.id);
             const filas = tablaEscenarios(salida, resultado, escenarios, umbral);
             return filas.length > 1 ? <TablaEscenarios filas={filas} conUmbral={Boolean(umbral)} /> : null;
           })()}
 
-          <h3>Probabilidad acumulada</h3>
-          <CurvaAcumulada
-            puntos={salida.cdf}
-            referencia={comparando ? salidaDeReferencia(comparando, salida.id)?.cdf : undefined}
-            etiquetaReferencia={comparando?.etiqueta}
-          />
-
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
-            <>
-              <h3>Qué la mueve más</h3>
+            <Plegable id="tornado" titulo="Qué la mueve más" abierta
+              resumen={salida.sensibilidad[0]?.nombre}>
               <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} r2={salida.r2} />
-            </>
+            </Plegable>
           )}
 
-          {salida.colas && salida.colas.length > 0 && <QueTieneQuePasar colas={salida.colas} />}
+          <Plegable id="percentiles" titulo="Estadísticos y percentiles"
+            resumen={`${numero(salida.resumen.min)} … ${numero(salida.resumen.max)}`}>
+            <dl>
+              <dt>Media</dt><dd>{numero(salida.resumen.media)}</dd>
+              <dt>Desviación</dt><dd>{numero(salida.resumen.desviacion)}</dd>
+              <dt>Mínimo</dt><dd>{numero(salida.resumen.min)}</dd>
+              <dt>Máximo</dt><dd>{numero(salida.resumen.max)}</dd>
+            </dl>
+            <ul className="percentiles">
+              {Object.entries(salida.resumen.percentiles).map(([clave, valor]) => (
+                <li key={clave}>
+                  <span className="tenue">{clave}</span>
+                  <span>{numero(valor)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="tenue">Percentiles aproximados.</p>
+            {salida.precision && <PrecisionSalida precision={salida.precision} n={salida.resumen.n} />}
+          </Plegable>
+
+          <Plegable id="acumulada" titulo="Probabilidad acumulada">
+            <CurvaAcumulada
+              puntos={salida.cdf}
+              referencia={comparando ? salidaDeReferencia(comparando, salida.id)?.cdf : undefined}
+              etiquetaReferencia={comparando?.etiqueta}
+            />
+          </Plegable>
+
+          {salida.riesgo && (
+            <Plegable id="riesgo" titulo="Medidas de riesgo" resumen="VaR, CVaR, forma">
+              <MedidasDeRiesgo riesgo={salida.riesgo} conTitulo={false} />
+            </Plegable>
+          )}
+
+          {salida.colas && salida.colas.length > 0 && (
+            <Plegable id="colas" titulo="Qué tiene que pasar" resumen="en el 10 % más bajo o más alto">
+              <QueTieneQuePasar colas={salida.colas} conTitulo={false} />
+            </Plegable>
+          )}
 
           {salida.porCategoria && salida.porCategoria.length > 0 && (
-            <TablasPorCategoria bloques={salida.porCategoria} />
+            <Plegable id="categorias" titulo="Según las entradas de texto">
+              <TablasPorCategoria bloques={salida.porCategoria} />
+            </Plegable>
           )}
 
           {salida.arana && salida.arana.length > 0 && (
-            <>
-              <h3>Qué pasa si cada entrada se mueve</h3>
+            <Plegable id="arana" titulo="Qué pasa si cada entrada se mueve">
               <Arana curvas={salida.arana} />
-            </>
+            </Plegable>
           )}
         </section>
       ))}
+
+      {alCambiarEscenarios && (
+        <Escenarios
+          escenarios={escenarios ?? { escenarios: [] }}
+          idSimulacion={resultado.idSimulacion}
+          alCambiar={alCambiarEscenarios}
+        />
+      )}
+
+      <section>
+        <Plegable id="calculo" titulo={<h2>Cómo se calculó</h2>} resumen={resumenCalculo}>
+          <dl>
+            <dt>Motor</dt>
+            <dd>{resultado.motor === 'fast' ? 'Rápido (en memoria)' : 'Compatible (Excel en el bucle)'}</dd>
+            <dt>Iteraciones</dt>
+            <dd>
+              {miles(resultado.iteracionesCompletadas)}
+              {resultado.cancelada && ' · cancelada antes de terminar'}
+            </dd>
+            <dt>Tiempo</dt>
+            <dd>
+              {duracion(resultado.milisegundos)}
+              {resultado.hilos !== undefined && ` · ${resultado.hilos === 1 ? 'un hilo' : `${resultado.hilos} hilos`}`}
+            </dd>
+            <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
+          </dl>
+
+          {resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0 && (
+            <>
+              <h3>Entradas con funciones RIESGO del libro</h3>
+              <ul className="motivos">
+                {resultado.entradasDeFunciones.map((e, i) => <li key={`${e.ref}-${i}`}>{e.nombre && e.nombre !== e.ref ? `${e.nombre} (${e.ref})` : e.ref}: {e.distribucion}</li>)}
+              </ul>
+            </>
+          )}
+          {resultado.funcionesIgnoradas && resultado.funcionesIgnoradas.length > 0 && (
+            <p className="tenue">
+              Estas celdas tienen una función RIESGO y también están en el panel; se usó la distribución
+              del panel: {resultado.funcionesIgnoradas.join(', ')}.
+            </p>
+          )}
+
+          {resultado.convergencia && (
+            <p className="tenue">
+              {resultado.convergencia.noDisponible
+                ? `«Simular hasta alcanzar la precisión» no se aplica con Excel en el bucle: se simularon las ${miles(resultado.iteracionesCompletadas)} iteraciones fijadas.`
+                : `Precisión buscada ±${(resultado.convergencia.objetivo * 100).toLocaleString('es-ES')} %: ${resultado.convergencia.tandas.map(miles).join(' → ')} iteraciones.`}
+            </p>
+          )}
+
+          {motivos.length > 0 && (
+            <>
+              <h3>Por qué no pudo el motor rápido</h3>
+              <ul className="motivos">
+                {motivos.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Plegable>
+      </section>
 
       {resultado.entradas && resultado.entradas.length > 0 && <EntradasMuestreadas entradas={resultado.entradas} />}
     </>
@@ -676,11 +702,11 @@ function SalidaDeTexto({
 
 
 /** Medidas de riesgo de una salida (H2): las dos colas y la forma. */
-export function MedidasDeRiesgo({ riesgo }: { riesgo: MedidasRiesgo }) {
+export function MedidasDeRiesgo({ riesgo, conTitulo = true }: { riesgo: MedidasRiesgo; conTitulo?: boolean }) {
   const forma = riesgo.asimetria > 0.3 ? 'cola larga a la derecha' : riesgo.asimetria < -0.3 ? 'cola larga a la izquierda' : 'casi simétrica';
   return (
     <>
-      <h3>Medidas de riesgo</h3>
+      {conTitulo && <h3>Medidas de riesgo</h3>}
       <div className="tabla-desplazable">
         <table className="tabla-resumen sin-clic">
           <thead><tr><th></th><th>Cola baja</th><th>Cola alta</th></tr></thead>
@@ -706,7 +732,7 @@ export function MedidasDeRiesgo({ riesgo }: { riesgo: MedidasRiesgo }) {
  * Qué tiene que pasar para que la salida caiga en su 10 % más bajo o más alto
  * (D1): cómo están las entradas en esos casos frente a lo normal.
  */
-export function QueTieneQuePasar({ colas }: { colas: readonly AnalisisCola[] }) {
+export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly AnalisisCola[]; conTitulo?: boolean }) {
   const [cola, setCola] = useState<'baja' | 'alta'>('baja');
   const c = colas.find((x) => x.cola === cola) ?? colas[0];
   if (!c) return null;
@@ -714,7 +740,7 @@ export function QueTieneQuePasar({ colas }: { colas: readonly AnalisisCola[] }) 
   const pct = (p: number) => `${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 0 })} %`;
   return (
     <>
-      <h3>Qué tiene que pasar</h3>
+      {conTitulo && <h3>Qué tiene que pasar</h3>}
       <label className="umbral-pregunta">
         <span>Para que quede en su 10 %</span>
         <select value={cola} onChange={(e) => setCola(e.target.value as 'baja' | 'alta')}>
@@ -766,7 +792,7 @@ function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestread
   if (!e) return null;
   return (
     <section>
-      <h2>Cómo se muestrearon las entradas</h2>
+      <Plegable id="muestreadas" titulo={<h2>Cómo se muestrearon las entradas</h2>} resumen={`${entradas.length} entrada${entradas.length === 1 ? '' : 's'}`}>
       <p className="tenue">
         Los valores que de verdad se generaron en la simulación ({miles(e.n)} iteraciones), con la
         distribución elegida encima: la línea es lo que se esperaba en cada barra.
@@ -809,6 +835,7 @@ function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestread
       <h3>Probabilidad acumulada</h3>
       <CurvaAcumulada puntos={e.cdf} />
       </>)}
+      </Plegable>
     </section>
   );
 }

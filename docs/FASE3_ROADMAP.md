@@ -501,7 +501,7 @@ Estimaciones en días de trabajo efectivo.
   estudio pedía «asistentes paso a paso»)*: guía a quien empieza (qué celdas
   son inciertas, qué distribución elegir, qué salida medir) y ofrece modelos
   de partida (proyecto de inversión, presupuesto de obra, cartera).
-- **U2. Legibilidad del panel** *(usuario, ronda del 29/09: «está muy difícil
+- **U2. Legibilidad del panel** ✅ 29/09 en Resultados (cifras clave, secciones plegables que se recuerdan, menos texto; el resto del panel, según lo que diga el usuario en N11) *(usuario, ronda del 29/09: «está muy difícil
   de leer toda la información, en general el panel lateral»)*. Primer paso
   hecho el 29/09: las acciones secundarias son botones con borde (antes
   parecían texto). Queda un repaso de conjunto, a decidir con el usuario:
@@ -700,7 +700,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → **U2**, ~~C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
+pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

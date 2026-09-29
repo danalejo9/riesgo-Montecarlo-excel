@@ -1032,6 +1032,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     arrastrables con captura del puntero y `CampoLimite`). El informe pasa
     p5/p95 fijos. Guía N10. **Siguiente**: U2.
 
+45. [x] **U2 (2026-09-29)**. `ui/Plegable.tsx` (`<details>` que recuerda
+    su estado en `localStorage`, con resumen junto al título). Resultados:
+    barra de arriba (resumen del cálculo, avisos, botones), cifras clave,
+    lectura, histograma y umbral a la vista; el resto plegado.
+    `MedidasDeRiesgo` y `QueTieneQuePasar` con `conTitulo`. Guía N11.
+    **Siguiente**: RIESGO.SALIDA y RIESGO.CORRELACION (resto de B6).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

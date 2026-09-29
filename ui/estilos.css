@@ -279,6 +279,27 @@ button.principal { width: 100%; padding: 8px; font-weight: 600; }
 /* El nombre de una salida lo escribe el usuario: se enseña tal cual, sin la
    mayúscula forzada que llevan los títulos de sección del panel. */
 h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); letter-spacing: 0; }
+h2.titulo-salida { font-size: 16px; margin-bottom: 6px; }
+.ref-salida { font-size: 12px; font-weight: 400; color: var(--tenue); margin-left: 4px; }
+
+/* U2: lo esencial a la vista (cifras clave e histograma); el resto, plegado. */
+.barra-resultados .resumen-calculo { margin: 0 0 6px; font-size: 12px; color: var(--tenue); }
+.barra-resultados .fila-botones { margin-top: 6px; }
+.cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; margin: 4px 0 8px; }
+.cifras > div { border: 1px solid var(--borde); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; min-width: 0; }
+.cifra { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cifra-nombre { font-size: 11px; color: var(--tenue); }
+.plegable { border-top: 1px solid var(--borde); margin-top: 10px; }
+.plegable > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; padding: 8px 0 4px; }
+.plegable > summary::-webkit-details-marker { display: none; }
+.plegable > summary::before { content: '▸'; color: var(--tenue); font-size: 11px; width: 10px; flex: none; transition: transform .15s; }
+.plegable[open] > summary::before { transform: rotate(90deg); }
+.plegable-titulo { font-size: 13px; font-weight: 600; flex: none; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plegable-titulo h2 { display: inline; margin: 0; }
+.plegable-resumen { font-size: 12px; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.plegable-cuerpo { padding-bottom: 4px; }
+.plegable-cuerpo > h3:first-child { margin-top: 4px; }
+section > .plegable:first-child { border-top: 0; margin-top: 0; }
 
 .botonera { display: flex; flex-wrap: wrap; gap: 8px; }
 .botonera button { margin-top: 8px; }

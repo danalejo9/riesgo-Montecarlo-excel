@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U2: Resultados más fáciles de leer (2026-09-29)
+
+**Cambiado**
+- Arriba, una línea con cómo se simuló (motor, iteraciones, tiempo), solo los
+  avisos que importan y los botones *Volcar a una hoja* e *Informe PDF* (las
+  explicaciones pasan a la ayuda al pasar el ratón).
+- Cada salida empieza por **cuatro cifras grandes** (media, p5, p95,
+  desviación), la lectura, el histograma y la pregunta de probabilidad.
+- El resto va en **secciones plegables**: *Qué la mueve más* (abierta),
+  *Estadísticos y percentiles*, *Probabilidad acumulada*, *Medidas de riesgo*,
+  *Qué tiene que pasar*, *Según las entradas de texto*, *Qué pasa si cada
+  entrada se mueve*, *Cómo se calculó* y *Cómo se muestrearon las entradas*.
+  Cada una dice al lado un resumen corto, y el panel recuerda cuáles abriste.
+- Escenarios y *Cómo se calculó* bajan al final.
+
 ### C10: marcas y delimitadores en el histograma (2026-09-29)
 
 **Añadido**

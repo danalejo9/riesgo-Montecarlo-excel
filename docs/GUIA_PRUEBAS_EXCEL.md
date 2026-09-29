@@ -175,6 +175,16 @@ demo con la salida de beneficio y mira el histograma de Resultados:
 - En el informe PDF (C7), el histograma trae fijas la media, la mediana y
   las líneas de p5 y p95.
 
+**N11. Resultados más fáciles de leer** (U2, nuevo; responde a T6). Tras
+simular la demo:
+- Arriba: una línea «Rápido · 10.000 iteraciones · …», los avisos (si hay) y
+  los dos botones. Bajo el nombre de la salida, **cuatro cifras grandes**
+  (media, p5, p95, desviación), la lectura y el histograma.
+- Debajo, secciones con ▸ que se abren con un clic; *Qué la mueve más* viene
+  abierta. Abre *Estadísticos y percentiles*, cierra el panel y vuelve a
+  abrirlo: sigue abierta.
+- Dime si ahora se lee mejor y si cambiarías qué va abierto o a la vista.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
