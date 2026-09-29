@@ -198,6 +198,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N17. Iteraciones a una hoja** (C3 del plan, nuevo): haz C5.
 
+**N18. Gráficas nuevas** (C4 del plan, nuevo): haz C6.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -378,6 +380,19 @@ Pulsa «Imprimir o guardar como PDF».
   salida da lo mismo que calcula tu modelo.
 - Tras cerrar y reabrir el libro (resultados restaurados), el botón no
   aparece: las iteraciones solo viven en memoria. Vuelve a simular.
+
+**C6. Gráficas nuevas** (C4 del plan, nuevo). Marca como salidas, en este
+orden, los flujos de caja libres de los cinco años de la hoja «Modelo»
+(**D28, E28, F28, G28 y H28**) y simula.
+- **Dispersión con una entrada** (sección plegable de cada salida): una nube
+  de puntos; elige otra entrada en el desplegable. La entrada que más mueve
+  la salida en el tornado da la nube más inclinada.
+- **Comparar salidas** (arriba, bajo la tabla de salidas): **caja y
+  bigotes** de cada salida en un eje común, las **curvas acumuladas**
+  superpuestas con su leyenda de colores y, con tres o más, el **abanico**
+  (mediana y bandas p25–p75 y p5–p95, en el orden en que marcaste las
+  salidas).
+- En el **Informe PDF**, al final, «Comparar salidas» con las mismas gráficas.
 
 ---
 

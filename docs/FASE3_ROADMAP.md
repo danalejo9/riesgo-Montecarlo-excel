@@ -428,7 +428,7 @@ Estimaciones en días de trabajo efectivo.
 - **C3. Datos de la simulación** ✅ 29/09 (`excel/iteraciones.ts`, `exportarIteraciones.ts`; hasta 100.000, las retenidas): exportar las iteraciones (entradas y
   salidas, hasta un tope) a una hoja, para que el usuario haga sus propios
   análisis o gráficos.
-- **C4. Gráficas nuevas en el panel y el informe**:
+- **C4. Gráficas nuevas en el panel y el informe** ✅ 29/09 (`ui/Graficos.tsx`; la dispersión, solo en el panel):
   - **dispersión** entrada × salida (se elige la pareja), que enseña la forma
     de la relación que resume el tornado;
   - **caja y bigotes** para comparar varias salidas o escenarios de un
@@ -703,7 +703,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
 pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
-~~T7, T8, T9, C3~~ ✅ 29/09 → C4 → resto de B, D (con D4), E, H, U1 → F según los
+~~T7, T8, T9, C3, C4~~ ✅ 29/09 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por

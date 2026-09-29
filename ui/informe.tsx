@@ -12,6 +12,7 @@ import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../ex
 import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
   MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
+import { Abanico, CajasSalidas, CurvasSuperpuestas } from './Graficos.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -81,6 +82,19 @@ function Informe() {
       </section>
 
       {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}
+
+      {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
+        <section className="salida-informe">
+          <h2>Comparar salidas</h2>
+          <div className="dos-columnas graficos-informe">
+            <div><h3>Caja y bigotes</h3><CajasSalidas salidas={datos.salidas} /></div>
+            <div><h3>Curvas acumuladas</h3><CurvasSuperpuestas salidas={datos.salidas} /></div>
+          </div>
+          {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 3 && (
+            <div><h3>Abanico</h3><Abanico salidas={datos.salidas} /></div>
+          )}
+        </section>
+      )}
 
       <footer className="tenue pie-informe">
         Percentiles aproximados (t-digest). Sensibilidad por correlación de rangos y regresión sobre las primeras

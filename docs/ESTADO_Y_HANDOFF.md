@@ -1100,6 +1100,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     filas, cabecera fija). Botón en la barra de Resultados. **Siguiente**:
     C4 (dispersión, caja, abanico, curvas superpuestas).
 
+52. [x] **C4 (2026-09-29)**. `ui/Graficos.tsx`: `Dispersion` (de
+    `resultado.iteraciones`, 1.500 puntos, entradas numéricas),
+    `CajasSalidas`, `CurvasSuperpuestas` y `Abanico` (eje común, colores de
+    serie; el abanico con ≥ 3). Sección «Comparar salidas» en Resultados y al
+    final del informe PDF. **Siguiente**: resto de B (B5, distribuciones
+    nuevas).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

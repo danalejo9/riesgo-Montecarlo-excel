@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### C4: gráficas nuevas (2026-09-29)
+
+**Añadido**
+- **Dispersión** de una entrada frente a la salida (elige la entrada), con
+  las primeras 1.500 iteraciones.
+- Con varias salidas, sección **«Comparar salidas»**: **caja y bigotes** en
+  un eje común, **curvas acumuladas superpuestas** y, con tres o más, un
+  **abanico** (mediana, p25–p75 y p5–p95 en el orden de las salidas). También
+  al final del informe PDF.
+
 ### C3: iteraciones a una hoja (2026-09-29)
 
 **Añadido**

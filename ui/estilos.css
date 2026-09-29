@@ -411,6 +411,18 @@ section > .plegable:first-child { border-top: 0; margin-top: 0; }
 .serie-3 { stroke: var(--serie-3); border-color: var(--serie-3) !important; }
 .serie-4 { stroke: var(--serie-4); border-color: var(--serie-4) !important; }
 .punto-serie { fill: var(--fondo); stroke-width: 2; }
+/* C4: dispersión, caja y bigotes, abanico. */
+.punto-dispersion { fill: var(--acento); fill-opacity: 0.35; }
+.bigote { stroke: var(--tenue); stroke-width: 1.2; }
+.caja { stroke-width: 1.5; fill-opacity: 0.25; }
+.caja.serie-1 { fill: var(--serie-1); }
+.caja.serie-2 { fill: var(--serie-2); }
+.caja.serie-3 { fill: var(--serie-3); }
+.caja.serie-4 { fill: var(--serie-4); }
+.mediana-caja { stroke: var(--texto); stroke-width: 2; }
+.media-caja { fill: var(--texto); }
+.abanico-exterior { fill: var(--acento); fill-opacity: 0.15; }
+.abanico-interior { fill: var(--acento); fill-opacity: 0.35; }
 .leyenda-series { flex-wrap: wrap; row-gap: 2px; }
 .tornado-contribucion { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
 

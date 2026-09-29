@@ -58,6 +58,7 @@ import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import { duracion, formatoDe, leerNumero, miles, numero, type FormatoValor } from './formato.ts';
 import { Plegable } from './Plegable.tsx';
+import { Abanico, CajasSalidas, CurvasSuperpuestas, Dispersion } from './Graficos.tsx';
 
 export function Resultados({
   modelo,
@@ -234,6 +235,23 @@ export function Resultados({
         />
       )}
 
+      {varias && resultado.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
+        <section>
+          <Plegable id="comparar-salidas" titulo={<h2>Comparar salidas</h2>} resumen="caja, curvas, abanico">
+            <h3>Caja y bigotes</h3>
+            <CajasSalidas salidas={resultado.salidas} />
+            <h3>Curvas acumuladas</h3>
+            <CurvasSuperpuestas salidas={resultado.salidas} />
+            {resultado.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 3 && (
+              <>
+                <h3>Abanico</h3>
+                <Abanico salidas={resultado.salidas} />
+              </>
+            )}
+          </Plegable>
+        </section>
+      )}
+
       {salidasVisibles.map((salida) => esSalidaDeTexto(salida) ? (
         <SalidaDeTexto
           key={salida.id}
@@ -349,6 +367,12 @@ export function Resultados({
             <Plegable id="tornado" titulo="Qué la mueve más" abierta
               resumen={salida.sensibilidad[0]?.nombre}>
               <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} r2={salida.r2} />
+            </Plegable>
+          )}
+
+          {resultado.iteraciones && resultado.iteraciones.salidas.some((s) => s.id === salida.id) && resultado.iteraciones.entradas.some((e) => !e.categorias) && (
+            <Plegable id="dispersion" titulo="Dispersión con una entrada">
+              <Dispersion iteraciones={resultado.iteraciones} idSalida={salida.id} formato={formatoDe(salida.fecha)} />
             </Plegable>
           )}
 
