@@ -36,7 +36,7 @@ import {
   type EleccionMotor,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
-import { curvaCDF, resumenEstadistico, siguienteTanda, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
+import { curvaCDF, probabilidadUmbral, resumenEstadistico, siguienteTanda, LIMITE_MUESTRA_SENSIBILIDAD } from '../engine/stats/index.ts';
 import {
   analisisDeMuestra,
   conPrecision,
@@ -47,6 +47,7 @@ import {
 import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNCION, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
 import { celdasConFormatoFecha } from './formatoCeldas.ts';
 import { registroDeRiesgos } from './registroRiesgos.ts';
+import { combinaciones, etiquetaCombinacion, fijarCombinacion, leerDecisiones, type ResultadoDecisiones, type SalidaEnOpcion } from './decisiones.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -157,6 +158,15 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     };
     clavesSalida.push(...salidasDeFunciones.map((s) => s.clave));
   }
+  // T9: las decisiones se simulan con cada opción; de momento, la primera.
+  const lecturaDecisiones = leerDecisiones(grafo);
+  if (lecturaDecisiones.errores.length > 0) {
+    return fallo('modelo', 'Hay funciones RIESGO.DECISION que no se pueden usar tal como están.', lecturaDecisiones.errores);
+  }
+  const decisiones = lecturaDecisiones.decisiones;
+  const combos = combinaciones(decisiones);
+  if (decisiones.length > 0) fijarCombinacion(grafo, decisiones, combos[0] as number[]);
+
   if (modelo.outputs.length === 0) {
     return fallo('modelo', 'El modelo no tiene ninguna salida.', [
       'Marca al menos una celda como salida: es lo que se va a medir,',
@@ -253,6 +263,14 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
 
+  if (decisiones.length > 0 && eleccion.motor === 'compatible') {
+    return fallo('modelo', 'Las decisiones (RIESGO.DECISION) solo se comparan con el motor rápido.', [
+      ...(modelo.settings.engine === 'compatible'
+        ? ['En Configuración está elegido el motor compatible: pon «Automático» o «Rápido».']
+        : ['El modelo necesita el motor compatible por esto:', ...motivosLegibles(eleccion)]),
+    ]);
+  }
+
   if (eleccion.motor === 'compatible') {
     const preparadas = prepararEntradas(modelo, resolver, semilla);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
@@ -269,6 +287,38 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     }
     return terminar(r);
   }
+
+  // T9: cada otra opción (o combinación) de las decisiones, con la misma
+  // semilla: las diferencias son de la decisión, no del azar.
+  const otrasOpciones: ResultadoDecisiones['opciones'] = [];
+  for (let c = 1; c < combos.length; c++) {
+    if (debeCancelar?.()) break;
+    const combo = combos[c] as number[];
+    const etiqueta = etiquetaCombinacion(decisiones, combo);
+    fijarCombinacion(grafo, decisiones, combo);
+    const preparadas = prepararEntradas(modelo, resolver, semilla);
+    if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
+    const r = await porElRapido({
+      ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, debeCancelar, crearPool,
+      ...(progreso ? { progreso: (a: AvanceSimulacion) => progreso({ ...a, mensaje: `Opción ${c + 1} de ${combos.length} (${etiqueta})…` }) } : {}),
+    });
+    if (!r.ok) return r;
+    otrasOpciones.push({ etiqueta, salidas: resumenParaDecision(r, modelo) });
+  }
+  if (decisiones.length > 0) fijarCombinacion(grafo, decisiones, combos[0] as number[]);
+  const conDecisiones = (r: ResultadoSimulacionPanel): ResultadoSimulacionPanel =>
+    decisiones.length > 0 && r.ok
+      ? {
+          ...r,
+          decisiones: {
+            celdas: decisiones.map((d) => {
+              const nodo = grafo.nodos.get(d.clave);
+              return { direccion: d.direccion, nombre: nodo ? textos.nombre(d.direccion, nodo.hoja, nodo.col, nodo.fila) : d.direccion };
+            }),
+            opciones: [{ etiqueta: etiquetaCombinacion(decisiones, combos[0] as number[]), salidas: resumenParaDecision(r, modelo) }, ...otrasOpciones],
+          },
+        }
+      : r;
 
   // Motor rápido: iteraciones fijas, o por tandas hasta la precisión pedida.
   // Cada tanda es una simulación completa con la misma semilla, así que el
@@ -301,7 +351,29 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       alcanzada: final.salidas.every((s) => s.precision?.suficiente !== false),
     };
   }
-  return terminar(final);
+  return conDecisiones(terminar(final));
+}
+
+/** Lo que se compara de cada salida en una opción de decisión (T9). */
+function resumenParaDecision(r: ResultadoSimulacionPanel, modelo: ModeloRiesgo): SalidaEnOpcion[] {
+  if (!r.ok) return [];
+  return r.salidas.map((s) => {
+    const umbral = modelo.outputs.find((o) => o.id === s.id)?.threshold;
+    const { p5, p50, p95 } = s.resumen.percentiles;
+    const moda = s.categorias?.[0];
+    return {
+      id: s.id,
+      media: s.resumen.media,
+      desviacion: s.resumen.desviacion,
+      ...(p5 !== undefined ? { p5 } : {}),
+      ...(p50 !== undefined ? { p50 } : {}),
+      ...(p95 !== undefined ? { p95 } : {}),
+      ...(umbral && s.muestraOrdenada && s.muestraOrdenada.length > 0
+        ? { probUmbral: probabilidadUmbral(s.muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima') }
+        : {}),
+      ...(moda ? { moda: { valor: moda.valor, proporcion: moda.proporcion } } : {}),
+    };
+  });
 }
 
 /** Marca como fecha las salidas y entradas cuya celda tiene formato de fecha (T7). */

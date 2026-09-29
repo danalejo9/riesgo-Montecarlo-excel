@@ -19,7 +19,7 @@
 
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
-  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
 import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
 import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
@@ -189,3 +189,16 @@ asociar(FUNCION_EVENTO.id, (probabilidad: number, impacto: number, invocacion?: 
   const ocurre = enModo({ type: 'bernoulli', p: probabilidad }, FUNCION_EVENTO.id, celdaDe([invocacion]));
   return (ocurre as number) * impacto;
 });
+
+// T9: una decisión. En la hoja vale la primera opción; al simular, el panel
+// compara todas. El parámetro se repite: cada argumento llega como una matriz.
+asociar(FUNCION_DECISION.id, ((opciones: unknown[][][]) => {
+  for (const matriz of opciones ?? []) {
+    for (const fila of matriz ?? []) {
+      for (const v of fila ?? []) {
+        if (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '')) return v;
+      }
+    }
+  }
+  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidValue, 'RIESGO.DECISION necesita al menos una opción');
+}) as (...args: never[]) => number | string);

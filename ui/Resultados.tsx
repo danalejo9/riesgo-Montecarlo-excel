@@ -45,6 +45,7 @@ import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
 import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
+import type { ResultadoDecisiones, SalidaEnOpcion } from '../excel/decisiones.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
 import {
@@ -224,6 +225,7 @@ export function Resultados({
               const filas = tablaEscenarios(salida, resultado, escenarios, undefined, modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest);
               return filas.length > 1 ? <TablaEscenarios filas={filas} conUmbral={false} /> : null;
             })()}
+            {resultado.decisiones && <TablaDecisiones decisiones={resultado.decisiones} idSalida={salida.id} formato={formatoDe(false)} />}
           </>}
           valorDeInteres={modelo.outputs.find((o) => o.id === salida.id)?.valueOfInterest}
           alCambiarValor={(v) =>
@@ -318,6 +320,8 @@ export function Resultados({
             const filas = tablaEscenarios(salida, resultado, escenarios, umbral);
             return filas.length > 1 ? <TablaEscenarios filas={filas} conUmbral={Boolean(umbral)} /> : null;
           })()}
+
+          {resultado.decisiones && <TablaDecisiones decisiones={resultado.decisiones} idSalida={salida.id} formato={formatoDe(salida.fecha)} />}
 
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
             <Plegable id="tornado" titulo="Qué la mueve más" abierta
@@ -788,6 +792,54 @@ export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly 
 }
 
 const TODAS = '__todas__';
+
+/**
+ * Las opciones de las decisiones lado a lado (T9): cada una simulada con los
+ * mismos números aleatorios. Sin juicio: si es mejor más o menos depende de
+ * la salida (un beneficio o un coste).
+ */
+function TablaDecisiones({ decisiones, idSalida, formato }: { decisiones: ResultadoDecisiones; idSalida: string; formato: FormatoValor }) {
+  const filas = decisiones.opciones
+    .map((o, i) => ({ etiqueta: o.etiqueta, i, s: o.salidas.find((x) => x.id === idSalida) }))
+    .filter((f): f is { etiqueta: string; i: number; s: SalidaEnOpcion } => f.s !== undefined);
+  if (filas.length < 2) return null;
+  const conUmbral = filas.some((f) => f.s.probUmbral !== undefined);
+  const texto = filas.some((f) => f.s.moda !== undefined);
+  return (
+    <Plegable id="decisiones" titulo="Comparar decisiones" abierta resumen={decisiones.celdas.map((c) => c.nombre).join(' · ')}>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead>
+            <tr>
+              <th>{decisiones.celdas.map((c) => c.nombre).join(' · ')}</th>
+              {texto ? <th>Lo más frecuente</th> : <><th>Media</th><th>p5</th><th>p95</th></>}
+              {conUmbral && <th>Umbral</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.i}>
+                <td className="celda-texto">{f.etiqueta}{f.i === 0 && <span className="tenue"> (en la hoja)</span>}</td>
+                {texto
+                  ? <td className="celda-texto">{f.s.moda ? `«${f.s.moda.valor}» ${pct(f.s.moda.proporcion)}` : '—'}</td>
+                  : <>
+                      <td>{formato.valor(f.s.media)}</td>
+                      <td>{f.s.p5 === undefined ? '' : formato.valor(f.s.p5)}</td>
+                      <td>{f.s.p95 === undefined ? '' : formato.valor(f.s.p95)}</td>
+                    </>}
+                {conUmbral && <td>{f.s.probUmbral === undefined ? '' : pct(f.s.probUmbral)}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Cada opción se simuló con los mismos números aleatorios, así que las diferencias son de la
+        decisión y no del azar. El resto de esta página es de la opción que hay en la hoja (la primera).
+      </p>
+    </Plegable>
+  );
+}
 
 /**
  * El registro de riesgos (T8): cada `RIESGO.EVENTO` con su probabilidad, su

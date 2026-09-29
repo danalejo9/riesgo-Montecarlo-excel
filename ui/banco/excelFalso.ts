@@ -107,11 +107,16 @@ const LIBRO: Record<string, Celda> = {
   B33: { formula: 'RIESGO.EVENTO(0.1,50000)' },
   A34: { valor: 'Coste con riesgos' },
   B34: { formula: 'RIESGO.SALIDA("Coste con riesgos")+B14+B32+B33' },
+  // Decisión (T9): tres proveedores con distinto factor de precio.
+  A36: { valor: 'Factor del proveedor' },
+  B36: { formula: 'RIESGO.DECISION(0.9,1,1.15)' },
+  A37: { valor: 'Coste según proveedor' },
+  B37: { formula: 'RIESGO.SALIDA("Coste según proveedor")+B14*B36' },
 };
 
 /** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
 const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
-const FILAS_USADAS = 34;
+const FILAS_USADAS = 37;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -213,6 +218,12 @@ function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): 
       if (x.tipo === 'funcion' && id === 'CORRELACION' && x.args[2]) {
         hay = true;
         return x.args[2];
+      }
+      // Una decisión vale su primera opción.
+      if (x.tipo === 'funcion' && id === 'DECISION' && x.args[0]) {
+        hay = true;
+        const a = x.args[0];
+        return a.tipo === 'matriz' ? (a.filas[0]?.[0] ?? a) : a;
       }
       if (x.tipo === 'funcion') return { ...x, args: x.args.map(cambiar) };
       if (x.tipo === 'binaria') return { ...x, izq: cambiar(x.izq), der: cambiar(x.der) };

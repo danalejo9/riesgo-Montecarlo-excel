@@ -450,6 +450,20 @@ for fila, texto in ((57, "escribe =RIESGO.EVENTO(0,3;RIESGO.TRIANGULAR(10000;200
 p["C59"] = "=C57+C58"
 p["C59"].number_format = '#,##0'
 
+# 12. Opciones de decisión (T9): el precio es una decisión, no un azar.
+etiqueta(61, "12. DECISIONES (prueba T11)", True)
+etiqueta(62, "Demanda")
+etiqueta(63, "Precio (decisión)")
+etiqueta(64, "Ingresos según el precio")
+for fila, texto in ((62, "escribe =RIESGO.NORMAL(1000;100)"),
+                    (63, "escribe =RIESGO.DECISION(8;10;12)")):
+    c3 = p.cell(fila, 3)
+    c3.fill = PARA_ESCRIBIR
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+p["C64"] = "=C62*C63"
+p["C64"].number_format = '#,##0'
+
 # 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
 p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"

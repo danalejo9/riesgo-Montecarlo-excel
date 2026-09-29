@@ -176,9 +176,20 @@ export const FUNCION_EVENTO = {
   ],
 } as const;
 
-/** ¿Es `RIESGO.<id>` una función que declara algo (salida, correlación)? */
+/**
+ * `RIESGO.DECISION(opción1; opción2; …)` o `RIESGO.DECISION(rango)` (T9): una
+ * decisión, no un azar. En la hoja vale la primera opción; al simular, el
+ * modelo se simula con cada una y se comparan lado a lado.
+ */
+export const FUNCION_DECISION = {
+  id: 'DECISION',
+  descripcion: 'Una decisión con varias opciones (no aleatoria): al simular se compara el resultado con cada una. En la hoja vale la primera.',
+  parametros: [{ nombre: 'opciones', descripcion: 'Las opciones: números o textos, o un rango con ellas' }],
+} as const;
+
+/** ¿Es `RIESGO.<id>` una función que declara algo (salida, correlación, decisión)? */
 export function esFuncionDeDeclaracion(id: string): boolean {
-  return id === FUNCION_SALIDA.id || id === FUNCION_CORRELACION.id;
+  return id === FUNCION_SALIDA.id || id === FUNCION_CORRELACION.id || id === FUNCION_DECISION.id;
 }
 
 /** ¿Es `RIESGO.<id>` una función de resultados (B6) y no una distribución? */

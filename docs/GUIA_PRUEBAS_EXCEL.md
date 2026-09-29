@@ -194,6 +194,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N15. Registro de riesgos** (T8 del plan, nuevo): haz T10.
 
+**N16. Opciones de decisión** (T9 del plan, nuevo): haz T11.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -740,6 +742,22 @@ en C57 y `=RIESGO.EVENTO(0,1;50000)` en C58.
     primero, también «… (impacto)».
 - Con el motor **Compatible**: C58 sí (una sola función); C57 avisa de que
   tiene varias funciones en la fórmula (pon el impacto en otra celda).
+
+**T11. Opciones de decisión** (T9 del plan, nuevo; «Pruebas», sección 12,
+filas 62–64). Escribe `=RIESGO.NORMAL(1000;100)` en C62 y
+`=RIESGO.DECISION(8;10;12)` en C63 (enseña **8**, la primera opción). Marca
+C64 como salida y simula.
+- Esperado: tarda unas tres veces lo normal (una simulación por opción). En
+  Resultados, **«Comparar decisiones»** con tres filas: 8 (en la hoja), 10 y
+  12, con medias en torno a **8.000**, **10.000** y **12.000**, y p5
+  **proporcionales** (unos 6.680, 8.350 y 10.020): se simuló cada opción con
+  los mismos números aleatorios.
+- Pon un umbral en C64 (por ejemplo, por debajo de 9.000) y vuelve a simular:
+  aparece la columna «Umbral» con la probabilidad en cada opción.
+- También con textos: `=RIESGO.DECISION("Proveedor A";"Proveedor B")`, o
+  con un rango (`=RIESGO.DECISION(E62:E64)`).
+- Con el motor **Compatible**: un aviso claro (las decisiones solo con el
+  rápido).
 
 ---
 

@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### T9: opciones de decisión (2026-09-29)
+
+**Añadido**
+- `=RIESGO.DECISION(opción1; opción2; …)` o `=RIESGO.DECISION(rango)`: una
+  celda con varias opciones que **no** son aleatorias (proveedor A/B/C,
+  deuda al 60/70/80 %). En la hoja vale la primera. Al simular, el modelo se
+  simula con cada opción (o cada combinación, hasta 16) con los **mismos
+  números aleatorios**, y Resultados enseña **«Comparar decisiones»**:
+  media, p5, p95 y la probabilidad del umbral de cada opción (en una salida
+  de texto, lo más frecuente). Solo con el motor rápido.
+- Libro de demostración: sección 12 de «Pruebas» (filas 62–64). Guía: T11 y N16.
+
 ### T8: registro de riesgos (2026-09-29)
 
 **Añadido**

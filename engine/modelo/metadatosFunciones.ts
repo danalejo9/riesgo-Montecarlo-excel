@@ -6,7 +6,7 @@
  */
 
 import {
-  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from './funcionesRiesgo.ts';
 
 /** Lo que enseñan fuera de la simulación (B2). */
@@ -127,6 +127,13 @@ export function metadatosFunciones(): object {
       result: { type: 'number', dimensionality: 'scalar' },
       options: VOLATIL,
       parameters: FUNCION_EVENTO.parametros.map((p) => ({ name: p.nombre, description: p.descripcion, type: 'number', dimensionality: 'scalar' })),
+    }, {
+      // T9: una decisión; cada argumento, una opción (o un rango de opciones).
+      id: FUNCION_DECISION.id,
+      name: FUNCION_DECISION.id,
+      description: FUNCION_DECISION.descripcion,
+      result: { type: 'any', dimensionality: 'scalar' },
+      parameters: FUNCION_DECISION.parametros.map((p) => ({ name: p.nombre, description: p.descripcion, type: 'any', dimensionality: 'matrix', repeating: true })),
     }])),
   };
 }

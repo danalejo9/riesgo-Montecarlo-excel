@@ -1081,6 +1081,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     impacto (con B1b si es la única función de la celda). Banco: B32–B34.
     **Siguiente**: T9 (opciones de decisión).
 
+50. [x] **T9 (2026-09-29)**. `FUNCION_DECISION` (declaración: no es
+    distribución); `excel/decisiones.ts` (`leerDecisiones` con literales,
+    `{…}` y rangos de valores escritos; `combinaciones`, `fijarCombinacion`,
+    `etiquetaCombinacion`); en `ejecutarSimulacion.ts`, la opción 0 se fija
+    antes del análisis, las demás se simulan con `porElRapido` y la misma
+    semilla, y `decisiones` va en el resultado (`resumenParaDecision`).
+    `TablaDecisiones` en Resultados (numéricas y de texto). En Excel, la
+    primera opción (parámetro `repeating`). Banco: B36–B37. **Siguiente**:
+    C3 (exportar iteraciones).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
