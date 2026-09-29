@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { modeloVacio } from '../../engine/modelo/index.ts';
-import type { SimulacionCompletada } from '../../excel/informe.ts';
+import { construirInforme, type SimulacionCompletada } from '../../excel/informe.ts';
 import { codificarInforme, datosDelInforme, decodificarInforme } from '../../excel/informeImprimible.ts';
 
 function caso() {
@@ -42,5 +42,30 @@ describe('informe imprimible', () => {
 
   it('un código roto no rompe la página', async () => {
     expect(await decodificarInforme('esto-no-es-un-informe')).toBeNull();
+  });
+});
+
+describe('registro de riesgos en el PDF y en la hoja volcada (T8)', () => {
+  const registro = [
+    { celda: 'R!B2', nombre: 'Avería', probabilidad: 0.1, impacto: '500', impactoMedio: 500, impactoDesviacion: 0, valorEsperado: 50, desviacion: 150 },
+    { celda: 'R!B3', nombre: 'Retraso', probabilidad: null, impacto: 'con parámetros que cambian', impactoMedio: null, impactoDesviacion: null, valorEsperado: null, desviacion: null },
+  ];
+
+  it('el PDF lo lleva solo si hay riesgos', () => {
+    const { m, r } = caso();
+    expect(datosDelInforme(m, r).registroRiesgos).toBeUndefined();
+    expect(datosDelInforme(m, { ...r, registroRiesgos: registro }).registroRiesgos).toEqual(registro);
+  });
+
+  it('la hoja volcada tiene su sección, con el total', () => {
+    const { m, r } = caso();
+    const inf = construirInforme(m, { ...r, registroRiesgos: registro });
+    const i = inf.filas.findIndex((f) => f[0] === 'REGISTRO DE RIESGOS');
+    expect(i).toBeGreaterThan(0);
+    expect(inf.titulos).toContain(i);
+    expect(inf.filas[i + 2]?.slice(0, 7)).toEqual(['Avería', 'R!B2', '500', 0.1, 50, 1, 150]);
+    expect(inf.filas[i + 3]?.slice(0, 5)).toEqual(['Retraso', 'R!B3', 'con parámetros que cambian', 'variable', '']);
+    expect(inf.filas[i + 4]?.[4]).toBe(50);
+    expect(construirInforme(m, r).filas.some((f) => f[0] === 'REGISTRO DE RIESGOS')).toBe(false);
   });
 });

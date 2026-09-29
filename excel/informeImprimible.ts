@@ -19,6 +19,7 @@ import { resumirDistribucion, textoFecha, type ModeloRiesgo } from '../engine/mo
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
+import type { FilaRiesgo } from './registroRiesgos.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 
@@ -48,6 +49,8 @@ export interface DatosInforme {
   };
   entradas: { nombre: string; ref: string; distribucion: string; correlaciones: string }[];
   referencia?: string;
+  /** El registro de riesgos (T8), si el libro tiene `RIESGO.EVENTO`. */
+  registroRiesgos?: FilaRiesgo[];
   salidas: SalidaInforme[];
 }
 
@@ -88,6 +91,7 @@ export function datosDelInforme(
       })),
     ],
     ...(ref ? { referencia: ref.etiqueta } : {}),
+    ...(resultado.registroRiesgos && resultado.registroRiesgos.length > 0 ? { registroRiesgos: resultado.registroRiesgos } : {}),
     salidas: resultado.salidas.map(({ muestraOrdenada, ...conTexto }) => {
       // La muestra de textos (hasta 100.000) no viaja: el informe no la enseña.
       const s = { ...conTexto };

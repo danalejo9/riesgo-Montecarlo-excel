@@ -5,6 +5,13 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### T8: registro de riesgos en la hoja volcada y el PDF (2026-09-29)
+
+**Añadido**
+- La hoja volcada tiene una sección **REGISTRO DE RIESGOS** (riesgo, celda,
+  impacto, probabilidad, esperado, parte del total, desviación y el total),
+  y el informe PDF la misma tabla tras las entradas.
+
 ### Binomial negativa en el ajuste, umbral de RIESGO.SALIDA y fechas en la tabla (2026-09-29)
 
 **Añadido**

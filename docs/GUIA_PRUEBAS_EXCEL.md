@@ -948,6 +948,10 @@ en C57 y `=RIESGO.EVENTO(0,1;50000)` en C58.
     5.000) y su parte del total (64 % y 36 %), de más a menos.
   - En «Qué la mueve más», cada riesgo aparece como «… (ocurre)» y, el
     primero, también «… (impacto)».
+  - **«Volcar a una hoja»**: sección **REGISTRO DE RIESGOS** tras el
+    resumen de las salidas, con probabilidad en %, esperado, parte del
+    total y una fila **Total** (14.000). **«Informe PDF»**: la misma tabla,
+    tras «Entradas inciertas».
 - Con el motor **Compatible**: C58 sí (una sola función); C57 avisa de que
   tiene varias funciones en la fórmula (pon el impacto en otra celda).
 

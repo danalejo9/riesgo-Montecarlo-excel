@@ -1193,6 +1193,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     de riesgos en la hoja volcada y el PDF; libro de prueba con LAMBDA
     (Peng-Robinson) y soporte de LAMBDA en el motor.
 
+64. [x] **T8 en el volcado y el PDF (2026-09-29)**. Sección «REGISTRO DE
+    RIESGOS» en `construirInforme` (tras el resumen de salidas) y
+    `registroRiesgos` en `DatosInforme`, pintado por `RegistroImpreso`
+    (`ui/informe.tsx`). Probado en `informeImprimible.test.ts`.
+    **Siguiente**: libro con LAMBDA (Peng-Robinson) y LAMBDA en el motor.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -674,7 +674,7 @@ este bloque y deja T7, T8 y T9 para después de la etapa 2)*:
   (triangular entre dos fechas) que se enseña como fecha y no como número de
   serie, y salidas de fecha («fecha de fin del proyecto») con percentiles en
   fechas. Muy de gestión de proyectos.
-- **T8. Registro de riesgos** ✅ 29/09 en el panel (`RIESGO.EVENTO`, `excel/registroRiesgos.ts`; falta llevarlo a la hoja volcada y al informe PDF) *(después de la etapa 2)*: cada riesgo como probabilidad × impacto (un
+- **T8. Registro de riesgos** ✅ 29/09 en el panel, la hoja volcada y el informe PDF (`RIESGO.EVENTO`, `excel/registroRiesgos.ts`) *(después de la etapa 2)*: cada riesgo como probabilidad × impacto (un
   sí/no y una distribución del coste o del retraso), declarado en una tabla
   de la hoja, con su propia vista: qué riesgos pesan más en el total. Es como
   se trabaja el riesgo en obra y en proyectos, y ningún complemento de

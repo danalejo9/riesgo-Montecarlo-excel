@@ -499,6 +499,29 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   tenue('«Sin valor» son las iteraciones en que la salida no dio un número (por ejemplo, una TIR que no existe).');
   fila++;
 
+  // T8: el registro de riesgos, como en el panel (de más a menos esperado).
+  const registro = resultado.registroRiesgos ?? [];
+  if (registro.length > 0) {
+    titulo('REGISTRO DE RIESGOS');
+    cabecera(['Riesgo', 'Celda', 'Impacto', 'Probabilidad', 'Esperado', 'Del total', 'Desviación']);
+    const total = registro.reduce((t, r) => t + (r.valorEsperado ?? 0), 0);
+    const i0 = fila;
+    for (const r of registro) {
+      linea([
+        r.nombre, r.celda, r.impacto, r.probabilidad ?? 'variable', r.valorEsperado ?? '',
+        r.valorEsperado !== null && total !== 0 ? r.valorEsperado / total : '', r.desviacion ?? '',
+      ]);
+    }
+    formato({ fila: i0, col: 3, filas: registro.length, cols: 1 }, FORMATO_PORCENTAJE);
+    formato({ fila: i0, col: 4, filas: registro.length, cols: 1 }, Math.abs(total) >= 100 ? FORMATO_ENTERO : '#,##0.00');
+    formato({ fila: i0, col: 5, filas: registro.length, cols: 1 }, FORMATO_PORCENTAJE);
+    formato({ fila: i0, col: 6, filas: registro.length, cols: 1 }, Math.abs(total) >= 100 ? FORMATO_ENTERO : '#,##0.00');
+    linea(['Total', '', '', '', total]);
+    formato({ fila: fila - 1, col: 4, filas: 1, cols: 1 }, Math.abs(total) >= 100 ? FORMATO_ENTERO : '#,##0.00');
+    tenue('Esperado: probabilidad × impacto medio, lo que aporta cada riesgo de media (ocurra o no). Lo que pesa en cada salida, en su tornado.');
+    fila++;
+  }
+
   /** La salida en cada categoría de cada entrada de texto (T3). */
   const escribirPorCategoria = (s: ResultadoSalida, fmt?: string) => {
     for (const b of s.porCategoria ?? []) {

@@ -81,6 +81,8 @@ function Informe() {
         </table>
       </section>
 
+      {datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />}
+
       {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}
 
       {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
@@ -101,6 +103,35 @@ function Informe() {
         iteraciones. Generado por Riesgo Monte Carlo; todo el cálculo se hizo en el equipo del usuario.
       </footer>
     </main>
+  );
+}
+
+/** El registro de riesgos (T8), como en el panel: de más a menos esperado. */
+function RegistroImpreso({ filas }: { filas: NonNullable<DatosInforme['registroRiesgos']> }) {
+  const total = filas.reduce((t, f) => t + (f.valorEsperado ?? 0), 0);
+  const pct = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`;
+  return (
+    <section>
+      <h2>Registro de riesgos</h2>
+      <table className="comparacion tabla-informe">
+        <thead><tr><th>Riesgo</th><th>Celda</th><th>Impacto</th><th>Probabilidad</th><th>Esperado</th><th>Del total</th></tr></thead>
+        <tbody>
+          {filas.map((f) => (
+            <tr key={f.celda}>
+              <th scope="row">{f.nombre}</th><td>{f.celda}</td><td>{f.impacto}</td>
+              <td>{f.probabilidad === null ? 'variable' : pct(f.probabilidad)}</td>
+              <td>{f.valorEsperado === null ? '—' : numero(f.valorEsperado)}</td>
+              <td>{f.valorEsperado !== null && total !== 0 ? pct(f.valorEsperado / total) : ''}</td>
+            </tr>
+          ))}
+          <tr><th scope="row">Total</th><td /><td /><td /><td>{numero(total)}</td><td /></tr>
+        </tbody>
+      </table>
+      <p className="tenue">
+        Esperado: probabilidad × impacto medio, lo que aporta cada riesgo de media (ocurra o no). Lo que pesa cada uno
+        en una salida, en su gráfico «Qué la mueve más».
+      </p>
+    </section>
   );
 }
 
