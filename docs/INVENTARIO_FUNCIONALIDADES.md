@@ -105,8 +105,8 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11b | B1b | ✅ (29/09, falta Excel real) **Funciones RIESGO que sortean en el motor compatible**: `=10+RIESGO.NORMAL(0;1)` y los parámetros aleatorios (B7) también con Excel en el bucle, y sin escribir encima de las fórmulas (más seguro). Necesita B1 | **Tú** (28/09) |
 | 11c | F5b | ✅ (29/09) **Modo compatible por lotes**: 20 iteraciones por viaje a Excel; repinta y tarda mucho menos, con los mismos números. Falta medirlo en tu Excel | **Tú** (H2) |
 | 11d | U2 | ✅ (29/09, falta tu opinión) **Legibilidad del panel**: cifras clave arriba, secciones plegables que se recuerdan, menos texto visible, botones con borde | **Tú** (T6) |
-| 11f | U3.1 | En curso (29/09) **Explorador de distribución** en ventana flotante: histograma o curva de la celda seleccionada, estadísticas a la derecha, delimitadores que se arrastran | **Tú** (29/09) |
-| 11g | U3.2 | En curso (29/09) **Cinta reorganizada**: grupos Modelo, Simulación (menú de iteraciones), Análisis, Informes y Ayuda (manual, ejemplos) | **Tú** (29/09) |
+| 11f | U3.1 | ✅ (29/09, falta Excel real) **Explorador de distribución** en ventana flotante: histograma o curva de la celda seleccionada, estadísticas a la derecha, delimitadores que se arrastran | **Tú** (29/09) |
+| 11g | U3.2 | ✅ (29/09, falta Excel real) **Cinta reorganizada**: grupos Modelo, Simulación (menú de iteraciones), Análisis, Informes y Ayuda (manual, ejemplos) | **Tú** (29/09) |
 | 11h | U3.3 | Pendiente **Catálogo visual de distribuciones** en el selector: forma en miniatura y cuándo usarla | **Tú** (29/09) |
 | 11i | U3.4 | Pendiente **Lista de entradas y salidas** en ventana flotante | **Tú** (29/09) |
 | 11j | U3.5–U3.6 | Propuesta, a confirmar: menú del clic derecho y botón Detener | Plan |

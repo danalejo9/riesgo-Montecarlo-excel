@@ -1230,6 +1230,21 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     delimitadores, catálogo de distribuciones, manual/ejemplos en la cinta):
     evaluadas con el usuario, pendientes de su decisión.
 
+67. [x] **U3.1 y U3.2 (2026-09-29)**. Decidido con el usuario el bloque U3
+    (roadmap). Cinta: 7 grupos; menú `menuIteraciones` (items `iter1000`…,
+    `iterOtra`) con `requestUpdate` en `excel/cinta.ts`; acciones nuevas en
+    `ui/main.tsx` (las del panel, con `pedirAlPanel`; los ejemplos, directo).
+    Ventanas flotantes con `excel/ventana.ts` (`displayDialogAsync`; datos en
+    `#d=` con `excel/codificacion.ts`, luego `messageChild`; en el banco,
+    `window.open` + `postMessage`). Explorador: `vistaDeCelda` (salida o
+    entrada de la última simulación, 501 cuantiles para los delimitadores),
+    sigue a `escucharSeleccion`. Banco: `onSelectionChanged` y
+    `Excel.run(contexto, fn)`. Probado en `exploradorU3.test.ts` (incluye que
+    cada `FunctionName` del manifiesto esté registrada) y en el banco
+    (explorador sobre salida y entrada, delimitadores, iteraciones 5.000,
+    ajuste desde la cinta). **Siguiente**: U3.3 (catálogo) y U3.4 (lista de
+    entradas y salidas).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

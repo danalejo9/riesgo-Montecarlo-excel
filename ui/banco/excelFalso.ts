@@ -238,6 +238,12 @@ function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): 
 /** Qué celda está "seleccionada". El banco la cambia con un desplegable. */
 export const seleccion = { ref: 'B3' };
 
+/** `workbook.onSelectionChanged` (U3.1: el explorador sigue a la selección). */
+const alSeleccionar = new Set<() => Promise<void> | void>();
+export function avisarSeleccion(): void {
+  for (const f of alSeleccionar) void f();
+}
+
 /**
  * El relleno de cada celda, que aquí no se ve pero sí se puede comprobar: el
  * banco lo enseña como texto, y así se verifica que el resaltado pinta las
@@ -452,6 +458,12 @@ export function instalarExcelFalso(): void {
         },
       },
       getSelectedRange: () => rangoFalso(seleccion.ref),
+      onSelectionChanged: {
+        add: (f: () => Promise<void> | void) => {
+          alSeleccionar.add(f);
+          return { context: undefined, remove: () => alSeleccionar.delete(f) };
+        },
+      },
     },
     sync: () => Promise.resolve(),
   };
@@ -459,7 +471,9 @@ export function instalarExcelFalso(): void {
   const g = globalThis as unknown as Record<string, unknown>;
 
   g.Excel = {
-    run: <T>(fn: (c: typeof contexto) => Promise<T>) => fn(contexto),
+    // También `Excel.run(contextoAnterior, fn)`, como al dejar de escuchar un evento.
+    run: <T>(a: unknown, b?: (c: typeof contexto) => Promise<T>) =>
+      (typeof a === 'function' ? (a as (c: typeof contexto) => Promise<T>) : (b as (c: typeof contexto) => Promise<T>))(contexto),
     ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered' },
     BorderIndex: { edgeBottom: 'EdgeBottom' },
     BorderLineStyle: { continuous: 'Continuous' },

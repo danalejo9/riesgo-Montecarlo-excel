@@ -40,7 +40,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.5.0.0</Version>
+  <Version>0.6.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -109,6 +109,7 @@
 
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <CustomTab id="PestanaRiesgo">
+              <!-- U3.2: la cinta en grupos. Todas las acciones son del runtime compartido (ui/acciones.ts, ui/main.tsx): no recargan el panel. Solo admite botones y menús. -->
               <Group id="GrupoPrincipal">
                 <Label resid="GrupoPrincipal.Label" />
                 <Icon>
@@ -116,13 +117,6 @@
                   <bt:Image size="32" resid="Icono.32" />
                   <bt:Image size="80" resid="Icono.80" />
                 </Icon>
-                <!--
-                  Cuatro botones, un solo panel. Cada uno ejecuta una acción
-                  del runtime compartido (`mostrarModelo`, `mostrarResultados`…,
-                  registradas en `ui/acciones.ts`) que pone la pestaña y
-                  muestra el panel con `Office.addin.showAsTaskpane()`, sin
-                  recargarlo ni perder los resultados.
-                -->
                 <Control xsi:type="Button" id="btnModelo">
                   <Label resid="btnModelo.Label" />
                   <Supertip>
@@ -168,28 +162,8 @@
                     <FunctionName>mostrarConfiguracion</FunctionName>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="btnDiagnostico">
-                  <Label resid="btnDiagnostico.Label" />
-                  <Supertip>
-                    <Title resid="btnDiagnostico.Label" />
-                    <Description resid="btnDiagnostico.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icono.16" />
-                    <bt:Image size="32" resid="Icono.32" />
-                    <bt:Image size="80" resid="Icono.80" />
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>mostrarDiagnostico</FunctionName>
-                  </Action>
-                </Control>
               </Group>
-              <!--
-                B3: actúan sin abrir el panel. Marcar la celda seleccionada
-                como entrada o salida (se pinta en la hoja: esa es la señal),
-                simular (el panel se abre para enseñar el progreso y los
-                resultados) y quitar el resaltado.
-              -->
+              <!-- B3: actúan sin abrir el panel; se pinta la celda, esa es la señal. -->
               <Group id="GrupoAcciones">
                 <Label resid="GrupoAcciones.Label" />
                 <Icon>
@@ -227,21 +201,6 @@
                     <FunctionName>marcarSalida</FunctionName>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="btnSimular">
-                  <Label resid="btnSimular.Label" />
-                  <Supertip>
-                    <Title resid="btnSimular.Label" />
-                    <Description resid="btnSimular.Tooltip" />
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="IconoSimular.16" />
-                    <bt:Image size="32" resid="IconoSimular.32" />
-                    <bt:Image size="80" resid="IconoSimular.80" />
-                  </Icon>
-                  <Action xsi:type="ExecuteFunction">
-                    <FunctionName>simular</FunctionName>
-                  </Action>
-                </Control>
                 <Control xsi:type="Button" id="btnQuitarResaltado">
                   <Label resid="btnQuitarResaltado.Label" />
                   <Supertip>
@@ -258,12 +217,105 @@
                   </Action>
                 </Control>
               </Group>
-              <!--
-                B2: el modo del libro. Qué enseñan las celdas RIESGO fuera de
-                la simulación: un valor fijo (la media, u otro elegido en
-                Configuración) o uno al azar que cambia con F9. El botón del
-                modo activo queda desactivado (Office.ribbon.requestUpdate).
-              -->
+              <!-- U3.2: el número de iteraciones sin abrir Configuración; la opción activa queda desactivada (requestUpdate). -->
+              <Group id="GrupoSimulacion">
+                <Label resid="GrupoSimulacion.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Menu" id="menuIteraciones">
+                  <Label resid="menuIteraciones.Label" />
+                  <Supertip>
+                    <Title resid="menuIteraciones.Label" />
+                    <Description resid="menuIteraciones.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoIteraciones.16" />
+                    <bt:Image size="32" resid="IconoIteraciones.32" />
+                    <bt:Image size="80" resid="IconoIteraciones.80" />
+                  </Icon>
+                  <Items>
+                    <Item id="iter1000">
+                      <Label resid="iter1000.Label" />
+                      <Supertip>
+                        <Title resid="iter1000.Label" />
+                        <Description resid="iter1000.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteraciones1000</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="iter5000">
+                      <Label resid="iter5000.Label" />
+                      <Supertip>
+                        <Title resid="iter5000.Label" />
+                        <Description resid="iter5000.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteraciones5000</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="iter10000">
+                      <Label resid="iter10000.Label" />
+                      <Supertip>
+                        <Title resid="iter10000.Label" />
+                        <Description resid="iter10000.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteraciones10000</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="iter50000">
+                      <Label resid="iter50000.Label" />
+                      <Supertip>
+                        <Title resid="iter50000.Label" />
+                        <Description resid="iter50000.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteraciones50000</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="iter100000">
+                      <Label resid="iter100000.Label" />
+                      <Supertip>
+                        <Title resid="iter100000.Label" />
+                        <Description resid="iter100000.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteraciones100000</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="iterOtra">
+                      <Label resid="iterOtra.Label" />
+                      <Supertip>
+                        <Title resid="iterOtra.Label" />
+                        <Description resid="iterOtra.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>iteracionesOtra</FunctionName>
+                      </Action>
+                    </Item>
+                  </Items>
+                </Control>
+                <Control xsi:type="Button" id="btnSimular">
+                  <Label resid="btnSimular.Label" />
+                  <Supertip>
+                    <Title resid="btnSimular.Label" />
+                    <Description resid="btnSimular.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoSimular.16" />
+                    <bt:Image size="32" resid="IconoSimular.32" />
+                    <bt:Image size="80" resid="IconoSimular.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>simular</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+              <!-- B2: el modo del libro; el botón del modo activo queda desactivado. -->
               <Group id="GrupoModo">
                 <Label resid="GrupoModo.Label" />
                 <Icon>
@@ -300,6 +352,189 @@
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
                     <FunctionName>modoAleatorio</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="GrupoAnalisis">
+                <Label resid="GrupoAnalisis.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnVerDistribucion">
+                  <Label resid="btnVerDistribucion.Label" />
+                  <Supertip>
+                    <Title resid="btnVerDistribucion.Label" />
+                    <Description resid="btnVerDistribucion.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoDistribucion.16" />
+                    <bt:Image size="32" resid="IconoDistribucion.32" />
+                    <bt:Image size="80" resid="IconoDistribucion.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>verDistribucion</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnAjustar">
+                  <Label resid="btnAjustar.Label" />
+                  <Supertip>
+                    <Title resid="btnAjustar.Label" />
+                    <Description resid="btnAjustar.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoAjustar.16" />
+                    <bt:Image size="32" resid="IconoAjustar.32" />
+                    <bt:Image size="80" resid="IconoAjustar.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>ajustarDatos</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnEscenarios">
+                  <Label resid="btnEscenarios.Label" />
+                  <Supertip>
+                    <Title resid="btnEscenarios.Label" />
+                    <Description resid="btnEscenarios.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoEscenarios.16" />
+                    <bt:Image size="32" resid="IconoEscenarios.32" />
+                    <bt:Image size="80" resid="IconoEscenarios.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>verEscenarios</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="GrupoInformes">
+                <Label resid="GrupoInformes.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnVolcar">
+                  <Label resid="btnVolcar.Label" />
+                  <Supertip>
+                    <Title resid="btnVolcar.Label" />
+                    <Description resid="btnVolcar.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoVolcar.16" />
+                    <bt:Image size="32" resid="IconoVolcar.32" />
+                    <bt:Image size="80" resid="IconoVolcar.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>volcarHoja</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnInformePdf">
+                  <Label resid="btnInformePdf.Label" />
+                  <Supertip>
+                    <Title resid="btnInformePdf.Label" />
+                    <Description resid="btnInformePdf.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoPdf.16" />
+                    <bt:Image size="32" resid="IconoPdf.32" />
+                    <bt:Image size="80" resid="IconoPdf.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>informePdf</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
+              <Group id="GrupoAyuda">
+                <Label resid="GrupoAyuda.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnAyuda">
+                  <Label resid="btnAyuda.Label" />
+                  <Supertip>
+                    <Title resid="btnAyuda.Label" />
+                    <Description resid="btnAyuda.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoAyuda.16" />
+                    <bt:Image size="32" resid="IconoAyuda.32" />
+                    <bt:Image size="80" resid="IconoAyuda.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>abrirAyuda</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Menu" id="menuEjemplos">
+                  <Label resid="menuEjemplos.Label" />
+                  <Supertip>
+                    <Title resid="menuEjemplos.Label" />
+                    <Description resid="menuEjemplos.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoEjemplos.16" />
+                    <bt:Image size="32" resid="IconoEjemplos.32" />
+                    <bt:Image size="80" resid="IconoEjemplos.80" />
+                  </Icon>
+                  <Items>
+                    <Item id="ejInversion">
+                      <Label resid="ejInversion.Label" />
+                      <Supertip>
+                        <Title resid="ejInversion.Label" />
+                        <Description resid="ejInversion.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>ejemploInversion</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="ejObra">
+                      <Label resid="ejObra.Label" />
+                      <Supertip>
+                        <Title resid="ejObra.Label" />
+                        <Description resid="ejObra.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>ejemploObra</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="ejCartera">
+                      <Label resid="ejCartera.Label" />
+                      <Supertip>
+                        <Title resid="ejCartera.Label" />
+                        <Description resid="ejCartera.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>ejemploCartera</FunctionName>
+                      </Action>
+                    </Item>
+                    <Item id="ejSerie">
+                      <Label resid="ejSerie.Label" />
+                      <Supertip>
+                        <Title resid="ejSerie.Label" />
+                        <Description resid="ejSerie.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>ejemploSerie</FunctionName>
+                      </Action>
+                    </Item>
+                  </Items>
+                </Control>
+                <Control xsi:type="Button" id="btnDiagnostico">
+                  <Label resid="btnDiagnostico.Label" />
+                  <Supertip>
+                    <Title resid="btnDiagnostico.Label" />
+                    <Description resid="btnDiagnostico.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoDiagnostico.16" />
+                    <bt:Image size="32" resid="IconoDiagnostico.32" />
+                    <bt:Image size="80" resid="IconoDiagnostico.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>mostrarDiagnostico</FunctionName>
                   </Action>
                 </Control>
               </Group>
@@ -342,6 +577,33 @@
         <bt:Image id="IconoAleatorio.16" DefaultValue="https://localhost:9090/icon-simulate-16.png" />
         <bt:Image id="IconoAleatorio.32" DefaultValue="https://localhost:9090/icon-simulate-32.png" />
         <bt:Image id="IconoAleatorio.80" DefaultValue="https://localhost:9090/icon-simulate-80.png" />
+        <bt:Image id="IconoIteraciones.16" DefaultValue="https://localhost:9090/icon-iteraciones-16.png" />
+        <bt:Image id="IconoIteraciones.32" DefaultValue="https://localhost:9090/icon-iteraciones-32.png" />
+        <bt:Image id="IconoIteraciones.80" DefaultValue="https://localhost:9090/icon-iteraciones-80.png" />
+        <bt:Image id="IconoDistribucion.16" DefaultValue="https://localhost:9090/icon-distribucion-16.png" />
+        <bt:Image id="IconoDistribucion.32" DefaultValue="https://localhost:9090/icon-distribucion-32.png" />
+        <bt:Image id="IconoDistribucion.80" DefaultValue="https://localhost:9090/icon-distribucion-80.png" />
+        <bt:Image id="IconoAjustar.16" DefaultValue="https://localhost:9090/icon-ajustar-16.png" />
+        <bt:Image id="IconoAjustar.32" DefaultValue="https://localhost:9090/icon-ajustar-32.png" />
+        <bt:Image id="IconoAjustar.80" DefaultValue="https://localhost:9090/icon-ajustar-80.png" />
+        <bt:Image id="IconoEscenarios.16" DefaultValue="https://localhost:9090/icon-escenarios-16.png" />
+        <bt:Image id="IconoEscenarios.32" DefaultValue="https://localhost:9090/icon-escenarios-32.png" />
+        <bt:Image id="IconoEscenarios.80" DefaultValue="https://localhost:9090/icon-escenarios-80.png" />
+        <bt:Image id="IconoVolcar.16" DefaultValue="https://localhost:9090/icon-volcar-16.png" />
+        <bt:Image id="IconoVolcar.32" DefaultValue="https://localhost:9090/icon-volcar-32.png" />
+        <bt:Image id="IconoVolcar.80" DefaultValue="https://localhost:9090/icon-volcar-80.png" />
+        <bt:Image id="IconoPdf.16" DefaultValue="https://localhost:9090/icon-pdf-16.png" />
+        <bt:Image id="IconoPdf.32" DefaultValue="https://localhost:9090/icon-pdf-32.png" />
+        <bt:Image id="IconoPdf.80" DefaultValue="https://localhost:9090/icon-pdf-80.png" />
+        <bt:Image id="IconoAyuda.16" DefaultValue="https://localhost:9090/icon-ayuda-16.png" />
+        <bt:Image id="IconoAyuda.32" DefaultValue="https://localhost:9090/icon-ayuda-32.png" />
+        <bt:Image id="IconoAyuda.80" DefaultValue="https://localhost:9090/icon-ayuda-80.png" />
+        <bt:Image id="IconoEjemplos.16" DefaultValue="https://localhost:9090/icon-ejemplos-16.png" />
+        <bt:Image id="IconoEjemplos.32" DefaultValue="https://localhost:9090/icon-ejemplos-32.png" />
+        <bt:Image id="IconoEjemplos.80" DefaultValue="https://localhost:9090/icon-ejemplos-80.png" />
+        <bt:Image id="IconoDiagnostico.16" DefaultValue="https://localhost:9090/icon-diagnostico-16.png" />
+        <bt:Image id="IconoDiagnostico.32" DefaultValue="https://localhost:9090/icon-diagnostico-32.png" />
+        <bt:Image id="IconoDiagnostico.80" DefaultValue="https://localhost:9090/icon-diagnostico-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -352,12 +614,12 @@
       <bt:ShortStrings>
         <bt:String id="PestanaRiesgo.Label" DefaultValue="Riesgo" />
         <bt:String id="Funciones.Namespace" DefaultValue="RIESGO" />
-        <bt:String id="GrupoPrincipal.Label" DefaultValue="Monte Carlo" />
+        <bt:String id="GrupoPrincipal.Label" DefaultValue="Panel" />
         <bt:String id="btnModelo.Label" DefaultValue="Modelo" />
         <bt:String id="btnResultados.Label" DefaultValue="Resultados" />
         <bt:String id="btnConfiguracion.Label" DefaultValue="Configuración" />
         <bt:String id="btnDiagnostico.Label" DefaultValue="Diagnóstico" />
-        <bt:String id="GrupoAcciones.Label" DefaultValue="Acciones" />
+        <bt:String id="GrupoAcciones.Label" DefaultValue="Celdas" />
         <bt:String id="btnMarcarEntrada.Label" DefaultValue="Marcar entrada" />
         <bt:String id="btnMarcarSalida.Label" DefaultValue="Marcar salida" />
         <bt:String id="btnSimular.Label" DefaultValue="Simular" />
@@ -366,6 +628,28 @@
         <bt:String id="btnFijo.Label" DefaultValue="Valores fijos" />
         <bt:String id="btnAleatorio.Label" DefaultValue="Aleatorio" />
         <bt:String id="GetStarted.Title" DefaultValue="Riesgo Monte Carlo" />
+        <bt:String id="GrupoSimulacion.Label" DefaultValue="Simulación" />
+        <bt:String id="GrupoAnalisis.Label" DefaultValue="Análisis" />
+        <bt:String id="GrupoInformes.Label" DefaultValue="Informes" />
+        <bt:String id="GrupoAyuda.Label" DefaultValue="Ayuda" />
+        <bt:String id="menuIteraciones.Label" DefaultValue="Iteraciones" />
+        <bt:String id="iter1000.Label" DefaultValue="1.000" />
+        <bt:String id="iter5000.Label" DefaultValue="5.000" />
+        <bt:String id="iter10000.Label" DefaultValue="10.000" />
+        <bt:String id="iter50000.Label" DefaultValue="50.000" />
+        <bt:String id="iter100000.Label" DefaultValue="100.000" />
+        <bt:String id="iterOtra.Label" DefaultValue="Otra cantidad…" />
+        <bt:String id="btnVerDistribucion.Label" DefaultValue="Ver distribución" />
+        <bt:String id="btnAjustar.Label" DefaultValue="Ajustar a datos" />
+        <bt:String id="btnEscenarios.Label" DefaultValue="Escenarios" />
+        <bt:String id="btnVolcar.Label" DefaultValue="Volcar a una hoja" />
+        <bt:String id="btnInformePdf.Label" DefaultValue="Informe PDF" />
+        <bt:String id="btnAyuda.Label" DefaultValue="Ayuda" />
+        <bt:String id="menuEjemplos.Label" DefaultValue="Ejemplos" />
+        <bt:String id="ejInversion.Label" DefaultValue="Proyecto de inversión" />
+        <bt:String id="ejObra.Label" DefaultValue="Presupuesto de obra" />
+        <bt:String id="ejCartera.Label" DefaultValue="Cartera de inversiones" />
+        <bt:String id="ejSerie.Label" DefaultValue="Serie de precios" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
@@ -379,6 +663,24 @@
         <bt:String id="btnAleatorio.Tooltip" DefaultValue="Las celdas con funciones RIESGO enseñan un valor al azar; F9 vuelve a sortear. No cambia los resultados de la simulación." />
         <bt:String id="btnDiagnostico.Tooltip" DefaultValue="Estado del complemento, lo guardado en el libro y la configuración regional." />
         <bt:String id="GetStarted.Description" DefaultValue="Usa la pestaña Riesgo para abrir el panel y analizar tu modelo." />
+        <bt:String id="menuIteraciones.Tooltip" DefaultValue="Cuántas iteraciones simula el modelo. La opción actual aparece desactivada; «Otra cantidad…» abre Configuración." />
+        <bt:String id="iter1000.Tooltip" DefaultValue="Rápido, para probar el modelo." />
+        <bt:String id="iter5000.Tooltip" DefaultValue="Suficiente para ver la forma de la distribución." />
+        <bt:String id="iter10000.Tooltip" DefaultValue="Lo habitual: percentiles estables." />
+        <bt:String id="iter50000.Tooltip" DefaultValue="Colas (p1, p99) más precisas." />
+        <bt:String id="iter100000.Tooltip" DefaultValue="Máxima precisión; tarda más." />
+        <bt:String id="iterOtra.Tooltip" DefaultValue="Abre Configuración para escribir cualquier cantidad o simular hasta alcanzar una precisión." />
+        <bt:String id="btnVerDistribucion.Tooltip" DefaultValue="Abre una ventana con la distribución de la celda seleccionada (entrada o salida), sus estadísticas y dos delimitadores que se arrastran." />
+        <bt:String id="btnAjustar.Tooltip" DefaultValue="Ajusta una distribución a los datos de la selección (una columna de datos históricos)." />
+        <bt:String id="btnEscenarios.Tooltip" DefaultValue="Guarda la simulación como escenario y compárala con las anteriores." />
+        <bt:String id="btnVolcar.Tooltip" DefaultValue="Escribe los resultados de la última simulación en una hoja nueva, con sus gráficos." />
+        <bt:String id="btnInformePdf.Tooltip" DefaultValue="Abre el informe de la última simulación, listo para imprimir o guardar como PDF." />
+        <bt:String id="btnAyuda.Tooltip" DefaultValue="Qué significa cada número y gráfico, y cómo empezar." />
+        <bt:String id="menuEjemplos.Tooltip" DefaultValue="Escribe un modelo de ejemplo en una hoja nueva de este libro, listo para simular." />
+        <bt:String id="ejInversion.Tooltip" DefaultValue="Cinco años de flujos con ventas, crecimiento y margen inciertos: el VAN y la probabilidad de perder dinero." />
+        <bt:String id="ejObra.Tooltip" DefaultValue="Partidas con mínimo, más probable y máximo, y dos riesgos que pueden ocurrir o no." />
+        <bt:String id="ejCartera.Tooltip" DefaultValue="Tres activos con rentabilidades inciertas, dos de ellos correlacionados." />
+        <bt:String id="ejSerie.Tooltip" DefaultValue="Un precio que evoluciona año a año con crecimiento incierto, y un tipo de interés que vuelve a su media." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

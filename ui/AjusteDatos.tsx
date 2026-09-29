@@ -9,7 +9,7 @@
  * empírica (escalones) y la de la candidata elegida.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { construirDesdeDescriptor } from '../engine/distributions/index.ts';
 import {
@@ -40,11 +40,20 @@ const M = { arriba: 6, derecha: 8, abajo: 18, izquierda: 8 };
 export function AjusteDatos({
   decimal,
   alUsar,
+  pedido = 0,
+  alCerrar,
+  explicacion,
 }: {
   decimal: string;
   alUsar: (spec: DistributionSpec) => void;
+  /** U3.2: cada vez que cambia (la cinta pide «Ajustar a datos»), se abre y lee la selección. */
+  pedido?: number;
+  /** Si se da, «Cerrar» lo llama en vez de plegar el ajuste (el ajuste suelto de la cinta). */
+  alCerrar?: () => void;
+  /** Un párrafo más, arriba (qué hace «Usar» en ese sitio). */
+  explicacion?: string;
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(pedido > 0);
   const [texto, setTexto] = useState('');
   const [origen, setOrigen] = useState<string | null>(null);
   const [elegida, setElegida] = useState(0);
@@ -76,6 +85,13 @@ export function AjusteDatos({
     }
   };
 
+  useEffect(() => {
+    if (pedido <= 0) return;
+    setAbierto(true);
+    void deLaSeleccion();
+    // Solo cuando llega un pedido nuevo de la cinta.
+  }, [pedido]);
+
   if (!abierto) {
     return (
       <button type="button" className="secundario" onClick={() => setAbierto(true)}>
@@ -91,6 +107,7 @@ export function AjusteDatos({
         Pega los datos (una columna de Excel sirve) o selecciónalos en la hoja.
         Se proponen las distribuciones que mejor los describen.
       </p>
+      {explicacion && <p className="tenue">{explicacion}</p>}
       <textarea
         rows={4}
         value={texto}
@@ -104,7 +121,7 @@ export function AjusteDatos({
       />
       <div className="fila-botones">
         <button type="button" onClick={() => void deLaSeleccion()}>Leer de la selección</button>
-        <button type="button" className="secundario" onClick={() => setAbierto(false)}>Cerrar</button>
+        <button type="button" className="secundario" onClick={() => (alCerrar ? alCerrar() : setAbierto(false))}>Cerrar</button>
       </div>
       {fallo && <p className="aviso-linea">{fallo}</p>}
 

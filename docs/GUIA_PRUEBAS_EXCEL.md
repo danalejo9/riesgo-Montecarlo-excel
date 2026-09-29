@@ -42,7 +42,9 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N33** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N36** (sección N, justo después de la 0).
+>   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
+>   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
 > - Pendientes de antes: **W6** y **W7** (Excel para la Web).
 >
@@ -429,6 +431,53 @@ Si Excel pregunta por habilitar la edición, sí.
     temperatura, positiva y menor (ρ ≈ 0,47).
   - Si luego quieres dejar el libro como estaba para mandármelo otra vez,
     no hace falta: con el que guardaste antes de simular me basta.
+
+**N34. La cinta nueva** (U3.2, nuevo). **El manifiesto cambió**: cierra
+Excel, `npm run stop`, `npm start`; si la pestaña Riesgo sigue como antes,
+borra la caché (`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`) y repite.
+- Esperado, de izquierda a derecha: **Panel** (Modelo, Resultados,
+  Configuración) · **Celdas** (Marcar entrada, Marcar salida, Quitar
+  resaltado) · **Simulación** (Iteraciones ▾, Simular) · **Modo del libro** ·
+  **Análisis** (Ver distribución, Ajustar a datos, Escenarios) · **Informes**
+  (Volcar a una hoja, Informe PDF) · **Ayuda** (Ayuda, Ejemplos ▾,
+  Diagnóstico).
+- **Iteraciones ▾**: elige **5.000** y simula: «Cómo se calculó» dice 5.000.
+  Vuelve a abrir el menú: **5.000 aparece desactivado** (si no se desactiva,
+  apúntalo: es lo que depende de tu versión de Excel). «Otra cantidad…» abre
+  Configuración.
+- **Ejemplos ▾ → Presupuesto de obra**: se crea la hoja con el modelo, sin
+  abrir el panel.
+- **Ayuda**: se abre una ventana con «Cómo empezar», «La cinta» y «Qué
+  significa cada cosa».
+- **Volcar a una hoja** e **Informe PDF** desde la cinta hacen lo mismo que
+  los botones de Resultados.
+- **Escenarios** abre Resultados y baja hasta la sección Escenarios.
+
+**N35. Explorador de distribución** (U3.1, nuevo). Simula la demo (hoja
+«Modelo», con su salida). Selecciona la celda de la salida y pulsa **Ver
+distribución**.
+- Esperado: una **ventana aparte** con el histograma a la izquierda y las
+  estadísticas a la derecha (media, desviación, mínimo, máximo, p1 a p99,
+  VaR, CVaR, asimetría, curtosis). Las mismas cifras que en Resultados.
+- **Arrastra** los dos delimitadores: los porcentajes de arriba cambian (por
+  debajo, entre y por encima). También se pueden escribir en «Desde» y
+  «Hasta». «Acumulada» cambia a la curva.
+- **Sin cerrar la ventana**, selecciona en la hoja una entrada (celda
+  amarilla): la ventana pasa a esa entrada (dice «Entrada» y su
+  distribución, con la curva teórica en rojo encima). Selecciona una celda
+  cualquiera: aparece arriba el aviso de que no es una entrada ni una
+  salida, y se queda lo anterior.
+- Vuelve a simular con la ventana abierta: se actualiza sola.
+- Apunta si la ventana se puede mover y cambiar de tamaño, y si en la Web
+  sale igual (W).
+
+**N36. Ajustar a datos desde la cinta** (U3.2, nuevo). En «Pruebas»,
+selecciona **K5:K44** (los precios históricos) y pulsa **Ajustar a datos**.
+- Esperado: el panel se abre en Modelo con «Ajustar a datos» arriba, ya con
+  los 40 datos leídos y las distribuciones propuestas.
+- Selecciona una celda vacía (por ejemplo **C70**) y pulsa **Usar** en la
+  primera: C70 se marca como entrada con esa distribución y se abre su
+  detalle.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

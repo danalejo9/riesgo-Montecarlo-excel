@@ -24,6 +24,7 @@ import {
   agruparCorrelaciones,
   resumirDistribucion,
   resumirDistribucionFecha,
+  type DistributionSpec,
   type EntradaRiskModel,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
@@ -40,7 +41,8 @@ import { escribirPlantilla } from '../excel/escribirPlantilla.ts';
 import { Ayuda } from './ayuda.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
-import { marcarSeleccion } from './marcar.ts';
+import { celdaSeleccionada, marcarSeleccion } from './marcar.ts';
+import { claveComparable } from '../excel/direcciones.ts';
 
 /**
  * Lo que tarda el modo compatible, **antes** de pulsar Simular.
@@ -149,6 +151,7 @@ export function Modelo({
   alDeshacer,
   entradasDelLibro,
   idsFecha,
+  pedidoAjuste = 0,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
@@ -164,6 +167,8 @@ export function Modelo({
   entradasDelLibro?: readonly { ref: string; distribucion: string; nombre?: string }[];
   /** Entradas cuya celda tiene formato de fecha, según la última simulación (T7). */
   idsFecha?: ReadonlySet<string>;
+  /** U3.2: «Ajustar a datos» desde la cinta; cada pulsación lo suma. */
+  pedidoAjuste?: number;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -203,6 +208,35 @@ export function Modelo({
     if (como === 'entrada') setAbierta(r.id);
   }, [modelo, alCambiar]);
   const anadirEntrada = useCallback(() => anadir('entrada'), [anadir]);
+
+  // U3.2: el ajuste suelto de la cinta. «Usar» aplica la distribución a la
+  // celda que esté seleccionada entonces: si ya es una entrada, la cambia; si
+  // no, la marca como entrada nueva con esa distribución.
+  const [ajusteCerrado, setAjusteCerrado] = useState(0);
+  const ajusteSuelto = pedidoAjuste > ajusteCerrado;
+  const aplicarAjuste = useCallback(async (dist: DistributionSpec) => {
+    setAviso(null);
+    const sel = await celdaSeleccionada();
+    if (typeof sel === 'string') {
+      setAviso(`${sel} Selecciona la celda de la entrada y pulsa «Usar» otra vez.`);
+      return;
+    }
+    const clave = claveComparable(sel.direccion);
+    const existente = modelo.inputs.find((e) => clave !== undefined && claveComparable(e.ref) === clave);
+    if (existente) {
+      alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === existente.id ? { ...e, dist } : e)) });
+      setAbierta(existente.id);
+    } else {
+      const r = await marcarSeleccion(modelo, 'entrada');
+      if (!r.ok) {
+        setAviso(r.aviso);
+        return;
+      }
+      alCambiar({ ...r.modelo, inputs: r.modelo.inputs.map((e) => (e.id === r.id ? { ...e, dist } : e)) });
+      setAbierta(r.id);
+    }
+    setAjusteCerrado(pedidoAjuste);
+  }, [modelo, alCambiar, pedidoAjuste]);
   const anadirSalida = useCallback(() => anadir('salida'), [anadir]);
 
   const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
@@ -238,7 +272,20 @@ export function Modelo({
         </p>
       )}
 
-      {modelo.inputs.length === 0 && modelo.outputs.length === 0 && <PrimerModelo />}
+      {ajusteSuelto && (
+        <section className="ajuste-suelto">
+          <AjusteDatos
+            key={pedidoAjuste}
+            pedido={pedidoAjuste}
+            decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+            alUsar={(dist) => void aplicarAjuste(dist)}
+            alCerrar={() => setAjusteCerrado(pedidoAjuste)}
+            explicacion="Para usar una distribución: selecciona en la hoja la celda de la entrada (si no lo es, se marca como entrada) y pulsa «Usar»."
+          />
+        </section>
+      )}
+
+      {modelo.inputs.length === 0 && modelo.outputs.length === 0 && !ajusteSuelto && <PrimerModelo />}
 
       {preparadoParaCompartir && compartir}
 

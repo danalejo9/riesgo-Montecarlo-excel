@@ -87,6 +87,10 @@ export default defineConfig({
         taskpane: resolve(__dirname, 'ui/taskpane.html'),
         // El informe imprimible: se abre en el navegador del sistema.
         informe: resolve(__dirname, 'ui/informe.html'),
+        // U3.1: el explorador de distribución, en una ventana flotante (displayDialogAsync).
+        explorador: resolve(__dirname, 'ui/explorador.html'),
+        // U3.2: la ayuda de la cinta, también en ventana flotante.
+        ayuda: resolve(__dirname, 'ui/ayuda.html'),
         // El banco de pruebas (`/banco/`): el panel sobre un Excel de mentira,
         // para poder desarrollar la interfaz sin Excel. No lo carga el
         // manifiesto; se abre a mano.

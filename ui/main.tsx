@@ -17,7 +17,10 @@ import { createRoot } from 'react-dom/client';
 
 import { ErrorPanel } from './ErrorPanel.tsx';
 import { Panel } from './Panel.tsx';
-import { pedirAlPanel, registrarAcciones } from './acciones.ts';
+import { mostrar, pedirAlPanel, registrarAcciones } from './acciones.ts';
+import { ITERACIONES_CINTA } from '../excel/cinta.ts';
+import { PLANTILLAS } from '../excel/plantillas.ts';
+import { escribirPlantilla } from '../excel/escribirPlantilla.ts';
 import { aplicarModo } from '../excel/modoLibro.ts';
 import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import './estilos.css';
@@ -51,6 +54,19 @@ if (typeof Office === 'undefined') {
     marcarSalida: () => pedirAlPanel('marcarSalida'),
     simular: () => pedirAlPanel('simular'),
     quitarResaltado: () => pedirAlPanel('quitarResaltado'),
+    // U3.2: la cinta reorganizada.
+    ...Object.fromEntries(ITERACIONES_CINTA.map((n) => [`iteraciones${n}`, () => pedirAlPanel(`iteraciones:${n}`)])),
+    iteracionesOtra: () => mostrar('configuracion'),
+    verDistribucion: () => pedirAlPanel('verDistribucion'),
+    ajustarDatos: () => pedirAlPanel('ajustarDatos'),
+    verEscenarios: () => pedirAlPanel('verEscenarios'),
+    volcarHoja: () => pedirAlPanel('volcarHoja'),
+    informePdf: () => pedirAlPanel('informePdf'),
+    abrirAyuda: () => pedirAlPanel('abrirAyuda'),
+    // Los ejemplos se escriben sin el panel: una hoja nueva, lista para simular.
+    ...Object.fromEntries(PLANTILLAS.map((p) => [`ejemplo${p.id[0]?.toUpperCase()}${p.id.slice(1)}`, async () => {
+      await escribirPlantilla(p);
+    }])),
   });
   void Office.onReady(() => {
     montar(

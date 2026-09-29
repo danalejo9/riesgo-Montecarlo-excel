@@ -22,6 +22,7 @@ import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
 import type { FilaRiesgo } from './registroRiesgos.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
+import { codificarJson, decodificarJson } from './codificacion.ts';
 
 export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' | 'muestraTexto'> {
   umbral?: { texto: string; probabilidad: number };
@@ -127,36 +128,12 @@ export function datosDelInforme(
   };
 }
 
-/** Base64 apto para URL, sin relleno. */
-function aBase64Url(bytes: Uint8Array): string {
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i] as number);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function deBase64Url(texto: string): Uint8Array {
-  const b = texto.replace(/-/g, '+').replace(/_/g, '/');
-  const bin = atob(b + '='.repeat((4 - (b.length % 4)) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-}
-
-async function transformar(bytes: Uint8Array, flujo: CompressionStream | DecompressionStream): Promise<Uint8Array> {
-  const salida = new Blob([bytes.slice().buffer]).stream().pipeThrough(flujo);
-  return new Uint8Array(await new Response(salida).arrayBuffer());
-}
-
 /** Los datos, comprimidos y listos para ir detrás de `#d=`. */
 export async function codificarInforme(datos: DatosInforme): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify(datos));
-  return aBase64Url(await transformar(json, new CompressionStream('deflate-raw')));
+  return codificarJson(datos);
 }
 
 export async function decodificarInforme(codigo: string): Promise<DatosInforme | null> {
-  try {
-    const json = await transformar(deBase64Url(codigo), new DecompressionStream('deflate-raw'));
-    const datos = JSON.parse(new TextDecoder().decode(json)) as DatosInforme;
-    return datos && datos.version === 1 && Array.isArray(datos.salidas) ? datos : null;
-  } catch {
-    return null;
-  }
+  const datos = (await decodificarJson(codigo)) as DatosInforme | null;
+  return datos && datos.version === 1 && Array.isArray(datos.salidas) ? datos : null;
 }

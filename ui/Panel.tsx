@@ -33,6 +33,16 @@ import { huellaModelo, restaurarResultados, serializarResultados } from '../exce
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
+import { abrirVentana, type Ventana } from '../excel/ventana.ts';
+import { codificarJson } from '../excel/codificacion.ts';
+import { vistaDeCelda, vistaPorDefecto } from '../excel/explorador.ts';
+import { actualizarCintaIteraciones, ITERACIONES_CINTA } from '../excel/cinta.ts';
+import { escucharSeleccion } from '../excel/seleccionActiva.ts';
+import { leerSeleccion } from '../excel/seleccion.ts';
+import { volcarResultados } from '../excel/volcarResultados.ts';
+import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
+import { escenarioActivo } from '../excel/escenarios.ts';
+import { abrirEnNavegador } from './Resultados.tsx';
 import { marcarSeleccion } from './marcar.ts';
 import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
 import { aplicarModo, leerModoGuardado } from '../excel/modoLibro.ts';
@@ -83,6 +93,8 @@ export function Panel() {
   const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
   const [guardado, setGuardado] = useState<EstadoGuardado>({ estado: 'sin-cambios' });
   const [escenarios, setEscenarios] = useState<AlmacenEscenarios>(sinEscenarios);
+  /** U3.2: «Ajustar a datos» en la cinta; cada pulsación abre el ajuste con la selección. */
+  const [pedidoAjuste, setPedidoAjuste] = useState(0);
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
@@ -258,6 +270,61 @@ export function Panel() {
     return () => window.removeEventListener('keydown', alPulsar);
   }, [deshacer]);
 
+  // U3.1: el explorador de distribución. Enseña la celda seleccionada y la
+  // sigue mientras está abierto (y la vuelve a mandar tras cada simulación).
+  const explorador = useRef<{ ventana: Ventana; dejar?: () => Promise<void>; direccion: string } | null>(null);
+  const mensajeExplorador = useCallback((direccion: string) => {
+    const { resultado: r, modelo: m } = ultimo.current;
+    const umbrales = new Map((m?.outputs ?? []).filter((o) => o.threshold).map((o) => [o.id, o.threshold as { value: number; direction: 'below' | 'above' }]));
+    const v = vistaDeCelda(direccion, r?.ok ? r : null, umbrales);
+    return v.ok ? { vista: v.vista } : { motivo: v.motivo };
+  }, []);
+  const abrirExplorador = useCallback(async () => {
+    let direccion = '';
+    try {
+      direccion = (await leerSeleccion()).direccion;
+    } catch {
+      // sin selección legible, se abre con la primera salida
+    }
+    const r = ultimo.current.resultado;
+    let mensaje = mensajeExplorador(direccion);
+    if ('motivo' in mensaje) {
+      const porDefecto = vistaPorDefecto(r?.ok ? r : null);
+      if (porDefecto.ok) mensaje = { vista: porDefecto.vista };
+    }
+    const abierta = explorador.current;
+    if (abierta && abierta.ventana.enviar(mensaje)) return;
+    const ventana = await abrirVentana('explorador.html', await codificarJson(mensaje), {
+      alto: 75,
+      ancho: 60,
+      alCerrar: () => {
+        void explorador.current?.dejar?.().catch(() => {});
+        explorador.current = null;
+      },
+    });
+    explorador.current = { ventana, direccion };
+    try {
+      const dejar = await escucharSeleccion((d) => {
+        if (!explorador.current) return;
+        explorador.current.direccion = d;
+        explorador.current.ventana.enviar(mensajeExplorador(d));
+      });
+      if (explorador.current) explorador.current.dejar = dejar;
+      else void dejar().catch(() => {});
+    } catch {
+      // sin el evento de selección, la ventana enseña lo que se abrió
+    }
+  }, [mensajeExplorador]);
+  useEffect(() => {
+    const e = explorador.current;
+    if (e && resultado?.ok) e.ventana.enviar(mensajeExplorador(e.direccion));
+  }, [resultado, mensajeExplorador]);
+  // U3.2: la cinta marca las iteraciones actuales (desactiva esa opción del menú).
+  const iteracionesActuales = modelo?.settings.iterations;
+  useEffect(() => {
+    if (iteracionesActuales !== undefined) void actualizarCintaIteraciones(iteracionesActuales);
+  }, [iteracionesActuales]);
+
   const simular = useCallback(async () => {
     if (!modelo) return;
     cancelado.current = false;
@@ -319,8 +386,8 @@ export function Panel() {
 
   // B3: la cinta actúa sin abrir el panel. Se registran con lo último del
   // estado (refs), para no volver a registrarlos en cada cambio.
-  const ultimo = useRef({ modelo, cambiarModelo, simular });
-  ultimo.current = { modelo, cambiarModelo, simular };
+  const ultimo = useRef({ modelo, cambiarModelo, simular, resultado, escenarios });
+  ultimo.current = { modelo, cambiarModelo, simular, resultado, escenarios };
   useEffect(() => {
     const marcar = (como: 'entrada' | 'salida') => async () => {
       const { modelo: m, cambiarModelo: cambiar } = ultimo.current;
@@ -344,6 +411,48 @@ export function Panel() {
         await ultimo.current.simular();
       }),
       manejarDesdeLaCinta('quitarResaltado', () => quitarResaltado()),
+      // U3.2: el menú de iteraciones, sin abrir Configuración.
+      ...ITERACIONES_CINTA.map((n) => manejarDesdeLaCinta(`iteraciones:${n}`, async () => {
+        const { modelo: m, cambiarModelo: cambiar } = ultimo.current;
+        if (!m) return mostrarPanel();
+        cambiar({ ...m, settings: { ...m.settings, iterations: n } });
+      })),
+      manejarDesdeLaCinta('verDistribucion', () => abrirExplorador()),
+      manejarDesdeLaCinta('ajustarDatos', async () => {
+        setPestana('modelo');
+        setPedidoAjuste((x) => x + 1);
+        await mostrarPanel();
+      }),
+      manejarDesdeLaCinta('verEscenarios', async () => {
+        setPestana('resultados');
+        await mostrarPanel();
+        setTimeout(() => document.getElementById('seccion-escenarios')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      }),
+      manejarDesdeLaCinta('volcarHoja', async () => {
+        const { modelo: m, resultado: r } = ultimo.current;
+        if (!m || !r?.ok) {
+          setPestana('resultados');
+          return mostrarPanel();
+        }
+        try {
+          await volcarResultados(m, r);
+        } catch (e) {
+          setError(`No se pudo volcar a una hoja: ${mensajeDe(e)}`);
+          await mostrarPanel();
+        }
+      }),
+      manejarDesdeLaCinta('informePdf', async () => {
+        const { modelo: m, resultado: r, escenarios: esc } = ultimo.current;
+        if (!m || !r?.ok) {
+          setPestana('resultados');
+          return mostrarPanel();
+        }
+        const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc) }));
+        abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
+      }),
+      manejarDesdeLaCinta('abrirAyuda', async () => {
+        await abrirVentana('ayuda.html', '', { alto: 70, ancho: 45 });
+      }),
     ];
     return () => quitas.forEach((q) => q());
   }, []);
@@ -435,6 +544,7 @@ export function Panel() {
             {...(puedeDeshacer ? { alDeshacer: deshacer } : {})}
             {...(resultado?.ok && resultado.entradasDeFunciones ? { entradasDelLibro: resultado.entradasDeFunciones } : {})}
             {...(resultado?.ok && resultado.entradas ? { idsFecha: new Set(resultado.entradas.filter((e) => e.fecha).map((e) => e.id)) } : {})}
+            pedidoAjuste={pedidoAjuste}
             alSimular={() => void simular()}
             ocupado={simulando}
             ritmo={ritmo}

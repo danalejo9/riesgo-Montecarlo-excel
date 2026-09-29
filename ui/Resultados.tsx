@@ -1720,7 +1720,7 @@ function Escenarios({
   const [etiqueta, setEtiqueta] = useState(lista.length === 0 ? 'Escenario base' : `Escenario ${lista.length + 1}`);
   const yaGuardada = lista.find((e) => idSimulacion && e.resultado.idSimulacion === idSimulacion);
   return (
-    <section>
+    <section id="seccion-escenarios">
       <h2>Escenarios</h2>
       <p className="tenue">
         Guarda esta simulación con un nombre, cambia el modelo y vuelve a simular: cada salida se
@@ -1955,7 +1955,7 @@ export function Arana({ curvas }: { curvas: readonly CurvaAranaPanel[] }) {
  * imprimir de forma fiable); fuera de Office —el banco de pruebas— basta
  * `window.open`.
  */
-function abrirEnNavegador(url: string): void {
+export function abrirEnNavegador(url: string): void {
   const ui = typeof Office !== 'undefined' ? (Office.context?.ui as { openBrowserWindow?: (u: string) => void } | undefined) : undefined;
   if (ui?.openBrowserWindow) ui.openBrowserWindow(url);
   else window.open(url, '_blank', 'noopener');

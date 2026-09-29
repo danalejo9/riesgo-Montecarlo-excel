@@ -5,6 +5,27 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U3.1 y U3.2: cinta reorganizada y explorador de distribución (2026-09-29)
+
+**Añadido**
+- **Cinta en grupos**: Panel · Celdas · Simulación (menú **Iteraciones** con
+  1.000 a 100.000 y «Otra cantidad…», la actual desactivada) · Modo del
+  libro · Análisis (Ver distribución, Ajustar a datos, Escenarios) ·
+  Informes (Volcar a una hoja, Informe PDF) · Ayuda (Ayuda, Ejemplos,
+  Diagnóstico). Iconos nuevos (`scripts/generar-iconos.mjs`).
+- **Explorador de distribución** en ventana flotante: la celda seleccionada
+  (salida o entrada), histograma con dos delimitadores que se arrastran o
+  curva acumulada, y a la derecha media, desviación, extremos, percentiles
+  p1–p99, VaR, CVaR, asimetría y curtosis. Sigue a la selección y se
+  actualiza al volver a simular.
+- **Ajustar a datos** desde la cinta: lee la columna seleccionada y «Usar»
+  aplica la distribución a la celda que se seleccione (si no es entrada, la
+  marca).
+- **Ayuda** en ventana flotante: cómo empezar, qué hace cada grupo de la
+  cinta y qué significa cada número (los textos de la ayuda del panel).
+- **Ejemplos** desde la cinta: escribe la plantilla en una hoja nueva sin
+  abrir el panel.
+
 ### Arreglos de la ronda (N4, N6) y hojas de prueba en un clic (2026-09-29)
 
 **Corregido**

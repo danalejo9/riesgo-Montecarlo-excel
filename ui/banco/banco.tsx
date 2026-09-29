@@ -11,7 +11,7 @@ import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { CELDAS, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
+import { avisarSeleccion, CELDAS, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
 import { pedirAlPanel } from '../acciones.ts';
 
 instalarExcelFalso();
@@ -44,6 +44,7 @@ function Banco() {
             value={celda}
             onChange={(e) => {
               seleccion.ref = e.target.value;
+              avisarSeleccion();
               setCelda(e.target.value);
             }}
           >
