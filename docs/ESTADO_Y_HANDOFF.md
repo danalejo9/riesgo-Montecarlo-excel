@@ -1260,6 +1260,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     operación no hereda el formato de fecha de la celda. **Siguiente**: la
     ronda del usuario (N1–N38); U3.5–U3.6 si los confirma.
 
+70. [x] **U3.5 y U3.6 (2026-09-29)**, confirmados por el usuario.
+    `ExtensionPoint ContextMenu` / `ContextMenuCell` con un `Menu`
+    (`ctxEntrada`, `ctxSalida`, `ctxDistribucion`: las acciones de la
+    cinta). `btnDetener` (`detenerSimulacion` → `cancelado.current`),
+    `estadoSimulando` en `excel/cinta.ts`. Banco: detener a los 60 ms deja
+    la simulación «cancelada». **Siguiente**: la ronda del usuario (N1–N39).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

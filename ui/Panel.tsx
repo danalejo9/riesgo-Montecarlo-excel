@@ -45,7 +45,7 @@ interface MensajeExplorador {
   pestana?: 'distribucion' | 'lista';
 }
 import { rangoDesdeDireccion } from '../excel/rangos.ts';
-import { actualizarCintaIteraciones, ITERACIONES_CINTA } from '../excel/cinta.ts';
+import { actualizarCintaIteraciones, actualizarCintaSimulando, ITERACIONES_CINTA } from '../excel/cinta.ts';
 import { escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { leerSeleccion } from '../excel/seleccion.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
@@ -352,6 +352,10 @@ export function Panel() {
     const e = explorador.current;
     if (e && resultado?.ok) e.ventana.enviar(mensajeExplorador(e.direccion));
   }, [resultado, mensajeExplorador]);
+  // U3.6: Detener solo tiene sentido mientras se simula.
+  useEffect(() => {
+    void actualizarCintaSimulando(simulando);
+  }, [simulando]);
   // U3.2: la cinta marca las iteraciones actuales (desactiva esa opción del menú).
   const iteracionesActuales = modelo?.settings.iterations;
   useEffect(() => {
@@ -450,6 +454,10 @@ export function Panel() {
         if (!m) return mostrarPanel();
         cambiar({ ...m, settings: { ...m.settings, iterations: n } });
       })),
+      // U3.6: Detener desde la cinta es lo mismo que Cancelar en el panel.
+      manejarDesdeLaCinta('detener', async () => {
+        cancelado.current = true;
+      }),
       manejarDesdeLaCinta('verDistribucion', () => abrirExplorador()),
       manejarDesdeLaCinta('verListaModelo', () => abrirExplorador('lista')),
       manejarDesdeLaCinta('ajustarDatos', async () => {

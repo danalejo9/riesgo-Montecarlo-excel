@@ -97,6 +97,59 @@
             </Metadata>
             <Namespace resid="Funciones.Namespace" />
           </ExtensionPoint>
+          <!--
+            U3.5: el menú del clic derecho en una celda. Las mismas acciones de
+            la cinta (runtime compartido): marcar sin abrir el panel y abrir el
+            explorador. En un menú contextual solo se admite un control Menu.
+          -->
+          <ExtensionPoint xsi:type="ContextMenu">
+            <OfficeMenu id="ContextMenuCell">
+              <Control xsi:type="Menu" id="menuContextual">
+                <Label resid="menuContextual.Label" />
+                <Supertip>
+                  <Title resid="menuContextual.Label" />
+                  <Description resid="menuContextual.Tooltip" />
+                </Supertip>
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Items>
+                  <Item id="ctxEntrada">
+                    <Label resid="ctxEntrada.Label" />
+                    <Supertip>
+                      <Title resid="ctxEntrada.Label" />
+                      <Description resid="ctxEntrada.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>marcarEntrada</FunctionName>
+                    </Action>
+                  </Item>
+                  <Item id="ctxSalida">
+                    <Label resid="ctxSalida.Label" />
+                    <Supertip>
+                      <Title resid="ctxSalida.Label" />
+                      <Description resid="ctxSalida.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>marcarSalida</FunctionName>
+                    </Action>
+                  </Item>
+                  <Item id="ctxDistribucion">
+                    <Label resid="ctxDistribucion.Label" />
+                    <Supertip>
+                      <Title resid="ctxDistribucion.Label" />
+                      <Description resid="ctxDistribucion.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>verDistribucion</FunctionName>
+                    </Action>
+                  </Item>
+                </Items>
+              </Control>
+            </OfficeMenu>
+          </ExtensionPoint>
         </AllFormFactors>
         <DesktopFormFactor>
           <GetStarted>
@@ -313,6 +366,22 @@
                   <Action xsi:type="ExecuteFunction">
                     <FunctionName>simular</FunctionName>
                   </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnDetener">
+                  <Label resid="btnDetener.Label" />
+                  <Supertip>
+                    <Title resid="btnDetener.Label" />
+                    <Description resid="btnDetener.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoDetener.16" />
+                    <bt:Image size="32" resid="IconoDetener.32" />
+                    <bt:Image size="80" resid="IconoDetener.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>detenerSimulacion</FunctionName>
+                  </Action>
+                  <Enabled>false</Enabled>
                 </Control>
               </Group>
               <!-- B2: el modo del libro; el botón del modo activo queda desactivado. -->
@@ -622,6 +691,9 @@
         <bt:Image id="IconoLista.16" DefaultValue="https://localhost:9090/icon-lista-16.png" />
         <bt:Image id="IconoLista.32" DefaultValue="https://localhost:9090/icon-lista-32.png" />
         <bt:Image id="IconoLista.80" DefaultValue="https://localhost:9090/icon-lista-80.png" />
+        <bt:Image id="IconoDetener.16" DefaultValue="https://localhost:9090/icon-detener-16.png" />
+        <bt:Image id="IconoDetener.32" DefaultValue="https://localhost:9090/icon-detener-32.png" />
+        <bt:Image id="IconoDetener.80" DefaultValue="https://localhost:9090/icon-detener-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -669,6 +741,11 @@
         <bt:String id="ejCartera.Label" DefaultValue="Cartera de inversiones" />
         <bt:String id="ejSerie.Label" DefaultValue="Serie de precios" />
         <bt:String id="btnListaModelo.Label" DefaultValue="Entradas y salidas" />
+        <bt:String id="btnDetener.Label" DefaultValue="Detener" />
+        <bt:String id="menuContextual.Label" DefaultValue="Riesgo Monte Carlo" />
+        <bt:String id="ctxEntrada.Label" DefaultValue="Marcar como entrada" />
+        <bt:String id="ctxSalida.Label" DefaultValue="Marcar como salida" />
+        <bt:String id="ctxDistribucion.Label" DefaultValue="Ver distribución" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
@@ -701,6 +778,11 @@
         <bt:String id="ejCartera.Tooltip" DefaultValue="Tres activos con rentabilidades inciertas, dos de ellos correlacionados." />
         <bt:String id="ejSerie.Tooltip" DefaultValue="Un precio que evoluciona año a año con crecimiento incierto, y un tipo de interés que vuelve a su media." />
         <bt:String id="btnListaModelo.Tooltip" DefaultValue="Abre una ventana con todas las entradas y salidas del modelo y sus cifras; pulsa una para seleccionarla en la hoja y ver su distribución." />
+        <bt:String id="btnDetener.Tooltip" DefaultValue="Detiene la simulación en curso. Se enseña lo simulado hasta ese momento." />
+        <bt:String id="menuContextual.Tooltip" DefaultValue="Marcar esta celda como entrada o salida, o ver su distribución." />
+        <bt:String id="ctxEntrada.Tooltip" DefaultValue="Marca la celda como entrada incierta, con una distribución alrededor de su valor." />
+        <bt:String id="ctxSalida.Tooltip" DefaultValue="Marca la celda como salida: lo que se quiere medir." />
+        <bt:String id="ctxDistribucion.Tooltip" DefaultValue="Abre la ventana con la distribución de esta celda (tras simular)." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

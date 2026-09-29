@@ -139,3 +139,20 @@ describe('lista de entradas y salidas (U3.4)', () => {
     });
   });
 });
+
+describe('clic derecho y Detener (U3.5, U3.6)', () => {
+  const manifiesto = readFileSync(resolve(__dirname, '../../manifest.xml'), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+
+  it('el menú del clic derecho en una celda: marcar entrada, salida y ver distribución', () => {
+    const menu = /<ExtensionPoint xsi:type="ContextMenu">\s*<OfficeMenu id="ContextMenuCell">([\s\S]*?)<\/OfficeMenu>/.exec(manifiesto)?.[1] ?? '';
+    expect(menu).toMatch(/<Control xsi:type="Menu" id="menuContextual">/);
+    expect([...menu.matchAll(/<FunctionName>([^<]+)<\/FunctionName>/g)].map((m) => m[1])).toEqual(['marcarEntrada', 'marcarSalida', 'verDistribucion']);
+  });
+
+  it('Detener empieza desactivado, y mientras simula se cambia con Simular', async () => {
+    expect(manifiesto).toMatch(/<FunctionName>detenerSimulacion<\/FunctionName>\s*<\/Action>\s*<Enabled>false<\/Enabled>/);
+    const { estadoSimulando } = await import('../../excel/cinta.ts');
+    expect(estadoSimulando(true)).toEqual([{ id: 'btnSimular', enabled: false }, { id: 'btnDetener', enabled: true }]);
+    expect(estadoSimulando(false)).toEqual([{ id: 'btnSimular', enabled: true }, { id: 'btnDetener', enabled: false }]);
+  });
+});

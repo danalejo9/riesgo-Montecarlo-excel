@@ -13,14 +13,26 @@ export function estadoMenuIteraciones(n: number): { id: string; enabled: boolean
   return ITERACIONES_CINTA.map((k) => ({ id: `iter${k}`, enabled: k !== n }));
 }
 
-export async function actualizarCintaIteraciones(n: number): Promise<void> {
+/** Activa o desactiva controles del grupo Simulación (RibbonApi 1.1). Si no se puede, no pasa nada. */
+async function actualizarSimulacion(controles: { id: string; enabled: boolean }[]): Promise<void> {
   try {
     const office = (globalThis as unknown as { Office?: { ribbon?: { requestUpdate(u: unknown): Promise<void> }; context?: { requirements?: { isSetSupported(s: string, v: string): boolean } } } }).Office;
     if (!office?.ribbon || !office.context?.requirements?.isSetSupported('RibbonApi', '1.1')) return;
-    await office.ribbon.requestUpdate({
-      tabs: [{ id: 'PestanaRiesgo', groups: [{ id: 'GrupoSimulacion', controls: estadoMenuIteraciones(n) }] }],
-    });
+    await office.ribbon.requestUpdate({ tabs: [{ id: 'PestanaRiesgo', groups: [{ id: 'GrupoSimulacion', controls: controles }] }] });
   } catch {
-    // Sin poder marcarla, la cinta sigue funcionando: cada opción pone su cantidad.
+    // Sin poder actualizarla, la cinta sigue funcionando: el panel dice lo mismo.
   }
+}
+
+export async function actualizarCintaIteraciones(n: number): Promise<void> {
+  await actualizarSimulacion(estadoMenuIteraciones(n));
+}
+
+/** U3.6: mientras simula, Simular se desactiva y Detener se activa (y al revés). */
+export function estadoSimulando(simulando: boolean): { id: string; enabled: boolean }[] {
+  return [{ id: 'btnSimular', enabled: !simulando }, { id: 'btnDetener', enabled: simulando }];
+}
+
+export async function actualizarCintaSimulando(simulando: boolean): Promise<void> {
+  await actualizarSimulacion(estadoSimulando(simulando));
 }

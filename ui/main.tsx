@@ -53,6 +53,7 @@ if (typeof Office === 'undefined') {
     marcarEntrada: () => pedirAlPanel('marcarEntrada'),
     marcarSalida: () => pedirAlPanel('marcarSalida'),
     simular: () => pedirAlPanel('simular'),
+    detenerSimulacion: () => pedirAlPanel('detener'),
     quitarResaltado: () => pedirAlPanel('quitarResaltado'),
     // U3.2: la cinta reorganizada.
     ...Object.fromEntries(ITERACIONES_CINTA.map((n) => [`iteraciones${n}`, () => pedirAlPanel(`iteraciones:${n}`)])),

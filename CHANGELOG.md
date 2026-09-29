@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U3.5 y U3.6: clic derecho y Detener (2026-09-29)
+
+**Añadido**
+- **Clic derecho** en una celda → «Riesgo Monte Carlo»: Marcar como entrada,
+  Marcar como salida, Ver distribución.
+- Botón **Detener** en la cinta (grupo Simulación): activo solo mientras se
+  simula (Simular se desactiva a la vez); hace lo mismo que Cancelar.
+
 ### U3.4: lista de entradas y salidas (2026-09-29)
 
 **Añadido**

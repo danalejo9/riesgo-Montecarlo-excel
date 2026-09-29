@@ -42,7 +42,7 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N38** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N39** (sección N, justo después de la 0).
 >   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
@@ -500,6 +500,18 @@ la cinta **Entradas y salidas** (grupo Análisis).
   fecha (escribe en una celda vacía con formato de fecha
   `=FECHA(2027;1;1)+RIESGO.NORMAL(90;10)` y márcala como salida) aparece en
   la lista como `Normal(90; 10)` (días), no como una fecha de 1900.
+
+**N39. Clic derecho y Detener** (U3.5, U3.6, nuevo).
+- **Clic derecho** en una celda de la hoja «Modelo»: aparece
+  **«Riesgo Monte Carlo»** con **Marcar como entrada**, **Marcar como
+  salida** y **Ver distribución**. Marca una entrada así: se pinta de
+  amarillo y el panel no se abre. «Ver distribución» sobre una salida ya
+  simulada abre el explorador.
+- En la cinta, **Detener** está gris. Pon **100.000** iteraciones y simula:
+  mientras simula, **Detener** se activa y **Simular** se pone gris. Pulsa
+  Detener: la simulación para y Resultados dice «cancelada». Al terminar,
+  vuelven como estaban. (Si no se activan o desactivan, apúntalo: depende de
+  tu versión de Excel, y Detener funciona igual pulsándolo.)
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
