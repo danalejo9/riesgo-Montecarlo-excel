@@ -15,6 +15,8 @@ import { claveCelda, columnaDeLetras, recorrer, type Nodo, type RefCelda, type R
 import type { ValorEscalar } from '../values/columna.ts';
 import { parsear } from '../parser/parse.ts';
 import { resolverDesrefConstantes } from '../parser/desref.ts';
+import type { NombresDefinidos } from '../parser/let.ts';
+import { nombresDeHoja, type NombresDelLibro } from '../parser/nombres.ts';
 
 export interface FormulaCelda {
   hoja: string;
@@ -74,6 +76,8 @@ export interface ConstruccionGrafo {
 export function construirGrafo(
   celdas: FormulaCelda[],
   valores: readonly ValorCelda[] = [],
+  /** Los nombres definidos del libro (constantes, referencias y LAMBDA), para resolverlos al parsear. */
+  nombres?: NombresDelLibro,
 ): ConstruccionGrafo {
   const nodos = new Map<string, NodoGrafo>();
   const dependencias = new Map<string, Set<string>>();
@@ -98,10 +102,12 @@ export function construirGrafo(
   };
 
   // Primera pasada: crear todos los nodos con fórmula y parsear.
+  const nombresPorHoja = new Map<string, NombresDefinidos | undefined>();
   for (const c of celdas) {
     const clave = claveCelda(c.hoja, c.col, c.fila);
     const nodo = obtenerNodo(clave, c.hoja, c.col, c.fila);
-    const r = parsear(c.formula);
+    if (nombres && !nombresPorHoja.has(c.hoja)) nombresPorHoja.set(c.hoja, nombresDeHoja(nombres, c.hoja));
+    const r = parsear(c.formula, nombresPorHoja.get(c.hoja));
     if (r.ok) {
       // F1: DESREF con desplazamientos escritos es una referencia fija.
       nodo.ast = resolverDesrefConstantes(r.ast);

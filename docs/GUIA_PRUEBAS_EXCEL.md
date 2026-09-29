@@ -3,7 +3,7 @@
 > **Ronda del 29/09 (la que toca ahora): qué hacer, en orden.**
 > 1. **Preparación** (sección 0, más abajo): actualizar, reinstalar y abrir
 >    el libro de demostración **recién descargado**.
-> 2. **Bloque N entero, de N1 a N32** (sección N, justo después de la 0).
+> 2. **Bloque N entero, de N1 a N33** (sección N, justo después de la 0).
 >    Es todo lo nuevo desde tu última ronda. Lo demás (bloques A–K, T, J, W,
 >    I) ya pasó; no hace falta repetirlo salvo N5, que es un repaso rápido.
 > 3. **N30 y N31** son con **tus propios libros** (el de humedales de 132
@@ -64,12 +64,12 @@ npm run stop
 npm start
 ```
 
-- Si `git pull` se queja de los archivos `tests/fixtures/fidelidad-tanda7.xlsx`
-  o `fidelidad-tanda8.xlsx` (porque los guardaste en Excel), descarta tu copia
-  y vuelve a hacer el pull:
+- Si `git pull` se queja de los archivos `tests/fixtures/fidelidad-tanda7.xlsx`,
+  `fidelidad-tanda8.xlsx` o `fidelidad-lambda.xlsx` (porque los guardaste en
+  Excel), descarta tu copia y vuelve a hacer el pull:
 
   ```
-  git checkout -- tests/fixtures/fidelidad-tanda7.xlsx tests/fixtures/fidelidad-tanda8.xlsx
+  git checkout -- tests/fixtures/fidelidad-tanda7.xlsx tests/fixtures/fidelidad-tanda8.xlsx tests/fixtures/fidelidad-lambda.xlsx
   git pull origin claude/nifty-thompson-xfnqm2
   ```
 
@@ -352,6 +352,41 @@ calculados o `INDIRECTO`) y así desarrollo solo lo que tus libros usan.
   «Todas las entradas»: la distribución de C52 se lee en **fechas** (y la
   desviación en días), no en números de serie como 46.388. Lo mismo en la
   hoja volcada.
+
+**N33. LAMBDA: Peng-Robinson** (F1 del plan, nuevo). Necesita **Excel 365**
+(LAMBDA no existe en Excel 2019 ni antes). Abre, desde la carpeta del
+proyecto, `tests\fixtures\fidelidad-lambda.xlsx`
+(ruta completa: `C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2\tests\fixtures\fidelidad-lambda.xlsx`).
+Si Excel pregunta por habilitar la edición, sí.
+- **Fórmulas → Administrador de nombres**: 11 nombres. `R_GAS` (una
+  constante), `TC_CO2`, `PC_CO2`, `W_CO2` (celdas) y siete LAMBDA:
+  `PR_KAPPA`, `PR_ALFA`, `PR_A`, `PR_B`, `PR_P` (la presión), `PR_Z` y
+  `FACTREC` (un factorial recursivo, para ver que el motor lo manda al
+  compatible).
+- **Hoja «Fidelidad»**: la columna E es lo que calcula Excel y la F, lo que
+  calculé en Python sin Excel. Tienen que coincidir en todas las filas con
+  «Python: …» (L-013, la presión: **40,286**). L-020 y L-021 deberían dar
+  **#¡VALOR!** y L-022 **#¡CALC!**: anota lo que salga, sea lo que sea. Si
+  alguna celda da **#¿NOMBRE?**, dímelo con captura: sería que Excel no
+  reconoció la LAMBDA tal como la escribí en el archivo.
+- **Hoja «PengRobinson»**: B11, B12 y B13 son la misma presión calculada con
+  una LAMBDA con nombre, con una LAMBDA dentro de LET y con una LAMBDA
+  invocada en la celda. Las tres, **40,286** (como la columna C). B14 (Z),
+  **0,782**; B15 (gas ideal), **51,55**; B16, **−21,8 %**.
+- **Guarda el libro** (Ctrl+G) tal cual y mándamelo: con él se activan las
+  pruebas que comparan el motor con tu Excel.
+- **Simula** (con el libro ya guardado, puedes seguir en él): escribe
+  `=RIESGO.NORMAL(310;5)` en B8 y `=RIESGO.TRIANGULAR(0,45;0,5;0,6)` en B9.
+  Marca B11, B12 y B13 como salidas y simula 10.000 iteraciones. Esperado:
+  - «Cómo se calculó» dice motor **Rápido** (las LAMBDA ya no mandan al
+    compatible).
+  - Las tres salidas, **iguales**: media en torno a **39,4 bar**, desviación
+    **2,06**, p5 ≈ **36,0** y p95 ≈ **42,7**.
+  - En «Qué la mueve más», **B9 (el volumen) es la que más mueve la presión**
+    y con signo negativo (ρ ≈ −0,87: más volumen, menos presión); la
+    temperatura, positiva y menor (ρ ≈ 0,47).
+  - Si luego quieres dejar el libro como estaba para mandármelo otra vez,
+    no hace falta: con el que guardaste antes de simular me basta.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
@@ -1067,6 +1102,7 @@ sáltalo.
 
 - **I1.** `tests\fixtures\fidelidad-tanda7.xlsx` (LET, 14 casos).
 - **I2.** `tests\fixtures\fidelidad-tanda8.xlsx` (matrices, 27 casos).
+- **I3.** `tests\fixtures\fidelidad-lambda.xlsx` (LAMBDA, 23 casos; es N33).
 
 Después haz el `git checkout -- …` de la preparación para que no te den
 conflicto en el próximo pull.

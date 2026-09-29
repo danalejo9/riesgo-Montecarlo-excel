@@ -232,3 +232,21 @@ export function leerCasosFidelidad(ruta: string): CasoFidelidad[] {
   }
   return casos;
 }
+
+/** Los nombres definidos del libro (`<definedName>`), con su fórmula tal como la guarda Excel. */
+export function leerNombresDelLibro(ruta: string): Array<{ nombre: string; formula: string; hoja?: string }> {
+  const zip = unzipSync(new Uint8Array(readFileSync(ruta)));
+  const entrada = zip['xl/workbook.xml'];
+  const workbook = entrada ? new TextDecoder('utf-8').decode(entrada) : '';
+  const hojas = [...workbook.matchAll(/<sheet\b[^>]*name="([^"]*)"/g)].map((m) => desescapar(m[1] as string));
+  const out: Array<{ nombre: string; formula: string; hoja?: string }> = [];
+  for (const m of workbook.matchAll(/<definedName\b([^>]*)>([\s\S]*?)<\/definedName>/g)) {
+    const atributos = m[1] as string;
+    const nombre = /name="([^"]+)"/.exec(atributos)?.[1];
+    if (!nombre) continue;
+    const local = /localSheetId="(\d+)"/.exec(atributos)?.[1];
+    const hoja = local !== undefined ? hojas[Number(local)] : undefined;
+    out.push({ nombre: desescapar(nombre), formula: desescapar(m[2] as string), ...(hoja !== undefined ? { hoja } : {}) });
+  }
+  return out;
+}

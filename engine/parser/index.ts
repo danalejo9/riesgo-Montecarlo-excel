@@ -12,4 +12,8 @@ export {
 
 export { esReferencia, tokenizar, type Token } from './lexer.ts';
 
-export { parsear, type ErrorSintaxis, type ResultadoParseo } from './parse.ts';
+export { parsear, parsearSinExpandir, type ErrorSintaxis, type ResultadoParseo } from './parse.ts';
+
+export { INVOCAR, type NombresDefinidos } from './let.ts';
+
+export { leerNombresDefinidos, nombresDeHoja, type DefinicionNombre, type NombresDelLibro } from './nombres.ts';

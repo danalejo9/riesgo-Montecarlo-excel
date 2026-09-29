@@ -151,7 +151,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 40 | H8 | ✅ (29/09) Migración del modelo guardado entre versiones | Plan |
 | 41 | H9 | Manual de usuario en español y más libros de ejemplo | Plan |
 | 42 | H10 | Libros compartidos en OneDrive/SharePoint (coautoría) | Estudio |
-| 43 | F1 | `DESREF` con desplazamientos constantes; `LAMBDA` | Plan |
+| 43 | F1 | ✅ (29/09, falta Excel real: N33) `DESREF` con desplazamientos constantes; `LAMBDA` en la celda, en LET y con nombre; nombres definidos (constantes, celdas, rangos). Recursivas y MAP/REDUCE, al compatible | Plan |
 | 44 | F2 | Medir y optimizar con libros grandes (el de 132 hojas) | Plan |
 | 45 | F3 | Modo compatible más rápido | Plan |
 | 46 | F5 | **Congelar la pantalla en el modo compatible** (como `ScreenUpdating` en VBA) | **Tú** |

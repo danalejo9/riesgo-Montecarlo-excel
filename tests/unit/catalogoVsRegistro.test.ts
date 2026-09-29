@@ -79,8 +79,8 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       'SUBSTITUTE', 'T', 'TEXT', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
       // Agregados que excluyen los subtotales intermedios.
       'AGGREGATE', 'SUBTOTAL',
-      // Nombres locales: se resuelven al parsear (engine/parser/let.ts).
-      'LET',
+      // Nombres locales y funciones anónimas: se resuelven al parsear (engine/parser/let.ts).
+      'LAMBDA', 'LET',
       // Matriciales dinámicas, dentro de una función que las consuma
       // (engine/functions/matriciales.ts, compiler/usoMatricial.ts).
       'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TRANSPOSE', 'UNIQUE',
@@ -92,9 +92,6 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
     expect(pendientes).toEqual([
       // Divide texto en varias celdas: solo tiene sentido derramando.
       'TEXTSPLIT',
-      // Funciones anónimas: necesitan ámbitos de verdad en el evaluador (LET no,
-      // porque sin efectos secundarios se puede resolver sustituyendo).
-      'LAMBDA',
       // Dependen de estructuras que el motor no lee: tablas dinámicas y el
       // texto de las fórmulas.
       'FORMULATEXT', 'GETPIVOTDATA',

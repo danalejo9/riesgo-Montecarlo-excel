@@ -74,6 +74,7 @@ import { leerAlmacenPublicado } from './almacenResultadosHoja.ts';
 import { celdasConFuncionesResultado, sustituirFuncionesResultado } from './resultadosEnGrafo.ts';
 import { componerDireccion } from './direcciones.ts';
 import { letrasDeColumna } from '../engine/parser/ast.ts';
+import { leerNombresDefinidos } from '../engine/parser/index.ts';
 
 export interface PeticionSimulacion {
   modelo: ModeloRiesgo;
@@ -127,7 +128,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     progreso: (hechas, total) =>
       progreso?.({ fase: 'leyendo', mensaje: `Leyendo hojas… ${hechas} de ${total}` }),
   });
-  const { grafo } = construirGrafo(libro.formulas, libro.valores.map(aValorCelda));
+  const { grafo } = construirGrafo(libro.formulas, libro.valores.map(aValorCelda), leerNombresDefinidos(libro.nombres ?? []));
 
   // B6: las funciones de resultados (`RIESGO.MEDIA(C32)`…) valen lo que dio la
   // simulación anterior durante toda esta; se sustituyen por ese número.

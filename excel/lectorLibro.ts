@@ -41,6 +41,7 @@
  */
 
 import type { FormulaCelda } from '../engine/graph/index.ts';
+import type { DefinicionNombre } from '../engine/parser/index.ts';
 import type { LibroLeido, OpcionesLectura, ValorEstatico } from './tiposLectura.ts';
 
 export type { EstadisticasLectura, LibroLeido, OpcionesLectura, ValorEstatico } from './tiposLectura.ts';
@@ -73,6 +74,7 @@ export async function leerLibro(opciones: OpcionesLectura = {}): Promise<LibroLe
   const arranque = performance.now();
   const formulas: FormulaCelda[] = [];
   const valores: ValorEstatico[] = [];
+  const nombres: DefinicionNombre[] = [];
 
   let celdasRecorridas = 0;
   let celdasConContenido = 0;
@@ -84,6 +86,27 @@ export async function leerLibro(opciones: OpcionesLectura = {}): Promise<LibroLe
     hojas.load('items/name,items/visibility');
     await context.sync();
     sincronizaciones++;
+
+    // F1: los nombres definidos, del libro y de cada hoja, en el mismo viaje.
+    // Si esta versión de Excel no los da, se sigue sin ellos (esas celdas
+    // irán al modo compatible, como antes).
+    try {
+      const delLibro = context.workbook.names;
+      delLibro.load('items/name,items/formula');
+      const porHoja = hojas.items.map((h) => {
+        const n = h.names;
+        n.load('items/name,items/formula');
+        return { hoja: h.name, n };
+      });
+      await context.sync();
+      sincronizaciones++;
+      for (const it of delLibro.items) nombres.push({ nombre: it.name, formula: String(it.formula ?? '') });
+      for (const { hoja, n } of porHoja) {
+        for (const it of n.items) nombres.push({ nombre: it.name, formula: String(it.formula ?? ''), hoja });
+      }
+    } catch {
+      nombres.length = 0;
+    }
 
     const candidatas = hojas.items.filter(
       (h) => opciones.incluirOcultas === true || h.visibility === Excel.SheetVisibility.visible,
@@ -160,6 +183,7 @@ export async function leerLibro(opciones: OpcionesLectura = {}): Promise<LibroLe
   return {
     formulas,
     valores,
+    ...(nombres.length > 0 ? { nombres } : {}),
     estadisticas: {
       hojas: resultado,
       hojasVisibles,

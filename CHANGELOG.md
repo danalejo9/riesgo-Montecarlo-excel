@@ -5,6 +5,33 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### F1: LAMBDA y nombres definidos (2026-09-29)
+
+**Añadido**
+- **LAMBDA** en el motor rápido, de las tres formas: invocada en la celda
+  (`LAMBDA(x;y;x/y)(A1;A2)`), guardada en un `LET` y **con nombre** (en el
+  Administrador de nombres), que pueden llamarse unas a otras y recibir otra
+  LAMBDA como argumento. Se resuelven al leer la fórmula, como `LET`.
+- Los **nombres definidos** del libro (constantes, celdas y rangos, del
+  libro o de una hoja) se leen de Excel y se sustituyen: las fórmulas con
+  nombres ya no mandan al modo compatible. Los de referencias relativas se
+  dejan fuera.
+- Libro de prueba `tests/fixtures/fidelidad-lambda.xlsx` (generador
+  `generar-lambda.py`): la ecuación de estado de **Peng-Robinson** con
+  LAMBDA con nombre, en LET y en la celda, con los valores calculados en
+  Python, y una hoja para simular la presión del CO2 con temperatura y
+  volumen inciertos. Guía: N33 e I3.
+- El escáner (`npm run scan`) ya no cuenta como desconocidas las llamadas a
+  LAMBDA con nombre.
+
+**Corregido**
+- Un `LET` que usaba dos veces un valor con una función RIESGO
+  (`LET(x;RIESGO.NORMAL(0;1);x-x)`) sorteaba dos veces; ahora esa celda va
+  al modo compatible, que la calcula como Excel (una vez).
+
+**Se queda en el modo compatible**: una LAMBDA recursiva y las funciones
+que reciben LAMBDA (`MAP`, `REDUCE`, `BYROW`…).
+
 ### T8: registro de riesgos en la hoja volcada y el PDF (2026-09-29)
 
 **Añadido**

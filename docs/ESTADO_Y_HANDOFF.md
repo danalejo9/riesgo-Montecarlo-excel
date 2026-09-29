@@ -1199,6 +1199,23 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (`ui/informe.tsx`). Probado en `informeImprimible.test.ts`.
     **Siguiente**: libro con LAMBDA (Peng-Robinson) y LAMBDA en el motor.
 
+65. [x] **F1: LAMBDA y nombres definidos (2026-09-29)**. `expandirLet`
+    (`engine/parser/let.ts`) resuelve también LAMBDA con cierres (parámetros,
+    cuerpo y el ámbito donde se escribió): `INVOCAR` es el nodo interno de
+    `expr(args)` (parser, caso `func`); `f(x)` con `f` del LET o del libro se
+    aplica; argumentos de más o de menos → #VALUE!; recursión (>64 llamadas
+    anidadas), LAMBDA sin invocar y nombres cíclicos → `no-soportado`.
+    `riesgoRepetido` renuncia si un mismo objeto RIESGO queda dos veces (un
+    valor de LET/LAMBDA usado dos veces: serían dos sorteos). Nombres:
+    `leerNombresDefinidos`/`nombresDeHoja` (`engine/parser/nombres.ts`),
+    `construirGrafo(…, nombres)`, `leerLibro` los lee de `workbook.names` y de
+    cada hoja (si falla, sin nombres). Libro `tests/fixtures/fidelidad-lambda.xlsx`
+    (`generar-lambda.py`, Peng-Robinson; 23 casos, 11 nombres, hoja
+    PengRobinson). Pruebas: `lambda.test.ts` (contra Python, simulación con
+    media 39,37 y σ 2,06 como Python con 400.000) y `fidelidadLambda.test.ts`
+    (en espera del Excel del usuario, N33/I3). **Siguiente**: la ronda del
+    usuario (N1–N33, W6, W7); con sus resultados, F2 y lo que salga en N31.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

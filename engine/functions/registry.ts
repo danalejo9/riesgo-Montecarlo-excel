@@ -90,11 +90,11 @@ function normalizar(nombre: string): string {
 /**
  * Construcciones que el motor soporta sin ser una función del registro: se
  * resuelven al parsear y nunca llegan a evaluarse como llamada. `LET` es la
- * primera (ver `engine/parser/let.ts`); las matriciales (`FILTRAR`, `ORDENAR`…)
+ * primera (ver `engine/parser/let.ts`), y `LAMBDA` con ella; las matriciales (`FILTRAR`, `ORDENAR`…)
  * las evalúa el evaluador como matrices, dentro de otra función (ver
  * `compiler/usoMatricial.ts`). Cuentan como soportadas para el escáner.
  */
-export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET', ...Object.keys(REGISTRO_MATRICIAL)]);
+export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET', 'LAMBDA', ...Object.keys(REGISTRO_MATRICIAL)]);
 
 export function funcionSoportada(nombre: string): boolean {
   const n = normalizar(nombre);

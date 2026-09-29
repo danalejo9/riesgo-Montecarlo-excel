@@ -223,7 +223,7 @@ rango depende de sus argumentos) y rompe el grafo fijo. Con desplazamientos
 constantes se podrá resolver al compilar; si no, modo compatible. Las once que
 entraron el 2026-09-23 están verificadas contra Excel (sexta tanda, 69/69).
 
-Faltan de Nivel 2: `LAMBDA`, `DIVIDIRTEXTO` (solo tiene sentido derramando),
+Faltan de Nivel 2 (`LAMBDA` hecha el 29/09): `DIVIDIRTEXTO` (solo tiene sentido derramando),
 `FORMULATEXTO` e `IMPORTARDATOSDINAMICOS`. Las matriciales dinámicas y `LET`
 están hechas; las matriciales, **dentro de una función que las consuma** (lo
 que derramaría va al modo compatible, ver `compiler/usoMatricial.ts`).
@@ -514,7 +514,7 @@ Estimaciones en días de trabajo efectivo.
   Va antes del manual (M2), para que las capturas sean las definitivas.
 
 ### F. Motor y cobertura — según lo que pidan los libros
-- **F1.** `DESREF` con desplazamientos constantes ✅ 29/09 (`engine/parser/desref.ts`); `LAMBDA`, pendiente.
+- **F1.** `DESREF` con desplazamientos constantes ✅ 29/09 (`engine/parser/desref.ts`); `LAMBDA` (en la celda, en LET y con nombre) y nombres definidos ✅ 29/09 (`engine/parser/let.ts`, `nombres.ts`; libro `fidelidad-lambda.xlsx`, Peng-Robinson). Siguen en el compatible: LAMBDA recursivas y `MAP`/`REDUCE`/`BYROW`…
 - **F2.** Medir con libros grandes (el de 132 hojas) el tiempo de lectura y de
   simulación, y optimizar donde se vea.
 - **F3.** Modo compatible más rápido (lotes de iteraciones por sincronización).
