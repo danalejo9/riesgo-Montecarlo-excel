@@ -14,9 +14,19 @@
 
   **Funciones personalizadas `RIESGO.*`** (desde la versión 0.4): declaradas
   en `<AllFormFactors>`, como pide Excel para Windows, con su script de un
-  solo archivo (`funciones.js`), su página (`funciones.html`) y sus metadatos
-  (`funciones.json`, generados del catálogo del motor). Ver
-  `engine/modelo/funcionesRiesgo.ts`.
+  solo archivo (`funciones.js`) y sus metadatos (`funciones.json`, generados
+  del catálogo del motor). Ver `engine/modelo/funcionesRiesgo.ts`.
+
+  **Runtime compartido** (desde la versión 0.5, etapa 2, B1): el panel, los
+  botones de la cinta y las funciones `RIESGO.*` viven en **un solo proceso**,
+  la página `taskpane.html`, que carga también `funciones.js`. Así:
+    - las funciones leen los resultados del panel en memoria (B6) y, más
+      adelante, sabrán en qué iteración está una simulación (B1b);
+    - los botones de la cinta ejecutan una acción (`ExecuteFunction`) que
+      cambia de pestaña y muestra el panel **sin recargarlo** (antes se
+      recargaba y se veía un instante en blanco, prueba B4 del 29/09).
+  Exige el conjunto `SharedRuntime 1.1` (Microsoft 365 en Windows, Mac y la
+  Web): en un Excel que no lo tenga, el complemento no se instala.
 
   El Id es nuevo a propósito: el del heredado puede estar en la caché de
   Office de la máquina del usuario, y reutilizarlo mezclaría los dos
@@ -30,7 +40,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.4.0.0</Version>
+  <Version>0.5.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -57,6 +67,7 @@
   <Requirements>
     <Sets DefaultMinVersion="1.1">
       <Set Name="ExcelApi" MinVersion="1.1" />
+      <Set Name="SharedRuntime" MinVersion="1.1" />
     </Sets>
   </Requirements>
 
@@ -69,13 +80,17 @@
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Hosts>
       <Host xsi:type="Workbook">
+        <!-- B1: un solo proceso para panel, cinta y funciones (ver arriba). -->
+        <Runtimes>
+          <Runtime resid="Panel.Url" lifetime="long" />
+        </Runtimes>
         <AllFormFactors>
           <ExtensionPoint xsi:type="CustomFunctions">
             <Script>
               <SourceLocation resid="Funciones.Script.Url" />
             </Script>
             <Page>
-              <SourceLocation resid="Funciones.Page.Url" />
+              <SourceLocation resid="Panel.Url" />
             </Page>
             <Metadata>
               <SourceLocation resid="Funciones.Metadata.Url" />
@@ -90,7 +105,7 @@
             <LearnMoreUrl resid="Soporte.Url" />
           </GetStarted>
 
-          <FunctionFile resid="Comandos.Url" />
+          <FunctionFile resid="Panel.Url" />
 
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <CustomTab id="PestanaRiesgo">
@@ -102,12 +117,11 @@
                   <bt:Image size="80" resid="Icono.80" />
                 </Icon>
                 <!--
-                  Cuatro botones, un solo panel: comparten TaskpaneId, así que
-                  abren el mismo panel y cada uno lo lleva a su pestaña por el
-                  fragmento de la URL (#modelo, #resultados, #configuracion, #diagnostico). El
-                  panel escucha "hashchange", de modo que si Office navega con
-                  el panel ya abierto cambia de pestaña sin recargar ni perder
-                  los resultados.
+                  Cuatro botones, un solo panel. Cada uno ejecuta una acción
+                  del runtime compartido (`mostrarModelo`, `mostrarResultados`…,
+                  registradas en `ui/acciones.ts`) que pone la pestaña y
+                  muestra el panel con `Office.addin.showAsTaskpane()`, sin
+                  recargarlo ni perder los resultados.
                 -->
                 <Control xsi:type="Button" id="btnModelo">
                   <Label resid="btnModelo.Label" />
@@ -120,9 +134,8 @@
                     <bt:Image size="32" resid="IconoModelo.32" />
                     <bt:Image size="80" resid="IconoModelo.80" />
                   </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PanelRiesgo</TaskpaneId>
-                    <SourceLocation resid="PanelModelo.Url" />
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>mostrarModelo</FunctionName>
                   </Action>
                 </Control>
                 <Control xsi:type="Button" id="btnResultados">
@@ -136,9 +149,8 @@
                     <bt:Image size="32" resid="IconoResultados.32" />
                     <bt:Image size="80" resid="IconoResultados.80" />
                   </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PanelRiesgo</TaskpaneId>
-                    <SourceLocation resid="PanelResultados.Url" />
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>mostrarResultados</FunctionName>
                   </Action>
                 </Control>
                 <Control xsi:type="Button" id="btnConfiguracion">
@@ -152,9 +164,8 @@
                     <bt:Image size="32" resid="IconoConfiguracion.32" />
                     <bt:Image size="80" resid="IconoConfiguracion.80" />
                   </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PanelRiesgo</TaskpaneId>
-                    <SourceLocation resid="PanelConfiguracion.Url" />
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>mostrarConfiguracion</FunctionName>
                   </Action>
                 </Control>
                 <Control xsi:type="Button" id="btnDiagnostico">
@@ -168,9 +179,8 @@
                     <bt:Image size="32" resid="Icono.32" />
                     <bt:Image size="80" resid="Icono.80" />
                   </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <TaskpaneId>PanelRiesgo</TaskpaneId>
-                    <SourceLocation resid="PanelDiagnostico.Url" />
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>mostrarDiagnostico</FunctionName>
                   </Action>
                 </Control>
               </Group>
@@ -197,13 +207,8 @@
         <bt:Image id="IconoConfiguracion.80" DefaultValue="https://localhost:9090/icon-settings-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="PanelModelo.Url" DefaultValue="https://localhost:9090/taskpane.html#modelo" />
-        <bt:Url id="PanelResultados.Url" DefaultValue="https://localhost:9090/taskpane.html#resultados" />
-        <bt:Url id="PanelConfiguracion.Url" DefaultValue="https://localhost:9090/taskpane.html#configuracion" />
-        <bt:Url id="PanelDiagnostico.Url" DefaultValue="https://localhost:9090/taskpane.html#diagnostico" />
-        <bt:Url id="Comandos.Url" DefaultValue="https://localhost:9090/commands.html" />
+        <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
         <bt:Url id="Funciones.Script.Url" DefaultValue="https://localhost:9090/funciones.js" />
-        <bt:Url id="Funciones.Page.Url" DefaultValue="https://localhost:9090/funciones.html" />
         <bt:Url id="Funciones.Metadata.Url" DefaultValue="https://localhost:9090/funciones.json" />
         <bt:Url id="Soporte.Url" DefaultValue="https://github.com/danalejo9/riesgo-Montecarlo-excel" />
       </bt:Urls>

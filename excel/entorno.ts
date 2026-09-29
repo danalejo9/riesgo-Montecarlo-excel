@@ -37,6 +37,11 @@ export interface EntornoOffice {
   idioma: string;
   /** Qué conjuntos de `ExcelApi` hay disponibles aquí. */
   conjuntos: ReadonlyArray<{ version: string; para: string; disponible: boolean }>;
+  /**
+   * Si panel, cinta y funciones comparten proceso (B1). `true` si este Excel
+   * admite `SharedRuntime 1.1`, que el manifiesto exige.
+   */
+  runtimeCompartido: boolean;
 }
 
 export function leerEntorno(): EntornoOffice {
@@ -53,6 +58,7 @@ export function leerEntorno(): EntornoOffice {
       ...c,
       disponible: Office.context.requirements.isSetSupported('ExcelApi', c.version),
     })),
+    runtimeCompartido: Office.context.requirements.isSetSupported('SharedRuntime', '1.1'),
   };
 }
 

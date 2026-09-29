@@ -77,6 +77,52 @@ Resultados, Configuración y Diagnóstico. Al pulsar Modelo se abre el panel
 
 ---
 
+## N. Etapa 2 (ronda siguiente: empieza por aquí)
+
+*Añadido el 29/09, tras tu ronda completa.* La etapa 2 cambia el
+**manifiesto** (versión 0.5): el panel, los botones de la cinta y las
+funciones RIESGO pasan a vivir en un solo proceso («runtime compartido»).
+Solo hace falta probar este bloque; lo demás ya pasó.
+
+**Antes de empezar** (imprescindible, porque el manifiesto cambió):
+1. Cierra Excel del todo.
+2. En PowerShell: `git pull origin claude/nifty-thompson-xfnqm2`, luego
+   `npm install`, `npm run stop` y `npm start`.
+3. Si la pestaña Riesgo no aparece o se comporta como antes, borra la caché
+   de complementos de Office: cierra Excel, borra el contenido de
+   `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` y repite `npm start`.
+4. En Excel para la Web: quita el complemento y vuelve a cargar
+   `manifest.xml`.
+
+**N1. Diagnóstico.** Pestaña Diagnóstico: la línea **«Runtime compartido»**
+dice **sí**. Si dice «no», para aquí y dímelo con la versión de Excel.
+
+**N2. La cinta sin recargar el panel** (era B4). Simula algo y, con el panel
+abierto, pulsa en la cinta Resultados, Configuración, Diagnóstico y Modelo.
+- Esperado: cambia de pestaña **sin ponerse en blanco** y sin perder los
+  resultados.
+- Cierra el panel con la ✕ y pulsa Resultados en la cinta: se abre
+  directamente en Resultados, con los resultados que había.
+
+**N3. Resultados en la hoja al reabrir** (era el límite de F19). En la hoja
+«Pruebas», con las secciones 7 y 8 escritas (F12 y F16), simula C37. Guarda,
+cierra Excel, ejecuta `npm start` y abre el libro **sin abrir el panel**.
+- Esperado: C40–C43 muestran sus números (el complemento arranca solo al
+  calcular las funciones y lee los resultados guardados en el libro). Si
+  salen #N/D un momento, deben pasar a números en uno o dos segundos.
+
+**N4. Modo compatible más rápido** (era H2). Repite H1 con y sin «Congelar
+la pantalla».
+- Esperado: bastante más rápido que en tu ronda del 29/09 y con mucho menos
+  parpadeo (ahora escribe 20 iteraciones por cada viaje a Excel). Apunta el
+  tiempo y las iteraciones por segundo que dice «Cómo se calculó».
+
+**N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
+«Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
+dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
+
+---
+
 ## A. Lo básico, en la hoja «Modelo»
 
 **A1. Valores base.** Sin tocar nada:

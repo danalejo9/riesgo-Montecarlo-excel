@@ -72,7 +72,9 @@ export function metadatosFunciones(): object {
       name: f.id,
       description: f.descripcion,
       result: { type: 'number', dimensionality: 'scalar' },
-      options: { requiresParameterAddresses: true },
+      // La propia celda también (B1): si dice «simula primero», el panel la
+      // refresca en cuanto tiene resultados.
+      options: { requiresParameterAddresses: true, requiresAddress: true },
       parameters: f.parametros.map((p, i) => ({
         name: p.nombre,
         description: p.descripcion,

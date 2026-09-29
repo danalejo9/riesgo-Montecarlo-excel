@@ -85,7 +85,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         taskpane: resolve(__dirname, 'ui/taskpane.html'),
-        commands: resolve(__dirname, 'ui/commands.html'),
         // El informe imprimible: se abre en el navegador del sistema.
         informe: resolve(__dirname, 'ui/informe.html'),
         // El banco de pruebas (`/banco/`): el panel sobre un Excel de mentira,

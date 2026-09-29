@@ -3,20 +3,20 @@
  * `=RIESGO.MEDIA(C32)`, `=RIESGO.PERCENTIL(C32; 0,05)`, `=RIESGO.PROB(C32;
  * 0)`… La parte pura, sin Office.js.
  *
- * **Cómo llegan los resultados a las funciones.** Las funciones de Excel viven
- * en un proceso aparte del panel (`funciones.html`, sin runtime compartido: no
- * se toca el manifiesto). No ven ni la memoria del panel ni lo guardado en el
- * libro, pero las dos partes comparten `OfficeRuntime.storage`: al terminar
- * de simular, el panel deja ahí un resumen de cada salida (este «almacén») y
- * las funciones lo leen. Con el runtime compartido (etapa 2, B1) las
- * funciones podrán leer los resultados guardados en el libro; lo de aquí se
- * reutiliza entero.
+ * **Cómo llegan los resultados a las funciones.** Al terminar de simular, el
+ * panel hace un resumen de cada salida (este «almacén»). Desde B1 (runtime
+ * compartido) panel y funciones son el mismo proceso y el almacén se les pasa
+ * **en memoria** (`almacenEnMemoria`); además se guarda en
+ * `OfficeRuntime.storage`, que era la vía antes de B1 y sigue sirviendo si
+ * alguna vez corren aparte.
  *
- * **Límites de esta versión**: el almacén es del equipo, no del libro. En
- * otro equipo las funciones dicen «simula primero» hasta que el panel se abre
- * (que vuelve a publicar los resultados guardados en el libro) o se simula.
- * Y dos libros abiertos con la misma hoja y celda comparten entrada: manda el
- * último que simuló.
+ * **Al abrir el libro**: el runtime arranca con la página del panel, que lee
+ * los resultados guardados en el libro y los publica; las celdas que ya
+ * hubieran dicho «simula primero» se apuntan (`anotarCeldaPendiente`) y el
+ * panel las refresca. Así funciona también en otro equipo.
+ *
+ * **Límite que queda**: dos libros abiertos con la misma hoja y celda
+ * comparten entrada: manda el último que simuló.
  *
  * **Qué se guarda de cada salida**: media, desviación, mínimo, máximo y
  * 1.001 cuantiles (con ellos, cualquier percentil y la probabilidad de un
@@ -113,6 +113,50 @@ export function construirAlmacen(resultado: SimulacionCompletada, ahora: Date = 
     }
   }
   return { version: 1, guardadoEn: (resultado.restaurado?.guardadoEn ?? ahora.toISOString()), salidas };
+}
+
+/**
+ * Con el runtime compartido (B1), el panel y las funciones son la misma
+ * página pero **dos paquetes distintos** (`funciones.js` va aparte): no
+ * comparten módulos, sí `globalThis`. Por aquí pasa el almacén en memoria, sin
+ * esperar a `OfficeRuntime.storage`, y la lista de celdas que dijeron «simula
+ * primero» para refrescarlas en cuanto haya resultados.
+ */
+interface Compartido {
+  __riesgoResultadosHoja?: AlmacenResultadosHoja;
+  __riesgoCeldasPendientes?: Set<string>;
+}
+const compartido = globalThis as unknown as Compartido;
+
+export function almacenEnMemoria(): AlmacenResultadosHoja | null {
+  return compartido.__riesgoResultadosHoja ?? null;
+}
+
+export function ponerAlmacenEnMemoria(a: AlmacenResultadosHoja): void {
+  compartido.__riesgoResultadosHoja = a;
+}
+
+/** Una función que devolvió #N/A por falta de resultados apunta su celda. */
+export function anotarCeldaPendiente(direccion: string | undefined): void {
+  if (!direccion) return;
+  (compartido.__riesgoCeldasPendientes ??= new Set()).add(direccion);
+}
+
+/** Las celdas apuntadas, y se vacía la lista. */
+export function tomarCeldasPendientes(): string[] {
+  const s = compartido.__riesgoCeldasPendientes;
+  if (!s || s.size === 0) return [];
+  const out = [...s];
+  s.clear();
+  return out;
+}
+
+/**
+ * Una dirección de `invocation.address` lista para `getRange`: sin el nombre
+ * del libro (`[Libro1]Hoja1!A1`, `'[Libro 1.xlsx]Mi hoja'!A1`).
+ */
+export function direccionSinLibro(direccion: string): string {
+  return direccion.replace(/^'\[[^\]]*\]/, "'").replace(/^\[[^\]]*\]/, '');
 }
 
 export function leerAlmacen(texto: string | null | undefined): AlmacenResultadosHoja | null {

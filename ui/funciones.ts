@@ -21,7 +21,8 @@ import {
   FUNCIONES_RESULTADO, FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
 } from '../engine/modelo/funcionesRiesgo.ts';
 import {
-  buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, valorFuncionResultado, type AlmacenResultadosHoja,
+  almacenEnMemoria, anotarCeldaPendiente, buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, valorFuncionResultado,
+  type AlmacenResultadosHoja,
 } from '../excel/resultadosEnHoja.ts';
 
 declare const CustomFunctions: {
@@ -30,8 +31,14 @@ declare const CustomFunctions: {
   ErrorCode: { invalidNumber: unknown; invalidName: unknown; invalidValue: unknown; notAvailable: unknown };
 };
 
+// B1: este archivo se carga también en el panel (runtime compartido) y en el
+// banco de pruebas, donde `CustomFunctions` no existe: ahí no se registra nada.
+const asociar: typeof CustomFunctions.associate = (id, f) => {
+  if (typeof CustomFunctions !== 'undefined') CustomFunctions.associate(id, f);
+};
+
 for (const f of FUNCIONES_RIESGO) {
-  CustomFunctions.associate(f.id, (...args: number[]) => {
+  asociar(f.id, (...args: number[]) => {
     const r = mediaDeFuncionRiesgo(f.id, args.slice(0, f.parametros.length));
     if (typeof r === 'number') return r;
     throw new CustomFunctions.Error(
@@ -43,20 +50,20 @@ for (const f of FUNCIONES_RIESGO) {
 
 // T4: el valor más probable de una entrada de texto. Los argumentos llegan
 // como matrices (rango o lista), se aplanan en el mismo orden.
-CustomFunctions.associate(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][]) => {
+asociar(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][]) => {
   const r = categoriaDesdeListas(valores.flat(), pesos.flat());
   if (typeof r !== 'string') return r.masProbable;
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
 });
 
 // B4: la media de una discreta, y una función RIESGO acotada.
-CustomFunctions.associate(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][]) => {
+asociar(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][]) => {
   const r = discretaDesdeListas(valores.flat(), pesos.flat());
   if (typeof r !== 'string') return r.media;
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
 });
 
-CustomFunctions.associate(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
+asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
   // Fuera de la simulación la función interior ya enseña su media; aquí solo
   // se mantiene dentro de los límites. La simulación usa la distribución
   // acotada de verdad.
@@ -65,7 +72,7 @@ CustomFunctions.associate(FUNCION_TRUNCAR.id, (valor: number, minimo: number, ma
 });
 
 // I1: la media de los datos históricos.
-CustomFunctions.associate(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
+asociar(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
   const r = empiricaDesdeLista(datos.flat());
   if (typeof r !== 'string') return r.media;
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
@@ -78,6 +85,9 @@ let ultimoTexto: string | null = null;
 let ultimoAlmacen: AlmacenResultadosHoja | null = null;
 
 async function almacen(): Promise<AlmacenResultadosHoja | null> {
+  // Con el runtime compartido, lo que el panel tiene en memoria (B1).
+  const enMemoria = almacenEnMemoria();
+  if (enMemoria) return enMemoria;
   const g = globalThis as unknown as { OfficeRuntime?: { storage?: { getItem(c: string): Promise<string | null> } } };
   let texto: string | null;
   try {
@@ -101,10 +111,12 @@ async function almacen(): Promise<AlmacenResultadosHoja | null> {
 
 interface Invocacion {
   parameterAddresses?: string[];
+  /** La celda de la propia función (`requiresAddress`). */
+  address?: string;
 }
 
 for (const f of FUNCIONES_RESULTADO) {
-  CustomFunctions.associate(f.id, (async (...args: unknown[]) => {
+  asociar(f.id, (async (...args: unknown[]) => {
     // Excel añade la invocación como último argumento.
     const invocacion = (args[args.length - 1] ?? {}) as Invocacion;
     const [valorCelda, ...resto] = args.slice(0, f.parametros.length);
@@ -112,6 +124,8 @@ for (const f of FUNCIONES_RESULTADO) {
     const salida = buscarSalida(await almacen(), direccion, valorCelda);
     const r = valorFuncionResultado(f.id, salida, resto);
     if (r.ok) return r.valor;
+    // Sin resultados todavía: el panel refrescará esta celda cuando los tenga (B1).
+    if (!salida) anotarCeldaPendiente(invocacion.address);
     const codigo = r.error === 'na' ? CustomFunctions.ErrorCode.notAvailable
       : r.error === 'num' ? CustomFunctions.ErrorCode.invalidNumber
       : CustomFunctions.ErrorCode.invalidValue;

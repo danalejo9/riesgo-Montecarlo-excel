@@ -5,6 +5,29 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 2 — B1: runtime compartido (2026-09-29)
+
+Primer cambio del manifiesto (versión 0.5).
+
+**Cambiado**
+- **Panel, cinta y funciones `RIESGO.*` en un solo proceso** (`SharedRuntime`):
+  `taskpane.html` es a la vez el panel, la página de los comandos y la de las
+  funciones (carga `funciones.js`). Se quitan `commands.html` y
+  `funciones.html`.
+- **Los botones de la cinta ejecutan una acción** (`ui/acciones.ts`) que pone
+  la pestaña y muestra el panel sin recargarlo: se acaba el instante en blanco
+  de la prueba B4.
+- **Resultados en la hoja (B6) en memoria**: las funciones leen lo que tiene
+  el panel; las celdas que dijeron «simula primero» se apuntan solas y se
+  refrescan al publicarse los resultados, también al abrir el libro (en otro
+  equipo, en cuanto el panel carga los resultados guardados en el libro).
+- Diagnóstico: línea «Runtime compartido».
+
+**Requisito nuevo**: `SharedRuntime 1.1` (Excel para la Web; Windows con
+Microsoft 365 desde la versión 2002, o Excel 2021; Mac desde 16.35). En el
+iPad el complemento no se instala (tampoco funcionaba antes; abrir allí un
+libro preparado para compartir sigue igual).
+
 ### Tercera ronda de pruebas del usuario (2026-09-29)
 
 La guía completa, recorrida entera en Excel (Windows y Web). Todo OK salvo lo

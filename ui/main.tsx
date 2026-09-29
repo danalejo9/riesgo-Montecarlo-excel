@@ -17,6 +17,7 @@ import { createRoot } from 'react-dom/client';
 
 import { ErrorPanel } from './ErrorPanel.tsx';
 import { Panel } from './Panel.tsx';
+import { registrarAcciones } from './acciones.ts';
 import './estilos.css';
 
 const raiz = document.getElementById('raiz');
@@ -38,6 +39,8 @@ if (typeof Office === 'undefined') {
     </main>,
   );
 } else {
+  // B1: los botones de la cinta ejecutan código de esta página.
+  registrarAcciones();
   void Office.onReady(() => {
     montar(
       <ErrorPanel>

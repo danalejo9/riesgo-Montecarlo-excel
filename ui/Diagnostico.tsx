@@ -90,6 +90,8 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
               <dt>Versión</dt><dd>{entorno.version}</dd>
               <dt>Idioma</dt><dd>{entorno.idioma}</dd>
               <dt>ExcelApi</dt><dd>hasta {versionMaximaDisponible(entorno)}</dd>
+              <dt>Runtime compartido</dt>
+              <dd>{entorno.runtimeCompartido ? 'sí: panel, cinta y funciones en el mismo proceso' : 'no'}</dd>
               {regional && (
                 <>
                   <dt>Separadores</dt>

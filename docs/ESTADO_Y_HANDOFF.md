@@ -995,6 +995,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Pendientes del usuario: W6, W7 (probables OK), Mac (no tiene). Tandas 7 y
     8 recalculadas: 47/47. **Siguiente**: etapa 2 (B1).
 
+40. [x] **B1, runtime compartido (2026-09-29)**. Manifiesto 0.5: `<Runtimes>`
+    (`Panel.Url`, long), `SharedRuntime 1.1` exigido, `FunctionFile` y
+    `<Page>` de las funciones = `taskpane.html`, botones `ExecuteFunction`
+    (`ui/acciones.ts`). `taskpane.html` carga `funciones.js` (guardado contra
+    la falta de `CustomFunctions`). B6 en memoria (`almacenEnMemoria`) y
+    celdas pendientes (`requiresAddress`). Validación del manifiesto: el
+    servicio de Microsoft da 403 desde aquí; comprobado contra la
+    documentación oficial (repositorio `OfficeDev/office-js-docs-pr`) y con
+    pruebas de estructura (`runtimeCompartidoB1.test.ts`). **Falta Excel
+    real**: al instalarlo, `npm run stop` + `npm start`; en la Web, quitar y
+    volver a cargar el manifiesto. **Siguiente**: B2, B3, B1b.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -279,6 +279,15 @@ Estimaciones en días de trabajo efectivo.
 ### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
 - **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
   el mismo proceso. Es la base de B2 y B3, y la solución segura de A1-B4.
+  ✅ **Hecho el 29/09** (manifiesto 0.5): `<Runtimes>` de larga vida con
+  `taskpane.html`, que carga también `funciones.js`; `FunctionFile` y la
+  página de las funciones apuntan ahí; los cuatro botones son `ExecuteFunction`
+  (`ui/acciones.ts`: pestaña + `showAsTaskpane`). Exige `SharedRuntime 1.1`
+  (Web, Windows 365 ≥ 2002 y Excel 2021, Mac ≥ 16.35; no iPad). B6 pasa los
+  resultados en memoria y las celdas que dijeron «simula primero» se
+  refrescan al publicarse, también al abrir el libro en otro equipo.
+  Verificado sobre la página real con un Office de mentira; **falta Excel
+  real**.
   *Ronda del 29/09 (B4):* los botones de la cinta cambian de pestaña, pero el
   panel se pone en blanco un instante (se recarga). Con el runtime compartido
   el panel no se recarga: debe desaparecer.

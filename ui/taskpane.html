@@ -17,6 +17,12 @@
       window.__replaceStateOriginal = window.history.replaceState.bind(window.history);
     </script>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <!--
+      B1, runtime compartido: esta página es también la de las funciones
+      RIESGO.*, así que carga su script (un solo archivo, sin módulos, el mismo
+      que el manifiesto declara en <Script>).
+    -->
+    <script src="./funciones.js"></script>
   </head>
   <body>
     <div id="raiz"></div>

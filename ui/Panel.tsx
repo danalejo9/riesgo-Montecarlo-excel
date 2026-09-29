@@ -32,7 +32,7 @@ import {
 import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
-import { publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
+import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
@@ -50,7 +50,7 @@ import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
 import { escribirFragmento } from './fragmento.ts';
 
-type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
+export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
 
 /**
  * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
@@ -92,8 +92,15 @@ export function Panel() {
 
   useEffect(() => {
     const alCambiar = () => setPestana(pestanaDeFragmento(window.location.hash));
+    // B1: los botones de la cinta piden la pestaña también con un evento
+    // (`acciones.ts`), por si el fragmento ya la decía.
+    const alPedir = (e: Event) => setPestana(pestanaDeFragmento(String((e as CustomEvent).detail ?? '')));
     window.addEventListener('hashchange', alCambiar);
-    return () => window.removeEventListener('hashchange', alCambiar);
+    window.addEventListener('riesgo:pestana', alPedir);
+    return () => {
+      window.removeEventListener('hashchange', alCambiar);
+      window.removeEventListener('riesgo:pestana', alPedir);
+    };
   }, []);
 
   useEffect(() => {
@@ -231,7 +238,7 @@ export function Panel() {
         void aplicarResaltado(modelo).catch(() => {});
         // B6: los resultados, para las funciones RIESGO.MEDIA, PERCENTIL…
         void publicarResultados(conHuella)
-          .then(() => refrescarCeldas(conHuella.celdasConResultados ?? []))
+          .then(() => refrescarCeldas(celdasParaRefrescar(conHuella.celdasConResultados)))
           .catch(() => {});
         // Guardarlos no puede estropear la simulación: si falla, se dice y ya.
         void guardarResultados(serializarResultados(modelo, conHuella)).catch((e: unknown) =>

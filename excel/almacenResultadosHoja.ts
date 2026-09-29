@@ -17,10 +17,14 @@ import { letrasDeColumna } from '../engine/parser/ast.ts';
 import { construirGrafo } from '../engine/graph/index.ts';
 import type { SimulacionCompletada } from './informe.ts';
 import {
+  almacenEnMemoria,
   CLAVE_ALMACEN_RESULTADOS,
   construirAlmacen,
+  direccionSinLibro,
   leerAlmacen,
   normalizarDireccion,
+  ponerAlmacenEnMemoria,
+  tomarCeldasPendientes,
   type AlmacenResultadosHoja,
 } from './resultadosEnHoja.ts';
 
@@ -76,9 +80,22 @@ export async function leerAlmacenPublicado(): Promise<AlmacenResultadosHoja | nu
  */
 export async function publicarResultados(resultado: SimulacionCompletada): Promise<void> {
   const nuevo = construirAlmacen(resultado);
-  const previo = await leerAlmacenPublicado();
+  const previo = almacenEnMemoria() ?? (await leerAlmacenPublicado());
   const salidas = { ...(previo?.salidas ?? {}), ...nuevo.salidas };
-  await escribirTexto(JSON.stringify({ ...nuevo, salidas }));
+  const mezcla = { ...nuevo, salidas };
+  // B1: en memoria para las funciones (mismo proceso), y en el almacén para
+  // cualquier proceso aparte que quede (Excel sin runtime compartido).
+  ponerAlmacenEnMemoria(mezcla);
+  await escribirTexto(JSON.stringify(mezcla));
+}
+
+/**
+ * Las celdas que hay que volver a calcular tras publicar: las que usan
+ * funciones de resultados en el modelo simulado y las que dijeron «simula
+ * primero» mientras no había resultados (B1).
+ */
+export function celdasParaRefrescar(conResultados: readonly string[] = []): string[] {
+  return [...new Set([...conResultados, ...tomarCeldasPendientes()])];
 }
 
 /**
@@ -89,7 +106,7 @@ export async function publicarResultados(resultado: SimulacionCompletada): Promi
 export async function refrescarCeldas(direcciones: readonly string[]): Promise<void> {
   if (direcciones.length === 0) return;
   await Excel.run(async (context) => {
-    const rangos = direcciones.map((d) => {
+    const rangos = [...new Set(direcciones.map(direccionSinLibro))].map((d) => {
       const r = rangoDesdeDireccion(context, d);
       r.load('formulas');
       return r;
@@ -104,15 +121,21 @@ export async function refrescarCeldas(direcciones: readonly string[]): Promise<v
 }
 
 /**
- * Al abrir el panel con resultados guardados en el libro: si el almacén no
- * tiene estas salidas (otro equipo, caché borrada), se publican y se refrescan
- * las celdas con funciones de resultados, que habrán dicho «simula primero».
+ * Al abrir el panel con resultados guardados en el libro: se publican (en
+ * memoria y en el almacén) y se refrescan las celdas con funciones de
+ * resultados que ya hubieran dicho «simula primero» (B1: las apuntan ellas
+ * mismas). Sin runtime compartido esa lista no llega aquí; entonces, si el
+ * almacén no tenía estas salidas, se buscan en el libro.
  */
 export async function publicarRestaurados(resultado: SimulacionCompletada): Promise<void> {
-  const previo = await leerAlmacenPublicado();
-  const falta = resultado.salidas.some((s) => !previo?.salidas[normalizarDireccion(s.clave ?? s.ref)]);
-  if (!falta) return;
+  const previo = almacenEnMemoria() ?? (await leerAlmacenPublicado());
+  const faltaban = resultado.salidas.some((s) => !previo?.salidas[normalizarDireccion(s.clave ?? s.ref)]);
   await publicarResultados(resultado);
+  const pendientes = celdasParaRefrescar();
+  if (pendientes.length > 0 || !faltaban || compartido()) {
+    await refrescarCeldas(pendientes);
+    return;
+  }
   const libro = await leerLibro();
   if (!libro.formulas.some((f) => /\bRIESGO\.(MEDIA|DESV|PERCENTIL|PROB|MIN|MAX)\s*\(/i.test(f.formula))) return;
   const { grafo } = construirGrafo(libro.formulas);
@@ -121,4 +144,13 @@ export async function publicarRestaurados(resultado: SimulacionCompletada): Prom
     if (nodo.ast && contieneFuncionResultado(nodo.ast)) celdas.push(componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`));
   }
   await refrescarCeldas(celdas);
+}
+
+/** ¿Corre el complemento con runtime compartido? */
+function compartido(): boolean {
+  try {
+    return typeof Office !== 'undefined' && Office.context?.requirements?.isSetSupported?.('SharedRuntime', '1.1') === true;
+  } catch {
+    return false;
+  }
 }
