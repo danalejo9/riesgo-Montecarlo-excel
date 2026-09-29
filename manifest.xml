@@ -184,6 +184,51 @@
                   </Action>
                 </Control>
               </Group>
+              <!--
+                B2: el modo del libro. Qué enseñan las celdas RIESGO fuera de
+                la simulación: un valor fijo (la media, u otro elegido en
+                Configuración) o uno al azar que cambia con F9. El botón del
+                modo activo queda desactivado (Office.ribbon.requestUpdate).
+              -->
+              <Group id="GrupoModo">
+                <Label resid="GrupoModo.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnFijo">
+                  <Label resid="btnFijo.Label" />
+                  <Supertip>
+                    <Title resid="btnFijo.Label" />
+                    <Description resid="btnFijo.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoFijo.16" />
+                    <bt:Image size="32" resid="IconoFijo.32" />
+                    <bt:Image size="80" resid="IconoFijo.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>modoFijo</FunctionName>
+                  </Action>
+                  <Enabled>false</Enabled>
+                </Control>
+                <Control xsi:type="Button" id="btnAleatorio">
+                  <Label resid="btnAleatorio.Label" />
+                  <Supertip>
+                    <Title resid="btnAleatorio.Label" />
+                    <Description resid="btnAleatorio.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoAleatorio.16" />
+                    <bt:Image size="32" resid="IconoAleatorio.32" />
+                    <bt:Image size="80" resid="IconoAleatorio.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>modoAleatorio</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
               <Label resid="PestanaRiesgo.Label" />
             </CustomTab>
           </ExtensionPoint>
@@ -205,6 +250,12 @@
         <bt:Image id="IconoConfiguracion.16" DefaultValue="https://localhost:9090/icon-settings-16.png" />
         <bt:Image id="IconoConfiguracion.32" DefaultValue="https://localhost:9090/icon-settings-32.png" />
         <bt:Image id="IconoConfiguracion.80" DefaultValue="https://localhost:9090/icon-settings-80.png" />
+        <bt:Image id="IconoFijo.16" DefaultValue="https://localhost:9090/icon-config-16.png" />
+        <bt:Image id="IconoFijo.32" DefaultValue="https://localhost:9090/icon-config-32.png" />
+        <bt:Image id="IconoFijo.80" DefaultValue="https://localhost:9090/icon-config-80.png" />
+        <bt:Image id="IconoAleatorio.16" DefaultValue="https://localhost:9090/icon-simulate-16.png" />
+        <bt:Image id="IconoAleatorio.32" DefaultValue="https://localhost:9090/icon-simulate-32.png" />
+        <bt:Image id="IconoAleatorio.80" DefaultValue="https://localhost:9090/icon-simulate-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -220,12 +271,17 @@
         <bt:String id="btnResultados.Label" DefaultValue="Resultados" />
         <bt:String id="btnConfiguracion.Label" DefaultValue="Configuración" />
         <bt:String id="btnDiagnostico.Label" DefaultValue="Diagnóstico" />
+        <bt:String id="GrupoModo.Label" DefaultValue="Modo del libro" />
+        <bt:String id="btnFijo.Label" DefaultValue="Valores fijos" />
+        <bt:String id="btnAleatorio.Label" DefaultValue="Aleatorio" />
         <bt:String id="GetStarted.Title" DefaultValue="Riesgo Monte Carlo" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
         <bt:String id="btnResultados.Tooltip" DefaultValue="Resultados de la última simulación: probabilidades, histograma, curva acumulada y sensibilidad." />
         <bt:String id="btnConfiguracion.Tooltip" DefaultValue="Iteraciones, semilla, muestreo, motor, precisión objetivo y núcleos del equipo." />
+        <bt:String id="btnFijo.Tooltip" DefaultValue="Las celdas con funciones RIESGO enseñan un valor fijo: la media, o la mediana, la moda o un percentil (se elige en Configuración)." />
+        <bt:String id="btnAleatorio.Tooltip" DefaultValue="Las celdas con funciones RIESGO enseñan un valor al azar; F9 vuelve a sortear. No cambia los resultados de la simulación." />
         <bt:String id="btnDiagnostico.Tooltip" DefaultValue="Estado del complemento, lo guardado en el libro y la configuración regional." />
         <bt:String id="GetStarted.Description" DefaultValue="Usa la pestaña Riesgo para abrir el panel y analizar tu modelo." />
       </bt:LongStrings>

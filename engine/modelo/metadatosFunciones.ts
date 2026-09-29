@@ -7,13 +7,25 @@
 
 import { FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO } from './funcionesRiesgo.ts';
 
+/** Lo que enseñan fuera de la simulación (B2). */
+const FUERA = 'Fuera de la simulación devuelve la media, u otro valor fijo o uno al azar según el modo del libro.';
+
+/**
+ * Volátiles (B2): en el modo «Aleatorio» cada recálculo (F9) tiene que
+ * sortear otra vez, y al cambiar de modo basta un recálculo para que todas
+ * enseñen lo nuevo. Las de resultados (B6) no: valen lo mismo hasta que se
+ * vuelve a simular.
+ */
+const VOLATIL = { volatile: true };
+
 export function metadatosFunciones(): object {
   return {
     functions: (FUNCIONES_RIESGO.map((f) => ({
       id: f.id,
       name: f.id,
-      description: `${f.descripcion} Fuera de la simulación devuelve la media.`,
+      description: `${f.descripcion} ${FUERA}`,
       result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
       parameters: f.parametros.map((p) => ({
         name: p.nombre,
         description: p.descripcion,
@@ -23,8 +35,9 @@ export function metadatosFunciones(): object {
     })) as object[]).concat(([{
       id: FUNCION_CATEGORIA.id,
       name: FUNCION_CATEGORIA.id,
-      description: `${FUNCION_CATEGORIA.descripcion} Fuera de la simulación devuelve el valor más probable.`,
+      description: `${FUNCION_CATEGORIA.descripcion} Fuera de la simulación devuelve el valor más probable (o uno al azar en el modo Aleatorio).`,
       result: { type: 'string', dimensionality: 'scalar' },
+      options: VOLATIL,
       parameters: FUNCION_CATEGORIA.parametros.map((p) => ({
         name: p.nombre,
         description: p.descripcion,
@@ -34,8 +47,9 @@ export function metadatosFunciones(): object {
     }, {
       id: FUNCION_DISCRETA.id,
       name: FUNCION_DISCRETA.id,
-      description: `${FUNCION_DISCRETA.descripcion} Fuera de la simulación devuelve la media.`,
+      description: `${FUNCION_DISCRETA.descripcion} ${FUERA}`,
       result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
       parameters: FUNCION_DISCRETA.parametros.map((p) => ({
         name: p.nombre,
         description: p.descripcion,
@@ -45,8 +59,9 @@ export function metadatosFunciones(): object {
     }, {
       id: FUNCION_EMPIRICA.id,
       name: FUNCION_EMPIRICA.id,
-      description: `${FUNCION_EMPIRICA.descripcion} Fuera de la simulación devuelve la media de los datos.`,
+      description: `${FUNCION_EMPIRICA.descripcion} ${FUERA}`,
       result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
       parameters: FUNCION_EMPIRICA.parametros.map((p) => ({
         name: p.nombre,
         description: p.descripcion,
@@ -58,6 +73,7 @@ export function metadatosFunciones(): object {
       name: FUNCION_TRUNCAR.id,
       description: `${FUNCION_TRUNCAR.descripcion} Fuera de la simulación devuelve el valor de la función interior, dentro de los límites.`,
       result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
       parameters: FUNCION_TRUNCAR.parametros.map((p) => ({
         name: p.nombre,
         description: p.descripcion,

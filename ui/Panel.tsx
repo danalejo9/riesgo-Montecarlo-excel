@@ -33,6 +33,7 @@ import { huellaModelo, restaurarResultados, serializarResultados } from '../exce
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
+import { aplicarModo, leerModoGuardado } from '../excel/modoLibro.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
@@ -136,6 +137,12 @@ export function Panel() {
             .then(({ texto, legado }) => setEscenarios(restaurarEscenarios(texto, legado)))
             .catch(() => {
               // Sin escenarios legibles, no hay comparación: nada más.
+            });
+          // B2: el modo del libro guardado (valores fijos o aleatorio).
+          void leerModoGuardado()
+            .then((m) => aplicarModo(m, { guardar: false }))
+            .catch(() => {
+              // Sin modo guardado legible, valores fijos (la media): lo de siempre.
             });
           void leerResultadosGuardados()
             .then((texto) => {

@@ -1007,6 +1007,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     real**: al instalarlo, `npm run stop` + `npm start`; en la Web, quitar y
     volver a cargar el manifiesto. **Siguiente**: B2, B3, B1b.
 
+41. [x] **B2, modo del libro (2026-09-29)**. `engine/modelo/valorFijo.ts`
+    (moda por familia, valor fijo, aleatorio, lectura del modo),
+    `excel/modoLibroCompartido.ts` (en memoria para las funciones),
+    `excel/modoLibro.ts` (guardar, recalcular, cinta con `requestUpdate`).
+    Grupo «Modo del libro» en el manifiesto (`modoFijo`, `modoAleatorio`).
+    Funciones de distribución volátiles. **Siguiente**: B3, B1b.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

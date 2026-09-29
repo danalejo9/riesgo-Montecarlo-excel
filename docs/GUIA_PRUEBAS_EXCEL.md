@@ -117,6 +117,22 @@ la pantalla».
   parpadeo (ahora escribe 20 iteraciones por cada viaje a Excel). Apunta el
   tiempo y las iteraciones por segundo que dice «Cómo se calculó».
 
+**N6. Modo del libro: valores fijos** (B2, nuevo). En la cinta hay un grupo
+**«Modo del libro»** con **Valores fijos** (desactivado: es el modo actual) y
+**Aleatorio**. En la hoja «Pruebas», con `=RIESGO.TRIANGULAR(8;10;14)` en C6:
+- C6 vale **10,67** (la media).
+- En ⚙ → **Modo del libro** → Valor fijo: **Moda** → C6 = **10**; **Mediana**
+  → **10,54**; **Percentil…** 90 → **12,45**. Vuelve a **Media**.
+
+**N7. Modo aleatorio.** Pulsa **Aleatorio** en la cinta.
+- Esperado: el botón Aleatorio queda desactivado y Valores fijos activo; C5,
+  C6 y C7 cambian a valores al azar. Pulsa **F9** varias veces: cambian cada
+  vez. En «Zonas», C12 (`RIESGO.CATEGORIA`) va saliendo Norte, Sur o Este.
+- Simula C7: la media sigue en torno a **10.670**, como siempre (el modo no
+  toca la simulación).
+- Guarda, cierra y reabre: el libro sigue en Aleatorio. Vuelve a **Valores
+  fijos** al terminar.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

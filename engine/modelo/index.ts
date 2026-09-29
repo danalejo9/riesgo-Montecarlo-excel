@@ -89,3 +89,14 @@ export {
   type OpcionesRiesgoEnGrafo,
   type RiesgoEnGrafo,
 } from './riesgoEnGrafo.ts';
+export {
+  describirEstadistico,
+  leerModoLibro,
+  modaDe,
+  MODO_POR_DEFECTO,
+  valorAleatorio,
+  valorEnModo,
+  valorFijo,
+  type EstadisticoFijo,
+  type ModoLibro,
+} from './valorFijo.ts';

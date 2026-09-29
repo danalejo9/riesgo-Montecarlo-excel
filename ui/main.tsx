@@ -18,6 +18,8 @@ import { createRoot } from 'react-dom/client';
 import { ErrorPanel } from './ErrorPanel.tsx';
 import { Panel } from './Panel.tsx';
 import { registrarAcciones } from './acciones.ts';
+import { aplicarModo } from '../excel/modoLibro.ts';
+import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import './estilos.css';
 
 const raiz = document.getElementById('raiz');
@@ -40,7 +42,11 @@ if (typeof Office === 'undefined') {
   );
 } else {
   // B1: los botones de la cinta ejecutan código de esta página.
-  registrarAcciones();
+  registrarAcciones({
+    // B2: el modo del libro, sin tocar el valor fijo elegido.
+    modoFijo: () => aplicarModo({ ...modoLibroEnMemoria(), modo: 'fijo' }),
+    modoAleatorio: () => aplicarModo({ ...modoLibroEnMemoria(), modo: 'aleatorio' }),
+  });
   void Office.onReady(() => {
     montar(
       <ErrorPanel>

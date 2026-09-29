@@ -1,11 +1,12 @@
 /**
  * Las funciones `RIESGO.*` de Excel (funciones personalizadas).
  *
- * Fuera de la simulación, cada una devuelve **la media** de su distribución:
- * el libro sigue calculando con normalidad y la celda enseña su valor
- * esperado, que es lo que un modelo determinista habría puesto ahí. Durante la
- * simulación el complemento ni las llama: la celda es una entrada y su valor
- * lo pone el muestreo (`excel/entradasRiesgo.ts`).
+ * Fuera de la simulación, cada una devuelve lo que diga el **modo del libro**
+ * (B2, `engine/modelo/valorFijo.ts`): en «Valores fijos» (por defecto) un
+ * estadístico de su distribución —la media, salvo que se elija la mediana,
+ * la moda o un percentil—; en «Aleatorio», un valor al azar que cambia con
+ * F9 (por eso son volátiles). Durante la simulación el complemento no usa lo
+ * que devuelven: sus muestras las pone el motor (`excel/entradasRiesgo.ts`).
  *
  * Las funciones de resultados (B6: `RIESGO.MEDIA(C32)`…) leen lo que el
  * panel publicó al simular (`excel/resultadosEnHoja.ts`). Excel les pasa la
@@ -18,8 +19,11 @@
 
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
-  FUNCIONES_RESULTADO, FUNCIONES_RIESGO, mediaDeFuncionRiesgo,
+  construirSpecRiesgo, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
+import { valorEnModo } from '../engine/modelo/valorFijo.ts';
+import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
+import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import {
   almacenEnMemoria, anotarCeldaPendiente, buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, valorFuncionResultado,
   type AlmacenResultadosHoja,
@@ -37,36 +41,38 @@ const asociar: typeof CustomFunctions.associate = (id, f) => {
   if (typeof CustomFunctions !== 'undefined') CustomFunctions.associate(id, f);
 };
 
+/** El valor de la celda en el modo del libro, o el error de Excel si la distribución no vale. */
+function enModo(spec: DistributionSpec | string, nombre: string): number | string {
+  if (typeof spec === 'string') throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, spec);
+  try {
+    return valorEnModo(spec, modoLibroEnMemoria());
+  } catch {
+    throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, `Parámetros no válidos para RIESGO.${nombre}`);
+  }
+}
+
 for (const f of FUNCIONES_RIESGO) {
-  asociar(f.id, (...args: number[]) => {
-    const r = mediaDeFuncionRiesgo(f.id, args.slice(0, f.parametros.length));
-    if (typeof r === 'number') return r;
-    throw new CustomFunctions.Error(
-      r === '#NAME?' ? CustomFunctions.ErrorCode.invalidName : CustomFunctions.ErrorCode.invalidNumber,
-      `Parámetros no válidos para RIESGO.${f.id}`,
-    );
-  });
+  asociar(f.id, (...args: number[]) => enModo(construirSpecRiesgo(f.id, args.slice(0, f.parametros.length)), f.id));
 }
 
 // T4: el valor más probable de una entrada de texto. Los argumentos llegan
 // como matrices (rango o lista), se aplanan en el mismo orden.
 asociar(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][]) => {
   const r = categoriaDesdeListas(valores.flat(), pesos.flat());
-  if (typeof r !== 'string') return r.masProbable;
-  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_CATEGORIA.id);
 });
 
 // B4: la media de una discreta, y una función RIESGO acotada.
 asociar(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][]) => {
   const r = discretaDesdeListas(valores.flat(), pesos.flat());
-  if (typeof r !== 'string') return r.media;
-  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_DISCRETA.id);
 });
 
 asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
-  // Fuera de la simulación la función interior ya enseña su media; aquí solo
-  // se mantiene dentro de los límites. La simulación usa la distribución
-  // acotada de verdad.
+  // Fuera de la simulación la función interior ya enseña su valor (fijo o al
+  // azar); aquí solo se mantiene dentro de los límites. La simulación usa la
+  // distribución acotada de verdad. (En «Aleatorio», lo que cae fuera se
+  // queda en el límite: basta para explorar el modelo, no para medirlo.)
   if (!(minimo < maximo)) throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'RIESGO.TRUNCAR: el mínimo tiene que ser menor que el máximo');
   return Math.min(maximo, Math.max(minimo, valor));
 });
@@ -74,8 +80,7 @@ asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
 // I1: la media de los datos históricos.
 asociar(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
   const r = empiricaDesdeLista(datos.flat());
-  if (typeof r !== 'string') return r.media;
-  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, r);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_EMPIRICA.id);
 });
 
 // B6: los resultados de la última simulación. El almacén se relee en cada

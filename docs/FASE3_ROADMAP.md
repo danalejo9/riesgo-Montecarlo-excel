@@ -296,6 +296,13 @@ Estimaciones en días de trabajo efectivo.
   Configuración entre **media, moda, mediana o un percentil**. Probabilístico:
   muestra un valor aleatorio y F9 remuestrea (funciones volátiles). El modo
   del libro no cambia los resultados de la simulación, y se dice en la UI.
+  ✅ **Hecho el 29/09**: grupo «Modo del libro» en la cinta (Valores fijos /
+  Aleatorio; el activo, desactivado con `Office.ribbon.requestUpdate`),
+  sección en Configuración, guardado en el libro (`excel/modoLibro.ts`),
+  valores en `engine/modelo/valorFijo.ts`. Las funciones de distribución son
+  volátiles; las de resultados (B6), no. Límite: en Aleatorio,
+  `RIESGO.TRUNCAR` deja en el límite lo que cae fuera (no vuelve a sortear).
+  **Falta Excel real** (N6, N7).
 - **B3. Cinta que actúa sin abrir el panel**: «Marcar como entrada», «Marcar
   como salida», «Simular», «Quitar resaltado».
 - **B1b. Funciones RIESGO que sortean en el motor compatible** (decidido el

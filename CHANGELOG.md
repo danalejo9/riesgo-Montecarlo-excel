@@ -5,6 +5,17 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 2 — B2: modo del libro (2026-09-29)
+
+**Añadido**
+- **«Modo del libro» en la cinta**: *Valores fijos* (por defecto) o
+  *Aleatorio*. En valores fijos, cada `RIESGO.*` enseña la media, o la
+  mediana, la moda o un percentil, según se elija en Configuración; en
+  aleatorio, un valor al azar que cambia con F9. El botón del modo activo
+  queda desactivado. Se guarda en el libro. La simulación no cambia.
+- Las funciones de distribución son volátiles (para que F9 sortee y un
+  cambio de modo se vea con un recálculo); las de resultados, no.
+
 ### Etapa 2 — B1: runtime compartido (2026-09-29)
 
 Primer cambio del manifiesto (versión 0.5).

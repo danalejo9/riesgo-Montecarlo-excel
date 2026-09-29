@@ -36,8 +36,12 @@ interface Entorno {
 
 const entorno = () => globalThis as unknown as Entorno;
 
-/** Registra las acciones de la cinta. Fuera de Office (el banco) no hace nada. */
-export function registrarAcciones(): void {
+/**
+ * Registra las acciones de la cinta. Fuera de Office (el banco) no hace nada.
+ * `otras` son acciones que no cambian de pestaña (el modo del libro, B2; las
+ * que actúan sin abrir el panel, B3): las pone quien sabe hacerlas.
+ */
+export function registrarAcciones(otras: Record<string, () => Promise<void>> = {}): void {
   const acciones = entorno().Office?.actions;
   if (typeof acciones?.associate !== 'function') return;
   for (const [id, pestana] of Object.entries(ACCIONES)) {
@@ -45,9 +49,15 @@ export function registrarAcciones(): void {
       void mostrar(pestana).finally(() => evento.completed());
     });
   }
+  for (const [id, hacer] of Object.entries(otras)) {
+    acciones.associate(id, (evento: EventoCinta) => {
+      // Un fallo no puede dejar la cinta esperando: siempre se da por terminada.
+      void hacer().catch(() => {}).finally(() => evento.completed());
+    });
+  }
 }
 
-async function mostrar(pestana: Pestana): Promise<void> {
+export async function mostrar(pestana: Pestana): Promise<void> {
   const { window: ventana, Office: office } = entorno();
   if (ventana) {
     if (ventana.location.hash.replace(/^#/, '') !== pestana) ventana.location.hash = pestana;

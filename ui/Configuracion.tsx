@@ -13,6 +13,9 @@
 import { useEffect, useState } from 'react';
 
 import {
+  describirEstadistico,
+  type EstadisticoFijo,
+  type ModoLibro,
   LARGO_MAXIMO_DESCRIPCION,
   LARGO_MAXIMO_TITULO,
   OBJETIVO_PRECISION_POR_DEFECTO,
@@ -20,6 +23,8 @@ import {
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
 import { leerNumero, miles } from './formato.ts';
+import { aplicarModo } from '../excel/modoLibro.ts';
+import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import {
   guardarCongelarPantalla,
   guardarPreferenciaHilos,
@@ -57,6 +62,8 @@ export function Configuracion({
   return (
     <>
       <Proyecto modelo={modelo} alCambiar={alCambiar} />
+
+      <ModoDelLibro />
 
       <Rendimiento hilosUltimaSimulacion={hilosUltimaSimulacion} />
 
@@ -150,6 +157,92 @@ export function Configuracion({
         </div>
       </section>
     </>
+  );
+}
+
+/**
+ * El modo del libro (B2): qué enseñan las celdas RIESGO fuera de la
+ * simulación. Se guarda en el libro. También se cambia desde la cinta; el
+ * evento `riesgo:modo` mantiene esto al día.
+ */
+function ModoDelLibro() {
+  const [modo, setModo] = useState<ModoLibro>(() => modoLibroEnMemoria());
+  const [error, setError] = useState<string | null>(null);
+  const [p, setP] = useState(() => (modo.fijo.tipo === 'percentil' ? String(Math.round(modo.fijo.p * 100)) : '90'));
+
+  useEffect(() => {
+    const alCambiar = (e: Event) => setModo((e as CustomEvent<ModoLibro>).detail);
+    window.addEventListener('riesgo:modo', alCambiar);
+    return () => window.removeEventListener('riesgo:modo', alCambiar);
+  }, []);
+
+  const aplicar = (m: ModoLibro) => {
+    setModo(m);
+    setError(null);
+    void aplicarModo(m).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  };
+  const tipo = modo.fijo.tipo;
+  const conPercentil = (texto: string): EstadisticoFijo | null => {
+    const n = leerNumero(texto);
+    return n !== null && n > 0 && n < 100 ? { tipo: 'percentil', p: n / 100 } : null;
+  };
+
+  return (
+    <section>
+      <h2>Modo del libro</h2>
+      <p className="tenue">
+        Qué enseñan las celdas con funciones RIESGO cuando no se simula. Se guarda en el libro y no cambia los
+        resultados de la simulación. También se cambia desde la cinta (Valores fijos / Aleatorio).
+      </p>
+      <div className="parametros">
+        <label className="campo">
+          <span className="tenue">Modo</span>
+          <select value={modo.modo} onChange={(e) => aplicar({ ...modo, modo: e.target.value === 'aleatorio' ? 'aleatorio' : 'fijo' })}>
+            <option value="fijo">Valores fijos</option>
+            <option value="aleatorio">Aleatorio (F9 vuelve a sortear)</option>
+          </select>
+        </label>
+        <label className="campo">
+          <span className="tenue">Valor fijo</span>
+          <select
+            value={tipo}
+            disabled={modo.modo === 'aleatorio'}
+            onChange={(e) => {
+              const t = e.target.value;
+              const fijo: EstadisticoFijo = t === 'percentil' ? conPercentil(p) ?? { tipo: 'percentil', p: 0.9 } : { tipo: t === 'mediana' || t === 'moda' ? t : 'media' };
+              aplicar({ ...modo, fijo });
+            }}
+          >
+            <option value="media">Media</option>
+            <option value="mediana">Mediana</option>
+            <option value="moda">Moda (el más probable)</option>
+            <option value="percentil">Percentil…</option>
+          </select>
+        </label>
+        {tipo === 'percentil' && modo.modo === 'fijo' && (
+          <label className="campo">
+            <span className="tenue">Percentil (1 a 99)</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={p}
+              onChange={(e) => setP(e.target.value)}
+              onBlur={() => {
+                const f = conPercentil(p);
+                if (f) aplicar({ ...modo, fijo: f });
+                else setP(String(Math.round((modo.fijo as { p: number }).p * 100)));
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <p className="tenue ayuda">
+        {modo.modo === 'aleatorio'
+          ? 'Cada celda RIESGO enseña un valor al azar; pulsa F9 para sortear otra vez y ver cómo se mueve el modelo.'
+          : `Cada celda RIESGO enseña ${describirEstadistico(modo.fijo)} de su distribución.`}
+      </p>
+      {error && <p className="aviso-linea">No se pudo aplicar: {error}</p>}
+    </section>
   );
 }
 
