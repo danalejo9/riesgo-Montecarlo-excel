@@ -81,6 +81,35 @@ export function crearLibroCalculable(
       for (let i = 0; i < nSalidas; i++) leidas[i] = aValor(salidas[i] as Excel.Range);
       return leidas;
     },
+
+    /**
+     * F5b: varias iteraciones en un solo `sync`. Office.js ejecuta los
+     * comandos en orden, así que cada lectura queda con los valores de *su*
+     * iteración; por eso se piden rangos nuevos para leer en cada una (el
+     * mismo objeto leído dos veces se quedaría con la última). La pantalla
+     * se congela hasta el `sync`, que ahora es uno por lote: Excel repinta
+     * una vez cada lote en vez de una por iteración (prueba H2, 29/09).
+     */
+    async calcularLote(valoresPorIteracion) {
+      const app = context.workbook.application;
+      if (congelar && typeof app.suspendScreenUpdatingUntilNextSync === 'function') app.suspendScreenUpdatingUntilNextSync();
+      const lecturas: Excel.Range[][] = [];
+      for (const valores of valoresPorIteracion) {
+        for (let i = 0; i < entradas.length; i++) {
+          const textos = opciones.categorias?.[i];
+          const v = valores[i] as number;
+          (entradas[i] as Excel.Range).values = [[textos ? (textos[Math.round(v)] ?? '') : v]];
+        }
+        app.calculate(Excel.CalculationType.recalculate);
+        lecturas.push(direccionesSalida.map((d) => {
+          const r = rangoDesdeDireccion(context, d);
+          r.load(['values', 'valueTypes']);
+          return r;
+        }));
+      }
+      await context.sync();
+      return lecturas.map((fila) => fila.map(aValor));
+    },
   };
 }
 

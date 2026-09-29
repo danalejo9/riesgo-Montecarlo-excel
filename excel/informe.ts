@@ -109,6 +109,11 @@ export interface FilaSensibilidadPanel {
   peso: number;
   /** Contribución a la varianza explicada (regresión, medida de Pratt), si se pudo calcular. */
   contribucion?: number;
+  /**
+   * Entrada de texto: su peso se mide con la media de la salida en cada
+   * categoría, así que no tiene sentido (subir o bajar) y su ρ es ≥ 0.
+   */
+  categorica?: true;
 }
 
 /** Una línea del gráfico de araña, con los nombres del modelo. */
@@ -135,11 +140,11 @@ export function sensibilidadDeSalida(
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
   muestraSalida: ArrayLike<number>,
 ): FilaSensibilidadPanel[] {
-  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
+  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave, muestraSalida);
   const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
   return analizarSensibilidad(entradas, muestraSalida).map((f) => {
     const e = porId.get(f.id);
-    return { ...f, nombre: e?.name ?? f.id, ref: e?.ref ?? '' };
+    return { ...f, nombre: e?.name ?? f.id, ref: e?.ref ?? '', ...(e?.dist.type === 'categorical' ? { categorica: true as const } : {}) };
   });
 }
 
@@ -176,9 +181,11 @@ export function analisisDeMuestra(
 ): Pick<ResultadoSalida, 'sensibilidad' | 'muestraOrdenada' | 'histograma' | 'arana' | 'r2' | 'riesgo' | 'colas'> {
   if (!muestraSalida || muestraSalida.length === 0) return {};
   const muestraOrdenada = ordenarUtiles(muestraSalida);
-  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave);
+  // La araña es por décimos de cada entrada: una de texto no tiene décimos.
+  const entradas = entradasDeSensibilidad(modelo, clavesEntrada, muestrasPorClave, muestraSalida);
   const porId = new Map(modelo.inputs.map((e) => [e.id, e] as const));
-  const arana = aranaDeSensibilidad(entradas, muestraSalida).map((c) => ({
+  const numericas = entradas.filter((e) => porId.get(e.id)?.dist.type !== 'categorical');
+  const arana = aranaDeSensibilidad(numericas, muestraSalida).map((c) => ({
     ...c, nombre: porId.get(c.id)?.name ?? c.id, ref: porId.get(c.id)?.ref ?? '',
   }));
   const r2 = r2Sensibilidad(entradas, muestraSalida);
@@ -199,14 +206,41 @@ function entradasDeSensibilidad(
   modelo: ModeloRiesgo,
   clavesEntrada: readonly string[],
   muestrasPorClave: ReadonlyMap<string, ArrayLike<number>>,
+  muestraSalida: ArrayLike<number>,
 ) {
   return modelo.inputs.flatMap((e, i) => {
-    // Las entradas de texto no entran en la correlación de rangos: el orden
-    // de sus categorías es arbitrario. Tienen su propio análisis (T3).
-    if (e.dist.type === 'categorical') return [];
     const muestras = muestrasPorClave.get(clavesEntrada[i] as string);
-    return muestras ? [{ id: e.id, muestras }] : [];
+    if (!muestras) return [];
+    // Una entrada de texto no tiene orden (Norte no es «más» que Sur), así
+    // que su índice no sirve para correlacionar. Se sustituye cada categoría
+    // por la media de la salida en ella: así la regresión mide cuánto de la
+    // variación explica (es la razón de correlación, η²), en la misma escala
+    // que las demás. Hasta el 29/09 se dejaban fuera, y el tornado de la hoja
+    // «Zonas» decía que la zona no pesaba nada cuando era lo que más pesaba.
+    if (e.dist.type === 'categorical') return [{ id: e.id, muestras: mediaPorCategoria(muestras, muestraSalida) }];
+    return [{ id: e.id, muestras }];
   });
+}
+
+/** Cada iteración, con la media de la salida en su categoría. */
+export function mediaPorCategoria(indices: ArrayLike<number>, salida: ArrayLike<number>): Float64Array {
+  const n = Math.min(indices.length, salida.length);
+  const suma = new Map<number, number>();
+  const cuenta = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const y = salida[i] as number;
+    if (!Number.isFinite(y)) continue;
+    const c = Math.round(indices[i] as number);
+    suma.set(c, (suma.get(c) ?? 0) + y);
+    cuenta.set(c, (cuenta.get(c) ?? 0) + 1);
+  }
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const c = Math.round(indices[i] as number);
+    const k = cuenta.get(c);
+    out[i] = k ? (suma.get(c) as number) / k : NaN;
+  }
+  return out;
 }
 
 /** Texto de un umbral: "P(VAN < 0)". */

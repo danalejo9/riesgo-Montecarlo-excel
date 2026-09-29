@@ -49,6 +49,13 @@ export interface LibroCalculable {
    * en el mismo orden en que se declararon.
    */
   calcularIteracion(valoresDeEntrada: readonly number[]): Promise<readonly ValorLeido[]>;
+  /**
+   * Varias iteraciones en un solo viaje a Excel (F5b): para cada una, escribe,
+   * recalcula y lee, todo encolado, y sincroniza una vez al final. El viaje es
+   * lo caro del modo compatible, y Excel repinta la hoja en cada uno: con
+   * lotes va más rápido y parpadea mucho menos. Opcional.
+   */
+  calcularLote?(valoresPorIteracion: readonly (readonly number[])[]): Promise<readonly (readonly ValorLeido[])[]>;
 }
 
 /** Cómo se llaman VERDADERO y FALSO en el idioma del libro (T6). */
@@ -91,6 +98,11 @@ export interface OpcionesCompatible {
   cadaCuantas?: number;
   /** Cuántas de las primeras iteraciones se guardan valor a valor (sensibilidad). */
   retenerMuestra?: number;
+  /**
+   * Iteraciones por viaje a Excel, si el libro sabe hacer lotes (F5b). 1 es
+   * una por viaje, como hasta el 29/09.
+   */
+  lote?: number;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }

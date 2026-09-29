@@ -179,7 +179,9 @@ function VistaPreviaDistribucion({ spec }: { spec: DistributionSpec }) {
       {figura}
       <figcaption className="tenue">
         {v.p5 !== undefined && v.p50 !== undefined && v.p95 !== undefined
-          ? `p5 ${numero(v.p5)} · p50 ${numero(v.p50)} · p95 ${numero(v.p95)}${v.media !== undefined ? ` · media ${numero(v.media)}` : ''}`
+          // Tres cifras significativas: es para hacerse una idea de la forma,
+          // no para leer decimales (A2, ronda del 29/09: «0,010654» amontonaba).
+          ? `p5 ${numero(v.p5, 3)}  ·  p50 ${numero(v.p50, 3)}  ·  p95 ${numero(v.p95, 3)}${v.media !== undefined ? `  ·  media ${numero(v.media, 3)}` : ''}`
           : 'Probabilidad de cada valor (pasa el ratón por una barra).'}
       </figcaption>
     </figure>
@@ -277,9 +279,12 @@ function EditorCategorica({
         alCambiar={(weights) => alCambiar({ ...spec, weights })}
       />
       {leerSeleccion && (
-        <button type="button" className="plano" onClick={() => void leer()}>
-          Leer de la selección (nombres y probabilidades)
-        </button>
+        <div className="ancho">
+          <button type="button" className="secundario" onClick={() => void leer()}>
+            Leer de la selección
+          </button>
+          <span className="tenue ayuda"> Selecciona en la hoja los nombres y, al lado, sus probabilidades.</span>
+        </div>
       )}
       {aviso && <p className="aviso-linea">{aviso}</p>}
     </div>

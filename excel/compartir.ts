@@ -12,6 +12,7 @@ import { leerLibro } from './lectorLibro.ts';
 import { modeloParaCompartir, modeloRestaurado, planificarCompartir, type PlanCompartir } from './compartirPuro.ts';
 import { rangoDesdeDireccion } from './rangos.ts';
 import { cargarResolverRef } from './resolverRef.ts';
+import { leerNombresSugeridos } from './etiquetasEnExcel.ts';
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
 
 export const CLAVE_FORMULAS_COMPARTIDAS = 'riesgoMontecarlo.sharedFormulas';
@@ -60,7 +61,9 @@ export async function prepararParaCompartir(modelo: ModeloRiesgo): Promise<Resul
     await context.sync();
   });
 
-  return { modelo: modeloParaCompartir(modelo, plan), plan };
+  // Con nombre legible («Demanda», no «Pruebas!C5»): prueba J1 del 29/09.
+  const nombres = await leerNombresSugeridos(plan.conversiones.map((c) => c.direccion)).catch(() => new Map<string, string>());
+  return { modelo: modeloParaCompartir(modelo, plan, nombres), plan };
 }
 
 /** ¿Hay fórmulas RIESGO guardadas por una preparación anterior? Cuántas. */

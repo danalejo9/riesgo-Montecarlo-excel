@@ -177,6 +177,10 @@ function rangoFalso(ref: string) {
 
 function rangoSimple(ref: string) {
   const objetivo = celda(ref);
+  // Como Office.js: `load` toma el valor en ese punto de la cola, no al
+  // leerlo después. Sin esto, varias iteraciones en un mismo viaje (F5b)
+  // leerían todas el valor de la última.
+  let foto: { valor: Celda['valor'] } | null = null;
   return {
     format: {
       fill: {
@@ -196,21 +200,24 @@ function rangoSimple(ref: string) {
     cellCount: 1,
     isNullObject: false,
     get values() {
-      return [[objetivo.valor ?? '']];
+      return [[(foto ? foto.valor : objetivo.valor) ?? '']];
     },
     set values(v: unknown[][]) {
       objetivo.valor = v[0]?.[0] as number;
+      foto = null;
     },
     get formulas() {
       return [[objetivo.formula ? `=${objetivo.formula}` : (objetivo.valor ?? '')]];
     },
     get valueTypes() {
-      return [[tipoDeValor(objetivo.valor)]];
+      return [[tipoDeValor(foto ? foto.valor : objetivo.valor)]];
     },
     get worksheet() {
       return { name: HOJA, load: () => {} };
     },
-    load: () => {},
+    load: () => {
+      foto = { valor: objetivo.valor };
+    },
   };
 }
 

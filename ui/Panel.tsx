@@ -430,7 +430,7 @@ function Progreso({ avance, alCancelar }: { avance: AvanceSimulacion; alCancelar
           </p>
         </>
       )}
-      <button type="button" className="plano" onClick={alCancelar}>
+      <button type="button" className="secundario" onClick={alCancelar}>
         Cancelar
       </button>
     </section>

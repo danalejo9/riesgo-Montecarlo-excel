@@ -60,14 +60,15 @@ export function lecturaDeSalida(d: DatosLectura): string[] {
   // Lo que más la mueve: por contribución a la varianza si se pudo calcular,
   // si no por ρ². Solo las que pesan de verdad (≥ 5 %), y como mucho tres.
   const filas = [...(d.sensibilidad ?? [])]
-    .map((f) => ({ nombre: f.nombre, peso: f.contribucion ?? f.peso, sube: f.spearman >= 0 }))
+    .map((f) => ({ nombre: f.nombre, peso: f.contribucion ?? f.peso, sube: f.spearman >= 0, texto: f.categorica === true }))
     .filter((f) => f.peso >= 0.05)
     .sort((a, b) => b.peso - a.peso)
     .slice(0, 3);
   if (filas.length > 0) {
     const [primera, ...resto] = filas;
-    const sentido = (f: { sube: boolean }) => (f.sube ? 'la sube' : 'la baja');
-    let frase = `Lo que más la mueve es ${primera!.nombre} (${porcentaje(primera!.peso)} de la variación; cuando sube, ${sentido(primera!)})`;
+    const sentido = (f: { sube: boolean; texto: boolean }) =>
+      f.texto ? 'según el valor que tome' : `cuando sube, ${f.sube ? 'la sube' : 'la baja'}`;
+    let frase = `Lo que más la mueve es ${primera!.nombre} (${porcentaje(primera!.peso)} de la variación; ${sentido(primera!)})`;
     if (resto.length > 0) {
       frase += `, seguido de ${resto.map((f) => `${f.nombre} (${porcentaje(f.peso)})`).join(' y ')}`;
     }

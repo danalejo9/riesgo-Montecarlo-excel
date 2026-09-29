@@ -70,7 +70,7 @@ export function AjusteDatos({
 
   if (!abierto) {
     return (
-      <button type="button" className="plano" onClick={() => setAbierto(true)}>
+      <button type="button" className="secundario" onClick={() => setAbierto(true)}>
         Ajustar a datos históricos…
       </button>
     );
@@ -96,7 +96,7 @@ export function AjusteDatos({
       />
       <div className="fila-botones">
         <button type="button" onClick={() => void deLaSeleccion()}>Leer de la selección</button>
-        <button type="button" className="plano" onClick={() => setAbierto(false)}>Cerrar</button>
+        <button type="button" className="secundario" onClick={() => setAbierto(false)}>Cerrar</button>
       </div>
       {fallo && <p className="aviso-linea">{fallo}</p>}
 
@@ -177,7 +177,7 @@ export function AjusteDatos({
           {candidata && <CurvaAjuste datos={lectura.valores} spec={candidata.spec} />}
           {ajuste.empirica && (
             <p>
-              <button type="button" className="plano" onClick={() => alUsar(ajuste.empirica as DistributionSpec)}>
+              <button type="button" className="secundario" onClick={() => alUsar(ajuste.empirica as DistributionSpec)}>
                 Usar los datos tal cual (distribución empírica)
               </button>
               <span className="tenue"> — cada valor observado con su frecuencia; no inventa valores que no se hayan visto.</span>

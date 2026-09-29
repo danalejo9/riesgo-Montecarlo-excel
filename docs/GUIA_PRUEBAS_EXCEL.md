@@ -499,8 +499,7 @@ E5:F7) que cambia el recargo con un BUSCARV. **Quita todo del panel** antes.
 entrada.
 - Esperado: el panel la propone como **Categórica** con una sola categoría,
   «Norte».
-- Selecciona en la hoja **E5:F7** y pulsa **«Leer de la selección (nombres y
-  probabilidades)»**: quedan Norte 20 %, Sur 50 % y Este 30 %, y la vista
+- Selecciona en la hoja **E5:F7** y pulsa **«Leer de la selección»**: quedan Norte 20 %, Sur 50 % y Este 30 %, y la vista
   previa enseña tres barras.
 
 **T2. El resto.** Marca C6 (precio) y C7 (unidades) como entradas; deja la

@@ -51,6 +51,12 @@ describe('planificarCompartir', () => {
     expect(nuevo.inputs[1]?.id.startsWith(PREFIJO_COMPARTIR)).toBe(true);
   });
 
+  it('con nombres legibles, las entradas nuevas los llevan (J1, 29/09)', () => {
+    const nuevo = modeloParaCompartir(modeloVacio(), plan, new Map([["'Mi hoja'!C6", 'Precio']]));
+    expect(nuevo.inputs.find((e) => e.ref === "'Mi hoja'!C6")?.name).toBe('Precio');
+    expect(nuevo.inputs.find((e) => e.ref === 'Pruebas!C5')?.name).toBe('Pruebas!C5');
+  });
+
   it('restaurar quita solo las entradas que creó la preparación', () => {
     const m = modeloVacio();
     m.inputs.push({ id: 'in_a', name: 'Demanda', ref: 'Pruebas!C5', dist: { type: 'uniform', min: 0, max: 1 }, correlations: [] });

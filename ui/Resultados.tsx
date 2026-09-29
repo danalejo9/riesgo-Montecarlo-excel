@@ -939,7 +939,9 @@ export function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilid
     (f.contribucion !== undefined
       ? `${Math.round(Math.max(0, f.contribucion) * 100)} % de la varianza explicada. `
       : `${Math.round(f.peso * 100)} % del efecto. `) +
-    (f.spearman >= 0 ? 'Cuando sube, la salida tiende a subir.' : 'Cuando sube, la salida tiende a bajar.');
+    (f.categorica
+      ? 'Es una entrada de texto: cuenta cuánto cambia la salida según su valor, sin sentido de subir o bajar.'
+      : f.spearman >= 0 ? 'Cuando sube, la salida tiende a subir.' : 'Cuando sube, la salida tiende a bajar.');
 
   return (
     <figure className="tornado" aria-label="Sensibilidad de la salida a cada entrada">
@@ -949,7 +951,7 @@ export function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilid
       </p>
 
       {visibles.map((f) => {
-        const lado = f.spearman >= 0 ? 'sube' : 'baja';
+        const lado = f.categorica ? 'segun' : f.spearman >= 0 ? 'sube' : 'baja';
         return (
           <div
             key={f.id}
@@ -965,7 +967,7 @@ export function Tornado({ filas, muestra, r2 }: { filas: readonly FilaSensibilid
             <span className="tornado-pista">
               <span className={`tornado-barra ${lado}`} style={{ width: `${Math.abs(f.spearman) * 50}%` }} />
             </span>
-            <span className="tornado-valor">{rho(f.spearman)}</span>
+            <span className="tornado-valor">{f.categorica ? 'texto' : rho(f.spearman)}</span>
             <span className="tornado-contribucion tenue">
               {f.contribucion !== undefined ? `${Math.round(Math.max(0, f.contribucion) * 100)} %` : ''}
             </span>

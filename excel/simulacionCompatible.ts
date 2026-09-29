@@ -40,6 +40,13 @@ import { hayRecuperacionPendiente, iniciarProteccion, restaurarDesdeRecuperacion
 import { cargarAlmacenGuardian } from './almacenGuardian.ts';
 import { crearLibroCalculable } from './libroCalculable.ts';
 
+/**
+ * Iteraciones por viaje a Excel (F5b). Con 20, la hoja se repinta 20 veces
+ * menos y se ahorran 19 de cada 20 viajes; más no compensa, porque el lote
+ * entero se pierde si Excel falla a mitad y el progreso avanzaría a saltos.
+ */
+export const LOTE_COMPATIBLE = 20;
+
 /** Modo de cálculo durante la simulación; ver `libroCalculable.ts`. */
 const MODO_DURANTE = 'Manual';
 
@@ -95,7 +102,7 @@ export async function simularEnExcel(peticion: PeticionCompatible): Promise<Resp
         congelarPantalla: peticion.congelarPantalla ?? false,
         categorias: peticion.entradas.map((e) => e.categorias),
       });
-      return await simularCompatible({ libro, ...peticion });
+      return await simularCompatible({ libro, lote: LOTE_COMPATIBLE, ...peticion });
     } finally {
       restaurarDesdeRecuperacion(almacen);
       await almacen.aplicar();
@@ -130,7 +137,7 @@ export async function medirRitmoEnExcel(
 
     try {
       const libro = crearLibroCalculable(context, refs, salidas, { categorias: entradas.map((e) => e.categorias) });
-      const medida = await medirRitmo(libro, entradas, iteracionesDePrueba);
+      const medida = await medirRitmo(libro, entradas, iteracionesDePrueba, LOTE_COMPATIBLE);
       return { ok: true as const, ...medida };
     } finally {
       restaurarDesdeRecuperacion(almacen);

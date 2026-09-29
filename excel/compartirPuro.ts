@@ -102,13 +102,18 @@ export const PREFIJO_COMPARTIR = 'rc_';
  * ya era entrada del panel, se deja la del panel (manda el panel, como al
  * simular).
  */
-export function modeloParaCompartir(modelo: ModeloRiesgo, plan: PlanCompartir): ModeloRiesgo {
+export function modeloParaCompartir(
+  modelo: ModeloRiesgo,
+  plan: PlanCompartir,
+  /** Nombre legible por dirección (E5); sin él, la entrada se llama como su celda. */
+  nombres?: ReadonlyMap<string, string>,
+): ModeloRiesgo {
   const yaEstan = new Set(modelo.inputs.map((e) => e.ref.replace(/'/g, '').toUpperCase()));
   const nuevas = plan.conversiones
     .filter((c) => !yaEstan.has(c.direccion.replace(/'/g, '').toUpperCase()))
     .map((c) => ({
       id: `${PREFIJO_COMPARTIR}${generarId('in').slice(3)}`,
-      name: c.clave,
+      name: nombres?.get(c.direccion) ?? c.clave,
       ref: c.direccion,
       dist: c.spec,
       correlations: [],

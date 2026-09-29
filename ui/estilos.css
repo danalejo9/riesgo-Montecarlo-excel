@@ -104,7 +104,10 @@ button {
   cursor: pointer;
 }
 button:disabled { opacity: .6; cursor: default; }
-button.secundario { background: transparent; color: var(--acento); }
+/* Acción secundaria: con borde, para que se vea que se puede pulsar (ronda
+   del 29/09: «no se sabe qué es texto y qué es un botón»). */
+button.secundario { background: transparent; color: var(--acento); font-weight: 600; }
+button.secundario:hover { background: color-mix(in srgb, var(--acento) 10%, transparent); }
 section.compartido { border-left: 3px solid var(--acento); padding-left: 10px; }
 
 .error {
@@ -170,7 +173,7 @@ code {
   margin-top: 8px;
 }
 .campo { display: flex; flex-direction: column; gap: 2px; }
-.campo.ancho { grid-column: 1 / -1; }
+.campo.ancho, .parametros > .ancho { grid-column: 1 / -1; }
 .campo .ayuda { font-size: 11px; }
 
 input[type='text'], select {
@@ -312,6 +315,8 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .tornado-barra { position: absolute; top: 2px; height: 10px; }
 .tornado-barra.sube { left: 50%; background: var(--sube); border-radius: 0 4px 4px 0; }
 .tornado-barra.baja { right: 50%; background: var(--baja); border-radius: 4px 0 0 4px; }
+/* Entrada de texto (T2): pesa, pero no sube ni baja. Centrada y en gris. */
+.tornado-barra.segun { left: 50%; background: var(--tenue, #8a8a8a); border-radius: 0 4px 4px 0; opacity: 0.8; }
 .tornado-valor { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
 .tornado button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }
 
@@ -416,6 +421,7 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 /* C5: vista previa de la distribución en el editor. */
 .vista-previa { margin: 6px 0 0; }
 .vista-previa svg { width: 100%; max-width: 320px; height: auto; display: block; }
+.vista-previa figcaption { white-space: pre-wrap; margin-top: 4px; }
 .previa-area { fill: color-mix(in srgb, var(--acento) 30%, transparent); stroke: var(--acento); stroke-width: 1; }
 .previa-p { stroke: var(--tenue); stroke-dasharray: 2 2; stroke-width: 1; }
 .previa-p50 { stroke: var(--texto); stroke-width: 1; }

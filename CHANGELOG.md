@@ -5,6 +5,36 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Tercera ronda de pruebas del usuario (2026-09-29)
+
+La guía completa, recorrida entera en Excel (Windows y Web). Todo OK salvo lo
+de abajo; las tandas 7 y 8 de fidelidad, recalculadas en su Excel, pasan (47
+comprobaciones).
+
+**Arreglado**
+- **Las entradas de texto no salían en el tornado ni en la lectura** (T2): en
+  la hoja «Zonas», la zona es lo que más mueve los ingresos (≈ 60 % de la
+  variación) y el panel decía que Unidades y Precio explicaban el 100 %.
+  Ahora cada categoría se sustituye por la media de la salida en ella (la
+  razón de correlación) y entra en la regresión con las demás; se pinta en
+  gris, sin «sube/baja», y la lectura dice «según el valor que tome». No
+  entra en la araña (no tiene décimos).
+- **Preparar para compartir** crea las entradas con nombre legible
+  («Demanda»), no con la referencia (J1).
+- **Botones que parecían texto** (E4, T1): «Ajustar a datos históricos…»,
+  «Usar los datos tal cual», «Leer de la selección», «Poner nombres desde la
+  hoja», «Cambiar en Configuración», «Cerrar» y «Cancelar» tienen ahora borde.
+- **Vista previa** con tres cifras significativas (A2: «p5 0,010654»).
+
+**Añadido**
+- **Modo compatible por lotes** (F5b, a raíz de H2): 20 iteraciones por viaje
+  a Excel. Menos repintado y muchos menos viajes; los mismos números.
+
+**Plan**
+- U2 (legibilidad del panel, T6), C10 (marcas y delimitadores en el
+  histograma, sugerencia), y la nota de B4 (el panel en blanco al cambiar de
+  pestaña desde la cinta) en B1.
+
 ### Plan: B1b (2026-09-28)
 
 **Cambiado**

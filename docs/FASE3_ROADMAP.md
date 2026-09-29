@@ -279,6 +279,9 @@ Estimaciones en días de trabajo efectivo.
 ### B. Runtime compartido, modo del libro y funciones RIESGO (E4) — 6–8 d
 - **B1. Runtime compartido** (`SharedRuntime`): panel, cinta y funciones en
   el mismo proceso. Es la base de B2 y B3, y la solución segura de A1-B4.
+  *Ronda del 29/09 (B4):* los botones de la cinta cambian de pestaña, pero el
+  panel se pone en blanco un instante (se recarga). Con el runtime compartido
+  el panel no se recarga: debe desaparecer.
 - **B2. Interruptor en la cinta «Determinístico / Probabilístico».**
   Determinístico: cada `RIESGO.*` muestra un valor fijo, a elegir en
   Configuración entre **media, moda, mediana o un percentil**. Probabilístico:
@@ -422,6 +425,11 @@ Estimaciones en días de trabajo efectivo.
   que de verdad se generaron, sus estadísticos y, encima, la distribución
   teórica elegida, para comprobar que el modelo usó lo que se quería. Barato:
   las entradas ya se guardan para el tornado.
+- **C10. Marcas en el histograma** *(usuario, ronda del 29/09)*: líneas de la
+  media y la mediana, y **delimitadores que se arrastran** sobre el gráfico
+  (como los de @RISK) que van diciendo el porcentaje a cada lado y entre los
+  dos. Percentiles configurables (enlaza con C6). En el panel y, fijos, en el
+  informe y la hoja volcada.
 
 ### D. Análisis que faltan — 3–5 d
 - **D1. Análisis de escenarios por cola** (el de @RISK; su versión iteración a
@@ -463,6 +471,15 @@ Estimaciones en días de trabajo efectivo.
   estudio pedía «asistentes paso a paso»)*: guía a quien empieza (qué celdas
   son inciertas, qué distribución elegir, qué salida medir) y ofrece modelos
   de partida (proyecto de inversión, presupuesto de obra, cartera).
+- **U2. Legibilidad del panel** *(usuario, ronda del 29/09: «está muy difícil
+  de leer toda la información, en general el panel lateral»)*. Primer paso
+  hecho el 29/09: las acciones secundarias son botones con borde (antes
+  parecían texto). Queda un repaso de conjunto, a decidir con el usuario:
+  jerarquía (lo principal arriba y grande: media, rango, probabilidad del
+  umbral), secciones plegables en Resultados (medidas de riesgo, qué tiene
+  que pasar, entradas muestreadas…) con las más usadas abiertas, menos texto
+  explicativo visible (a una «i» o a la ayuda E4) y más espacio entre bloques.
+  Va antes del manual (M2), para que las capturas sean las definitivas.
 
 ### F. Motor y cobertura — según lo que pidan los libros
 - **F1.** `DESREF` con desplazamientos constantes; `LAMBDA`.
@@ -480,7 +497,16 @@ Estimaciones en días de trabajo efectivo.
   documentación avisa de parpadeo si se llama en bucle, que es justo lo que
   hace el modo compatible. Probarlo en Excel con una opción antes de dejarlo
   por defecto; medir si acelera. **Pedido otra vez el 28/09**: sube de
-  prioridad.
+  prioridad. **Ronda del 29/09**: con la casilla, la hoja parpadea y va más
+  rápido; sin ella, se ven los números cambiar y va más lento. Congelar del
+  todo no se puede con Office.js (no hay un `ScreenUpdating` que dure), pero
+  sí repintar mucho menos: ver F5b.
+- **F5b. El modo compatible por lotes** ✅ *(29/09)*: 20 iteraciones por
+  viaje a Excel en vez de una (escribir, recalcular y leer, encolado, y un
+  solo `sync`). Excel repinta una vez por lote y se ahorran 19 de cada 20
+  viajes, que son lo caro. Mismos números que antes (comprobado en el banco
+  contra el motor rápido). Pendiente: medirlo en Excel real (prueba H2 de la
+  próxima ronda).
 - **F6. Reproducibilidad del modo compatible** *(28/09)*: el usuario vio un p95
   distinto al repetir K1/K2 con el motor de Excel. En el banco los dos dan
   exactamente lo mismo (media, desviación y todos los percentiles). Sospecha:
@@ -644,7 +670,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** (guía reescrita el 28/09, pendiente del usuario) → B1–B3 → **B1b** → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
+pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → **U2, C10** (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6 (salvo SALIDA y CORRELACION)~~ ✅ 28/09 (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

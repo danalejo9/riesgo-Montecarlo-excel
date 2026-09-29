@@ -291,3 +291,58 @@ describe('tiempoEstimado', () => {
     expect(convieneAvisar(0, 1_000)).toBe(false);
   });
 });
+
+describe('lotes: varias iteraciones por viaje a Excel (F5b, prueba H2 del 29/09)', () => {
+  function libroConLotes(formula: (v: readonly number[]) => number[]) {
+    const base = libroDe(formula);
+    return Object.assign(base, {
+      viajes: 0,
+      async calcularLote(filas: readonly (readonly number[])[]) {
+        this.viajes += 1;
+        return filas.map((f) => formula([...f]));
+      },
+    });
+  }
+  const valores = Array.from({ length: 53 }, (_, i) => i + 1);
+
+  it('da exactamente lo mismo que una iteración por viaje, con muchos menos viajes', async () => {
+    const f = ([x]: readonly number[]) => [(x as number) ** 2, (x as number) % 7];
+    const opciones = { entradas: [entrada('A1', valores)], salidas: ['B1', 'B2'], iteraciones: 53, retenerMuestra: 53 };
+    const uno = await simularCompatible({ libro: libroDe(f), ...opciones });
+    const conLotes = libroConLotes(f);
+    const lotes = await simularCompatible({ libro: conLotes, lote: 20, ...opciones });
+    if (!uno.ok || !lotes.ok) throw new Error('falló');
+    expect(conLotes.viajes).toBe(3); // 20 + 20 + 13
+    expect(conLotes.llamadas).toBe(0);
+    for (const s of ['B1', 'B2']) {
+      expect(lotes.porSalida.get(s)?.welford).toEqual(uno.porSalida.get(s)?.welford);
+      expect(Array.from(lotes.porSalida.get(s)?.muestra ?? [])).toEqual(Array.from(uno.porSalida.get(s)?.muestra ?? []));
+    }
+    expect(lotes.iteracionesCompletadas).toBe(53);
+  });
+
+  it('cancelar sigue funcionando entre lotes', async () => {
+    let preguntas = 0;
+    const r = await simularCompatible({
+      libro: libroConLotes(([x]) => [x as number]), lote: 20,
+      entradas: [entrada('A1', valores)], salidas: ['B1'], iteraciones: 53,
+      debeCancelar: () => ++preguntas > 1,
+    });
+    expect(r.ok && r.cancelada).toBe(true);
+    expect(r.ok && r.iteracionesCompletadas).toBe(20);
+  });
+
+  it('sin calcularLote, el libro sigue yendo de una en una', async () => {
+    const libro = libroDe(([x]) => [x as number]);
+    const r = await simularCompatible({ libro, lote: 20, entradas: [entrada('A1', valores)], salidas: ['B1'], iteraciones: 53 });
+    expect(r.ok && r.iteracionesCompletadas).toBe(53);
+    expect(libro.llamadas).toBe(53);
+  });
+
+  it('medirRitmo mide con un lote, como se va a simular', async () => {
+    const libro = libroConLotes(([x]) => [x as number]);
+    await medirRitmo(libro, [entrada('A1', [1, 2, 3])], 5, 20);
+    expect(libro.viajes).toBe(1);
+    expect(libro.llamadas).toBe(0);
+  });
+});

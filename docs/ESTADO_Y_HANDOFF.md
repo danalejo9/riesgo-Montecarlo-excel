@@ -986,12 +986,20 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     puede ser entrada. Guía: F5 nueva, F12–F19, T8, W7. **Pendiente de B6**:
     `RIESGO.SALIDA`, `RIESGO.CORRELACION` y, con B1, leer del libro.
 
+39. [x] **Tercera ronda del usuario (2026-09-29), guía completa**. Todo OK
+    salvo: T2 (entradas de texto fuera del tornado: arreglado con la media por
+    categoría en `excel/informe.ts`), J1 (nombres al compartir), botones que
+    parecían texto, cifras de la vista previa. H2 → F5b (compatible por lotes,
+    `calcularLote`). B4 (panel en blanco al cambiar de pestaña) se resuelve
+    con B1. Nuevos en el plan: U2 (legibilidad), C10 (histograma con marcas).
+    Pendientes del usuario: W6, W7 (probables OK), Mac (no tiene). Tandas 7 y
+    8 recalculadas: 47/47. **Siguiente**: etapa 2 (B1).
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **El usuario ejecuta `docs/GUIA_PRUEBAS_EXCEL.md` (reescrita el 28/09)**
-   entera y reporta por código. Arreglar lo que falle, empezando por B4
-   (cinta con el panel abierto), W5 (RIESGO en la Web) y J3 (iPad).
-2. Tandas 7 y 8 de vuelta de Excel (bloque I de la guía).
+1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
+2. **Etapa 2: B1** (runtime compartido), que es el primer cambio del
+   manifiesto; después B2, B3 y B1b.
 3. Después, etapa 2: B1–B3 (runtime compartido, modo
    determinista/probabilístico, cinta que actúa) y **B1b** (las funciones
    RIESGO sortean en el motor compatible: casos 2 y 3 de B7 con Excel en el

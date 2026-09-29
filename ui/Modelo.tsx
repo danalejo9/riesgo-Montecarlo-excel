@@ -308,7 +308,7 @@ export function Modelo({
         <p className="aviso-linea">
           {sinNombre.length === 1 ? 'Una celda se llama' : `${miles(sinNombre.length)} celdas se llaman`} como su
           referencia ({sinNombre.slice(0, 3).map((x) => x.ref).join(', ')}{sinNombre.length > 3 ? '…' : ''}).{' '}
-          <button type="button" className="plano" onClick={() => void nombrarDesdeLaHoja()}>
+          <button type="button" className="secundario" onClick={() => void nombrarDesdeLaHoja()}>
             Poner nombres desde la hoja
           </button>
         </p>
@@ -453,7 +453,7 @@ export function Modelo({
           {' · '}motor {modelo.settings.engine === 'auto' ? 'automático' : modelo.settings.engine === 'fast' ? 'rápido' : 'compatible'}
         </p>
         {alAbrirConfiguracion && (
-          <button type="button" className="plano" onClick={alAbrirConfiguracion}>
+          <button type="button" className="secundario" onClick={alAbrirConfiguracion}>
             ⚙ Cambiar en Configuración
           </button>
         )}
