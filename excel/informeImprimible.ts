@@ -15,7 +15,7 @@
  * lo que no: ni la muestra ni los cuantiles, que no se imprimen.
  */
 
-import { resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { resumirDistribucion, textoFecha, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
@@ -110,7 +110,7 @@ export function datosDelInforme(
         ...(umbral && muestraOrdenada && muestraOrdenada.length > 0
           ? {
               umbral: {
-                texto: `Probabilidad de quedar ${umbral.direction === 'below' ? 'por debajo' : 'por encima'} de ${umbral.value.toLocaleString('es-ES')}`,
+                texto: `Probabilidad de quedar ${umbral.direction === 'below' ? 'por debajo' : 'por encima'} de ${s.fecha ? textoFecha(umbral.value) : umbral.value.toLocaleString('es-ES')}`,
                 probabilidad: probabilidadUmbral(muestraOrdenada, umbral.value, umbral.direction === 'below' ? 'debajo' : 'encima'),
               },
             }

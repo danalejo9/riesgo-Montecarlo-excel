@@ -45,6 +45,7 @@ import {
   type ResultadoSimulacionPanel,
 } from './informe.ts';
 import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNCION, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
+import { celdasConFormatoFecha } from './formatoCeldas.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -230,6 +231,17 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const conv = modelo.settings.convergence;
   const objetivo = conv?.target ?? OBJETIVO_PRECISION_POR_DEFECTO;
 
+  // T7: las entradas y salidas con formato de fecha se enseñan como fechas.
+  const direccionDe = (clave: string) => {
+    const nodo = grafo.nodos.get(clave);
+    return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : clave;
+  };
+  const dirSalidas = clavesSalida.map(direccionDe);
+  const dirEntradas = modelo.inputs.map((e, i) => direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)));
+  const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])]).catch(() => new Set<string>());
+  const terminar = (r: ResultadoSimulacionPanel) =>
+    conFechas(conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados), modelo, dirSalidas, dirEntradas, fechas);
+
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
 
@@ -247,7 +259,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     if (r.ok && conv?.untilConverged) {
       r.convergencia = { objetivo, tandas: [n], alcanzada: r.salidas.every((s) => s.precision?.suficiente !== false), tope: conv.maxIterations, noDisponible: true };
     }
-    return conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados);
+    return terminar(r);
   }
 
   // Motor rápido: iteraciones fijas, o por tandas hasta la precisión pedida.
@@ -281,7 +293,24 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       alcanzada: final.salidas.every((s) => s.precision?.suficiente !== false),
     };
   }
-  return conCeldasConResultados(conEntradasDeFunciones(final, deFunciones), celdasConResultados);
+  return terminar(final);
+}
+
+/** Marca como fecha las salidas y entradas cuya celda tiene formato de fecha (T7). */
+function conFechas(
+  r: ResultadoSimulacionPanel,
+  modelo: ModeloRiesgo,
+  dirSalidas: readonly string[],
+  dirEntradas: readonly string[],
+  fechas: ReadonlySet<string>,
+): ResultadoSimulacionPanel {
+  if (!r.ok || fechas.size === 0) return r;
+  const entradaFecha = new Set(modelo.inputs.filter((_, i) => fechas.has(dirEntradas[i] as string)).map((e) => e.id));
+  return {
+    ...r,
+    salidas: r.salidas.map((s, i) => (fechas.has(dirSalidas[i] as string) ? { ...s, fecha: true } : s)),
+    ...(r.entradas ? { entradas: r.entradas.map((e) => (entradaFecha.has(e.id) ? { ...e, fecha: true } : e)) } : {}),
+  };
 }
 
 function conCeldasConResultados(r: ResultadoSimulacionPanel, celdas: string[]): ResultadoSimulacionPanel {

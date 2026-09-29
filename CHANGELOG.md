@@ -5,6 +5,17 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### T7: entradas y salidas de fecha (2026-09-29)
+
+**Añadido**
+- Las entradas y salidas cuya celda tiene **formato de fecha** se enseñan
+  como fechas en Resultados (cifras, percentiles, histograma, curva,
+  delimitadores, lectura, tabla de salidas, entradas muestreadas), en el
+  informe PDF y en la hoja volcada; la desviación y la semidesviación, en
+  **días**. La pregunta de probabilidad y los delimitadores aceptan fechas
+  escritas (`15/05/2027`).
+- Libro de demostración: sección 10 de «Pruebas» (filas 52–54). Guía: T9 y N14.
+
 ### I2: ajuste de distribuciones orientado al riesgo (2026-09-29)
 
 **Añadido**

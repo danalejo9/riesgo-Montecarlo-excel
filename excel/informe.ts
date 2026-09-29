@@ -49,6 +49,8 @@ export interface ResultadoSalida {
   id: string;
   nombre: string;
   ref: string;
+  /** La celda tiene formato de fecha (T7): sus valores se enseñan como fechas y la dispersión en días. */
+  fecha?: boolean;
   /** La celda de verdad (`Modelo!C32`), también si `ref` es un nombre definido. */
   clave?: string;
   resumen: ResumenEstadistico;
@@ -572,10 +574,12 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
 
     // Estadísticos (A:B) y percentiles (D:E), lado a lado.
     const inicio = fila;
+    // Una fecha (T7): los valores con el formato de la celda; la dispersión, en días.
+    const fd = s.fecha ? '#,##0.0 "días"' : f;
     const estad: Array<[string, number, string]> = [
       ['Iteraciones con valor', s.resumen.n, FORMATO_ENTERO],
       ['Media', s.resumen.media, f],
-      ['Desviación típica', s.resumen.desviacion, f],
+      ['Desviación típica', s.resumen.desviacion, fd],
       ['Mínimo', s.resumen.min, f],
       ['Máximo', s.resumen.max, f],
     ];
@@ -586,12 +590,12 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
       estad.push(['CVaR 5 % cola baja (media del peor 5 %)', s.riesgo.cvarInferior, f]);
       estad.push(['VaR 5 % cola alta (p95)', s.riesgo.varSuperior, f]);
       estad.push(['CVaR 5 % cola alta (media del mayor 5 %)', s.riesgo.cvarSuperior, f]);
-      estad.push(['Semidesviación', s.riesgo.semidesviacion, f]);
+      estad.push(['Semidesviación', s.riesgo.semidesviacion, fd]);
       estad.push(['Asimetría', s.riesgo.asimetria, '0.00']);
       estad.push(['Curtosis (en exceso)', s.riesgo.curtosis, '0.00']);
     }
     if (s.precision) {
-      estad.push(['Margen de la media (95 %)', s.precision.margenMedia, f]);
+      estad.push(['Margen de la media (95 %)', s.precision.margenMedia, fd]);
       estad.push([`Iteraciones para un margen del ${(s.precision.objetivo * 100).toLocaleString('es-ES')} %`, s.precision.iteracionesParaObjetivo, FORMATO_ENTERO]);
     }
     cabecera(['Estadístico', 'Valor']);

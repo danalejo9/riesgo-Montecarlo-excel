@@ -670,7 +670,7 @@ este bloque y deja T7, T8 y T9 para después de la etapa 2)*:
 - **T6. Salidas de sí/no** *(entra en el bloque T)* (`VERDADERO`/`FALSO`): «¿se cumple el covenant?»,
   «¿llega a tiempo?» → probabilidad de que sea verdadero, y qué entradas lo
   deciden. Sale casi gratis con T2.
-- **T7. Entradas de fecha** *(después de la etapa 2)*: una fecha de inicio o de entrega incierta
+- **T7. Entradas de fecha** ✅ 29/09 (por el formato de fecha de la celda; `engine/modelo/fechas.ts`, `excel/formatoCeldas.ts`, `formatoDe` en `ui/formato.ts`) *(después de la etapa 2)*: una fecha de inicio o de entrega incierta
   (triangular entre dos fechas) que se enseña como fecha y no como número de
   serie, y salidas de fecha («fecha de fin del proyecto») con percentiles en
   fechas. Muy de gestión de proyectos.
@@ -703,7 +703,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
 pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
-**T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
+~~T7~~ ✅ 29/09, **T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por

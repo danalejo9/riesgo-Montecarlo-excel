@@ -1062,6 +1062,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     columna Perc., `PercentilesAjuste`, `Fiabilidad` (bajo demanda; 85 ms con
     60 datos en el banco). **Siguiente**: T7 (fechas).
 
+48. [x] **T7 (2026-09-29)**. `engine/modelo/fechas.ts` (`esFormatoFecha`
+    con el código invariante, serie ↔ fecha con el 29/02/1900 de Excel,
+    `leerFecha`), `excel/formatoCeldas.ts` (lee `numberFormat` de entradas y
+    salidas; si falla, números), `fecha?: true` en `ResultadoSalida` y
+    `EntradaMuestreada` (`conFechas` en `ejecutarSimulacion.ts`),
+    `formatoDe(fecha)` (`valor`, `dispersion`, `leer`) usado por Resultados,
+    Histograma, CurvaAcumulada, MedidasDeRiesgo, PrecisionSalida, Umbral y el
+    informe; `lectura.ts` con `fecha`; volcado con `"días"` en la dispersión.
+    Banco: B29–B30 con formato. **Siguiente**: T8 (registro de riesgos).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

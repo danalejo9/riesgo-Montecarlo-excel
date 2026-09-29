@@ -190,6 +190,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N13. Ajuste orientado al riesgo** (I2, nuevo): haz E5.
 
+**N14. Fechas** (T7 del plan, nuevo): haz T9.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -708,6 +710,19 @@ precio y simula.
 **T8. RIESGO.PROB con texto.** Tras simular T2, escribe en una celda vacía
 `=RIESGO.PROB(C9;"Alta")`.
 - Esperado: en torno a **12 %**, lo mismo que dice el panel para «Alta».
+
+**T9. Fechas** (T7 del plan, nuevo; hoja «Pruebas», sección 10, filas
+52–54). Escribe `=RIESGO.TRIANGULAR(FECHA(2027;1;1);FECHA(2027;2;1);FECHA(2027;4;1))`
+en C52 (ya tiene formato de fecha) y `=RIESGO.NORMAL(90;10)` en C53. C54 es
+`=C52+C53`, con formato de fecha. Marca C54 como salida y simula.
+- Esperado, en Resultados, **todo en fechas**: media en torno al
+  **11/05/2027**, p5 hacia el **08/04/2027** y p95 hacia el **17/06/2027**;
+  la desviación, en **días** (unos **21**). También los ejes del histograma y
+  de la curva, los delimitadores, los percentiles y la lectura.
+- En la pregunta de probabilidad escribe `15/05/2027`: da la probabilidad de
+  terminar antes (en torno al **58 %**).
+- En «Cómo se muestrearon las entradas», C52 sale en fechas.
+- «Volcar a una hoja» e «Informe PDF»: fechas también (la desviación, en días).
 
 ---
 

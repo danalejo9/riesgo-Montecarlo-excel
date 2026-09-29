@@ -17,6 +17,8 @@ export interface EntradaMuestreada {
   id: string;
   nombre: string;
   ref: string;
+  /** Con formato de fecha en su celda (T7). */
+  fecha?: boolean;
   /** La distribución elegida, en palabras: «Triangular(105; 120; 140)». */
   distribucion: string;
   n: number;

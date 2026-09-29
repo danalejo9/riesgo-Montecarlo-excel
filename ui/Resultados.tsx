@@ -53,7 +53,7 @@ import type { BinHistograma } from '../engine/stats/index.ts';
 import { probabilidadUmbral, type MedidasRiesgo } from '../engine/stats/index.ts';
 import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
-import { duracion, leerNumero, miles, numero } from './formato.ts';
+import { duracion, formatoDe, leerNumero, miles, numero, type FormatoValor } from './formato.ts';
 import { Plegable } from './Plegable.tsx';
 
 export function Resultados({
@@ -257,10 +257,10 @@ export function Resultados({
           <h2 className="titulo-salida">{salida.nombre} <span className="ref-salida">{salida.ref}</span></h2>
 
           <div className="cifras">
-            <div><span className="cifra">{numero(salida.resumen.media)}</span><span className="cifra-nombre">media</span></div>
-            <div><span className="cifra">{numero(salida.resumen.percentiles.p5 ?? NaN)}</span><span className="cifra-nombre">p5</span></div>
-            <div><span className="cifra">{numero(salida.resumen.percentiles.p95 ?? NaN)}</span><span className="cifra-nombre">p95</span></div>
-            <div><span className="cifra">{numero(salida.resumen.desviacion)}</span><span className="cifra-nombre">desviación</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.media)}</span><span className="cifra-nombre">media</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles.p5 ?? NaN)}</span><span className="cifra-nombre">p5</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles.p95 ?? NaN)}</span><span className="cifra-nombre">p95</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).dispersion(salida.resumen.desviacion)}</span><span className="cifra-nombre">desviación</span></div>
           </div>
 
           <LecturaSalida salida={salida} umbral={umbralDe(salida.id)} />
@@ -278,6 +278,7 @@ export function Resultados({
               umbral={umbralDe(salida.id)}
               marcas={{ media: salida.resumen.media, ...(salida.resumen.percentiles.p50 !== undefined ? { mediana: salida.resumen.percentiles.p50 } : {}) }}
               {...(salida.muestraOrdenada ? { muestraOrdenada: salida.muestraOrdenada } : {})}
+              formato={formatoDe(salida.fecha)}
             />
           )}
 
@@ -325,23 +326,23 @@ export function Resultados({
           )}
 
           <Plegable id="percentiles" titulo="Estadísticos y percentiles"
-            resumen={`${numero(salida.resumen.min)} … ${numero(salida.resumen.max)}`}>
+            resumen={`${formatoDe(salida.fecha).valor(salida.resumen.min)} … ${formatoDe(salida.fecha).valor(salida.resumen.max)}`}>
             <dl>
-              <dt>Media</dt><dd>{numero(salida.resumen.media)}</dd>
-              <dt>Desviación</dt><dd>{numero(salida.resumen.desviacion)}</dd>
-              <dt>Mínimo</dt><dd>{numero(salida.resumen.min)}</dd>
-              <dt>Máximo</dt><dd>{numero(salida.resumen.max)}</dd>
+              <dt>Media</dt><dd>{formatoDe(salida.fecha).valor(salida.resumen.media)}</dd>
+              <dt>Desviación</dt><dd>{formatoDe(salida.fecha).dispersion(salida.resumen.desviacion)}</dd>
+              <dt>Mínimo</dt><dd>{formatoDe(salida.fecha).valor(salida.resumen.min)}</dd>
+              <dt>Máximo</dt><dd>{formatoDe(salida.fecha).valor(salida.resumen.max)}</dd>
             </dl>
             <ul className="percentiles">
               {Object.entries(salida.resumen.percentiles).map(([clave, valor]) => (
                 <li key={clave}>
                   <span className="tenue">{clave}</span>
-                  <span>{numero(valor)}</span>
+                  <span>{formatoDe(salida.fecha).valor(valor)}</span>
                 </li>
               ))}
             </ul>
             <p className="tenue">Percentiles aproximados.</p>
-            {salida.precision && <PrecisionSalida precision={salida.precision} n={salida.resumen.n} />}
+            {salida.precision && <PrecisionSalida precision={salida.precision} n={salida.resumen.n} formato={formatoDe(salida.fecha)} />}
           </Plegable>
 
           <Plegable id="acumulada" titulo="Probabilidad acumulada">
@@ -349,12 +350,13 @@ export function Resultados({
               puntos={salida.cdf}
               referencia={comparando ? salidaDeReferencia(comparando, salida.id)?.cdf : undefined}
               etiquetaReferencia={comparando?.etiqueta}
+              formato={formatoDe(salida.fecha)}
             />
           </Plegable>
 
           {salida.riesgo && (
             <Plegable id="riesgo" titulo="Medidas de riesgo" resumen="VaR, CVaR, forma">
-              <MedidasDeRiesgo riesgo={salida.riesgo} conTitulo={false} />
+              <MedidasDeRiesgo riesgo={salida.riesgo} conTitulo={false} formato={formatoDe(salida.fecha)} />
             </Plegable>
           )}
 
@@ -465,10 +467,13 @@ export function CurvaAcumulada({
   puntos,
   referencia,
   etiquetaReferencia,
+  formato = formatoDe(false),
 }: {
   puntos: readonly PuntoCDF[];
   referencia?: readonly PuntoCDF[];
   etiquetaReferencia?: string;
+  /** Números o fechas (T7). */
+  formato?: FormatoValor;
 }) {
   const [cerca, setCerca] = useState<PuntoCDF | null>(null);
 
@@ -528,8 +533,8 @@ export function CurvaAcumulada({
           </g>
         )}
 
-        <text className="eje" x={MARGEN.izquierda} y={ALTO - 6}>{numero(min)}</text>
-        <text className="eje" x={ANCHO - MARGEN.derecha} y={ALTO - 6} textAnchor="end">{numero(max)}</text>
+        <text className="eje" x={MARGEN.izquierda} y={ALTO - 6}>{formato.valor(min)}</text>
+        <text className="eje" x={ANCHO - MARGEN.derecha} y={ALTO - 6} textAnchor="end">{formato.valor(max)}</text>
       </svg>
 
       {conRef && (
@@ -540,7 +545,7 @@ export function CurvaAcumulada({
       )}
       <figcaption className="tenue">
         {cerca
-          ? `${Math.round(cerca.p * 100)} % de probabilidad de quedar por debajo de ${numero(cerca.x)}`
+          ? `${Math.round(cerca.p * 100)} % de probabilidad de quedar por debajo de ${formato.valor(cerca.x)}`
           : 'Pasa el ratón por la curva para leer un valor.'}
       </figcaption>
     </figure>
@@ -702,7 +707,7 @@ function SalidaDeTexto({
 
 
 /** Medidas de riesgo de una salida (H2): las dos colas y la forma. */
-export function MedidasDeRiesgo({ riesgo, conTitulo = true }: { riesgo: MedidasRiesgo; conTitulo?: boolean }) {
+export function MedidasDeRiesgo({ riesgo, conTitulo = true, formato = formatoDe(false) }: { riesgo: MedidasRiesgo; conTitulo?: boolean; formato?: FormatoValor }) {
   const forma = riesgo.asimetria > 0.3 ? 'cola larga a la derecha' : riesgo.asimetria < -0.3 ? 'cola larga a la izquierda' : 'casi simétrica';
   return (
     <>
@@ -711,8 +716,8 @@ export function MedidasDeRiesgo({ riesgo, conTitulo = true }: { riesgo: MedidasR
         <table className="tabla-resumen sin-clic">
           <thead><tr><th></th><th>Cola baja</th><th>Cola alta</th></tr></thead>
           <tbody>
-            <tr><td title="Valor que solo el 5 % de las iteraciones empeora">VaR 5 %</td><td>{numero(riesgo.varInferior)}</td><td>{numero(riesgo.varSuperior)}</td></tr>
-            <tr><td title="Media del 5 % de las iteraciones más extremas">CVaR 5 %</td><td>{numero(riesgo.cvarInferior)}</td><td>{numero(riesgo.cvarSuperior)}</td></tr>
+            <tr><td title="Valor que solo el 5 % de las iteraciones empeora">VaR 5 %</td><td>{formato.valor(riesgo.varInferior)}</td><td>{formato.valor(riesgo.varSuperior)}</td></tr>
+            <tr><td title="Media del 5 % de las iteraciones más extremas">CVaR 5 %</td><td>{formato.valor(riesgo.cvarInferior)}</td><td>{formato.valor(riesgo.cvarSuperior)}</td></tr>
           </tbody>
         </table>
       </div>
@@ -721,7 +726,7 @@ export function MedidasDeRiesgo({ riesgo, conTitulo = true }: { riesgo: MedidasR
         Si la salida es una ganancia, mira la cola baja; si es un coste, la alta.
         Asimetría {riesgo.asimetria.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ({forma}) ·
         curtosis {riesgo.curtosis.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ·
-        semidesviación {numero(riesgo.semidesviacion)}.
+        semidesviación {formato.dispersion(riesgo.semidesviacion)}.
       </p>
     </>
   );
@@ -816,24 +821,24 @@ function EntradasMuestreadas({ entradas }: { entradas: readonly EntradaMuestread
             <tr><th></th><th>Muestreado</th>{e.teorica && <th>Esperado</th>}</tr>
           </thead>
           <tbody>
-            <tr><td>Media</td><td>{numero(e.media)}</td>{e.teorica && <td>{numero(e.teorica.media)}</td>}</tr>
-            <tr><td>Desviación</td><td>{numero(e.desviacion)}</td>{e.teorica && <td>{numero(e.teorica.desviacion)}</td>}</tr>
-            <tr><td>Mínimo</td><td>{numero(e.min)}</td>{e.teorica && <td></td>}</tr>
-            <tr><td>p5</td><td>{numero(e.percentiles.p5)}</td>{e.teorica && <td></td>}</tr>
-            <tr><td>p50</td><td>{numero(e.percentiles.p50)}</td>{e.teorica && <td></td>}</tr>
-            <tr><td>p95</td><td>{numero(e.percentiles.p95)}</td>{e.teorica && <td></td>}</tr>
-            <tr><td>Máximo</td><td>{numero(e.max)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>Media</td><td>{formatoDe(e.fecha).valor(e.media)}</td>{e.teorica && <td>{formatoDe(e.fecha).valor(e.teorica.media)}</td>}</tr>
+            <tr><td>Desviación</td><td>{formatoDe(e.fecha).dispersion(e.desviacion)}</td>{e.teorica && <td>{formatoDe(e.fecha).dispersion(e.teorica.desviacion)}</td>}</tr>
+            <tr><td>Mínimo</td><td>{formatoDe(e.fecha).valor(e.min)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p5</td><td>{formatoDe(e.fecha).valor(e.percentiles.p5)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p50</td><td>{formatoDe(e.fecha).valor(e.percentiles.p50)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>p95</td><td>{formatoDe(e.fecha).valor(e.percentiles.p95)}</td>{e.teorica && <td></td>}</tr>
+            <tr><td>Máximo</td><td>{formatoDe(e.fecha).valor(e.max)}</td>{e.teorica && <td></td>}</tr>
           </tbody>
         </table>
       </div>
       {e.histograma.length > 0 && (
         <>
           <h3>Histograma</h3>
-          <Histograma barras={e.histograma} {...(e.esperado ? { esperado: e.esperado } : {})} etiqueta={`Histograma de ${e.nombre}`} />
+          <Histograma barras={e.histograma} {...(e.esperado ? { esperado: e.esperado } : {})} etiqueta={`Histograma de ${e.nombre}`} formato={formatoDe(e.fecha)} />
         </>
       )}
       <h3>Probabilidad acumulada</h3>
-      <CurvaAcumulada puntos={e.cdf} />
+      <CurvaAcumulada puntos={e.cdf} formato={formatoDe(e.fecha)} />
       </>)}
       </Plegable>
     </section>
@@ -920,12 +925,12 @@ function ResumenSalidas({
                   title="Ver esta salida"
                 >
                   <td>{s.nombre}</td>
-                  <td>{sinDatos ? '—' : numero(s.resumen.media)}</td>
-                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p5 ?? NaN)}</td>
-                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p50 ?? NaN)}</td>
-                  <td>{sinDatos ? '—' : numero(s.resumen.percentiles.p95 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.media)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p5 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p50 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p95 ?? NaN)}</td>
                   {conUmbral && (
-                    <td>{p === null ? '' : `${u?.direction === 'below' ? '<' : '>'} ${numero(u?.value ?? 0)}: ${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
+                    <td>{p === null ? '' : `${u?.direction === 'below' ? '<' : '>'} ${formatoDe(s.fecha).valor(u?.value ?? 0)}: ${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
                   )}
                 </tr>
               );
@@ -1045,9 +1050,10 @@ function Umbral({
   exacto: boolean;
   alCambiar: (u: UmbralRiskModel | null) => void;
 }) {
-  const [texto, setTexto] = useState(umbral ? String(umbral.value).replace('.', decimal) : '');
+  const formato = formatoDe(salida.fecha);
+  const [texto, setTexto] = useState(umbral ? (formato.fecha ? formato.valor(umbral.value) : String(umbral.value).replace('.', decimal)) : '');
   const [sentido, setSentido] = useState<UmbralRiskModel['direction']>(umbral?.direction ?? 'below');
-  const valor = leerNumero(texto, decimal);
+  const valor = formato.leer(texto, decimal);
   const ordenada = salida.muestraOrdenada as Float64Array;
   const p = valor === null ? null : probabilidadUmbral(ordenada, valor, sentido === 'below' ? 'debajo' : 'encima');
 
@@ -1077,7 +1083,7 @@ function Umbral({
         <input
           type="text"
           inputMode="decimal"
-          placeholder="p. ej. 0"
+          placeholder={formato.fecha ? 'p. ej. 15/03/2027' : 'p. ej. 0'}
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onBlur={() => guardar()}
@@ -1145,6 +1151,7 @@ export function Histograma({
   etiqueta = 'Histograma de la salida',
   marcas,
   muestraOrdenada,
+  formato = formatoDe(false),
 }: {
   barras: readonly BinHistograma[];
   umbral?: UmbralRiskModel;
@@ -1155,6 +1162,8 @@ export function Histograma({
   marcas?: MarcasHistograma;
   /** Con la muestra, dos delimitadores que se arrastran y dicen el % de cada tramo (C10). */
   muestraOrdenada?: ArrayLike<number>;
+  /** Números o fechas (T7). */
+  formato?: FormatoValor;
 }) {
   const [cerca, setCerca] = useState<number | null>(null);
   const min = (barras[0] as BinHistograma).x0;
@@ -1277,21 +1286,21 @@ export function Histograma({
             <text x={(aX(tramos.hasta) + ANCHO - MARGEN_H.derecha) / 2} y={10} textAnchor="middle">{pct(tramos.pEncima)}</text>
           </g>
         )}
-        <text className="eje" x={MARGEN_H.izquierda} y={altoTotal - 6}>{numero(min)}</text>
-        <text className="eje" x={ANCHO - MARGEN_H.derecha} y={altoTotal - 6} textAnchor="end">{numero(max)}</text>
+        <text className="eje" x={MARGEN_H.izquierda} y={altoTotal - 6}>{formato.valor(min)}</text>
+        <text className="eje" x={ANCHO - MARGEN_H.derecha} y={altoTotal - 6} textAnchor="end">{formato.valor(max)}</text>
       </svg>
       {lim && tramos && (
         <div className="delimitadores-campos">
-          <CampoLimite etiqueta="Desde" valor={lim[0]} alCambiar={(v) => setLim([Math.min(Math.max(v, min), lim[1]), lim[1]])} />
-          <CampoLimite etiqueta="Hasta" valor={lim[1]} alCambiar={(v) => setLim([lim[0], Math.max(Math.min(v, max), lim[0])])} />
+          <CampoLimite formato={formato} etiqueta="Desde" valor={lim[0]} alCambiar={(v) => setLim([Math.min(Math.max(v, min), lim[1]), lim[1]])} />
+          <CampoLimite formato={formato} etiqueta="Hasta" valor={lim[1]} alCambiar={(v) => setLim([lim[0], Math.max(Math.min(v, max), lim[0])])} />
         </div>
       )}
       <figcaption className="tenue">
         {b
-          ? `Entre ${numero(b.x0)} y ${numero(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)` +
+          ? `Entre ${formato.valor(b.x0)} y ${formato.valor(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)` +
             (esperado && cerca !== null && esperado[cerca] !== undefined ? `; la distribución esperaba ${miles(Math.round(esperado[cerca]))}` : '')
           : tramos
-            ? `Entre ${numero(tramos.desde)} y ${numero(tramos.hasta)} queda el ${pct(tramos.pEntre)}; por debajo, el ${pct(tramos.pDebajo)}; por encima, el ${pct(tramos.pEncima)}.` +
+            ? `Entre ${formato.valor(tramos.desde)} y ${formato.valor(tramos.hasta)} queda el ${pct(tramos.pEntre)}; por debajo, el ${pct(tramos.pDebajo)}; por encima, el ${pct(tramos.pEncima)}.` +
               (lim ? ' Arrastra las líneas o escribe los límites.' : '')
             : 'Pasa el ratón por una barra para leerla.'}
       </figcaption>
@@ -1300,8 +1309,8 @@ export function Histograma({
 }
 
 /** Un límite de los delimitadores, editable a mano (y sin ratón). */
-function CampoLimite({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: number; alCambiar: (v: number) => void }) {
-  const [texto, setTexto] = useState(() => numero(valor));
+function CampoLimite({ etiqueta, valor, alCambiar, formato }: { etiqueta: string; valor: number; alCambiar: (v: number) => void; formato: FormatoValor }) {
+  const [texto, setTexto] = useState(() => formato.valor(valor));
   const [editando, setEditando] = useState(false);
   return (
     <label className="campo">
@@ -1309,15 +1318,15 @@ function CampoLimite({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: 
       <input
         type="text"
         inputMode="decimal"
-        value={editando ? texto : numero(valor)}
+        value={editando ? texto : formato.valor(valor)}
         onFocus={() => {
-          setTexto(numero(valor));
+          setTexto(formato.valor(valor));
           setEditando(true);
         }}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={() => {
           setEditando(false);
-          const v = leerNumero(texto.replace(/\./g, ''));
+          const v = formato.fecha ? formato.leer(texto) : leerNumero(texto.replace(/\./g, ''));
           if (v !== null) alCambiar(v);
         }}
         onKeyDown={(e) => {
@@ -1347,7 +1356,7 @@ const pct = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractio
 const pctFino = (x: number) =>
   `${(x * 100).toLocaleString('es-ES', { maximumSignificantDigits: 2 })} %`;
 
-export function PrecisionSalida({ precision, n }: { precision: Precision; n: number }) {
+export function PrecisionSalida({ precision, n, formato = formatoDe(false) }: { precision: Precision; n: number; formato?: FormatoValor }) {
   const { margenMedia, margenRelativo, iteracionesParaObjetivo, suficiente, percentiles } = precision;
   const pct = pctFino;
   return (
@@ -1355,15 +1364,15 @@ export function PrecisionSalida({ precision, n }: { precision: Precision; n: num
       <p>
         <span className="precision-icono" aria-hidden="true">{suficiente ? '✓' : '!'}</span>
         {suficiente
-          ? <>Iteraciones suficientes: la media se conoce con ±{numero(margenMedia)} ({pct(margenRelativo)}).</>
+          ? <>Iteraciones suficientes: la media se conoce con ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}).</>
           : <>
-              Con {miles(n)} iteraciones la media tiene un margen de ±{numero(margenMedia)} ({pct(margenRelativo)}).
+              Con {miles(n)} iteraciones la media tiene un margen de ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}).
               Para bajarlo al {pct(precision.objetivo)} harían falta unas {miles(iteracionesParaObjetivo)}.
             </>}
       </p>
       {percentiles.length > 0 && (
         <p className="tenue">
-          {percentiles.map((iv) => `p${Math.round(iv.p * 100)} entre ${numero(iv.inferior)} y ${numero(iv.superior)}`).join(' · ')}
+          {percentiles.map((iv) => `p${Math.round(iv.p * 100)} entre ${formato.valor(iv.inferior)} y ${formato.valor(iv.superior)}`).join(' · ')}
           {' '}(intervalos al 95 %)
         </p>
       )}

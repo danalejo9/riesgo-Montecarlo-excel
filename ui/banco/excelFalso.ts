@@ -34,6 +34,8 @@ import { LOGICO, NUMERO, TEXTO, desdeEscalar, numeroEn, textoEn, tipoEn, type Va
 interface Celda {
   formula?: string;
   valor?: number | string | boolean;
+  /** Formato de número (código invariante, como `numberFormat`). */
+  formato?: string;
 }
 
 /**
@@ -93,11 +95,16 @@ const LIBRO: Record<string, Celda> = {
   B26: { formula: 'RIESGO.CORRELACION(B24,B25,0.9)' },
   A27: { valor: 'Coste total' },
   B27: { formula: 'RIESGO.SALIDA("Coste total")+B24+B25' },
+  // Fechas (T7): inicio incierto y fin de obra con formato de fecha.
+  A29: { valor: 'Inicio' },
+  B29: { formula: 'RIESGO.TRIANGULAR(DATE(2027,1,1),DATE(2027,2,1),DATE(2027,4,1))', formato: 'dd/mm/yyyy' },
+  A30: { valor: 'Fin de obra' },
+  B30: { formula: 'RIESGO.SALIDA("Fin de obra")+B29+RIESGO.NORMAL(90,10)', formato: 'dd/mm/yyyy' },
 };
 
 /** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
 const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
-const FILAS_USADAS = 27;
+const FILAS_USADAS = 30;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -304,6 +311,9 @@ function rangoSimple(ref: string) {
         objetivo.valor = x as number;
       }
       foto = null;
+    },
+    get numberFormat() {
+      return [[objetivo.formato ?? 'General']];
     },
     get valueTypes() {
       return [[tipoDeValor(foto ? foto.valor : objetivo.valor)]];

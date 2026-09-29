@@ -10,6 +10,7 @@
  * no sabe.
  */
 
+import { textoFecha } from '../engine/modelo/fechas.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import type { FilaSensibilidadPanel } from './informe.ts';
 
@@ -21,10 +22,12 @@ export interface DatosLectura {
   precision?: Precision;
   /** El umbral ya calculado, si la salida tiene uno. */
   umbral?: { valor: number; sentido: 'below' | 'above'; probabilidad: number };
+  /** Una fecha (T7): los valores se dicen como fechas. */
+  fecha?: boolean;
 }
 
 /** Un número en formato español con las cifras justas para leerlo en una frase. */
-function cifra(n: number): string {
+function cifraNumero(n: number): string {
   const a = Math.abs(n);
   const decimales = a >= 100 ? 0 : a >= 1 ? 2 : 4;
   return n.toLocaleString('es-ES', { maximumFractionDigits: decimales });
@@ -37,6 +40,7 @@ function porcentaje(p: number): string {
 /** Las frases de la lectura, en orden. Vacío si no hay datos. */
 export function lecturaDeSalida(d: DatosLectura): string[] {
   if (d.resumen.n === 0) return [];
+  const cifra = d.fecha ? textoFecha : cifraNumero;
   const frases: string[] = [];
   const { p5, p50, p95 } = d.resumen.percentiles;
 

@@ -9,7 +9,7 @@ import { Fragment, StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
-import { duracion, miles, numero } from './formato.ts';
+import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
   MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
 import './estilos.css';
@@ -151,22 +151,22 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
 
       <div className="dos-columnas">
         <dl className="datos">
-          <dt>Media</dt><dd>{numero(s.resumen.media)}</dd>
-          <dt>Desviación</dt><dd>{numero(s.resumen.desviacion)}</dd>
-          <dt>Mínimo</dt><dd>{numero(s.resumen.min)}</dd>
-          <dt>Máximo</dt><dd>{numero(s.resumen.max)}</dd>
+          <dt>Media</dt><dd>{formatoDe(s.fecha).valor(s.resumen.media)}</dd>
+          <dt>Desviación</dt><dd>{formatoDe(s.fecha).dispersion(s.resumen.desviacion)}</dd>
+          <dt>Mínimo</dt><dd>{formatoDe(s.fecha).valor(s.resumen.min)}</dd>
+          <dt>Máximo</dt><dd>{formatoDe(s.fecha).valor(s.resumen.max)}</dd>
           {s.noNumericas > 0 && (<><dt>Sin valor</dt><dd>{miles(s.noNumericas)} iteraciones</dd></>)}
         </dl>
         <dl className="datos">
           {Object.entries(s.resumen.percentiles).map(([k, v]) => (
-            <Fragment key={k}><dt>{k}</dt><dd>{numero(v)}</dd></Fragment>
+            <Fragment key={k}><dt>{k}</dt><dd>{formatoDe(s.fecha).valor(v)}</dd></Fragment>
           ))}
         </dl>
       </div>
 
-      {s.precision && <PrecisionSalida precision={s.precision} n={s.resumen.n} />}
+      {s.precision && <PrecisionSalida precision={s.precision} n={s.resumen.n} formato={formatoDe(s.fecha)} />}
 
-      {s.riesgo && <MedidasDeRiesgo riesgo={s.riesgo} />}
+      {s.riesgo && <MedidasDeRiesgo riesgo={s.riesgo} formato={formatoDe(s.fecha)} />}
 
       {s.comparacion && referencia && <TablaComparacion etiqueta={referencia} filas={s.comparacion} />}
 
@@ -181,11 +181,12 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
                 ? { fijos: { desde: s.resumen.percentiles.p5, hasta: s.resumen.percentiles.p95, pDebajo: 0.05, pEntre: 0.9, pEncima: 0.05 } }
                 : {}),
             }}
+            formato={formatoDe(s.fecha)}
           /></div>
         )}
         <div>
           <h3>Probabilidad acumulada</h3>
-          <CurvaAcumulada puntos={s.cdf} referencia={s.cdfReferencia} etiquetaReferencia={referencia} />
+          <CurvaAcumulada puntos={s.cdf} referencia={s.cdfReferencia} etiquetaReferencia={referencia} formato={formatoDe(s.fecha)} />
         </div>
       </div>
 

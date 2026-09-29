@@ -8,6 +8,8 @@
  * cero que no es cierto.
  */
 
+import { leerFecha, textoFecha } from '../engine/modelo/fechas.ts';
+
 /**
  * Un número para leer, no para copiar.
  *
@@ -99,4 +101,35 @@ export function leerNumero(texto: string, decimal: string = ','): number | null 
  */
 export function numeroEditable(v: number | undefined): string {
   return v === undefined ? '' : String(v).replace('.', ',');
+}
+
+/**
+ * Cómo se enseñan los valores de una salida o entrada (T7): como números o,
+ * si su celda tiene formato de fecha, como fechas; la dispersión (desviación,
+ * semidesviación) de una fecha va en días. `leer` entiende lo que escribe el
+ * usuario en ese mismo formato.
+ */
+export interface FormatoValor {
+  fecha: boolean;
+  valor(n: number): string;
+  dispersion(n: number): string;
+  leer(texto: string, decimal?: string): number | null;
+}
+
+const NUMERICO: FormatoValor = {
+  fecha: false,
+  valor: (n) => numero(n),
+  dispersion: (n) => numero(n),
+  leer: (t, d) => leerNumero(t, d),
+};
+
+const DE_FECHA: FormatoValor = {
+  fecha: true,
+  valor: (n) => textoFecha(n),
+  dispersion: (n) => `${numero(n, 3)} días`,
+  leer: (t, d) => leerFecha(t) ?? leerNumero(t, d),
+};
+
+export function formatoDe(fecha?: boolean): FormatoValor {
+  return fecha ? DE_FECHA : NUMERICO;
 }

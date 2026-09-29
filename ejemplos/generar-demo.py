@@ -420,6 +420,21 @@ for fila, texto, formato in ((46, "escribe =RIESGO.NORMAL(100;10)", '#,##0.00'),
     c = p.cell(fila, 9, texto)
     c.font = Font(italic=True, color="666666")
 
+# 10. Fechas (T7): inicio incierto, duración y fin de obra con formato de fecha.
+etiqueta(51, "10. FECHAS (prueba T9)", True)
+etiqueta(52, "Inicio de obra")
+etiqueta(53, "Duración (días)")
+etiqueta(54, "Fin de obra")
+for fila, texto, formato in ((52, "escribe =RIESGO.TRIANGULAR(FECHA(2027;1;1);FECHA(2027;2;1);FECHA(2027;4;1))", 'dd/mm/yyyy'),
+                             (53, "escribe =RIESGO.NORMAL(90;10)", '0')):
+    c3 = p.cell(fila, 3)
+    c3.fill = PARA_ESCRIBIR
+    c3.number_format = formato
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+p["C54"] = "=C52+C53"
+p["C54"].number_format = 'dd/mm/yyyy'
+
 # 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
 p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"

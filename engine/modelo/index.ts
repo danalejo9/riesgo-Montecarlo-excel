@@ -103,3 +103,4 @@ export {
   type EstadisticoFijo,
   type ModoLibro,
 } from './valorFijo.ts';
+export { esFormatoFecha, fechaDeSerie, leerFecha, serieDeFecha, textoFecha } from './fechas.ts';
