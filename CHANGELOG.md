@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### C10: marcas y delimitadores en el histograma (2026-09-29)
+
+**Añadido**
+- El histograma de Resultados muestra la **media** (línea continua) y la
+  **mediana** (discontinua; se omite si cae encima de la media).
+- Dos **delimitadores que se arrastran** sobre el gráfico (empiezan en p5 y
+  p95) y dicen encima el porcentaje por debajo, entre los dos y por encima;
+  las barras fuera se atenúan. También se escriben a mano en *Desde* y
+  *Hasta* (se ajustan al rango de la muestra).
+- En el informe PDF, el histograma lleva fijos la media, la mediana y los
+  delimitadores en p5 y p95 (5 % / 90 % / 5 %).
+
 ### Etapa 2 — B1b: las funciones RIESGO sortean con Excel en el bucle (2026-09-29)
 
 **Añadido**

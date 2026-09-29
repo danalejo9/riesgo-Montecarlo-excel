@@ -105,7 +105,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11b | B1b | ✅ (29/09, falta Excel real) **Funciones RIESGO que sortean en el motor compatible**: `=10+RIESGO.NORMAL(0;1)` y los parámetros aleatorios (B7) también con Excel en el bucle, y sin escribir encima de las fórmulas (más seguro). Necesita B1 | **Tú** (28/09) |
 | 11c | F5b | ✅ (29/09) **Modo compatible por lotes**: 20 iteraciones por viaje a Excel; repinta y tarda mucho menos, con los mismos números. Falta medirlo en tu Excel | **Tú** (H2) |
 | 11d | U2 | **Legibilidad del panel**: jerarquía, secciones plegables, menos texto visible (primer paso hecho: botones con borde) | **Tú** (T6) |
-| 11e | C10 | **Marcas en el histograma**: media, mediana y delimitadores que se arrastran con su porcentaje | **Tú** (sugerencia) |
+| 11e | C10 | ✅ (29/09, falta Excel real) **Marcas en el histograma**: media, mediana y delimitadores que se arrastran con su porcentaje | **Tú** (sugerencia) |
 
 ### Etapa 3: gráficas, exportación y ajuste (≈ 8–10 días)
 

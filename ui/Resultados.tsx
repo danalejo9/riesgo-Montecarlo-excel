@@ -364,6 +364,8 @@ export function Resultados({
               <Histograma
                 barras={salida.histograma}
                 umbral={modelo.outputs.find((o) => o.id === salida.id)?.threshold}
+                marcas={{ media: salida.resumen.media, ...(salida.resumen.percentiles.p50 !== undefined ? { mediana: salida.resumen.percentiles.p50 } : {}) }}
+                {...(salida.muestraOrdenada ? { muestraOrdenada: salida.muestraOrdenada } : {})}
               />
             </>
           )}
@@ -1086,17 +1088,46 @@ const MARGEN_H = { arriba: 6, derecha: 8, abajo: 20, izquierda: 8 };
  * área coloreada **es** la respuesta de arriba, y se ve de un vistazo si la
  * cola que preocupa es fina o gruesa.
  */
+/** Marcas fijas sobre el histograma (C10): media, mediana y, en el informe, p5 y p95. */
+export interface MarcasHistograma {
+  media?: number;
+  mediana?: number;
+  /** Delimitadores fijos, con el porcentaje de cada tramo ya calculado (informe impreso). */
+  fijos?: { desde: number; hasta: number; pDebajo: number; pEntre: number; pEncima: number };
+}
+
+/** Cuántos valores de una muestra ordenada quedan por debajo de x (búsqueda binaria). */
+function cuantosDebajo(ordenada: ArrayLike<number>, x: number): number {
+  let lo = 0;
+  let hi = ordenada.length;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if ((ordenada[m] as number) < x) lo = m + 1;
+    else hi = m;
+  }
+  return lo;
+}
+
+const cuantilDe = (ordenada: ArrayLike<number>, p: number) =>
+  ordenada[Math.min(ordenada.length - 1, Math.max(0, Math.round(p * (ordenada.length - 1))))] as number;
+
 export function Histograma({
   barras,
   umbral,
   esperado,
   etiqueta = 'Histograma de la salida',
+  marcas,
+  muestraOrdenada,
 }: {
   barras: readonly BinHistograma[];
   umbral?: UmbralRiskModel;
   /** Lo que esperaba la distribución teórica en cada barra (C9): una línea encima. */
   esperado?: readonly number[];
   etiqueta?: string;
+  /** Media, mediana y delimitadores fijos (C10). */
+  marcas?: MarcasHistograma;
+  /** Con la muestra, dos delimitadores que se arrastran y dicen el % de cada tramo (C10). */
+  muestraOrdenada?: ArrayLike<number>;
 }) {
   const [cerca, setCerca] = useState<number | null>(null);
   const min = (barras[0] as BinHistograma).x0;
@@ -1106,7 +1137,25 @@ export function Histograma({
   const mayor = Math.max(...barras.map((b) => b.count), ...(esperado ?? []), 1);
   const ancho = ANCHO - MARGEN_H.izquierda - MARGEN_H.derecha;
   const aX = (x: number) => MARGEN_H.izquierda + ((x - min) / rango) * ancho;
-  const alto = ALTO_H - MARGEN_H.arriba - MARGEN_H.abajo;
+  const deX = (px: number) => Math.min(max, Math.max(min, min + ((px - MARGEN_H.izquierda) / ancho) * rango));
+
+  // C10: los delimitadores que se arrastran, en p5 y p95 al empezar.
+  const conMuestra = muestraOrdenada && muestraOrdenada.length > 1 ? muestraOrdenada : null;
+  const [lim, setLim] = useState<[number, number] | null>(() => (conMuestra ? [cuantilDe(conMuestra, 0.05), cuantilDe(conMuestra, 0.95)] : null));
+  const [arrastrando, setArrastrando] = useState<0 | 1 | null>(null);
+  const tramos = (() => {
+    if (lim && conMuestra) {
+      const n = conMuestra.length;
+      const d = cuantosDebajo(conMuestra, lim[0]) / n;
+      const h = cuantosDebajo(conMuestra, lim[1]) / n;
+      return { desde: lim[0], hasta: lim[1], pDebajo: d, pEntre: h - d, pEncima: 1 - h };
+    }
+    return marcas?.fijos ?? null;
+  })();
+  const arriba = tramos ? 14 : MARGEN_H.arriba;
+  const altoTotal = ALTO_H + (arriba - MARGEN_H.arriba);
+  const alto = altoTotal - arriba - MARGEN_H.abajo;
+  const base = altoTotal - MARGEN_H.abajo;
 
   const contada = (b: BinHistograma) => {
     if (!umbral) return true;
@@ -1116,22 +1165,46 @@ export function Histograma({
 
   const b = cerca === null ? null : barras[cerca];
 
+  const moverA = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (arrastrando === null || !lim) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const v = deX(((e.clientX - r.left) / r.width) * ANCHO);
+    setLim(arrastrando === 0 ? [Math.min(v, lim[1]), lim[1]] : [lim[0], Math.max(v, lim[0])]);
+  };
+
+  const dentro = (x: number | undefined) => x !== undefined && Number.isFinite(x) && x >= min && x <= max;
+  const linea = (x: number, clase: string, texto: string, ancla: 'start' | 'end') => (
+    <g className={clase}>
+      <line x1={aX(x)} y1={arriba} x2={aX(x)} y2={base} />
+      <text x={aX(x) + (ancla === 'start' ? 2 : -2)} y={arriba + 8} textAnchor={ancla}>{texto}</text>
+    </g>
+  );
+
   return (
     <figure className="grafico">
-      <svg viewBox={`0 0 ${ANCHO} ${ALTO_H}`} role="img" aria-label={etiqueta} onMouseLeave={() => setCerca(null)}>
-        <line className="rejilla" x1={MARGEN_H.izquierda} y1={ALTO_H - MARGEN_H.abajo} x2={ANCHO - MARGEN_H.derecha} y2={ALTO_H - MARGEN_H.abajo} />
+      <svg
+        viewBox={`0 0 ${ANCHO} ${altoTotal}`}
+        role="img"
+        aria-label={etiqueta}
+        onMouseLeave={() => setCerca(null)}
+        onPointerMove={moverA}
+        onPointerUp={() => setArrastrando(null)}
+        onPointerCancel={() => setArrastrando(null)}
+      >
+        <line className="rejilla" x1={MARGEN_H.izquierda} y1={base} x2={ANCHO - MARGEN_H.derecha} y2={base} />
         {barras.map((bin, i) => {
           const x = aX(bin.x0);
           const w = Math.max(0.5, aX(bin.x1) - x - 1); // 1 unidad de separación entre barras
           const h = (bin.count / mayor) * alto;
+          const fuera = tramos ? (bin.x1 <= tramos.desde || bin.x0 >= tramos.hasta) : false;
           return (
             <g key={i} onMouseEnter={() => setCerca(i)}>
               {/* Zona sensible a toda la altura: más fácil de señalar que una barra baja. */}
-              <rect x={x} y={MARGEN_H.arriba} width={w + 1} height={alto} fill="transparent" />
+              <rect x={x} y={arriba} width={w + 1} height={alto} fill="transparent" />
               <rect
-                className={`histo-barra${contada(bin) ? '' : ' apagada'}${cerca === i ? ' activa' : ''}`}
+                className={`histo-barra${contada(bin) && !fuera ? '' : ' apagada'}${cerca === i ? ' activa' : ''}`}
                 x={x}
-                y={ALTO_H - MARGEN_H.abajo - h}
+                y={base - h}
                 width={w}
                 height={h}
                 rx={Math.min(2, w / 2)}
@@ -1142,22 +1215,89 @@ export function Histograma({
         {esperado && esperado.length === barras.length && (
           <polyline
             className="curva-teorica"
-            points={barras.map((bin, i) => `${(aX(bin.x0) + aX(bin.x1)) / 2},${ALTO_H - MARGEN_H.abajo - ((esperado[i] ?? 0) / mayor) * alto}`).join(' ')}
+            points={barras.map((bin, i) => `${(aX(bin.x0) + aX(bin.x1)) / 2},${base - ((esperado[i] ?? 0) / mayor) * alto}`).join(' ')}
           />
         )}
         {umbral && umbral.value > min && umbral.value < max && (
-          <line className="cursor" x1={aX(umbral.value)} y1={MARGEN_H.arriba} x2={aX(umbral.value)} y2={ALTO_H - MARGEN_H.abajo} />
+          <line className="cursor" x1={aX(umbral.value)} y1={arriba} x2={aX(umbral.value)} y2={base} />
         )}
-        <text className="eje" x={MARGEN_H.izquierda} y={ALTO_H - 6}>{numero(min)}</text>
-        <text className="eje" x={ANCHO - MARGEN_H.derecha} y={ALTO_H - 6} textAnchor="end">{numero(max)}</text>
+        {dentro(marcas?.media) && linea(marcas?.media as number, 'marca-media', 'media', (marcas?.media as number) < (min + max) / 2 ? 'start' : 'end')}
+        {dentro(marcas?.mediana) && Math.abs(aX(marcas?.mediana as number) - aX(marcas?.media ?? Infinity)) > 3 &&
+          linea(marcas?.mediana as number, 'marca-mediana', 'mediana', (marcas?.mediana as number) < (min + max) / 2 ? 'end' : 'start')}
+        {tramos && (
+          <g className="delimitadores">
+            {[tramos.desde, tramos.hasta].map((x, k) => (
+              <g key={k} className={lim ? 'arrastrable' : undefined}>
+                <line x1={aX(x)} y1={arriba - 2} x2={aX(x)} y2={base} />
+                {lim && (
+                  <rect
+                    x={aX(x) - 5}
+                    y={arriba - 2}
+                    width={10}
+                    height={alto + 2}
+                    fill="transparent"
+                    style={{ cursor: 'ew-resize', touchAction: 'none' }}
+                    onPointerDown={(e) => {
+                      (e.currentTarget.ownerSVGElement as SVGSVGElement).setPointerCapture(e.pointerId);
+                      setArrastrando(k as 0 | 1);
+                    }}
+                  />
+                )}
+              </g>
+            ))}
+            <text x={(MARGEN_H.izquierda + aX(tramos.desde)) / 2} y={10} textAnchor="middle">{pct(tramos.pDebajo)}</text>
+            <text x={(aX(tramos.desde) + aX(tramos.hasta)) / 2} y={10} textAnchor="middle" className="fuerte">{pct(tramos.pEntre)}</text>
+            <text x={(aX(tramos.hasta) + ANCHO - MARGEN_H.derecha) / 2} y={10} textAnchor="middle">{pct(tramos.pEncima)}</text>
+          </g>
+        )}
+        <text className="eje" x={MARGEN_H.izquierda} y={altoTotal - 6}>{numero(min)}</text>
+        <text className="eje" x={ANCHO - MARGEN_H.derecha} y={altoTotal - 6} textAnchor="end">{numero(max)}</text>
       </svg>
+      {lim && tramos && (
+        <div className="delimitadores-campos">
+          <CampoLimite etiqueta="Desde" valor={lim[0]} alCambiar={(v) => setLim([Math.min(Math.max(v, min), lim[1]), lim[1]])} />
+          <CampoLimite etiqueta="Hasta" valor={lim[1]} alCambiar={(v) => setLim([lim[0], Math.max(Math.min(v, max), lim[0])])} />
+        </div>
+      )}
       <figcaption className="tenue">
         {b
           ? `Entre ${numero(b.x0)} y ${numero(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)` +
             (esperado && cerca !== null && esperado[cerca] !== undefined ? `; la distribución esperaba ${miles(Math.round(esperado[cerca]))}` : '')
-          : 'Pasa el ratón por una barra para leerla.'}
+          : tramos
+            ? `Entre ${numero(tramos.desde)} y ${numero(tramos.hasta)} queda el ${pct(tramos.pEntre)}; por debajo, el ${pct(tramos.pDebajo)}; por encima, el ${pct(tramos.pEncima)}.` +
+              (lim ? ' Arrastra las líneas o escribe los límites.' : '')
+            : 'Pasa el ratón por una barra para leerla.'}
       </figcaption>
     </figure>
+  );
+}
+
+/** Un límite de los delimitadores, editable a mano (y sin ratón). */
+function CampoLimite({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: number; alCambiar: (v: number) => void }) {
+  const [texto, setTexto] = useState(() => numero(valor));
+  const [editando, setEditando] = useState(false);
+  return (
+    <label className="campo">
+      <span className="tenue">{etiqueta}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={editando ? texto : numero(valor)}
+        onFocus={() => {
+          setTexto(numero(valor));
+          setEditando(true);
+        }}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={() => {
+          setEditando(false);
+          const v = leerNumero(texto.replace(/\./g, ''));
+          if (v !== null) alCambiar(v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        }}
+      />
+    </label>
   );
 }
 

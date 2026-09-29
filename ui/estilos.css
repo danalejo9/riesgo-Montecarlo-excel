@@ -324,6 +324,16 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .histo-barra { fill: var(--acento); }
 .histo-barra.apagada { fill: color-mix(in srgb, var(--tenue) 35%, var(--fondo)); }
 .histo-barra.activa { opacity: 0.75; }
+/* C10: media, mediana y delimitadores sobre el histograma. */
+.marca-media line { stroke: var(--texto); stroke-width: 1.5; }
+.marca-mediana line { stroke: var(--texto); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.marca-media text, .marca-mediana text { font-size: 9px; fill: var(--tenue); }
+.delimitadores line { stroke: var(--texto); stroke-width: 1.5; }
+.delimitadores .arrastrable line { stroke-width: 2; }
+.delimitadores text { font-size: 10px; fill: var(--tenue); font-variant-numeric: tabular-nums; }
+.delimitadores text.fuerte { fill: var(--texto); font-weight: 600; }
+.delimitadores-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.delimitadores-campos input { width: 100%; box-sizing: border-box; }
 .umbral { margin: 8px 0; padding: 8px; border: 1px solid var(--borde); border-radius: 4px; }
 .umbral-pregunta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
 .umbral-pregunta input { width: 8em; }

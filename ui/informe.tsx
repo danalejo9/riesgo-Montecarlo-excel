@@ -172,7 +172,16 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
 
       <div className="dos-columnas graficos-informe">
         {s.histograma && s.histograma.length > 0 && (
-          <div><h3>Histograma</h3><Histograma barras={s.histograma} /></div>
+          <div><h3>Histograma</h3><Histograma
+            barras={s.histograma}
+            marcas={{
+              media: s.resumen.media,
+              ...(s.resumen.percentiles.p50 !== undefined ? { mediana: s.resumen.percentiles.p50 } : {}),
+              ...(s.resumen.percentiles.p5 !== undefined && s.resumen.percentiles.p95 !== undefined
+                ? { fijos: { desde: s.resumen.percentiles.p5, hasta: s.resumen.percentiles.p95, pDebajo: 0.05, pEntre: 0.9, pEncima: 0.05 } }
+                : {}),
+            }}
+          /></div>
         )}
         <div>
           <h3>Probabilidad acumulada</h3>

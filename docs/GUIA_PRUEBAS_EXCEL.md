@@ -162,6 +162,19 @@ era F15). En la hoja «Pruebas», con F12 escrito (C34–C36) y C37 como salida:
   fórmula, o `RIESGO.TRUNCAR` con parámetros que cambian.
 - Vuelve el motor a **Automático**.
 
+**N10. Marcas y delimitadores en el histograma** (C10, nuevo). Simula la
+demo con la salida de beneficio y mira el histograma de Resultados:
+- Hay una línea continua con «media» y, si no coincide con ella, otra
+  discontinua con «mediana».
+- Dos líneas oscuras en p5 y p95; encima dicen **5 % · 90 % · 5 %** y las
+  barras de fuera se ven grises.
+- **Arrastra** la línea izquierda hacia la derecha: los porcentajes cambian
+  al momento y suman 100 %. Escribe un valor en *Desde* o *Hasta* y pulsa
+  Intro: la línea se mueve ahí (un valor fuera del gráfico se queda en el
+  borde).
+- En el informe PDF (C7), el histograma trae fijas la media, la mediana y
+  las líneas de p5 y p95.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

@@ -1027,6 +1027,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `requiresAddress`. **Etapa 2 terminada en código** (B1, B2, B3, B1b):
     falta la ronda del usuario (bloque N de la guía).
 
+44. [x] **C10 (2026-09-29)**. `Histograma` (`ui/Resultados.tsx`) con
+    `marcas` (media, mediana, `fijos`) y `muestraOrdenada` (delimitadores
+    arrastrables con captura del puntero y `CampoLimite`). El informe pasa
+    p5/p95 fijos. Guía N10. **Siguiente**: U2.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
