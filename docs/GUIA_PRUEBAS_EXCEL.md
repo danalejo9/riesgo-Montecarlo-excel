@@ -188,6 +188,8 @@ simular la demo:
 **N12. Salida y correlación desde la fórmula** (resto de B6, nuevo): haz
 F20 y F21 (sección 9 de «Pruebas»).
 
+**N13. Ajuste orientado al riesgo** (I2, nuevo): haz E5.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -405,6 +407,23 @@ empírica)»**.
   enseña barras.
 - Vuelve a **Ajustar…** y pulsa **Usar** en la primera de la tabla. Déjala
   así o vuelve a Triangular 105 / 120 / 140; da igual para lo que sigue.
+
+**E5. Ajuste orientado al riesgo** (I2, nuevo). Con los 40 precios otra vez
+en «Ajustar a datos»:
+- En **«Lo que más importa»** elige *La cola alta*, y en «Ordenar por»,
+  *Error en los percentiles del objetivo*. La columna **Perc.** es ese error
+  (en desviaciones típicas; cuanto menor, mejor).
+- Debajo de la tabla, **«Percentiles: datos y …»**: p50, p80, p90, p95 y p99
+  de los datos frente a los de la elegida; en negrita los que se separan más
+  de 0,25 σ. Pincha la **Normal**: en p95–p99 se queda corta (diferencia
+  negativa en negrita).
+- Pulsa **«¿Cuánto fiarse de este ajuste? (bootstrap)»**: en un momento sale
+  una tabla con cada parámetro y cada percentil y su intervalo del 90 %.
+  Con 40 datos el p99 tiene un intervalo ancho: es lo esperable.
+- **Conteos**: pega `3 5 2 4 4 6 1 3 5 4 2 7 3 4 5 3 2 4 6 3`. Aparecen
+  **Poisson** y **binomial** marcadas «(discreta)», con una nota: su AICc no
+  se compara con el de las continuas; en «Perc.» la binomial queda la
+  primera.
 
 ---
 

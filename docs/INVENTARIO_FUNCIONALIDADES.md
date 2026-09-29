@@ -124,7 +124,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 18 | B6 | ✅ (28–29/09, falta Excel real de lo último) **Traer resultados a la hoja**: `RIESGO.MEDIA`, `RIESGO.DESV`, `RIESGO.PERCENTIL`, `RIESGO.PROB` (también de un texto), `RIESGO.MIN`, `RIESGO.MAX`; y **declarar desde la fórmula**: `RIESGO.SALIDA("nombre")` y `RIESGO.CORRELACION(celda1; celda2; coef)` | **Tú** (lista de funciones) |
 | 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
 | 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
-| 21 | I2 | **Ajuste orientado al riesgo**: error en percentiles P50–P99, bootstrap, discretas | **Tú** (investigación) |
+| 21 | I2 | ✅ (29/09, falta Excel real) **Ajuste orientado al riesgo**: error en percentiles por objetivo (general, cola alta, cola baja), tabla percentil a percentil, bootstrap, Poisson y binomial (la binomial negativa, con B5) | **Tú** (investigación) |
 | 22 | C3 | Exportar las iteraciones a una hoja | Plan |
 | 23 | C4 | Gráficas nuevas: dispersión entrada × salida, caja y bigotes, abanico por periodos, curvas superpuestas | **Tú** (gráficas) |
 

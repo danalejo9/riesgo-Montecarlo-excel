@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### I2: ajuste de distribuciones orientado al riesgo (2026-09-29)
+
+**Añadido**
+- **Error en percentiles** en cada candidata, según lo que más importe:
+  toda la distribución (p5–p95), la cola alta (p50–p99) o la baja (p1–p50).
+  Columna «Perc.» y criterio de orden propio; cada criterio por separado, sin
+  puntuación combinada.
+- Tabla **percentil a percentil** (datos frente a la elegida, diferencia en
+  σ, en negrita lo que se separa más de 0,25 σ).
+- **Bootstrap** bajo demanda: intervalos del 90 % de los parámetros y de los
+  percentiles (200 repeticiones, con semilla: da lo mismo cada vez).
+- **Poisson y binomial** cuando los datos parecen conteos, marcadas como
+  discretas (su AICc no se compara con el de las continuas). La binomial
+  negativa llega con B5 (el motor aún no la tiene).
+
 ### B6 (resto): RIESGO.SALIDA y RIESGO.CORRELACION (2026-09-29)
 
 **Añadido**

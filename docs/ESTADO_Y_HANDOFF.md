@@ -1052,6 +1052,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     salida declarada con la función no se guarda (no está en el panel).
     **Siguiente**: I2.
 
+47. [x] **I2 (2026-09-29)**. `engine/modelo/ajuste.ts`: `specsDe(x,
+    discretas, solo?)` (las familias, o una sola para reajustar),
+    `errorGeneral/Superior/Inferior` en cada candidata
+    (`PERCENTILES_OBJETIVO`), `tablaPercentiles`, `percentilDatos`
+    (PERCENTIL.INC), Poisson y binomial para conteos (`discreta: true`),
+    `bootstrapAjuste` (mulberry32 con semilla, intervalos del 90 %,
+    `etiqueta` legible). UI en `AjusteDatos.tsx`: «Lo que más importa»,
+    columna Perc., `PercentilesAjuste`, `Fiabilidad` (bajo demanda; 85 ms con
+    60 datos en el banco). **Siguiente**: T7 (fechas).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -50,8 +50,8 @@ export {
   type UmbralRiskModel,
 } from './riskModel.ts';
 export {
-  ajustarDistribuciones, leerDatos, logDensidad, ordenarCandidatos,
-  type AjusteCandidato, type CriterioAjuste, type ResultadoAjuste,
+  ajustarDistribuciones, bootstrapAjuste, CRITERIO_DE_OBJETIVO, leerDatos, logDensidad, ordenarCandidatos, PERCENTILES_OBJETIVO, percentilDatos, tablaPercentiles,
+  type AjusteCandidato, type CriterioAjuste, type FilaPercentil, type IntervaloBootstrap, type ObjetivoAjuste, type ResultadoAjuste, type ResultadoBootstrap,
 } from './ajuste.ts';
 export {
   categoriaDesdeListas,

@@ -601,7 +601,7 @@ por momentos; A–D, K–S, AIC y BIC; orden por AIC con selector.
   - **Gamma por MLE exacto** (Newton sobre la aproximación de Minka).
   - **Distribución empírica** como candidata en el ajuste y como función
     `RIESGO.EMPIRICA(datos)` (enlaza con «general/histograma» de B5).
-- **I2. Ajuste orientado al riesgo**:
+- **I2. Ajuste orientado al riesgo** ✅ 29/09 (salvo la binomial negativa, que espera a B5: el motor aún no la muestrea):
   - **Error en percentiles** P50, P80, P90, P95 y P99 (ajustado frente a
     empírico), con un objetivo elegible: *general*, *cola superior* o *cola
     inferior*. Cada criterio se muestra por separado; **sin puntuación combinada
@@ -702,7 +702,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
-pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → I2 →
+pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
 **T7, T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.

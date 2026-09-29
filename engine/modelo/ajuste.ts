@@ -55,7 +55,35 @@ export interface AjusteCandidato {
   andersonDarling: number;
   /** Kolmogorov–Smirnov (distancia máxima entre CDF empírica y teórica, 0..1). */
   kolmogorovSmirnov: number;
+  /**
+   * Error en percentiles (I2): la media de |percentil ajustado − percentil de
+   * los datos|, en desviaciones típicas de los datos, en los percentiles de
+   * cada objetivo (`PERCENTILES_OBJETIVO`). Cuanto menor, mejor. Cada uno se
+   * enseña por separado: no hay puntuación combinada.
+   */
+  errorGeneral: number;
+  errorSuperior: number;
+  errorInferior: number;
+  /** Poisson o binomial (I2): su verosimilitud es una probabilidad, no una densidad; el AIC no se compara con las continuas. */
+  discreta?: boolean;
 }
+
+/** Objetivo del ajuste (I2): qué parte de la distribución importa más. */
+export type ObjetivoAjuste = 'general' | 'superior' | 'inferior';
+
+/** Los percentiles que mira cada objetivo. */
+export const PERCENTILES_OBJETIVO: Record<ObjetivoAjuste, readonly number[]> = {
+  general: [0.05, 0.25, 0.5, 0.75, 0.95],
+  superior: [0.5, 0.8, 0.9, 0.95, 0.99],
+  inferior: [0.01, 0.05, 0.1, 0.2, 0.5],
+};
+
+/** El criterio de error en percentiles de cada objetivo. */
+export const CRITERIO_DE_OBJETIVO: Record<ObjetivoAjuste, 'errorGeneral' | 'errorSuperior' | 'errorInferior'> = {
+  general: 'errorGeneral',
+  superior: 'errorSuperior',
+  inferior: 'errorInferior',
+};
 
 /**
  * Lo que dicen los datos antes de ajustar nada (I1): la vía local, sin IA, a
@@ -193,6 +221,19 @@ export function logDensidad(spec: DistributionSpec): { f: (x: number) => number;
       const { shape: k, scale: l } = spec;
       return { k: 2, f: (x) => (x <= 0 ? -Infinity : Math.log(k / l) + (k - 1) * Math.log(x / l) - (x / l) ** k) };
     }
+    // Discretas (I2): el logaritmo de la probabilidad de cada valor.
+    case 'poisson': {
+      const l = spec.lambda;
+      return { k: 1, f: (x) => (x < 0 || !Number.isInteger(x) ? -Infinity : x * Math.log(l) - l - lgamma(x + 1)) };
+    }
+    case 'binomial': {
+      const { n: m, p: q } = spec;
+      return {
+        k: 2,
+        f: (x) => (x < 0 || x > m || !Number.isInteger(x) ? -Infinity
+          : lgamma(m + 1) - lgamma(x + 1) - lgamma(m - x + 1) + (x === 0 ? 0 : x * Math.log(q)) + (x === m ? 0 : (m - x) * Math.log(1 - q))),
+      };
+    }
     default:
       return null;
   }
@@ -226,6 +267,7 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
   const k = densidad.k;
   let cvm = 1 / (12 * n);
   for (let i = 0; i < n; i++) cvm += ((F[i] as number) - (2 * i + 1) / (2 * n)) ** 2;
+  const errorDe = (o: ObjetivoAjuste) => errorEnPercentiles(dist, ordenados, PERCENTILES_OBJETIVO[o], desviacionDe(ordenados));
   return {
     spec,
     aic: 2 * k - 2 * ll,
@@ -235,10 +277,62 @@ function bondad(spec: DistributionSpec, ordenados: Float64Array): AjusteCandidat
     parametros: k,
     andersonDarling: -n - suma / n,
     kolmogorovSmirnov: ks,
+    errorGeneral: errorDe('general'),
+    errorSuperior: errorDe('superior'),
+    errorInferior: errorDe('inferior'),
+    ...(spec.type === 'poisson' || spec.type === 'binomial' ? { discreta: true } : {}),
   };
 }
 
-export type CriterioAjuste = 'aicc' | 'aic' | 'bic' | 'andersonDarling' | 'cramerVonMises';
+/** Percentil `p` de unos datos ordenados (interpolación lineal, la de PERCENTIL.INC de Excel). */
+export function percentilDatos(ordenados: ArrayLike<number>, p: number): number {
+  const n = ordenados.length;
+  const h = (n - 1) * p;
+  const i = Math.floor(h);
+  const a = ordenados[i] as number;
+  const b = ordenados[Math.min(n - 1, i + 1)] as number;
+  return a + (h - i) * (b - a);
+}
+
+function desviacionDe(x: ArrayLike<number>): number {
+  const n = x.length;
+  let s = 0;
+  for (let i = 0; i < n; i++) s += x[i] as number;
+  const m = s / n;
+  let ss = 0;
+  for (let i = 0; i < n; i++) ss += ((x[i] as number) - m) ** 2;
+  return Math.sqrt(ss / (n - 1));
+}
+
+function errorEnPercentiles(dist: { quantile(u: number): number }, ordenados: Float64Array, ps: readonly number[], desviacion: number): number {
+  let e = 0;
+  for (const p of ps) e += Math.abs(dist.quantile(p) - percentilDatos(ordenados, p));
+  const r = e / ps.length / desviacion;
+  return Number.isFinite(r) ? r : Infinity;
+}
+
+export interface FilaPercentil {
+  p: number;
+  datos: number;
+  ajustado: number;
+  /** Diferencia ajustado − datos, en desviaciones típicas de los datos. */
+  error: number;
+}
+
+/** Percentil a percentil (I2): lo que dicen los datos y lo que dice la candidata, en los del objetivo. */
+export function tablaPercentiles(spec: DistributionSpec, datos: readonly number[], objetivo: ObjetivoAjuste): FilaPercentil[] {
+  const x = Float64Array.from(datos.filter(Number.isFinite)).sort();
+  if (x.length < 2) return [];
+  const dist = construirDesdeDescriptor(toDescriptor(spec));
+  const s = desviacionDe(x);
+  return PERCENTILES_OBJETIVO[objetivo].map((p) => {
+    const d = percentilDatos(x, p);
+    const a = dist.quantile(p);
+    return { p, datos: d, ajustado: a, error: s > 0 ? (a - d) / s : 0 };
+  });
+}
+
+export type CriterioAjuste = 'aicc' | 'aic' | 'bic' | 'andersonDarling' | 'cramerVonMises' | 'errorGeneral' | 'errorSuperior' | 'errorInferior';
 
 /** Digamma y trigamma (series asintóticas con recurrencia), para la gamma por máxima verosimilitud. */
 function digamma(x: number): number {
@@ -345,64 +439,190 @@ export function ajustarDistribuciones(datos: readonly number[]): ResultadoAjuste
   const n = x.length;
   if (n < 5) return null;
 
-  let suma = 0;
-  for (const v of x) suma += v;
-  const media = suma / n;
-  let ss = 0;
-  for (const v of x) ss += (v - media) ** 2;
-  const desviacion = Math.sqrt(ss / (n - 1));
+  const { media, desviacion } = momentos(x);
   const min = x[0] as number;
   const max = x[n - 1] as number;
   if (!(desviacion > 0)) return { n, media, desviacion, min, max, candidatos: [] };
 
-  const specs: DistributionSpec[] = [{ type: 'normal', mean: media, stdDev: desviacion }];
+  const diagnostico = diagnosticar(x, media, desviacion);
+  const candidatos = specsDe(x, conteo(x, diagnostico))
+    .map(redondearSpec)
+    .map((s) => bondad(s, x))
+    .filter((c): c is AjusteCandidato => c !== null && Number.isFinite(c.andersonDarling) && Number.isFinite(c.aic))
+    .sort((p, q) => p.aicc - q.aicc);
+
+  return { n, media, desviacion, min, max, candidatos, diagnostico, empirica: empiricaDe(x) };
+}
+
+function momentos(x: Float64Array): { media: number; desviacion: number } {
+  let suma = 0;
+  for (const v of x) suma += v;
+  const media = suma / x.length;
+  let ss = 0;
+  for (const v of x) ss += (v - media) ** 2;
+  return { media, desviacion: Math.sqrt(ss / (x.length - 1)) };
+}
+
+/** ¿Parecen un conteo (enteros no negativos, pequeños o muy repetidos)? Entonces se prueban las discretas. */
+function conteo(x: Float64Array, d: DiagnosticoDatos): boolean {
+  if (!d.todosEnteros || (x[0] as number) < 0) return false;
+  return (x[x.length - 1] as number) <= 100 || new Set(x).size < x.length * 0.6;
+}
+
+/**
+ * Las candidatas ajustadas a unos datos ordenados, o solo la de la familia
+ * `solo` (para el bootstrap, que reajusta la misma familia muchas veces).
+ */
+function specsDe(x: Float64Array, discretas: boolean, solo?: DistributionSpec['type']): DistributionSpec[] {
+  const n = x.length;
+  const quiere = (t: DistributionSpec['type']) => solo === undefined || solo === t;
+  const { media, desviacion } = momentos(x);
+  const min = x[0] as number;
+  const max = x[n - 1] as number;
+  const specs: DistributionSpec[] = [];
+  if (quiere('normal')) specs.push({ type: 'normal', mean: media, stdDev: desviacion });
 
   // Extremos ampliados: el mínimo de la muestra casi nunca es el mínimo posible.
   const holgura = (max - min) / (n - 1);
   const a = min - holgura;
   const b = max + holgura;
-  specs.push({ type: 'uniform', min: a, max: b });
-  const modaTri = Math.min(b, Math.max(a, 3 * media - a - b));
-  specs.push({ type: 'triangular', min: a, mode: modaTri, max: b });
-  const modaPert = Math.min(b, Math.max(a, (6 * media - a - b) / 4));
-  specs.push({ type: 'pert', min: a, mode: modaPert, max: b });
+  if (quiere('uniform')) specs.push({ type: 'uniform', min: a, max: b });
+  if (quiere('triangular')) specs.push({ type: 'triangular', min: a, mode: Math.min(b, Math.max(a, 3 * media - a - b)), max: b });
+  if (quiere('pert')) specs.push({ type: 'pert', min: a, mode: Math.min(b, Math.max(a, (6 * media - a - b) / 4)), max: b });
 
-  if (min > 0) {
+  if (min > 0 && (quiere('lognormal') || quiere('gamma') || quiere('weibull'))) {
     let sl = 0;
     for (const v of x) sl += Math.log(v);
     const mu = sl / n;
-    let sl2 = 0;
-    for (const v of x) sl2 += (Math.log(v) - mu) ** 2;
-    const sigma = Math.sqrt(sl2 / n);
-    // Lognormal en la parametrización por defecto del modelo: media y
-    // desviación de la variable, que es lo que el usuario entiende.
-    const mediaVar = Math.exp(mu + (sigma * sigma) / 2);
-    specs.push({ type: 'lognormal', p1: mediaVar, p2: mediaVar * Math.sqrt(Math.exp(sigma * sigma) - 1) });
-
+    if (quiere('lognormal')) {
+      let sl2 = 0;
+      for (const v of x) sl2 += (Math.log(v) - mu) ** 2;
+      const sigma = Math.sqrt(sl2 / n);
+      // Lognormal en la parametrización por defecto del modelo: media y
+      // desviación de la variable, que es lo que el usuario entiende.
+      const mediaVar = Math.exp(mu + (sigma * sigma) / 2);
+      specs.push({ type: 'lognormal', p1: mediaVar, p2: mediaVar * Math.sqrt(Math.exp(sigma * sigma) - 1) });
+    }
     const s = Math.log(media) - mu;
-    if (s > 0) {
+    if (quiere('gamma') && s > 0) {
       const forma = gammaFormaMLE(s);
       specs.push({ type: 'gamma', shape: forma, scale: media / forma });
     }
-    const k = weibullForma(x, mu);
+    const k = quiere('weibull') ? weibullForma(x, mu) : null;
     if (k) {
       let sk = 0;
       for (const v of x) sk += v ** k;
       specs.push({ type: 'weibull', shape: k, scale: (sk / n) ** (1 / k) });
     }
   }
-  if (min >= 0) specs.push({ type: 'exponential', lambda: 1 / media });
-  if (min >= 0 && max <= 1) {
+  if (min >= 0 && quiere('exponential')) specs.push({ type: 'exponential', lambda: 1 / media });
+  if (min >= 0 && max <= 1 && quiere('beta')) {
     const v = desviacion * desviacion;
     const comun = (media * (1 - media)) / v - 1;
     if (comun > 0) specs.push({ type: 'beta', alpha: media * comun, beta: (1 - media) * comun });
   }
+  // I2: conteos. Poisson (λ = la media, su MLE) y, si los datos varían menos
+  // que su media, binomial por momentos (con n al menos el máximo visto).
+  if (discretas && min >= 0) {
+    if (quiere('poisson') && media > 0) specs.push({ type: 'poisson', lambda: media });
+    const v = desviacion * desviacion;
+    if (quiere('binomial') && v < media) {
+      let ensayos = Math.max(max, Math.round(media / (1 - v / media)));
+      if (!(ensayos >= 1)) ensayos = max;
+      const p = media / ensayos;
+      if (p > 0 && p < 1) specs.push({ type: 'binomial', n: ensayos, p });
+    }
+  }
+  return specs;
+}
 
-  const candidatos = specs
-    .map(redondearSpec)
-    .map((s) => bondad(s, x))
-    .filter((c): c is AjusteCandidato => c !== null && Number.isFinite(c.andersonDarling) && Number.isFinite(c.aic))
-    .sort((p, q) => p.aicc - q.aicc);
+export interface IntervaloBootstrap {
+  /** El parámetro de la especificación (`mean`, `shape`…) o el percentil (`p95`). */
+  nombre: string;
+  /** Para enseñar: «Media», «Forma», «p95». */
+  etiqueta: string;
+  estimado: number;
+  /** Percentil 5 de las repeticiones. */
+  bajo: number;
+  /** Percentil 95 de las repeticiones. */
+  alto: number;
+}
 
-  return { n, media, desviacion, min, max, candidatos, diagnostico: diagnosticar(x, media, desviacion), empirica: empiricaDe(x) };
+export interface ResultadoBootstrap {
+  repeticiones: number;
+  /** Cuántas repeticiones dieron un ajuste válido de la familia. */
+  validas: number;
+  parametros: IntervaloBootstrap[];
+  percentiles: (IntervaloBootstrap & { p: number })[];
+}
+
+/**
+ * Bootstrap (I2): se remuestrean los datos con reemplazo, se reajusta la misma
+ * familia y se mira cuánto bailan sus parámetros y sus percentiles. Un
+ * intervalo ancho dice que con estos datos el ajuste es poco fiable, lo diga
+ * el criterio que lo diga. Intervalos del 90 %. Con semilla: da lo mismo cada vez.
+ */
+const ETIQUETAS_PARAMETRO: Record<string, string> = {
+  mean: 'Media', stdDev: 'Desviación', p1: 'Media', p2: 'Desviación', min: 'Mínimo', mode: 'Moda', max: 'Máximo',
+  alpha: 'α', beta: 'β', shape: 'Forma', scale: 'Escala', lambda: 'λ', n: 'Ensayos', p: 'Probabilidad',
+};
+
+export function bootstrapAjuste(
+  datos: readonly number[],
+  spec: DistributionSpec,
+  percentiles: readonly number[],
+  repeticiones = 200,
+  semilla = 12345,
+): ResultadoBootstrap | null {
+  const x = Float64Array.from(datos.filter(Number.isFinite)).sort();
+  const n = x.length;
+  if (n < 5) return null;
+  const discretas = spec.type === 'poisson' || spec.type === 'binomial';
+  const claves = Object.keys(spec).filter((k) => k !== 'type' && typeof (spec as unknown as Record<string, unknown>)[k] === 'number');
+  const porClave = new Map(claves.map((k) => [k, [] as number[]]));
+  const porPercentil = percentiles.map(() => [] as number[]);
+  let estado = semilla >>> 0 || 1;
+  const azar = () => {
+    // mulberry32: rápido y suficiente para remuestrear.
+    estado = (estado + 0x6d2b79f5) >>> 0;
+    let t = estado;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const muestra = new Float64Array(n);
+  let validas = 0;
+  for (let r = 0; r < repeticiones; r++) {
+    for (let i = 0; i < n; i++) muestra[i] = x[Math.floor(azar() * n)] as number;
+    muestra.sort();
+    if (!(momentos(muestra).desviacion > 0)) continue;
+    const s = specsDe(muestra, discretas, spec.type)[0];
+    if (!s) continue;
+    let dist;
+    try {
+      dist = construirDesdeDescriptor(toDescriptor(s));
+    } catch {
+      continue;
+    }
+    validas++;
+    for (const k of claves) {
+      const v = (s as unknown as Record<string, number>)[k];
+      if (typeof v === 'number' && Number.isFinite(v)) porClave.get(k)?.push(v);
+    }
+    percentiles.forEach((p, i) => porPercentil[i]?.push(dist.quantile(p)));
+  }
+  if (validas === 0) return { repeticiones, validas, parametros: [], percentiles: [] };
+  const intervalo = (vs: number[]) => {
+    const o = Float64Array.from(vs).sort();
+    return { bajo: percentilDatos(o, 0.05), alto: percentilDatos(o, 0.95) };
+  };
+  const base = construirDesdeDescriptor(toDescriptor(spec));
+  return {
+    repeticiones,
+    validas,
+    parametros: claves
+      .filter((k) => (porClave.get(k)?.length ?? 0) > 0)
+      .map((k) => ({ nombre: k, etiqueta: ETIQUETAS_PARAMETRO[k] ?? k, estimado: (spec as unknown as Record<string, number>)[k] as number, ...intervalo(porClave.get(k) as number[]) })),
+    percentiles: percentiles.map((p, i) => ({ nombre: `p${Math.round(p * 100)}`, etiqueta: `p${Math.round(p * 100)}`, p, estimado: base.quantile(p), ...intervalo(porPercentil[i] as number[]) })),
+  };
 }

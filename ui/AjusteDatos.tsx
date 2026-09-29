@@ -14,9 +14,15 @@ import { useMemo, useState } from 'react';
 import { construirDesdeDescriptor } from '../engine/distributions/index.ts';
 import {
   ajustarDistribuciones,
+  bootstrapAjuste,
+  CRITERIO_DE_OBJETIVO,
   describirDistribucion,
   ordenarCandidatos,
+  PERCENTILES_OBJETIVO,
+  tablaPercentiles,
   type CriterioAjuste,
+  type ObjetivoAjuste,
+  type ResultadoBootstrap,
   leerDatos,
   resumirDistribucion,
   toDescriptor,
@@ -44,6 +50,8 @@ export function AjusteDatos({
   const [elegida, setElegida] = useState(0);
   const [fallo, setFallo] = useState<string | null>(null);
   const [criterio, setCriterio] = useState<CriterioAjuste>('aicc');
+  // I2: qué parte de la distribución importa (los percentiles que se comparan).
+  const [objetivo, setObjetivo] = useState<ObjetivoAjuste>('general');
 
   const lectura = useMemo(() => leerDatos(texto, decimal), [texto, decimal]);
   const ajuste = useMemo(() => ajustarDistribuciones(lectura.valores), [lectura]);
@@ -135,6 +143,24 @@ export function AjusteDatos({
               <option value="bic">BIC (castiga más los parámetros)</option>
               <option value="andersonDarling">Anderson–Darling (colas)</option>
               <option value="cramerVonMises">Cramér–von Mises (todo el rango)</option>
+              <option value={CRITERIO_DE_OBJETIVO[objetivo]}>Error en los percentiles del objetivo</option>
+            </select>
+          </label>
+          <label className="campo ordenar-ajuste">
+            <span className="tenue">Lo que más importa</span>
+            <select
+              value={objetivo}
+              onChange={(e) => {
+                const o = e.target.value as ObjetivoAjuste;
+                setObjetivo(o);
+                // Si se ordenaba por el error en percentiles, que siga, con el objetivo nuevo.
+                if (criterio.startsWith('error')) setCriterio(CRITERIO_DE_OBJETIVO[o]);
+                setElegida(0);
+              }}
+            >
+              <option value="general">Toda la distribución (p5, p25, p50, p75, p95)</option>
+              <option value="superior">La cola alta (p50 a p99: costes, plazos)</option>
+              <option value="inferior">La cola baja (p1 a p50: ingresos, márgenes)</option>
             </select>
           </label>
           <table className="comparacion ajuste-tabla">
@@ -145,6 +171,7 @@ export function AjusteDatos({
                 <th title="Criterio bayesiano: cuanto menor, mejor">BIC</th>
                 <th title="Anderson–Darling: cuanto menor, mejor">A–D</th>
                 <th title="Cramér–von Mises: cuanto menor, mejor">CvM</th>
+                <th title="Error medio en los percentiles del objetivo, en desviaciones típicas de los datos: cuanto menor, mejor">Perc.</th>
                 <th />
               </tr>
             </thead>
@@ -158,6 +185,7 @@ export function AjusteDatos({
                   <th scope="row">
                     {i === 0 && <span className="insignia">mejor</span>}
                     {describirDistribucion(c.spec.type)?.nombre ?? c.spec.type}
+                    {c.discreta && <span className="tenue"> (discreta)</span>}
                     <span className="tenue parametros-ajuste">{resumirDistribucion(c.spec)}</span>
                   </th>
                   <td title={`AIC: ${c.aic.toLocaleString('es-ES', { maximumFractionDigits: 1 })}`}>{c.aicc.toLocaleString('es-ES', { maximumFractionDigits: 1 })}</td>
@@ -166,6 +194,7 @@ export function AjusteDatos({
                     {c.andersonDarling.toLocaleString('es-ES', { maximumFractionDigits: 2 })}
                   </td>
                   <td>{c.cramerVonMises.toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>
+                  <td>{c[CRITERIO_DE_OBJETIVO[objetivo]].toLocaleString('es-ES', { maximumFractionDigits: 3 })}</td>
                   <td>
                     <button type="button" onClick={(e) => { e.stopPropagation(); alUsar(c.spec); }}>Usar</button>
                   </td>
@@ -173,6 +202,15 @@ export function AjusteDatos({
               ))}
             </tbody>
           </table>
+          {candidatos.some((c) => c.discreta) && (
+            <p className="tenue">
+              Las discretas (Poisson, binomial) dan la probabilidad de cada valor, no una densidad:
+              su AICc y su BIC no se comparan con los de las continuas. Compáralas por el error en
+              percentiles o por la curva.
+            </p>
+          )}
+          {candidata && <PercentilesAjuste datos={lectura.valores} spec={candidata.spec} objetivo={objetivo} />}
+          {candidata && <Fiabilidad key={`${candidata.spec.type}-${lectura.valores.length}-${objetivo}`} datos={lectura.valores} spec={candidata.spec} objetivo={objetivo} />}
           {candidata && <HistogramaAjuste datos={lectura.valores} spec={candidata.spec} />}
           {candidata && <CurvaAjuste datos={lectura.valores} spec={candidata.spec} />}
           {ajuste.empirica && (
@@ -194,6 +232,97 @@ export function AjusteDatos({
         </>
       )}
     </div>
+  );
+}
+
+/** Percentil a percentil (I2): los datos frente a la candidata elegida, en los del objetivo. */
+function PercentilesAjuste({ datos, spec, objetivo }: { datos: readonly number[]; spec: DistributionSpec; objetivo: ObjetivoAjuste }) {
+  const filas = useMemo(() => {
+    try {
+      return tablaPercentiles(spec, datos, objetivo);
+    } catch {
+      return [];
+    }
+  }, [datos, spec, objetivo]);
+  if (filas.length === 0) return null;
+  return (
+    <>
+      <h5>Percentiles: datos y {describirDistribucion(spec.type)?.nombre ?? spec.type}</h5>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th /><th>Datos</th><th>Ajustada</th><th title="Ajustada − datos, en desviaciones típicas de los datos">Diferencia</th></tr></thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.p} className={Math.abs(f.error) > 0.25 ? 'desvio' : undefined}>
+                <td>p{Math.round(f.p * 100)}</td>
+                <td>{numero(f.datos)}</td>
+                <td>{numero(f.ajustado)}</td>
+                <td>{f.error >= 0 ? '+' : '−'}{Math.abs(f.error).toLocaleString('es-ES', { maximumFractionDigits: 2 })} σ</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Más de 0,25 σ de diferencia (en negrita) es un aviso: en ese percentil la distribución
+        no sigue a los datos. Con pocos datos, los percentiles extremos de los datos son poco fiables también.
+      </p>
+    </>
+  );
+}
+
+/**
+ * Cuánto fiarse del ajuste (I2): bootstrap bajo demanda (con muchos datos
+ * tarda un momento), con los intervalos de los parámetros y de los percentiles.
+ */
+function Fiabilidad({ datos, spec, objetivo }: { datos: readonly number[]; spec: DistributionSpec; objetivo: ObjetivoAjuste }) {
+  const [r, setR] = useState<ResultadoBootstrap | null>(null);
+  const [calculando, setCalculando] = useState(false);
+  const calcular = () => {
+    setCalculando(true);
+    // Un respiro para que se pinte «Calculando…» antes del cálculo.
+    setTimeout(() => {
+      try {
+        setR(bootstrapAjuste(datos, spec, PERCENTILES_OBJETIVO[objetivo], datos.length > 2_000 ? 100 : 200));
+      } finally {
+        setCalculando(false);
+      }
+    }, 20);
+  };
+  if (!r) {
+    return (
+      <p>
+        <button type="button" className="secundario" onClick={calcular} disabled={calculando}>
+          {calculando ? 'Calculando…' : '¿Cuánto fiarse de este ajuste? (bootstrap)'}
+        </button>
+      </p>
+    );
+  }
+  const fila = (x: { nombre: string; etiqueta: string; estimado: number; bajo: number; alto: number }) => (
+    <tr key={x.nombre}>
+      <td>{x.etiqueta}</td>
+      <td>{numero(x.estimado)}</td>
+      <td>{numero(x.bajo)} – {numero(x.alto)}</td>
+    </tr>
+  );
+  return (
+    <>
+      <h5>Cuánto fiarse: bootstrap ({miles(r.validas)} de {miles(r.repeticiones)} repeticiones)</h5>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th /><th>Ajustado</th><th>Intervalo del 90 %</th></tr></thead>
+          <tbody>
+            {r.parametros.map(fila)}
+            {r.percentiles.map(fila)}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Se remuestrean los datos con reemplazo, se vuelve a ajustar la misma distribución y se
+        mira cuánto cambian sus parámetros y sus percentiles. Un intervalo ancho dice que con estos
+        datos no se puede afinar mucho, la ordene como la ordene el criterio.
+      </p>
+    </>
   );
 }
 
