@@ -200,6 +200,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N18. Gráficas nuevas** (C4 del plan, nuevo): haz C6.
 
+**N19. Distribuciones nuevas** (B5 del plan, nuevo): haz F22.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -640,6 +642,31 @@ a abrir el libro.
 - «Preparar para compartir»: C49 queda como `=0+C46+C47` (sigue calculando
   sin el complemento), C48 con su valor, y el panel gana la salida «Coste
   total» y la correlación entre C46 y C47. «Restaurar» lo deshace.
+
+**F22. Distribuciones nuevas** (B5 del plan, nuevo). En celdas vacías de
+«Pruebas» (por ejemplo, la columna E a partir de la fila 46), escribe una a
+una. En «Valores fijos» (media), cada una enseña:
+
+| Fórmula | Enseña |
+|---|---|
+| `=RIESGO.STUDENT(5;100;10)` | 100 |
+| `=RIESGO.LOGISTICA(100;10)` | 100 |
+| `=RIESGO.LOGLOGISTICA(50;4)` | 55,54 |
+| `=RIESGO.PARETO(1000;3)` | 1.500 |
+| `=RIESGO.UNIFORMEENTERA(1;6)` | 3,5 |
+| `=RIESGO.GEOMETRICA(0,25)` | 3 |
+| `=RIESGO.BINOMNEG(3;0,4)` | 4,5 |
+| `=RIESGO.HIPERGEOM(10;5;50)` | 1 |
+| `=RIESGO.TRIGEN(80;100;150;0,1;0,9)` | 112,93 |
+| `=RIESGO.HISTOGRAMA(0;100;{1;3;5;3;1})` | 50 |
+
+- Marca una de ellas como salida y simula: la media del panel se acerca a lo
+  que enseña la celda.
+- En el panel, una entrada nueva: en «Distribución» aparecen las diez, cada
+  una con su explicación y su vista previa; el histograma pide mínimo,
+  máximo y los pesos de los tramos.
+- Errores claros: `=RIESGO.HIPERGEOM(10;60;50)` da #¡NUM! (más casos que
+  población); al simular, el motivo.
 
 ---
 

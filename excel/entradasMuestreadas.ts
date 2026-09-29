@@ -10,7 +10,7 @@
  */
 
 import { construirDesdeDescriptor } from '../engine/distributions/index.ts';
-import { PREFIJO_DINAMICA, resumirDistribucion, toDescriptor, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { esDiscretaEntera, PREFIJO_DINAMICA, resumirDistribucion, toDescriptor, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { histogramaDeMuestra, ordenarUtiles, type BinHistograma, type PuntoCDF } from '../engine/stats/index.ts';
 
 export interface EntradaMuestreada {
@@ -99,7 +99,7 @@ export function entradasMuestreadas(
       const dist = construirDesdeDescriptor(toDescriptor(e.dist));
       teorica = { media: dist.mean(), desviacion: Math.sqrt(dist.variance()) };
       // Las discretas no tienen una curva que dibujar encima de las barras.
-      if (!['bernoulli', 'binomial', 'poisson', 'discrete'].includes(e.dist.type)) {
+      if (e.dist.type !== 'discrete' && !esDiscretaEntera(e.dist.type)) {
         esperado = histograma.map((b) => n * Math.max(0, dist.cdf(b.x1) - dist.cdf(b.x0)));
       }
     } catch {

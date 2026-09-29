@@ -1,6 +1,7 @@
 export {
   CATALOGO_DISTRIBUCIONES,
   describirDistribucion,
+  esDiscretaEntera,
   resumirDistribucion,
   type DescripcionDistribucion,
   type ParametroDistribucion,
@@ -59,6 +60,8 @@ export {
   FUNCION_CATEGORIA,
   FUNCION_DISCRETA,
   FUNCION_EMPIRICA,
+  FUNCION_HISTOGRAMA,
+  histogramaDesdeLista,
   empiricaDesdeLista,
   FUNCION_TRUNCAR,
   FUNCIONES_RIESGO,

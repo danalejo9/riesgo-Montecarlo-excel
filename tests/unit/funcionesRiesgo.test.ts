@@ -71,6 +71,8 @@ describe('leerFuncionRiesgo', () => {
     const ejemplos: Record<string, number[]> = {
       NORMAL: [0, 1], LOGNORMAL: [10, 2], LOGNORMAL2: [0, 0.5], UNIFORME: [0, 1], TRIANGULAR: [0, 1, 2], PERT: [0, 1, 2],
       BETA: [2, 3], GAMMA: [2, 1], EXPON: [1], WEIBULL: [2, 1], BERNOULLI: [0.3], BINOMIAL: [10, 0.5], POISSON: [3],
+      TRIGEN: [80, 100, 150, 0.1, 0.9], STUDENT: [5, 0, 1], LOGISTICA: [0, 1], LOGLOGISTICA: [1, 3], PARETO: [1, 3],
+      UNIFORMEENTERA: [1, 6], GEOMETRICA: [0.3], BINOMNEG: [3, 0.4], HIPERGEOM: [10, 5, 50],
     };
     for (const f of FUNCIONES_RIESGO) {
       expect(ejemplos[f.id], `falta ejemplo para ${f.id}`).toBeDefined();
@@ -84,7 +86,7 @@ describe('metadatos para Excel (funciones.json)', () => {
   it('uno por función del catálogo, con sus parámetros', () => {
     const m = metadatosFunciones() as { functions: { id: string; parameters: unknown[] }[] };
     expect(m.functions.map((f) => f.id)).toEqual([
-      ...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA', 'DISCRETA', 'EMPIRICA', 'TRUNCAR',
+      ...FUNCIONES_RIESGO.map((f) => f.id), 'CATEGORIA', 'DISCRETA', 'EMPIRICA', 'HISTOGRAMA', 'TRUNCAR',
       'MEDIA', 'DESV', 'PERCENTIL', 'PROB', 'MIN', 'MAX', 'SALIDA', 'CORRELACION', 'EVENTO', 'DECISION',
     ]);
     expect(m.functions.find((f) => f.id === 'TRIANGULAR')?.parameters).toHaveLength(3);

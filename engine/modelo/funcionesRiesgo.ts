@@ -102,7 +102,78 @@ export const FUNCIONES_RIESGO: readonly FuncionRiesgo[] = [
     parametros: [{ nombre: 'lambda', descripcion: 'Media de sucesos (> 0)' }],
     construir: ([lambda]) => ({ type: 'poisson', lambda: lambda as number }),
   },
+  // B5
+  {
+    id: 'TRIGEN', descripcion: 'Trigen: una triangular dada por dos percentiles («el 10 % de las veces baja de 80») y el valor más probable.',
+    parametros: [
+      { nombre: 'bajo', descripcion: 'Valor bajo' }, { nombre: 'moda', descripcion: 'Valor más probable' }, { nombre: 'alto', descripcion: 'Valor alto' },
+      { nombre: 'p_bajo', descripcion: 'Probabilidad de quedar por debajo del valor bajo (p. ej. 0,1)' },
+      { nombre: 'p_alto', descripcion: 'Probabilidad de quedar por debajo del valor alto (p. ej. 0,9)' },
+    ],
+    construir: ([low, mode, high, pLow, pHigh]) => ({ type: 'trigen', low: low as number, mode: mode as number, high: high as number, pLow: pLow as number, pHigh: pHigh as number }),
+  },
+  {
+    id: 'STUDENT', descripcion: 't de Student: como la normal, con colas más gruesas.',
+    parametros: [{ nombre: 'gl', descripcion: 'Grados de libertad (> 0; más de 2 para tener desviación)' }, { nombre: 'centro', descripcion: 'Centro (la media)' }, { nombre: 'escala', descripcion: 'Escala (> 0)' }],
+    construir: ([df, loc, scale]) => ({ type: 'student', df: df as number, loc: loc as number, scale: scale as number }),
+  },
+  {
+    id: 'LOGISTICA', descripcion: 'Logística: simétrica, parecida a la normal con colas algo más gruesas.',
+    parametros: [{ nombre: 'media', descripcion: 'Media' }, { nombre: 'escala', descripcion: 'Escala (> 0)' }],
+    construir: ([mean, scale]) => ({ type: 'logistic', mean: mean as number, scale: scale as number }),
+  },
+  {
+    id: 'LOGLOGISTICA', descripcion: 'Log-logística: positiva y con cola a la derecha; la escala es la mediana.',
+    parametros: [{ nombre: 'escala', descripcion: 'Escala (> 0): la mediana' }, { nombre: 'forma', descripcion: 'Forma (> 0; más de 1 para tener media)' }],
+    construir: ([scale, shape]) => ({ type: 'loglogistic', scale: scale as number, shape: shape as number }),
+  },
+  {
+    id: 'PARETO', descripcion: 'Pareto: nunca por debajo del mínimo, con cola derecha muy larga (grandes siniestros).',
+    parametros: [{ nombre: 'minimo', descripcion: 'Mínimo (> 0)' }, { nombre: 'forma', descripcion: 'Forma (> 0; más de 1 para tener media)' }],
+    construir: ([min, shape]) => ({ type: 'pareto', min: min as number, shape: shape as number }),
+  },
+  {
+    id: 'UNIFORMEENTERA', descripcion: 'Uniforme entera: cada entero entre el mínimo y el máximo, igual de probable.',
+    parametros: [{ nombre: 'minimo', descripcion: 'Mínimo (entero)' }, { nombre: 'maximo', descripcion: 'Máximo (entero)' }],
+    construir: ([min, max]) => ({ type: 'intuniform', min: min as number, max: max as number }),
+  },
+  {
+    id: 'GEOMETRICA', descripcion: 'Geométrica: cuántos intentos fallan antes del primer éxito.',
+    parametros: [{ nombre: 'p', descripcion: 'Probabilidad de éxito en cada intento (0 a 1)' }],
+    construir: ([p]) => ({ type: 'geometric', p: p as number }),
+  },
+  {
+    id: 'BINOMNEG', descripcion: 'Binomial negativa: cuántos intentos fallan antes de r éxitos; conteos más dispersos que una Poisson.',
+    parametros: [{ nombre: 'r', descripcion: 'Éxitos buscados (> 0)' }, { nombre: 'p', descripcion: 'Probabilidad de éxito (0 a 1)' }],
+    construir: ([r, p]) => ({ type: 'negbin', r: r as number, p: p as number }),
+  },
+  {
+    id: 'HIPERGEOM', descripcion: 'Hipergeométrica: cuántos casos salen en una muestra sin reponer (defectuosos en un lote).',
+    parametros: [{ nombre: 'muestra', descripcion: 'Tamaño de la muestra' }, { nombre: 'casos', descripcion: 'Casos en la población' }, { nombre: 'poblacion', descripcion: 'Tamaño de la población' }],
+    construir: ([n, successes, population]) => ({ type: 'hypergeometric', n: n as number, successes: successes as number, population: population as number }),
+  },
 ];
+
+/** `RIESGO.HISTOGRAMA(mínimo; máximo; pesos)` (B5): tramos iguales, cada uno con su peso. Su tercer argumento es una lista. */
+export const FUNCION_HISTOGRAMA = {
+  id: 'HISTOGRAMA',
+  descripcion: 'Histograma: una forma libre entre el mínimo y el máximo, en tramos iguales con los pesos dados.',
+  parametros: [
+    { nombre: 'minimo', descripcion: 'Mínimo' },
+    { nombre: 'maximo', descripcion: 'Máximo' },
+    { nombre: 'pesos', descripcion: 'El peso de cada tramo, de izquierda a derecha: un rango o una lista {1;3;5;3;1}' },
+  ],
+} as const;
+
+export function histogramaDesdeLista(min: number, max: number, pesos: readonly unknown[]): { spec: DistributionSpec; media: number } | string {
+  const weights = pesos.filter((v) => v !== null && v !== undefined && v !== '').map((v) => (typeof v === 'number' ? v : Number(String(v).replace(',', '.'))));
+  const spec: DistributionSpec = { type: 'histogram', min, max, weights };
+  try {
+    return { spec, media: construirDesdeDescriptor(toDescriptor(spec)).mean() };
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
 
 const POR_ID = new Map(FUNCIONES_RIESGO.map((f) => [f.id, f] as const));
 
@@ -374,6 +445,17 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
     if (typeof c === 'string') return { ok: false, motivo: c };
     return { ok: true, id, spec: c.spec, media: c.masProbable };
   }
+  if (id === FUNCION_HISTOGRAMA.id) {
+    if (raiz.args.length !== 3) return { ok: false, motivo: 'RIESGO.HISTOGRAMA necesita 3 argumentos: mínimo; máximo; pesos' };
+    const min = numero(raiz.args[0]);
+    const max = numero(raiz.args[1]);
+    const pesos = listaDe(raiz.args[2] as Nodo, lector);
+    if (min === null || max === null || !pesos) {
+      return { ok: false, motivo: 'RIESGO.HISTOGRAMA: el mínimo y el máximo tienen que ser números, y los pesos un rango con valores escritos o una lista {1;3;5}' };
+    }
+    const h = histogramaDesdeLista(min, max, pesos);
+    return typeof h === 'string' ? { ok: false, motivo: h } : { ok: true, id, spec: h.spec, media: h.media };
+  }
   if (id === FUNCION_EMPIRICA.id) {
     const datos = raiz.args.length === 1 ? listaDe(raiz.args[0] as Nodo, lector) : null;
     if (!datos) return { ok: false, motivo: 'RIESGO.EMPIRICA necesita 1 argumento: un rango con los datos, o una lista {1;2;3}' };
@@ -401,7 +483,7 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
   }
   const f = POR_ID.get(id);
   if (!f) {
-    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_EMPIRICA.id, FUNCION_TRUNCAR.id].join(', ')}` };
+    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_EMPIRICA.id, FUNCION_HISTOGRAMA.id, FUNCION_TRUNCAR.id].join(', ')}` };
   }
   if (raiz.args.length !== f.parametros.length) {
     return { ok: false, motivo: `RIESGO.${id} necesita ${f.parametros.length} argumento(s): ${f.parametros.map((p) => p.nombre).join('; ')}` };

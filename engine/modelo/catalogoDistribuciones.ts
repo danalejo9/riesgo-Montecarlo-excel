@@ -1,5 +1,5 @@
 /**
- * Las trece distribuciones, descritas para que una interfaz pueda pintarlas
+ * Todas las distribuciones, descritas para que una interfaz pueda pintarlas
  * sin saber nada de ninguna.
  *
  * Sin esto, el panel tendría un `switch` de trece ramas con los nombres de los
@@ -142,6 +142,92 @@ export const CATALOGO_DISTRIBUCIONES: readonly DescripcionDistribucion[] = [
     parametros: [P('lambda', 'Media', { ayuda: 'Sucesos esperados en el periodo.', min: 0 })],
     porDefecto: { type: 'poisson', lambda: 3 },
   },
+  // B5: distribuciones nuevas.
+  {
+    tipo: 'trigen',
+    nombre: 'Trigen (triangular por percentiles)',
+    cuando: 'Como la triangular, pero con dos percentiles en vez de mínimo y máximo: «el 10 % de las veces baja de 80».',
+    parametros: [
+      P('low', 'Valor bajo', { ayuda: 'El que solo se rebasa por abajo con la probabilidad de abajo.' }),
+      P('mode', 'Más probable'),
+      P('high', 'Valor alto'),
+      P('pLow', 'Probabilidad por debajo del bajo', { ayuda: 'Entre 0 y 1; 0,1 = un 10 %.', min: 0, max: 1 }),
+      P('pHigh', 'Probabilidad por debajo del alto', { ayuda: 'Entre 0 y 1; 0,9 = el 90 %.', min: 0, max: 1 }),
+    ],
+    porDefecto: { type: 'trigen', low: 80, mode: 100, high: 150, pLow: 0.1, pHigh: 0.9 },
+  },
+  {
+    tipo: 'student',
+    nombre: 't de Student',
+    cuando: 'Como la normal, pero con colas más gruesas: sorpresas grandes más frecuentes. Pocos grados de libertad, colas más gruesas.',
+    parametros: [
+      P('df', 'Grados de libertad', { ayuda: 'Más de 2 para que tenga desviación; con 30 o más es casi una normal.', min: 0 }),
+      P('loc', 'Centro'),
+      P('scale', 'Escala', { min: 0 }),
+    ],
+    porDefecto: { type: 'student', df: 5, loc: 0, scale: 1 },
+  },
+  {
+    tipo: 'logistic',
+    nombre: 'Logística',
+    cuando: 'Parecida a la normal y simétrica, con colas algo más gruesas. Crecimientos y demandas.',
+    parametros: [P('mean', 'Media'), P('scale', 'Escala', { min: 0 })],
+    porDefecto: { type: 'logistic', mean: 0, scale: 1 },
+  },
+  {
+    tipo: 'loglogistic',
+    nombre: 'Log-logística',
+    cuando: 'Positiva y con cola a la derecha, como la lognormal: duraciones, tiempos de reparación, rentas.',
+    parametros: [P('scale', 'Escala (mediana)', { min: 0 }), P('shape', 'Forma', { ayuda: 'Más de 1 para que tenga media; más alta, más concentrada.', min: 0 })],
+    porDefecto: { type: 'loglogistic', scale: 1, shape: 3 },
+  },
+  {
+    tipo: 'pareto',
+    nombre: 'Pareto',
+    cuando: 'Nunca por debajo de un mínimo y con una cola derecha muy larga: grandes siniestros, pérdidas extremas.',
+    parametros: [P('min', 'Mínimo', { min: 0 }), P('shape', 'Forma', { ayuda: 'Más de 1 para que tenga media; más baja, cola más larga.', min: 0 })],
+    porDefecto: { type: 'pareto', min: 1, shape: 3 },
+  },
+  {
+    tipo: 'intuniform',
+    nombre: 'Uniforme entera',
+    cuando: 'Cualquier número entero entre dos, todos igual de probables: plazas, días, unidades.',
+    parametros: [P('min', 'Mínimo', { entero: true }), P('max', 'Máximo', { entero: true })],
+    porDefecto: { type: 'intuniform', min: 1, max: 6 },
+  },
+  {
+    tipo: 'geometric',
+    nombre: 'Geométrica',
+    cuando: 'Cuántos intentos fallan antes del primer éxito: ofertas hasta ganar un contrato.',
+    parametros: [P('p', 'Probabilidad de éxito', { ayuda: 'Entre 0 y 1, en cada intento.', min: 0, max: 1 })],
+    porDefecto: { type: 'geometric', p: 0.3 },
+  },
+  {
+    tipo: 'negbin',
+    nombre: 'Binomial negativa',
+    cuando: 'Cuántos intentos fallan antes de conseguir r éxitos. También, conteos más dispersos que una Poisson.',
+    parametros: [P('r', 'Éxitos buscados', { min: 0 }), P('p', 'Probabilidad de éxito', { min: 0, max: 1 })],
+    porDefecto: { type: 'negbin', r: 3, p: 0.4 },
+  },
+  {
+    tipo: 'hypergeometric',
+    nombre: 'Hipergeométrica',
+    cuando: 'Cuántos defectuosos salen al revisar una muestra sin reponer de un lote con un número conocido de ellos.',
+    parametros: [
+      P('n', 'Tamaño de la muestra', { min: 0, entero: true }),
+      P('successes', 'Casos en la población', { ayuda: 'Por ejemplo, las piezas defectuosas del lote.', min: 0, entero: true }),
+      P('population', 'Tamaño de la población', { min: 1, entero: true }),
+    ],
+    porDefecto: { type: 'hypergeometric', n: 10, successes: 5, population: 50 },
+  },
+  {
+    tipo: 'histogram',
+    nombre: 'Histograma (forma libre)',
+    cuando: 'Una forma dibujada a mano: entre un mínimo y un máximo, en tramos iguales, cada uno con su peso.',
+    // El mínimo y el máximo son números; los pesos, una lista que el panel edita aparte.
+    parametros: [P('min', 'Mínimo'), P('max', 'Máximo')],
+    porDefecto: { type: 'histogram', min: 0, max: 100, weights: [1, 3, 5, 3, 1] },
+  },
   {
     tipo: 'discrete',
     nombre: 'Discreta',
@@ -160,6 +246,13 @@ export const CATALOGO_DISTRIBUCIONES: readonly DescripcionDistribucion[] = [
     porDefecto: { type: 'categorical', categories: ['A', 'B'], weights: [1, 1] },
   },
 ];
+
+/** Las distribuciones de números enteros (se pintan como barras, sin curva encima). */
+const DISCRETAS_ENTERAS: ReadonlySet<TipoDistribucion> = new Set(['bernoulli', 'binomial', 'poisson', 'geometric', 'negbin', 'hypergeometric', 'intuniform']);
+
+export function esDiscretaEntera(tipo: TipoDistribucion): boolean {
+  return DISCRETAS_ENTERAS.has(tipo);
+}
 
 const POR_TIPO = new Map(CATALOGO_DISTRIBUCIONES.map((d) => [d.tipo, d] as const));
 

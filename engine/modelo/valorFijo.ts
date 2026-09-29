@@ -56,6 +56,24 @@ export function modaDe(spec: DistributionSpec): number | string {
     case 'bernoulli': return spec.p > 0.5 ? 1 : 0;
     case 'binomial': return Math.min(spec.n, Math.floor((spec.n + 1) * spec.p));
     case 'poisson': return Math.floor(spec.lambda);
+    // B5
+    case 'student': return acotar(spec.loc);
+    case 'logistic': return acotar(spec.mean);
+    case 'loglogistic': return acotar(spec.shape > 1 ? spec.scale * ((spec.shape - 1) / (spec.shape + 1)) ** (1 / spec.shape) : 0);
+    case 'pareto': return acotar(spec.min);
+    case 'geometric': return 0;
+    case 'negbin': return spec.r > 1 ? Math.floor(((spec.r - 1) * (1 - spec.p)) / spec.p) : 0;
+    case 'hypergeometric': return Math.floor(((spec.n + 1) * (spec.successes + 1)) / (spec.population + 2));
+    case 'intuniform': return Math.round((spec.min + spec.max) / 2);
+    case 'trigen': return acotar(spec.mode);
+    case 'histogram': {
+      let mejor = 0;
+      spec.weights.forEach((w, i) => {
+        if (w > (spec.weights[mejor] as number)) mejor = i;
+      });
+      const ancho = (spec.max - spec.min) / spec.weights.length;
+      return acotar(spec.min + (mejor + 0.5) * ancho);
+    }
     case 'discrete': {
       let mejor = 0;
       spec.weights.forEach((w, i) => {

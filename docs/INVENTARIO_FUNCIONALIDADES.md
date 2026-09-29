@@ -132,7 +132,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 
 | # | Código | Funcionalidad | Origen |
 |---|---|---|---|
-| 24 | B5 | Distribuciones nuevas: t de Student, logística, log-logística, Pareto, geométrica, binomial negativa, hipergeométrica, uniforme entera, Trigen, general/histograma | **Tú** (lista de funciones) |
+| 24 | B5 | ✅ (29/09, falta Excel real) Distribuciones nuevas: t de Student, logística, log-logística, Pareto, geométrica, binomial negativa, hipergeométrica, uniforme entera, Trigen, general/histograma | **Tú** (lista de funciones) |
 | 25 | B7 | ✅ (28/09) `RIESGO.*` con celdas o cálculos como argumentos (`=RIESGO.NORMAL(B2;15)`), dentro de operaciones y con parámetros que dependen de otra celda aleatoria (los dos últimos, solo con el motor rápido) | **Tú** (prueba E4) |
 | 26 | C6 | Percentiles configurables | Plan |
 | 27 | D2 | Análisis de estrés: fijar una entrada en un percentil | Plan |

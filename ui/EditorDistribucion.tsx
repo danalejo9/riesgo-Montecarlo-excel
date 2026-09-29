@@ -95,6 +95,24 @@ export function EditorDistribucion({
         <EditorCategorica spec={actual} alCambiar={intentar} {...(leerSeleccion ? { leerSeleccion } : {})} />
       ) : actual.type === 'discrete' ? (
         <EditorDiscreta spec={actual} alCambiar={intentar} />
+      ) : actual.type === 'histogram' ? (
+        <div className="parametros">
+          {desc?.parametros.map((p) => (
+            <CampoNumero
+              key={p.clave}
+              etiqueta={p.etiqueta}
+              ayuda={p.ayuda}
+              valor={(actual as unknown as Record<string, number | undefined>)[p.clave]}
+              alCambiar={(v) => intentar({ ...actual, [p.clave]: v } as DistributionSpec)}
+            />
+          ))}
+          <CampoLista
+            etiqueta="Pesos de los tramos"
+            ayuda="Uno por tramo, de izquierda a derecha. No hace falta que sumen 1."
+            valores={actual.weights}
+            alCambiar={(weights) => intentar({ ...actual, weights })}
+          />
+        </div>
       ) : (
         <div className="parametros">
           {desc?.parametros.map((p) => (

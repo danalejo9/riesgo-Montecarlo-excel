@@ -1107,6 +1107,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     final del informe PDF. **Siguiente**: resto de B (B5, distribuciones
     nuevas).
 
+53. [x] **B5 (2026-09-29)**. Motor: `continuasB5.ts` (Student con
+    Newton sobre la beta incompleta y respaldo por bisección; logística,
+    log-logística, Pareto), `discretasB5.ts` (geométrica cerrada; binomial
+    negativa e hipergeométrica con la acumulada en tabla y búsqueda binaria;
+    uniforme entera), `trigen.ts` (punto fijo para mínimo y máximo) e
+    `histograma.ts`. Esquema, descriptor, catálogo (con `esDiscretaEntera`),
+    moda, funciones de Excel (`HISTOGRAMA` con lista), editor (pesos del
+    histograma). Pruebas `distribucionesB5.test.ts` (KS, frecuencias,
+    momentos, cuantiles de tablas). **Siguiente**: D2–D4.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

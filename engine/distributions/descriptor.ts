@@ -29,6 +29,10 @@ import { truncar } from './truncate.ts';
 import type { Distribution } from './types.ts';
 import { uniform } from './uniform.ts';
 import { weibull } from './weibull.ts';
+import { logistica, logLogistica, pareto, student } from './continuasB5.ts';
+import { binomialNegativa, geometrica, hipergeometrica, uniformeEntera } from './discretasB5.ts';
+import { trigen } from './trigen.ts';
+import { histograma } from './histograma.ts';
 
 export type DescriptorBase =
   | { tipo: 'normal'; media: number; desviacion: number }
@@ -43,7 +47,18 @@ export type DescriptorBase =
   | { tipo: 'bernoulli'; p: number }
   | { tipo: 'binomial'; n: number; p: number }
   | { tipo: 'poisson'; lambda: number }
-  | { tipo: 'discreta'; valores: number[]; pesos: number[] };
+  | { tipo: 'discreta'; valores: number[]; pesos: number[] }
+  // B5
+  | { tipo: 'student'; gl: number; centro: number; escala: number }
+  | { tipo: 'logistica'; media: number; escala: number }
+  | { tipo: 'loglogistica'; escala: number; forma: number }
+  | { tipo: 'pareto'; minimo: number; forma: number }
+  | { tipo: 'geometrica'; p: number }
+  | { tipo: 'binomialNegativa'; r: number; p: number }
+  | { tipo: 'hipergeometrica'; n: number; exitos: number; poblacion: number }
+  | { tipo: 'uniformeEntera'; min: number; max: number }
+  | { tipo: 'trigen'; inferior: number; moda: number; superior: number; pInferior: number; pSuperior: number }
+  | { tipo: 'histograma'; min: number; max: number; pesos: number[] };
 
 /**
  * Una distribución, opcionalmente **acotada** (B4): la masa fuera de
@@ -73,5 +88,15 @@ function construirBase(d: DescriptorBase): Distribution {
     case 'binomial': return binomial(d.n, d.p);
     case 'poisson': return poisson(d.lambda);
     case 'discreta': return discrete(d.valores, d.pesos);
+    case 'student': return student(d.gl, d.centro, d.escala);
+    case 'logistica': return logistica(d.media, d.escala);
+    case 'loglogistica': return logLogistica(d.escala, d.forma);
+    case 'pareto': return pareto(d.minimo, d.forma);
+    case 'geometrica': return geometrica(d.p);
+    case 'binomialNegativa': return binomialNegativa(d.r, d.p);
+    case 'hipergeometrica': return hipergeometrica(d.n, d.exitos, d.poblacion);
+    case 'uniformeEntera': return uniformeEntera(d.min, d.max);
+    case 'trigen': return trigen(d.inferior, d.moda, d.superior, d.pInferior, d.pSuperior);
+    case 'histograma': return histograma(d.min, d.max, d.pesos);
   }
 }

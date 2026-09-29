@@ -18,7 +18,8 @@
  */
 
 import {
-  categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
+  categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_HISTOGRAMA, FUNCION_TRUNCAR,
+  histogramaDesdeLista,
   construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
 import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
@@ -99,6 +100,12 @@ asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
   // queda en el límite: basta para explorar el modelo, no para medirlo.)
   if (!(minimo < maximo)) throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'RIESGO.TRUNCAR: el mínimo tiene que ser menor que el máximo');
   return Math.min(maximo, Math.max(minimo, valor));
+});
+
+// B5: un histograma de forma libre.
+asociar(FUNCION_HISTOGRAMA.id, (minimo: number, maximo: number, pesos: unknown[][], invocacion?: unknown) => {
+  const r = histogramaDesdeLista(minimo, maximo, pesos.flat());
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_HISTOGRAMA.id, celdaDe([invocacion]));
 });
 
 // I1: la media de los datos históricos.

@@ -26,3 +26,7 @@ export type { Distribution } from './types.ts';
 export { muestrear } from './types.ts';
 export { uniform } from './uniform.ts';
 export { weibull } from './weibull.ts';
+export { logistica, logLogistica, pareto, student } from './continuasB5.ts';
+export { binomialNegativa, geometrica, hipergeometrica, uniformeEntera } from './discretasB5.ts';
+export { limitesTrigen, trigen } from './trigen.ts';
+export { histograma } from './histograma.ts';

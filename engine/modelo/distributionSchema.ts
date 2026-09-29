@@ -36,6 +36,17 @@ type BaseSpec =
   | { type: 'binomial'; n: number; p: number }
   | { type: 'poisson'; lambda: number }
   | { type: 'discrete'; values: number[]; weights: number[] }
+  // B5: distribuciones nuevas.
+  | { type: 'student'; df: number; loc: number; scale: number }
+  | { type: 'logistic'; mean: number; scale: number }
+  | { type: 'loglogistic'; scale: number; shape: number }
+  | { type: 'pareto'; min: number; shape: number }
+  | { type: 'geometric'; p: number }
+  | { type: 'negbin'; r: number; p: number }
+  | { type: 'hypergeometric'; n: number; successes: number; population: number }
+  | { type: 'intuniform'; min: number; max: number }
+  | { type: 'trigen'; low: number; mode: number; high: number; pLow: number; pHigh: number }
+  | { type: 'histogram'; min: number; max: number; weights: number[] }
   /**
    * Una entrada de **texto** (T1): «Norte» con peso 20, «Sur» con 25… Se
    * muestrea como el índice de la categoría (una discreta 0..m−1), y el
@@ -94,6 +105,16 @@ function descriptorBase(spec: DistributionSpec): DescriptorDistribucion {
     case 'binomial': return { tipo: 'binomial', n: spec.n, p: spec.p };
     case 'poisson': return { tipo: 'poisson', lambda: spec.lambda };
     case 'discrete': return { tipo: 'discreta', valores: spec.values, pesos: spec.weights };
+    case 'student': return { tipo: 'student', gl: spec.df, centro: spec.loc, escala: spec.scale };
+    case 'logistic': return { tipo: 'logistica', media: spec.mean, escala: spec.scale };
+    case 'loglogistic': return { tipo: 'loglogistica', escala: spec.scale, forma: spec.shape };
+    case 'pareto': return { tipo: 'pareto', minimo: spec.min, forma: spec.shape };
+    case 'geometric': return { tipo: 'geometrica', p: spec.p };
+    case 'negbin': return { tipo: 'binomialNegativa', r: spec.r, p: spec.p };
+    case 'hypergeometric': return { tipo: 'hipergeometrica', n: spec.n, exitos: spec.successes, poblacion: spec.population };
+    case 'intuniform': return { tipo: 'uniformeEntera', min: spec.min, max: spec.max };
+    case 'trigen': return { tipo: 'trigen', inferior: spec.low, moda: spec.mode, superior: spec.high, pInferior: spec.pLow, pSuperior: spec.pHigh };
+    case 'histogram': return { tipo: 'histograma', min: spec.min, max: spec.max, pesos: spec.weights };
     case 'categorical': {
       const c = spec.categories;
       if (!Array.isArray(c) || c.length === 0) throw new Error('CATEGÓRICA: hace falta al menos una categoría');
@@ -134,6 +155,16 @@ export function fromDescriptor(d: DescriptorDistribucion): DistributionSpec {
     case 'binomial': return { type: 'binomial', n: d.n, p: d.p };
     case 'poisson': return { type: 'poisson', lambda: d.lambda };
     case 'discreta': return { type: 'discrete', values: d.valores, weights: d.pesos };
+    case 'student': return { type: 'student', df: d.gl, loc: d.centro, scale: d.escala };
+    case 'logistica': return { type: 'logistic', mean: d.media, scale: d.escala };
+    case 'loglogistica': return { type: 'loglogistic', scale: d.escala, shape: d.forma };
+    case 'pareto': return { type: 'pareto', min: d.minimo, shape: d.forma };
+    case 'geometrica': return { type: 'geometric', p: d.p };
+    case 'binomialNegativa': return { type: 'negbin', r: d.r, p: d.p };
+    case 'hipergeometrica': return { type: 'hypergeometric', n: d.n, successes: d.exitos, population: d.poblacion };
+    case 'uniformeEntera': return { type: 'intuniform', min: d.min, max: d.max };
+    case 'trigen': return { type: 'trigen', low: d.inferior, mode: d.moda, high: d.superior, pLow: d.pInferior, pHigh: d.pSuperior };
+    case 'histograma': return { type: 'histogram', min: d.min, max: d.max, weights: d.pesos };
     default:
       throw new Error(`Tipo de distribución no reconocido: ${JSON.stringify((d as { tipo?: unknown }).tipo)}`);
   }

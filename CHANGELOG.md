@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### B5: distribuciones nuevas (2026-09-29)
+
+**Añadido**
+- Diez distribuciones, en el motor, en el editor del panel (con su «cuándo
+  usarla» y su vista previa) y como funciones de Excel: **t de Student**
+  (`RIESGO.STUDENT`), **logística**, **log-logística**, **Pareto**,
+  **uniforme entera**, **geométrica**, **binomial negativa** (`BINOMNEG`),
+  **hipergeométrica** (`HIPERGEOM`), **Trigen** (triangular por
+  percentiles) e **histograma** de forma libre (`RIESGO.HISTOGRAMA(mín;
+  máx; pesos)`). Cada una probada contra su teoría (Kolmogorov–Smirnov o
+  frecuencias, y momentos).
+
 ### C4: gráficas nuevas (2026-09-29)
 
 **Añadido**

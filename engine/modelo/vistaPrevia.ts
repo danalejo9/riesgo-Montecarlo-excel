@@ -10,6 +10,7 @@
 
 import { construirDesdeDescriptor } from '../distributions/index.ts';
 import { toDescriptor, type DistributionSpec } from './distributionSchema.ts';
+import { esDiscretaEntera } from './catalogoDistribuciones.ts';
 
 export type VistaPrevia =
   | {
@@ -47,7 +48,7 @@ export function vistaPrevia(spec: DistributionSpec): VistaPrevia | null {
       const pares = spec.values.map((v, i) => ({ x: v, p: (spec.weights[i] ?? 0) / total })).sort((a, b) => a.x - b.x);
       return { tipo: 'discreta', barras: pares.map((b) => ({ etiqueta: String(b.x), x: b.x, p: b.p })), p5: q(0.05), p50: q(0.5), p95: q(0.95), media };
     }
-    if (spec.type === 'bernoulli' || spec.type === 'binomial' || spec.type === 'poisson') {
+    if (esDiscretaEntera(spec.type)) {
       const desde = Math.floor(q(0.0005));
       const hasta = Math.ceil(q(0.9995));
       const paso = Math.max(1, Math.ceil((hasta - desde + 1) / MAX_BARRAS));

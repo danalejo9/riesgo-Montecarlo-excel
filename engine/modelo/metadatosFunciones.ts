@@ -6,7 +6,7 @@
  */
 
 import {
-  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_HISTOGRAMA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from './funcionesRiesgo.ts';
 
 /** Lo que enseñan fuera de la simulación (B2). */
@@ -71,6 +71,19 @@ export function metadatosFunciones(): object {
         description: p.descripcion,
         type: 'any',
         dimensionality: 'matrix',
+      })),
+    }, {
+      // B5: mínimo y máximo, números; los pesos, una lista.
+      id: FUNCION_HISTOGRAMA.id,
+      name: FUNCION_HISTOGRAMA.id,
+      description: `${FUNCION_HISTOGRAMA.descripcion} ${FUERA}`,
+      result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
+      parameters: FUNCION_HISTOGRAMA.parametros.map((p, i) => ({
+        name: p.nombre,
+        description: p.descripcion,
+        type: i === 2 ? 'any' : 'number',
+        dimensionality: i === 2 ? 'matrix' : 'scalar',
       })),
     }, {
       id: FUNCION_TRUNCAR.id,
