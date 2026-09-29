@@ -1176,6 +1176,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     constantes). **Siguiente**: la ronda del usuario (bloque N, N1–N29);
     luego LAMBDA si la piden los libros, G (decisiones del usuario), M.
 
+62. [x] **Preparar la ronda (2026-09-29)**. «Leer el libro» y «Preparar y
+    simular» en «Cómo se calculó» (F2 se mide en el Excel del usuario, sin
+    enviar el libro). Guía con el orden de la ronda arriba, N30 (humedales,
+    10.000 y 1.000 iteraciones) y N31 (`npm run scan` sobre sus libros).
+    **Siguiente**: esperar la ronda; con sus cifras, optimizar lectura o
+    cálculo (F2) y desarrollar solo las funciones que salgan en N31.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

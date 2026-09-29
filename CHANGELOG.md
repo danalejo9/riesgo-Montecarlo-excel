@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### F2 (preparación): tiempo de lectura separado (2026-09-29)
+
+**Añadido**
+- «Cómo se calculó» separa **Leer el libro** (con hojas, fórmulas y viajes a
+  Excel) de **Preparar y simular**, para medir libros grandes en Excel.
+- Guía: la ronda del 29/09 explicada en orden al principio, y N30 (medir el
+  libro de 132 hojas) y N31 (escanear los libros propios).
+
 ### F1: DESREF con desplazamientos constantes (2026-09-29)
 
 **Añadido**

@@ -1,6 +1,21 @@
 # Guía de pruebas en Excel
 
-*Versión del 28/09, reescrita desde cero.* Recorre **todo** el complemento
+> **Ronda del 29/09 (la que toca ahora): qué hacer, en orden.**
+> 1. **Preparación** (sección 0, más abajo): actualizar, reinstalar y abrir
+>    el libro de demostración **recién descargado**.
+> 2. **Bloque N entero, de N1 a N31** (sección N, justo después de la 0).
+>    Es todo lo nuevo desde tu última ronda. Lo demás (bloques A–K, T, J, W,
+>    I) ya pasó; no hace falta repetirlo salvo N5, que es un repaso rápido.
+> 3. **N30 y N31** son con **tus propios libros** (el de humedales de 132
+>    hojas y los que pienses usar): miden el tiempo con un libro grande y
+>    buscan funciones que el motor todavía no sepa.
+> 4. Pendientes de antes: **W6** y **W7** (Excel para la Web). Mac, si algún
+>    día tienes uno a mano.
+>
+> Anota **OK** o **Falla + qué ves** por código, en el mismo documento de
+> siempre (tu Word de resultados), y pásamelo con las capturas.
+
+*Versión del 28/09, reescrita desde cero; bloque N ampliado el 29/09.* Recorre **todo** el complemento
 de principio a fin, incluido lo nuevo desde tu última ronda:
 
 - **Etapa 1b**: hoja volcada legible, entradas muestreadas y pantalla congelada.
@@ -66,7 +81,11 @@ npm start
   falta.
 - Abre **el libro recién descargado**
   (`ejemplos\demo-proyecto-aurora.xlsx`), no una copia vieja: ha cambiado
-  (hoja «Zonas» nueva y secciones 6, 7 y 8 en «Pruebas»).
+  (hoja «Zonas» y, en «Pruebas», secciones 6 a 12; la 9 a la 12 son del
+  29/09). Si guardaste cambios en tu copia y `git pull` se queja, descártala:
+  `git checkout -- ejemplos/demo-proyecto-aurora.xlsx` y repite el pull.
+  Mejor: trabaja sobre una copia (`Copy-Item ejemplos\demo-proyecto-aurora.xlsx
+  "$HOME\Desktop\aurora-prueba.xlsx"`) y deja el original intacto.
 - Las funciones de Excel del complemento han cambiado (hay seis nuevas). Si
   al escribir `=RIESGO.MEDIA` Excel no la propone, cierra Excel, repite
   `npm run stop` y `npm start` y vuelve a abrir el libro.
@@ -278,6 +297,45 @@ vacía `=SUMA(DESREF(C5;0;0;3;1))` (suma C5:C7) y márcala como salida junto a
 lo demás: simula con el motor **rápido** (antes DESREF lo mandaba al
 compatible) y da lo mismo que `=SUMA(C5:C7)`. Con un desplazamiento
 calculado (`DESREF(C5;C32/1000;0)`) sigue yendo al compatible.
+
+**N30. Tu libro grande: cuánto tarda** (F2 del plan, nuevo). Con el libro
+de humedales (`Humedales_v1_completo (100).xlsx`, 132 hojas) **abierto en
+Excel** y el complemento cargado (`npm start` en la carpeta del proyecto):
+1. Pestaña **Diagnóstico** → **Analizar el libro**. Apunta: hojas, fórmulas,
+   viajes a Excel, **tiempo**, cobertura y las funciones sin soporte que
+   liste.
+2. Pestaña **Modelo**: marca como entradas **tres o cuatro celdas con
+   números** de las que dependa un resultado importante (cualquier supuesto
+   del modelo) y como salida **ese resultado**. Deja la distribución que
+   propone el panel.
+3. En ⚙, **10.000 iteraciones** y motor **Automático**. **Simular**.
+4. En Resultados → «Cómo se calculó», apunta: **motor**, **tiempo total**,
+   **Leer el libro** (con hojas, fórmulas y viajes), **Preparar y simular**,
+   **celdas del modelo** e hilos. Si sale «Por qué no pudo el motor rápido»,
+   copia los motivos.
+5. Repite el paso 3 con **1.000 iteraciones** (para separar lo fijo de lo que
+   crece con las iteraciones).
+6. Al terminar, **quita las entradas y la salida** del panel o **no guardes**
+   el libro (el modelo se guarda dentro del archivo).
+- Pásame esas cifras (o capturas). No hace falta que me envíes el libro:
+  con esto sé dónde se va el tiempo (leer o calcular) y si hay que optimizar.
+  Si prefieres que lo mida yo aquí, súbelo al repositorio en
+  `tests/fixtures/privado/` (dime antes si contiene datos que no deban
+  quedar en GitHub).
+
+**N31. Qué funciones usan tus libros** (F1, LAMBDA; nuevo). En PowerShell,
+**en la carpeta del proyecto**:
+
+```
+cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
+npm run scan -- "RUTA\DEL\LIBRO.xlsx"
+```
+
+(cambia `RUTA\DEL\LIBRO.xlsx` por la ruta de verdad, entre comillas; puedes
+poner varios libros seguidos). Hazlo con el de humedales y con los libros
+que pienses simular de verdad. Pásame el informe que sale en pantalla: dice
+qué funciones faltan (por ejemplo `LAMBDA`, `DESREF` con desplazamientos
+calculados o `INDIRECTO`) y así desarrollo solo lo que tus libros usan.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

@@ -497,6 +497,18 @@ export function Resultados({
               {resultado.hilos !== undefined && ` · ${resultado.hilos === 1 ? 'un hilo' : `${resultado.hilos} hilos`}`}
             </dd>
             <dt>Celdas del modelo</dt><dd>{miles(resultado.eleccion.celdasNecesarias)}</dd>
+            {/* F2: cuánto de ese tiempo fue leer el libro y cuánto simular. */}
+            {resultado.lectura && (
+              <>
+                <dt>Leer el libro</dt>
+                <dd>
+                  {duracion(resultado.lectura.milisegundos)} · {miles(resultado.lectura.hojasVisibles)} hojas,{' '}
+                  {miles(resultado.lectura.formulas)} fórmulas, {miles(resultado.lectura.sincronizaciones)} viajes a Excel
+                </dd>
+                <dt>Preparar y simular</dt>
+                <dd>{duracion(Math.max(0, resultado.milisegundos - resultado.lectura.milisegundos))}</dd>
+              </>
+            )}
           </dl>
 
           {resultado.entradasDeFunciones && resultado.entradasDeFunciones.length > 0 && (
