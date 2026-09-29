@@ -496,8 +496,10 @@ la cinta **Entradas y salidas** (grupo Análisis).
   distribución o su valor más frecuente, y media, p5 y p95.
 - Pulsa una fila: Excel **selecciona esa celda** y la ventana pasa a la
   pestaña «Distribución» con esa entrada o salida.
-- En «Pruebas» (rellena), la entrada de «Fin de obra» si la hubiera dentro
-  de una suma con fecha se lee en días, no como una fecha de 1900.
+- Arreglo de paso: una función RIESGO dentro de una suma en una celda con
+  fecha (escribe en una celda vacía con formato de fecha
+  `=FECHA(2027;1;1)+RIESGO.NORMAL(90;10)` y márcala como salida) aparece en
+  la lista como `Normal(90; 10)` (días), no como una fecha de 1900.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
