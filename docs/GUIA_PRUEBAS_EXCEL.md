@@ -261,7 +261,9 @@ marcar nada: sale el **VAN** (media en torno a **30.000 €**, con mucha
 dispersión). Prueba también **Presupuesto de obra** (coste total en torno a
 **323.000 €**, con «Registro de riesgos») y **Cartera** (valor al cabo de un
 año en torno a **105.500 €**; cambia la correlación de B9 a 0 y el p5
-mejora).
+mejora). Y **Serie de precios** (H5): cinco salidas «Precio · Año 1…5»
+(medias en torno a 103 → 116, cada vez más dispersas) y el tipo a 5 años
+en torno al **4,2 %**; en «Comparar salidas», el abanico se abre con los años.
 
 **N28. Buscar objetivo** (H4 del plan, nuevo). Simula la demo con el VAN y
 pon el umbral «por debajo de 0». Abre **«Buscar objetivo»**: celda C5 (el

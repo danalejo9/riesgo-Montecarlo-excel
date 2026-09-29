@@ -49,7 +49,7 @@ async function simular(p: Plantilla, n = 20_000) {
 
 describe('plantillas', () => {
   it('hay tres, con sus salidas declaradas', () => {
-    expect(PLANTILLAS.map((p) => p.id)).toEqual(['inversion', 'obra', 'cartera']);
+    expect(PLANTILLAS.map((p) => p.id)).toEqual(['inversion', 'obra', 'cartera', 'serie']);
   });
 
   it('proyecto de inversión: el VAN sale con media razonable y dispersión', async () => {
@@ -73,5 +73,18 @@ describe('plantillas', () => {
     expect(r.get('Rentabilidad de la cartera')?.media).toBeCloseTo(0.055, 2);
     expect(r.get('Valor al cabo de un año')?.media).toBeGreaterThan(104_500);
     expect(r.get('Valor al cabo de un año')?.media).toBeLessThan(106_500);
+  });
+
+  it('serie de precios (H5): la media crece un 3 % al año y la dispersión se abre; el tipo vuelve al 4 %', async () => {
+    const r = await simular(PLANTILLAS[3] as Plantilla);
+    const a1 = r.get('Precio · Año 1');
+    const a5 = r.get('Precio · Año 5');
+    expect(a1?.media).toBeCloseTo(103, 0);
+    expect(a5?.media).toBeGreaterThan(114);
+    expect(a5?.media).toBeLessThan(118);
+    const sd = (w?: { m2: number; n: number }) => Math.sqrt((w?.m2 ?? 0) / ((w?.n ?? 2) - 1));
+    expect(sd(a5)).toBeGreaterThan(2 * sd(a1));
+    // 0,04 + 0,03·0,6⁵ ≈ 0,0423.
+    expect(r.get('Tipo a 5 años')?.media).toBeCloseTo(0.0423, 3);
   });
 });

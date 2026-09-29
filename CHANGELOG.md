@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### H5: series temporales (2026-09-29)
+
+**Añadido**
+- Cuarta plantilla, **Serie de precios**: un paseo aleatorio con deriva
+  (cada año, el anterior por 1 + un crecimiento incierto) y una serie con
+  reversión a la media, cada año como salida para el abanico. Enseña el
+  patrón que el motor ya admite: encadenar celdas con funciones RIESGO.
+
 ### H8: migración del modelo guardado (2026-09-29)
 
 **Añadido**

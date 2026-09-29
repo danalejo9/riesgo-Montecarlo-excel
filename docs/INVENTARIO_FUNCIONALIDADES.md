@@ -145,7 +145,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 34 | U1 | ✅ (29/09, falta Excel real) **Asistente del primer modelo y plantillas** (proyecto de inversión, presupuesto…): paso a paso para quien empieza | **Nuevo** (el estudio pedía «asistentes») |
 | 35 | H3 | ✅ (29/09, con `RIESGO.DECISION`) Simulaciones en serie (precio 100 / 110 / 120, lado a lado) | Plan |
 | 36 | H4 | ✅ (29/09, falta Excel real) Búsqueda de objetivo con riesgo («¿qué precio deja P(VAN<0) bajo el 10 %?») | Plan |
-| 37 | H5 | Series temporales (paseo aleatorio, reversión a la media) | Plan |
+| 37 | H5 | ✅ (29/09, con fórmulas encadenadas y una plantilla) Series temporales (paseo aleatorio, reversión a la media) | Plan |
 | 38 | H6 | ✅ (29/09) Avisos de coherencia del modelo | Plan |
 | 39 | H7 | ✅ (29/09) Trazado de dependencias (qué salidas dependen de cada entrada) | Plan |
 | 40 | H8 | ✅ (29/09) Migración del modelo guardado entre versiones | Plan |

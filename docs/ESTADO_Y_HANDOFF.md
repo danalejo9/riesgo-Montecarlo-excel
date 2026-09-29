@@ -1163,6 +1163,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     más nueva → no se toca, pedir actualizar). `validarRiskModel` migra
     antes de validar. **Siguiente**: H5 (series temporales), después F, G, M.
 
+60. [x] **H5 (2026-09-29)**. Plantilla `serie` en `excel/plantillas.ts`
+    (paseo con deriva y reversión a la media con fórmulas encadenadas),
+    probada en `plantillasU1.test.ts` (media 103 → 116, dispersión que se
+    abre, tipo → 4,2 %). **Siguiente**: F (según los libros del usuario),
+    G, M (tutoriales y manual), I3; y la ronda del usuario (bloque N).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

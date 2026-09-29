@@ -97,4 +97,32 @@ export const PLANTILLAS: readonly Plantilla[] = [
       { ref: 'A14', valor: 'Cambia la correlación de B9 a 0 y vuelve a simular: el p5 del valor mejora; así se ve lo que diversificar protege.' },
     ],
   },
+  {
+    id: 'serie',
+    nombre: 'Serie de precios (H5)',
+    descripcion: 'Un precio que evoluciona año a año con crecimiento incierto, y un tipo de interés que vuelve a su media; cada año, una salida para el abanico.',
+    hoja: 'Serie',
+    anchos: [30, 12],
+    celdas: [
+      { ref: 'A1', valor: 'Series temporales (plantilla)', negrita: true },
+      { ref: 'A3', valor: 'Año', negrita: true },
+      ...['B', 'C', 'D', 'E', 'F', 'G'].map((c, i) => ({ ref: `${c}3`, valor: i === 0 ? 'Hoy' : `Año ${i}`, negrita: true })),
+      // Paseo aleatorio con deriva: cada año, el anterior por (1 + crecimiento incierto).
+      { ref: 'A4', valor: 'Precio (crece un 3 % ± 8 %)' }, { ref: 'B4', valor: 100, formato: '#,##0.0' },
+      ...['C', 'D', 'E', 'F', 'G'].map((c, i) => ({
+        ref: `${c}4`,
+        valor: `=RIESGO.SALIDA("Precio · Año ${i + 1}")+${String.fromCharCode(c.charCodeAt(0) - 1)}4*(1+RIESGO.NORMAL(0.03,0.08))`,
+        formato: '#,##0.0',
+      })),
+      // Reversión a la media: se acerca un 40 % al 4 % cada año, con ruido.
+      { ref: 'A5', valor: 'Tipo de interés (vuelve al 4 %)' }, { ref: 'B5', valor: 0.07, formato: '0.00%' },
+      ...['C', 'D', 'E', 'F', 'G'].map((c) => {
+        const prev = `${String.fromCharCode(c.charCodeAt(0) - 1)}5`;
+        return { ref: `${c}5`, valor: `=${prev}+0.4*(0.04-${prev})+RIESGO.NORMAL(0,0.005)`, formato: '0.00%' };
+      }),
+      { ref: 'A6', valor: 'Tipo de interés dentro de 5 años' },
+      { ref: 'B6', valor: '=RIESGO.SALIDA("Tipo a 5 años")+G5', formato: '0.00%' },
+      { ref: 'A8', valor: 'Simula y abre «Comparar salidas»: el abanico del precio se abre con los años; el tipo converge hacia el 4 %.' },
+    ],
+  },
 ];
