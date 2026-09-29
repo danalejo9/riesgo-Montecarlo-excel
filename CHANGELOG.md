@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### C3: iteraciones a una hoja (2026-09-29)
+
+**Añadido**
+- Botón **«Iteraciones a una hoja»** en Resultados: escribe en la hoja
+  «Iteraciones» las entradas y salidas de cada iteración (las primeras,
+  hasta 100.000), emparejadas, para análisis o gráficos propios. Textos como
+  texto, fechas como fechas. Solo tras simular: no se guardan en el libro.
+
 ### T9: opciones de decisión (2026-09-29)
 
 **Añadido**

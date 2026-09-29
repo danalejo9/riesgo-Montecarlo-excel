@@ -40,6 +40,7 @@ import { esSalidaDeTexto, probabilidadDeValor, type PorCategoria } from '../exce
 import { lecturaDeSalida, lecturaDeTexto } from '../excel/lectura.ts';
 import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
+import { exportarIteraciones } from '../excel/exportarIteraciones.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
@@ -132,6 +133,21 @@ export function Resultados({
     }
   };
 
+  // C3: las iteraciones, a una hoja (hasta 100.000 filas, las que se retienen).
+  const exportar = async () => {
+    if (!resultado.iteraciones) return;
+    setVolcando(true);
+    setFalloVolcado(null);
+    try {
+      const hecho = await exportarIteraciones(resultado.iteraciones, LIMITE_EXPORTAR);
+      setVolcado(`${miles(hecho.filas)} iteraciones escritas en la hoja «${hecho.hoja}».`);
+    } catch (e) {
+      setFalloVolcado(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVolcando(false);
+    }
+  };
+
   const desactualizados = resultadosDesactualizados(resultado, modelo);
   // Comparar solo si la referencia es otra simulación, no esta misma.
   const comparando =
@@ -198,6 +214,12 @@ export function Resultados({
             title="Abre el informe en el navegador, listo para imprimir o guardar como PDF. Los datos no salen del equipo.">
             Informe PDF
           </button>
+          {resultado.iteraciones && resultado.iteraciones.n > 0 && (
+            <button type="button" className="secundario" onClick={() => void exportar()} disabled={volcando}
+              title={`Escribe en la hoja «Iteraciones» las entradas y salidas de las primeras ${miles(Math.min(resultado.iteraciones.n, LIMITE_EXPORTAR))} iteraciones, para tus propios análisis o gráficos.`}>
+              Iteraciones a una hoja
+            </button>
+          )}
         </div>
         {volcado && <p className="tenue">{volcado}</p>}
         {falloVolcado && <p className="aviso-linea">{falloVolcado}</p>}
@@ -792,6 +814,9 @@ export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly 
 }
 
 const TODAS = '__todas__';
+
+/** Como mucho, estas iteraciones a la hoja (C3): más, y Excel tarda en escribirlas y en abrir el libro. */
+const LIMITE_EXPORTAR = 100_000;
 
 /**
  * Las opciones de las decisiones lado a lado (T9): cada una simulada con los

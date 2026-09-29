@@ -125,7 +125,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 19 | D1 | ✅ **Análisis de escenarios por cola**: qué entradas pesan cuando la salida cae en su peor 10 % | Plan |
 | 20 | H2 | ✅ **Más medidas de riesgo**: VaR, CVaR, asimetría, curtosis, semidesviación | Plan |
 | 21 | I2 | ✅ (29/09, falta Excel real) **Ajuste orientado al riesgo**: error en percentiles por objetivo (general, cola alta, cola baja), tabla percentil a percentil, bootstrap, Poisson y binomial (la binomial negativa, con B5) | **Tú** (investigación) |
-| 22 | C3 | Exportar las iteraciones a una hoja | Plan |
+| 22 | C3 | ✅ (29/09, falta Excel real) Exportar las iteraciones a una hoja (entradas y salidas emparejadas, hasta 100.000) | Plan |
 | 23 | C4 | Gráficas nuevas: dispersión entrada × salida, caja y bigotes, abanico por periodos, curvas superpuestas | **Tú** (gráficas) |
 
 ### Etapa 5: el resto del plan (sin orden fijo entre sí, ≈ 15–25 días)

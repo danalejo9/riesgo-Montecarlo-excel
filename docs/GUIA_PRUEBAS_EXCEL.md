@@ -196,6 +196,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N16. Opciones de decisión** (T9 del plan, nuevo): haz T11.
 
+**N17. Iteraciones a una hoja** (C3 del plan, nuevo): haz C5.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -363,6 +365,19 @@ Pulsa «Imprimir o guardar como PDF».
   - Los **resultados**, con la nota «Resultados guardados en el libro el…».
   - El título del proyecto.
   - El umbral del VAN.
+
+**C5. Iteraciones a una hoja** (C3 del plan, nuevo). Simula la demo y pulsa
+**Iteraciones a una hoja** (arriba en Resultados).
+- Esperado: una hoja nueva **«Iteraciones»** con una fila por iteración
+  (10.000 con los ajustes de la demo): la columna *Iteración*, una por cada
+  entrada y una por cada salida, con su nombre y, debajo, su celda. Las dos
+  primeras filas quedan fijas al desplazarte.
+- Las entradas de texto salen como texto («Norte»), las fechas como fechas,
+  y una iteración sin número, en blanco.
+- Comprueba una fila a mano: con los valores de las entradas de esa fila, la
+  salida da lo mismo que calcula tu modelo.
+- Tras cerrar y reabrir el libro (resultados restaurados), el botón no
+  aparece: las iteraciones solo viven en memoria. Vuelve a simular.
 
 ---
 

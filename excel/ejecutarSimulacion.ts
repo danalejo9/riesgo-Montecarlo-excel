@@ -48,6 +48,7 @@ import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNC
 import { celdasConFormatoFecha } from './formatoCeldas.ts';
 import { registroDeRiesgos } from './registroRiesgos.ts';
 import { combinaciones, etiquetaCombinacion, fijarCombinacion, leerDecisiones, type ResultadoDecisiones, type SalidaEnOpcion } from './decisiones.ts';
+import type { IteracionesSimuladas } from './iteraciones.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -386,10 +387,20 @@ function conFechas(
 ): ResultadoSimulacionPanel {
   if (!r.ok || fechas.size === 0) return r;
   const entradaFecha = new Set(modelo.inputs.filter((_, i) => fechas.has(dirEntradas[i] as string)).map((e) => e.id));
+  const salidaFecha = new Set(modelo.outputs.filter((_, i) => fechas.has(dirSalidas[i] as string)).map((s) => s.id));
   return {
     ...r,
     salidas: r.salidas.map((s, i) => (fechas.has(dirSalidas[i] as string) ? { ...s, fecha: true } : s)),
     ...(r.entradas ? { entradas: r.entradas.map((e) => (entradaFecha.has(e.id) ? { ...e, fecha: true } : e)) } : {}),
+    ...(r.iteraciones
+      ? {
+          iteraciones: {
+            ...r.iteraciones,
+            entradas: r.iteraciones.entradas.map((e) => (entradaFecha.has(e.id) ? { ...e, fecha: true } : e)),
+            salidas: r.iteraciones.salidas.map((s) => (salidaFecha.has(s.id) ? { ...s, fecha: true } : s)),
+          },
+        }
+      : {}),
   };
 }
 
@@ -517,6 +528,7 @@ function porElRapido(
       milisegundos: performance.now() - args.arranque,
       muestraSensibilidad: largo,
       entradas: entradasMuestreadas(args.modelo, clavesEntrada, muestrasEntrada),
+      iteraciones: construirIteraciones(args.modelo, clavesEntrada, muestrasEntrada, new Map(resueltas.map((d) => [d.clave, d.categorias] as const)), clavesSalida, (c) => r.porSalida.get(c), largo),
       hilos: hilos(),
       salidas: args.modelo.outputs.map((salida, i) => {
         const s = r.porSalida.get(clavesSalida[i] as string);
@@ -604,6 +616,7 @@ async function porElCompatible(
     milisegundos: performance.now() - args.arranque,
     muestraSensibilidad: largo,
     entradas: entradasMuestreadas(args.modelo, clavesEntrada, muestrasEntrada),
+    iteraciones: construirIteraciones(args.modelo, clavesEntrada, muestrasEntrada, new Map(resueltas.map((d) => [d.clave, d.categorias] as const)), clavesSalida, (c) => r.porSalida.get(c), largo),
     salidas: args.modelo.outputs.map((salida, i) => {
       const s = r.porSalida.get(clavesSalida[i] as string);
       return {
@@ -621,6 +634,31 @@ async function porElCompatible(
         ...(s ? analisisDeTexto(args.modelo, clavesEntrada, muestrasEntrada, s) : {}),
       };
     }).map(conPrecision(args.objetivo)),
+  };
+}
+
+/** Las entradas y salidas de las primeras iteraciones, emparejadas (C3). */
+function construirIteraciones(
+  modelo: ModeloRiesgo,
+  clavesEntrada: readonly string[],
+  muestras: ReadonlyMap<string, ArrayLike<number>>,
+  categorias: ReadonlyMap<string, readonly string[] | undefined>,
+  clavesSalida: readonly string[],
+  salidaDe: (clave: string) => { muestra?: Float64Array; muestraTexto?: (string | null)[] } | undefined,
+  n: number,
+): IteracionesSimuladas {
+  return {
+    n,
+    entradas: modelo.inputs.flatMap((e, i) => {
+      const c = clavesEntrada[i] as string;
+      const valores = muestras.get(c);
+      const cats = categorias.get(c);
+      return valores ? [{ id: e.id, nombre: e.name, ref: e.ref, valores, ...(cats ? { categorias: cats } : {}) }] : [];
+    }),
+    salidas: modelo.outputs.flatMap((s, i) => {
+      const x = salidaDe(clavesSalida[i] as string);
+      return x?.muestra ? [{ id: s.id, nombre: s.name, ref: s.ref, valores: x.muestra, ...(x.muestraTexto ? { texto: x.muestraTexto } : {}) }] : [];
+    }),
   };
 }
 

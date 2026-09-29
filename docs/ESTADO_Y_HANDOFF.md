@@ -1091,6 +1091,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     primera opción (parámetro `repeating`). Banco: B36–B37. **Siguiente**:
     C3 (exportar iteraciones).
 
+51. [x] **C3 (2026-09-29)**. `iteraciones` en el resultado (solo en
+    memoria; `serializarResultados` lo quita): entradas regeneradas con el
+    generador de contador y la muestra retenida de cada salida, emparejadas
+    (`construirIteraciones`, en los dos motores; fechas por `conFechas`).
+    `excel/iteraciones.ts` (`tablaIteraciones`, puro) y
+    `excel/exportarIteraciones.ts` (hoja «Iteraciones», tramos de 5.000
+    filas, cabecera fija). Botón en la barra de Resultados. **Siguiente**:
+    C4 (dispersión, caja, abanico, curvas superpuestas).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

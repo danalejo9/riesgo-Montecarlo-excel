@@ -282,6 +282,8 @@ export interface SimulacionCompletada {
   funcionesIgnoradas?: string[];
   /** Celdas con funciones de resultados (`RIESGO.MEDIA`…, B6): se recalculan al terminar. */
   celdasConResultados?: string[];
+  /** Entradas y salidas de las primeras iteraciones, emparejadas (C3). Solo en memoria. */
+  iteraciones?: import('./iteraciones.ts').IteracionesSimuladas;
   /** Cada opción de las decisiones (`RIESGO.DECISION`, T9), con sus salidas. */
   decisiones?: import('./decisiones.ts').ResultadoDecisiones;
   /** Los `RIESGO.EVENTO` del libro con su valor esperado (T8). */

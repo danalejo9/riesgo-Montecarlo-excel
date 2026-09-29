@@ -68,7 +68,7 @@ interface ResultadosGuardados {
   version: typeof VERSION_RESULTADOS;
   guardadoEn: string;
   huellaModelo: string;
-  resultado: Omit<SimulacionCompletada, 'salidas' | 'restaurado'> & { salidas: SalidaGuardada[] };
+  resultado: Omit<SimulacionCompletada, 'salidas' | 'restaurado' | 'iteraciones'> & { salidas: SalidaGuardada[] };
 }
 
 export function serializarResultados(
@@ -76,8 +76,10 @@ export function serializarResultados(
   resultado: SimulacionCompletada,
   ahora: Date = new Date(),
 ): string {
-  const { restaurado: _r, salidas, ...resto } = resultado;
+  // Las iteraciones (C3) son hasta 100.000 filas: solo en memoria.
+  const { restaurado: _r, iteraciones: _i, salidas, ...resto } = resultado;
   void _r;
+  void _i;
   const guardado: ResultadosGuardados = {
     version: VERSION_RESULTADOS,
     guardadoEn: ahora.toISOString(),
