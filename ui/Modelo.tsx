@@ -494,26 +494,32 @@ function PrimerModelo() {
       setEscribiendo(false);
     }
   };
+  // Plegado y recordado: quien ya sabe empezar lo cierra una vez y no lo vuelve
+  // a ver; los ejemplos, cerrados de salida (no son lo primero que importa).
   return (
     <section className="primer-modelo">
-      <h2>Tu primer modelo</h2>
-      <ol className="pasos">
-        <li><strong>Las entradas inciertas.</strong> Selecciona en la hoja una celda cuyo valor no conoces (un precio, unas unidades, un plazo) y pulsa «Añadir la selección como entrada».</li>
-        <li><strong>Su distribución.</strong> Despliégala (▸) y elige cómo puede variar: si sabes el mínimo, el más probable y el máximo, una triangular.</li>
-        <li><strong>La salida.</strong> Selecciona el resultado que te importa (el beneficio, el coste total) y pulsa «Añadir la selección como salida».</li>
-        <li><strong>Simula.</strong> En Resultados verás la media, el rango probable y qué entrada pesa más.</li>
-      </ol>
-      <p className="tenue">¿Prefieres empezar por un ejemplo que ya funciona? Se escribe en una hoja nueva de este libro:</p>
-      <div className="plantillas">
-        {PLANTILLAS.map((p) => (
-          <button key={p.id} type="button" className="secundario plantilla" disabled={escribiendo} onClick={() => void crear(p)} title={p.descripcion}>
-            <strong>{p.nombre}</strong>
-            <span className="tenue">{p.descripcion}</span>
-          </button>
-        ))}
-      </div>
-      {hecho && <p className="aviso-ok">{hecho}</p>}
-      {fallo && <p className="aviso-linea">{fallo}</p>}
+      <Plegable id="primer-modelo" titulo={<h2>Cómo empezar</h2>} abierta resumen="cuatro pasos y ejemplos">
+        <ol className="pasos">
+          <li><strong>Las entradas inciertas.</strong> Selecciona en la hoja una celda cuyo valor no conoces (un precio, unas unidades, un plazo) y pulsa «Añadir la selección como entrada».</li>
+          <li><strong>Su distribución.</strong> Despliégala (▸) y elige cómo puede variar: si sabes el mínimo, el más probable y el máximo, una triangular.</li>
+          <li><strong>La salida.</strong> Selecciona el resultado que te importa (el beneficio, el coste total) y pulsa «Añadir la selección como salida».</li>
+          <li><strong>Simula.</strong> En Resultados verás la media, el rango probable y qué entrada pesa más.</li>
+        </ol>
+        <p className="tenue">¿Ya usas funciones RIESGO en las fórmulas? Te basta el paso 3: marca la salida y simula.</p>
+        <Plegable id="plantillas" titulo={<h3>Ejemplos listos para simular</h3>} resumen={`${PLANTILLAS.length} ejemplos`}>
+          <p className="tenue">Cada uno se escribe en una hoja nueva de este libro, con sus entradas y salidas ya puestas.</p>
+          <div className="plantillas">
+            {PLANTILLAS.map((p) => (
+              <button key={p.id} type="button" className="secundario plantilla" disabled={escribiendo} onClick={() => void crear(p)} title={p.descripcion}>
+                <strong>{p.nombre}</strong>
+                <span className="tenue">{p.descripcion}</span>
+              </button>
+            ))}
+          </div>
+        </Plegable>
+        {hecho && <p className="aviso-ok">{hecho}</p>}
+        {fallo && <p className="aviso-linea">{fallo}</p>}
+      </Plegable>
     </section>
   );
 }

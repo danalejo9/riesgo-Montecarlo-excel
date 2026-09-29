@@ -166,7 +166,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     clavesSalida.push(...salidasDeFunciones.map((s) => s.clave));
   }
   // T9: las decisiones se simulan con cada opción; de momento, la primera.
-  const lecturaDecisiones = leerDecisiones(grafo);
+  const lecturaDecisiones = leerDecisiones(grafo, clavesSalida);
   if (lecturaDecisiones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO.DECISION que no se pueden usar tal como están.', lecturaDecisiones.errores);
   }

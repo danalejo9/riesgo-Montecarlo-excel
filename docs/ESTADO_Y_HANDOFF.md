@@ -1216,6 +1216,20 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (en espera del Excel del usuario, N33/I3). **Siguiente**: la ronda del
     usuario (N1–N33, W6, W7); con sus resultados, F2 y lo que salga en N31.
 
+66. [x] **Ronda parcial del usuario (N1–N6, 2026-09-29)**. N1–N3 y N6 OK.
+    N4 fallaba con `ItemNotFound` en `restaurar` del resaltado (dirección de
+    una hoja que ya no existe): `direccionPintable` (`excel/direcciones.ts`)
+    y `leerPrevios` carga las hojas y filtra. `leerDecisiones(grafo,
+    clavesSalida)` solo cuenta las decisiones del ámbito de las salidas.
+    «Cómo empezar» plegable (plantillas dentro, plegadas). Botón
+    Diagnóstico → «Rellenar las hojas de prueba» (`excel/hojasPrueba.ts`,
+    `rellenarHojasPrueba.ts`). N6: F9 lento en «Aleatorio» (funciones
+    personalizadas volátiles con `requiresAddress`, cada una un viaje al
+    runtime JS); se pide medirlo en N7 antes de optimizar. Propuestas de la
+    cinta y de interacción (ventana de distribución con estadísticas,
+    delimitadores, catálogo de distribuciones, manual/ejemplos en la cinta):
+    evaluadas con el usuario, pendientes de su decisión.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

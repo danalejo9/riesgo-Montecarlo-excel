@@ -99,7 +99,7 @@ export const PLANTILLAS: readonly Plantilla[] = [
   },
   {
     id: 'serie',
-    nombre: 'Serie de precios (H5)',
+    nombre: 'Serie de precios',
     descripcion: 'Un precio que evoluciona año a año con crecimiento incierto, y un tipo de interés que vuelve a su media; cada año, una salida para el abanico.',
     hoja: 'Serie',
     anchos: [30, 12],

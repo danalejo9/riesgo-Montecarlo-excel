@@ -6,6 +6,7 @@
  */
 
 import { reemplazarAst, type Grafo } from '../engine/graph/index.ts';
+import { clausuraDependencias } from '../engine/graph/subgraph.ts';
 import { FUNCION_DECISION, idDeFuncionRiesgo } from '../engine/modelo/index.ts';
 import { claveCelda, letrasDeColumna, recorrer, type Nodo } from '../engine/parser/ast.ts';
 import { NUMERO, TEXTO } from '../engine/values/columna.ts';
@@ -25,11 +26,21 @@ const MAX_OPCIONES = 20;
 
 const esDecision = (n: Nodo) => n.tipo === 'funcion' && idDeFuncionRiesgo(n.nombre) === FUNCION_DECISION.id;
 
-export function leerDecisiones(grafo: Grafo): { decisiones: Decision[]; errores: string[] } {
+export function leerDecisiones(
+  grafo: Grafo,
+  /**
+   * Las salidas: solo cuentan las decisiones de las que depende alguna. Una
+   * `RIESGO.DECISION` en otra hoja que no toca nada no multiplica la
+   * simulación por sus opciones. Sin salidas, todas (para las pruebas).
+   */
+  clavesSalida?: readonly string[],
+): { decisiones: Decision[]; errores: string[] } {
   const decisiones: Decision[] = [];
   const errores: string[] = [];
+  const ambito = clavesSalida ? clausuraDependencias(grafo, clavesSalida) : null;
   for (const [clave, nodo] of grafo.nodos) {
     if (!nodo.ast) continue;
+    if (ambito && !ambito.has(clave)) continue;
     let hay = false;
     recorrer(nodo.ast, (n) => {
       if (esDecision(n)) hay = true;

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   claveDesdeDireccion,
   componerDireccion,
+  direccionPintable,
   esDireccionDirecta,
   partirDireccion,
 } from '../../excel/direcciones.ts';
@@ -90,5 +91,19 @@ describe('esDireccionDirecta', () => {
     expect(esDireccionDirecta('Hoja1!B7:C9')).toBe(false);
     // Una eñe no hace directa a una dirección, ni rompe la comprobación.
     expect(esDireccionDirecta('Año_base')).toBe(false);
+  });
+});
+
+describe('direccionPintable (N4: resaltar sin romperse con hojas borradas)', () => {
+  const hojas = ['Pruebas', 'Flujo de caja'];
+  it('la hoja tiene que existir hoy (sin distinguir mayúsculas)', () => {
+    expect(direccionPintable('Pruebas!C5', hojas)).toBe(true);
+    expect(direccionPintable("'Flujo de caja'!B2:B9", hojas)).toBe(true);
+    expect(direccionPintable('pruebas!$C$5', hojas)).toBe(true);
+    expect(direccionPintable('Proyecto de inversión!C5', hojas)).toBe(false);
+  });
+  it('y tiene que ser una celda o un rango', () => {
+    expect(direccionPintable('Pruebas!C49 (2)', hojas)).toBe(false);
+    expect(direccionPintable('C5', hojas)).toBe(true);
   });
 });

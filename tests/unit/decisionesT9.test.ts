@@ -105,3 +105,11 @@ describe('en Excel', () => {
     expect(() => registradas.get('DECISION')?.([[['']]])).toThrow();
   });
 });
+
+describe('solo las decisiones que afectan a las salidas', () => {
+  it('una DECISION que no toca ninguna salida no multiplica la simulación', () => {
+    const { grafo } = libro({ A1: 'RIESGO.NORMAL(100,10)', B1: 'RIESGO.DECISION(1,2)', C1: 'A1*2', D1: 'A1*B1' });
+    expect(leerDecisiones(grafo, [k('C1')]).decisiones).toEqual([]);
+    expect(leerDecisiones(grafo, [k('D1')]).decisiones.map((d) => d.clave)).toEqual([k('B1')]);
+  });
+});

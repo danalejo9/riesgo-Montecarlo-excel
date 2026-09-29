@@ -1,19 +1,56 @@
 # Guía de pruebas en Excel
 
-> **Ronda del 29/09 (la que toca ahora): qué hacer, en orden.**
-> 1. **Preparación** (sección 0, más abajo): actualizar, reinstalar y abrir
->    el libro de demostración **recién descargado**.
-> 2. **Bloque N entero, de N1 a N33** (sección N, justo después de la 0).
->    Es todo lo nuevo desde tu última ronda. Lo demás (bloques A–K, T, J, W,
->    I) ya pasó; no hace falta repetirlo salvo N5, que es un repaso rápido.
-> 3. **N30 y N31** son con **tus propios libros** (el de humedales de 132
->    hojas y los que pienses usar): miden el tiempo con un libro grande y
->    buscan funciones que el motor todavía no sepa.
-> 4. Pendientes de antes: **W6** y **W7** (Excel para la Web). Mac, si algún
->    día tienes uno a mano.
+> **Ronda del 29/09 — qué hacer, paso a paso** (actualizado tras tus
+> resultados de N1–N6).
 >
-> Anota **OK** o **Falla + qué ves** por código, en el mismo documento de
-> siempre (tu Word de resultados), y pásamelo con las capturas.
+> **Paso 1. Actualizar.** En PowerShell, una línea cada vez:
+>
+> ```
+> cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
+> git checkout -- ejemplos/demo-proyecto-aurora.xlsx
+> git pull origin claude/nifty-thompson-xfnqm2
+> npm install
+> npm run stop
+> npm start
+> ```
+>
+> La segunda línea descarta tu copia del libro de demostración (el pull se
+> negaba por ella). Si el pull se queja de otro `.xlsx`, haz lo mismo con
+> ese archivo: `git checkout -- RUTA` y repite el pull. Sale bien cuando
+> termina en `Fast-forward`.
+>
+> **Paso 2. Tu copia del libro, ya rellena.** No hay que reconstruir nada a
+> mano:
+> 1. Copia el libro al escritorio (así el original queda intacto y el próximo
+>    pull no se queja):
+>    `Copy-Item ejemplos\demo-proyecto-aurora.xlsx "$HOME\Desktop\aurora-prueba.xlsx"`
+> 2. Abre `aurora-prueba.xlsx` del escritorio y abre el panel (Riesgo → Modelo).
+> 3. Pestaña **Diagnóstico** → sección **«Hojas de prueba»** → botón
+>    **«Rellenar las hojas de prueba»**. Escribe de una vez las 28 fórmulas de
+>    las celdas amarillas de «Pruebas» (secciones 1 a 12) y «Zonas» (C12).
+>    Debe decir «Escritas 28 fórmulas».
+> 4. Guarda (Ctrl+G). Desde aquí, **cada prueba que diga «escribe …» ya lo
+>    tiene escrito**: sáltate ese paso y comprueba lo que dice «Esperado».
+>
+> Dos cosas normales en este libro relleno: en Resultados siempre aparece
+> también la salida **«Coste total»** (la declara `RIESGO.SALIDA` en C49), y
+> la sección 12 (decisiones) solo se simula tres veces si marcas C64 como
+> salida.
+>
+> **Paso 3. Las pruebas, en este orden.**
+> - **Ya hechas** (tu documento): N1, N2, N3 y N6.
+> - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
+>   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
+>   no existía). Debe ir sin errores.
+> - **Seguir con N5 y de N7 a N33** (sección N, justo después de la 0).
+>   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
+> - Pendientes de antes: **W6** y **W7** (Excel para la Web).
+>
+> Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
+> anteriores: es referencia, no hace falta repetirlo.
+>
+> Anota **OK** o **Falla + qué ves** por código en tu Word de resultados y
+> pásamelo con las capturas.
 
 *Versión del 28/09, reescrita desde cero; bloque N ampliado el 29/09.* Recorre **todo** el complemento
 de principio a fin, incluido lo nuevo desde tu última ronda:
@@ -37,8 +74,9 @@ Las guías anteriores quedan sustituidas por esta.
 
 Se usa el libro **`ejemplos/demo-proyecto-aurora.xlsx`**, que tiene cuatro
 hojas: **Instrucciones**, **Modelo**, **Pruebas** y **Zonas**. Las celdas en
-amarillo claro de «Pruebas» y «Zonas» están vacías a propósito: ahí se
-escribe lo que diga la guía.
+amarillo claro de «Pruebas» y «Zonas» vienen vacías: se rellenan todas con el
+botón **Diagnóstico → «Rellenar las hojas de prueba»** (paso 2 de arriba), o
+a mano, escribiendo lo que diga cada prueba.
 
 Cada prueba tiene un código (A1, A2…). Por cada código dime:
 
@@ -147,6 +185,10 @@ la pantalla».
 - Esperado: el botón Aleatorio queda desactivado y Valores fijos activo; C5,
   C6 y C7 cambian a valores al azar. Pulsa **F9** varias veces: cambian cada
   vez. En «Zonas», C12 (`RIESGO.CATEGORIA`) va saliendo Norte, Sur o Este.
+  (C5, C6 y C12 ya las escribió «Rellenar las hojas de prueba».)
+- Cuenta, a ojo, **cuántos segundos** tardan en cambiar tras F9 y apúntalo
+  (en N6 notaste que tardan): con la cifra decido si vale la pena
+  optimizarlo.
 - Simula C7: la media sigue en torno a **10.670**, como siempre (el modo no
   toca la simulación).
 - Guarda, cierra y reabre: el libro sigue en Aleatorio. Vuelve a **Valores

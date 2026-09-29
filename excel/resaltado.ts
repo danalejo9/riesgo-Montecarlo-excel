@@ -29,6 +29,7 @@
  */
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
+import { direccionPintable } from './direcciones.ts';
 import { rangoDesdeDireccion } from './rangos.ts';
 
 /** Amarillo suave: el color de siempre de una celda de supuestos. */
@@ -66,19 +67,30 @@ export const CLAVE_RELLENOS = 'riesgoMontecarlo.fills';
  */
 type RellenosPrevios = Record<string, string>;
 
-async function leerPrevios(context: Excel.RequestContext): Promise<RellenosPrevios> {
+/**
+ * Lo guardado y, en el mismo viaje, las hojas que existen hoy: una dirección
+ * de una hoja borrada o renombrada no se toca (Excel daría `ItemNotFound` y
+ * no se pintaría nada), y se olvida.
+ */
+async function leerPrevios(context: Excel.RequestContext): Promise<{ previos: RellenosPrevios; pintable: (ref: string) => boolean }> {
   const ajuste = context.workbook.settings.getItemOrNullObject(CLAVE_RELLENOS);
   ajuste.load(['value', 'isNullObject']);
+  const hojas = context.workbook.worksheets;
+  hojas.load('items/name');
   await context.sync();
 
-  if (ajuste.isNullObject) return {};
+  const nombres = hojas.items.map((h) => h.name);
+  const pintable = (ref: string) => direccionPintable(ref, nombres);
+  if (ajuste.isNullObject) return { previos: {}, pintable };
   try {
     const dato: unknown = JSON.parse(typeof ajuste.value === 'string' ? ajuste.value : '{}');
-    return typeof dato === 'object' && dato !== null ? (dato as RellenosPrevios) : {};
+    const previos = typeof dato === 'object' && dato !== null ? (dato as RellenosPrevios) : {};
+    for (const ref of Object.keys(previos)) if (!pintable(ref)) delete previos[ref];
+    return { previos, pintable };
   } catch {
     // Un ajuste corrupto no puede dejar sin complemento a nadie: se pierde la
     // memoria del formato anterior, que es un mal menor frente a no arrancar.
-    return {};
+    return { previos: {}, pintable };
   }
 }
 
@@ -103,7 +115,8 @@ export async function aplicarResaltado(modelo: ModeloRiesgo): Promise<void> {
   for (const s of modelo.outputs) deseado.set(s.ref, COLOR_SALIDA);
 
   await Excel.run(async (context) => {
-    const previos = await leerPrevios(context);
+    const { previos, pintable } = await leerPrevios(context);
+    for (const ref of [...deseado.keys()]) if (!pintable(ref)) deseado.delete(ref);
 
     // 1. Quitar el resaltado de lo que ya no está en el modelo.
     for (const ref of Object.keys(previos)) {
@@ -149,7 +162,7 @@ export async function aplicarResaltado(modelo: ModeloRiesgo): Promise<void> {
  */
 export async function quitarResaltado(): Promise<void> {
   await Excel.run(async (context) => {
-    const previos = await leerPrevios(context);
+    const { previos } = await leerPrevios(context);
     for (const [ref, color] of Object.entries(previos)) restaurar(context, ref, color);
 
     context.workbook.settings.add(CLAVE_RELLENOS, JSON.stringify({}));

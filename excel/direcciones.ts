@@ -111,3 +111,17 @@ export function celdasDelRango(direccion: string): string[] {
   for (let f = f1; f <= f2; f++) for (let c = c1; c <= c2; c++) { const celda = `${letras(c)}${f}`; out.push(hoja ? componerDireccion(hoja, celda) : celda); }
   return out;
 }
+
+/**
+ * ¿Se puede pintar esta dirección en el libro de hoy? Hace falta que su hoja
+ * exista (una hoja borrada o renombrada deja direcciones huérfanas en lo que se
+ * guardó) y que sea una celda o un rango de verdad. Excel no distingue
+ * mayúsculas en los nombres de hoja.
+ */
+export function direccionPintable(direccion: string, hojas: readonly string[]): boolean {
+  const { hoja, rango } = partirDireccion(direccion);
+  if (!/^\$?[A-Za-z]{1,3}\$?\d{1,7}(?::\$?[A-Za-z]{1,3}\$?\d{1,7})?$/.test(rango)) return false;
+  if (hoja === undefined) return true;
+  const buscada = hoja.toLowerCase();
+  return hojas.some((h) => h.toLowerCase() === buscada);
+}

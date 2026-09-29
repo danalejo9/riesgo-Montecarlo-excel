@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Arreglos de la ronda (N4, N6) y hojas de prueba en un clic (2026-09-29)
+
+**Corregido**
+- N4: `ItemNotFound` al resaltar (por ejemplo, al pasar al modo compatible)
+  cuando el libro recordaba celdas de una hoja borrada o renombrada. Ahora
+  esas direcciones se saltan y se olvidan.
+- Una `RIESGO.DECISION` que no afecta a ninguna salida ya no multiplica la
+  simulación por sus opciones.
+
+**Cambiado**
+- «Tu primer modelo» pasa a «Cómo empezar», plegable y recordado; los
+  ejemplos (plantillas) quedan plegados dentro, no son lo primero que se ve.
+
+**Añadido**
+- Diagnóstico → «Rellenar las hojas de prueba»: escribe de una vez las 28
+  fórmulas de las celdas amarillas de «Pruebas» y «Zonas» del libro de
+  demostración, sin tocar las que ya tienen algo.
+- Guía: la cabecera de la ronda, paso a paso (actualizar, copia rellena,
+  qué pruebas quedan).
+
 ### F1: LAMBDA y nombres definidos (2026-09-29)
 
 **Añadido**
