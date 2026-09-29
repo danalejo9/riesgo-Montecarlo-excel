@@ -309,3 +309,17 @@ export function resumirDistribucionFecha(spec: DistributionSpec): string {
   }).filter((x): x is string => x !== null);
   return `${desc.nombre}(${valores.join('; ')})`;
 }
+
+/**
+ * El catálogo visual (U3.3), agrupado por **lo que sabe quien modela**, no
+ * por familias estadísticas: se busca «sé el mínimo y el máximo», no «una
+ * beta». Cada distribución está en un grupo, y solo en uno.
+ */
+export const GRUPOS_CATALOGO: readonly { titulo: string; tipos: readonly TipoDistribucion[] }[] = [
+  { titulo: 'Sé el mínimo, el más probable y el máximo', tipos: ['triangular', 'pert', 'trigen', 'uniform'] },
+  { titulo: 'Varía alrededor de un valor central', tipos: ['normal', 'student', 'logistic'] },
+  { titulo: 'Siempre positiva, con cola a la derecha', tipos: ['lognormal', 'loglogistic', 'gamma', 'weibull', 'exponential', 'pareto'] },
+  { titulo: 'Una proporción, entre 0 y 1', tipos: ['beta'] },
+  { titulo: 'Pasa o no pasa, o se cuenta', tipos: ['bernoulli', 'binomial', 'poisson', 'negbin', 'geometric', 'hypergeometric', 'intuniform'] },
+  { titulo: 'Una forma o una lista propias', tipos: ['histogram', 'discrete', 'categorical'] },
+];

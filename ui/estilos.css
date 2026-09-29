@@ -509,3 +509,19 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .diagnostico-ajuste { border-left: 3px solid var(--acento); padding: 2px 0 2px 10px; margin: 8px 0; }
 .diagnostico-ajuste h5 { margin: 0 0 4px; font-size: 12px; }
 .diagnostico-ajuste ul { margin: 0; padding-left: 16px; font-size: 12px; }
+
+/* U3.3: el catálogo visual de distribuciones. */
+.enlace-catalogo { margin: 0 0 8px; }
+.catalogo { margin: 8px 0 16px; }
+.catalogo h4 { margin: 12px 0 4px; font-size: 12px; color: var(--tenue); font-weight: 600; }
+.catalogo-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.catalogo-ficha {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  text-align: left; padding: 8px; border: 1px solid var(--borde); border-radius: 6px;
+  background: var(--fondo); color: var(--texto); font-weight: 400; cursor: pointer;
+}
+.catalogo-ficha:hover { border-color: var(--acento); }
+.catalogo-ficha:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.catalogo-ficha.elegida { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.catalogo-ficha .tenue { font-size: 12px; line-height: 1.35; }
+.miniatura path, .miniatura rect { fill: var(--serie-1); opacity: 0.8; }

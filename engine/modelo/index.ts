@@ -1,5 +1,6 @@
 export {
   CATALOGO_DISTRIBUCIONES,
+  GRUPOS_CATALOGO,
   describirDistribucion,
   esDiscretaEntera,
   resumirDistribucionFecha,

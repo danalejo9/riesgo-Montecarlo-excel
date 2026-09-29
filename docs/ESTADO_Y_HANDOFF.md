@@ -1245,6 +1245,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     ajuste desde la cinta). **Siguiente**: U3.3 (catálogo) y U3.4 (lista de
     entradas y salidas).
 
+68. [x] **U3.3 (2026-09-29)**. `GRUPOS_CATALOGO` (catálogo del motor,
+    agrupado por lo que sabe quien modela; probado que cada tipo está en uno
+    y solo uno) y `Catalogo`/`Miniatura` en `EditorDistribucion.tsx` (forma
+    de `vistaPrevia` del ejemplo por defecto). Visto en el banco.
+    **Siguiente**: U3.4.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

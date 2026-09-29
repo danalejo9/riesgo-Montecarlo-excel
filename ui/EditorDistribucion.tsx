@@ -27,6 +27,7 @@ import { leerNumero, numero, numeroEditable } from './formato.ts';
 
 import {
   CATALOGO_DISTRIBUCIONES,
+  GRUPOS_CATALOGO,
   describirDistribucion,
   problemaDeDistribucion,
   vistaPrevia,
@@ -46,6 +47,7 @@ export function EditorDistribucion({
 }) {
   // Lo que el usuario ha escrito y todavía no es una distribución válida.
   const [borrador, setBorrador] = useState<DistributionSpec | null>(null);
+  const [conCatalogo, setConCatalogo] = useState(false);
   const actual = borrador ?? spec;
   const desc = describirDistribucion(actual.type);
   const problema = borrador ? problemaDeDistribucion(borrador) : null;
@@ -53,6 +55,18 @@ export function EditorDistribucion({
   // Si la distribución cambia desde fuera (otro libro, ajuste a datos), el
   // borrador ya no tiene sentido.
   useEffect(() => setBorrador(null), [spec]);
+
+  // Al cambiar de tipo se parte del ejemplo por defecto: los parámetros de
+  // una no significan nada en otra, y conservarlos por nombre daría una PERT
+  // con la desviación de una normal.
+  const elegirTipo = (tipo: TipoDistribucion) => {
+    if (tipo === actual.type) return;
+    const nueva = describirDistribucion(tipo)?.porDefecto;
+    if (nueva) {
+      setBorrador(null);
+      alCambiar(nueva);
+    }
+  };
 
   const intentar = (nueva: DistributionSpec) => {
     if (problemaDeDistribucion(nueva) === null) {
@@ -69,17 +83,7 @@ export function EditorDistribucion({
         <span className="tenue">Distribución</span>
         <select
           value={actual.type}
-          onChange={(e) => {
-            const tipo = e.target.value as TipoDistribucion;
-            // Al cambiar de tipo se parte del ejemplo por defecto: los
-            // parámetros de una no significan nada en otra, y conservarlos
-            // por nombre daría una PERT con la desviación de una normal.
-            const nueva = describirDistribucion(tipo)?.porDefecto;
-            if (nueva) {
-              setBorrador(null);
-              alCambiar(nueva);
-            }
-          }}
+          onChange={(e) => elegirTipo(e.target.value as TipoDistribucion)}
         >
           {CATALOGO_DISTRIBUCIONES.map((d) => (
             <option key={d.tipo} value={d.tipo}>
@@ -90,6 +94,18 @@ export function EditorDistribucion({
       </label>
 
       {desc && <p className="tenue">{desc.cuando}</p>}
+      <button type="button" className="secundario enlace-catalogo" onClick={() => setConCatalogo((v) => !v)} aria-expanded={conCatalogo}>
+        {conCatalogo ? 'Ocultar el catálogo' : '¿Cuál elegir? Ver el catálogo'}
+      </button>
+      {conCatalogo && (
+        <Catalogo
+          actual={actual.type}
+          alElegir={(t) => {
+            elegirTipo(t);
+            setConCatalogo(false);
+          }}
+        />
+      )}
 
       {actual.type === 'categorical' ? (
         <EditorCategorica spec={actual} alCambiar={intentar} {...(leerSeleccion ? { leerSeleccion } : {})} />
@@ -151,6 +167,65 @@ export function EditorDistribucion({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * El catálogo visual (U3.3): cada distribución con su forma en miniatura y
+ * cuándo usarla, agrupadas por lo que se sabe. Elegir una es lo mismo que
+ * elegirla en el desplegable.
+ */
+function Catalogo({ actual, alElegir }: { actual: TipoDistribucion; alElegir: (t: TipoDistribucion) => void }) {
+  return (
+    <div className="catalogo">
+      {GRUPOS_CATALOGO.map((g) => (
+        <section key={g.titulo}>
+          <h4>{g.titulo}</h4>
+          <div className="catalogo-rejilla">
+            {g.tipos.map((t) => {
+              const d = describirDistribucion(t);
+              if (!d) return null;
+              return (
+                <button key={t} type="button" className={`catalogo-ficha${t === actual ? ' elegida' : ''}`} aria-pressed={t === actual} onClick={() => alElegir(t)}>
+                  <Miniatura spec={d.porDefecto} />
+                  <strong>{d.nombre}</strong>
+                  <span className="tenue">{d.cuando}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/** La forma, en pequeño: la curva de una continua o las barras de una discreta. */
+function Miniatura({ spec }: { spec: DistributionSpec }) {
+  const v = vistaPrevia(spec);
+  const ancho = 72;
+  const alto = 28;
+  if (!v) return <svg className="miniatura" width={ancho} height={alto} aria-hidden="true" />;
+  if (v.tipo === 'continua') {
+    const xs = v.puntos.map((p) => p.x);
+    const x0 = Math.min(...xs);
+    const x1 = Math.max(...xs);
+    const yMax = v.puntos.reduce((m, p) => Math.max(m, p.y), 0) || 1;
+    const px = (x: number) => ((x - x0) / (x1 - x0 || 1)) * ancho;
+    const py = (y: number) => alto - (y / yMax) * (alto - 2);
+    const d = `M0 ${alto} ${v.puntos.map((p) => `L${px(p.x).toFixed(1)} ${py(p.y).toFixed(1)}`).join(' ')} L${ancho} ${alto} Z`;
+    return <svg className="miniatura" width={ancho} height={alto} viewBox={`0 0 ${ancho} ${alto}`} aria-hidden="true"><path d={d} /></svg>;
+  }
+  const barras = v.barras.slice(0, 24);
+  const pMax = barras.reduce((m, b) => Math.max(m, b.p), 0) || 1;
+  const w = ancho / Math.max(barras.length, 1);
+  return (
+    <svg className="miniatura" width={ancho} height={alto} viewBox={`0 0 ${ancho} ${alto}`} aria-hidden="true">
+      {barras.map((b, i) => {
+        const h = (b.p / pMax) * (alto - 2);
+        return <rect key={i} x={i * w + w * 0.15} y={alto - h} width={w * 0.7} height={h} />;
+      })}
+    </svg>
   );
 }
 

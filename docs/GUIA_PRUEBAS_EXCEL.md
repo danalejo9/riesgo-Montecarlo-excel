@@ -42,7 +42,7 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N36** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N37** (sección N, justo después de la 0).
 >   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
@@ -478,6 +478,15 @@ selecciona **K5:K44** (los precios históricos) y pulsa **Ajustar a datos**.
 - Selecciona una celda vacía (por ejemplo **C70**) y pulsa **Usar** en la
   primera: C70 se marca como entrada con esa distribución y se abre su
   detalle.
+
+**N37. Catálogo de distribuciones** (U3.3, nuevo). Abre una entrada del
+panel (▸) y pulsa **«¿Cuál elegir? Ver el catálogo»**.
+- Esperado: las distribuciones en fichas, cada una con su forma pequeña y
+  una línea de cuándo usarla, en seis grupos («Sé el mínimo, el más probable
+  y el máximo», «Varía alrededor de un valor central»…). La actual, marcada.
+- Pulsa **Lognormal**: el catálogo se cierra, la entrada pasa a lognormal y
+  su vista previa cambia. Dime si los grupos te sirven para elegir o si
+  cambiarías alguno.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

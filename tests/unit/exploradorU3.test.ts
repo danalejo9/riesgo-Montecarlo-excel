@@ -105,3 +105,13 @@ describe('la cinta reorganizada (U3.2)', () => {
     expect(grupos).toEqual(['GrupoPrincipal', 'GrupoAcciones', 'GrupoSimulacion', 'GrupoModo', 'GrupoAnalisis', 'GrupoInformes', 'GrupoAyuda']);
   });
 });
+
+describe('catálogo visual (U3.3)', () => {
+  it('cada distribución del catálogo está en un grupo, y solo en uno, con su forma', async () => {
+    const { CATALOGO_DISTRIBUCIONES, GRUPOS_CATALOGO, vistaPrevia } = await import('../../engine/modelo/index.ts');
+    const agrupadas = GRUPOS_CATALOGO.flatMap((g) => g.tipos);
+    expect([...agrupadas].sort()).toEqual(CATALOGO_DISTRIBUCIONES.map((d) => d.tipo).sort());
+    expect(new Set(agrupadas).size).toBe(agrupadas.length);
+    for (const d of CATALOGO_DISTRIBUCIONES) expect(vistaPrevia(d.porDefecto), d.tipo).not.toBeNull();
+  });
+});

@@ -107,7 +107,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11d | U2 | ✅ (29/09, falta tu opinión) **Legibilidad del panel**: cifras clave arriba, secciones plegables que se recuerdan, menos texto visible, botones con borde | **Tú** (T6) |
 | 11f | U3.1 | ✅ (29/09, falta Excel real) **Explorador de distribución** en ventana flotante: histograma o curva de la celda seleccionada, estadísticas a la derecha, delimitadores que se arrastran | **Tú** (29/09) |
 | 11g | U3.2 | ✅ (29/09, falta Excel real) **Cinta reorganizada**: grupos Modelo, Simulación (menú de iteraciones), Análisis, Informes y Ayuda (manual, ejemplos) | **Tú** (29/09) |
-| 11h | U3.3 | Pendiente **Catálogo visual de distribuciones** en el selector: forma en miniatura y cuándo usarla | **Tú** (29/09) |
+| 11h | U3.3 | ✅ (29/09, falta Excel real) **Catálogo visual de distribuciones** en el selector: forma en miniatura y cuándo usarla | **Tú** (29/09) |
 | 11i | U3.4 | Pendiente **Lista de entradas y salidas** en ventana flotante | **Tú** (29/09) |
 | 11j | U3.5–U3.6 | Propuesta, a confirmar: menú del clic derecho y botón Detener | Plan |
 | 11e | C10 | ✅ (29/09, falta Excel real) **Marcas en el histograma**: media, mediana y delimitadores que se arrastran con su porcentaje | **Tú** (sugerencia) |

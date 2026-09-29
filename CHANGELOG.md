@@ -5,6 +5,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U3.3: catálogo visual de distribuciones (2026-09-29)
+
+**Añadido**
+- En el editor de cada entrada, «¿Cuál elegir? Ver el catálogo»: todas las
+  distribuciones con su forma en miniatura y cuándo usarla, agrupadas por lo
+  que se sabe (mínimo-más probable-máximo, valor central, cola a la derecha,
+  proporción, conteos, forma propia). Elegir una es como elegirla en el
+  desplegable.
+
 ### U3.1 y U3.2: cinta reorganizada y explorador de distribución (2026-09-29)
 
 **Añadido**
