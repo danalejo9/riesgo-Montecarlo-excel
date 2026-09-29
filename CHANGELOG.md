@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### T8: registro de riesgos (2026-09-29)
+
+**Añadido**
+- `=RIESGO.EVENTO(probabilidad; impacto)`: un riesgo que ocurre con esa
+  probabilidad y, si ocurre, vale el impacto (un número o una función
+  RIESGO). En «Valores fijos» enseña su valor esperado.
+- Sección **«Registro de riesgos»** en Resultados: cada riesgo con su
+  probabilidad, su impacto, su valor esperado (p × impacto medio) y su parte
+  del total, de más a menos. En el tornado, cada riesgo aparece como
+  «(ocurre)» e «(impacto)».
+- Libro de demostración: sección 11 de «Pruebas» (filas 57–59). Guía: T10 y N15.
+
 ### T7: entradas y salidas de fecha (2026-09-29)
 
 **Añadido**

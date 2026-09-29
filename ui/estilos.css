@@ -389,6 +389,10 @@ section > .plegable:first-child { border-top: 0; margin-top: 0; }
 .ajuste-tabla tr.elegida { background: color-mix(in srgb, var(--acento) 10%, transparent); }
 .ajuste-tabla th[scope='row'] { color: var(--texto); }
 .tabla-resumen tr.desvio td { font-weight: 600; }
+/* T8: la barra de cada riesgo en el registro. */
+.barra-registro { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.barra-registro > span { display: inline-block; height: 8px; max-width: 30px; background: var(--acento); border-radius: 2px; }
+.impacto-registro { display: block; font-size: 11px; overflow-wrap: anywhere; }
 .parametros-ajuste { display: block; font-size: 11px; }
 .insignia { display: inline-block; font-size: 10px; padding: 0 4px; margin-right: 4px; border-radius: 3px; background: var(--acento); color: var(--fondo); }
 

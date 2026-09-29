@@ -282,6 +282,8 @@ export interface SimulacionCompletada {
   funcionesIgnoradas?: string[];
   /** Celdas con funciones de resultados (`RIESGO.MEDIA`…, B6): se recalculan al terminar. */
   celdasConResultados?: string[];
+  /** Los `RIESGO.EVENTO` del libro con su valor esperado (T8). */
+  registroRiesgos?: import('./registroRiesgos.ts').FilaRiesgo[];
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
   /**

@@ -40,6 +40,7 @@ import {
   esFuncionDeDeclaracion,
   esFuncionDeResultado,
   esFuncionParametrica,
+  FUNCION_EVENTO,
   FUNCION_TRUNCAR,
   idDeFuncionRiesgo,
   leerNodoRiesgo,
@@ -101,6 +102,41 @@ export interface RiesgoEnGrafo {
   errores: string[];
   /** Celdas que están en el panel y además tienen RIESGO: manda el panel. */
   duplicadas: string[];
+  /** Celdas con `RIESGO.EVENTO` (T8), ya expandidas a BERNOULLI × impacto. */
+  eventos: string[];
+}
+
+/**
+ * T8: cada `RIESGO.EVENTO(p; impacto)` pasa a ser `RIESGO.BERNOULLI(p) *
+ * (impacto)`, que el análisis ya sabe tratar (una función dentro de una
+ * operación). Cambia el grafo. Devuelve las celdas cambiadas.
+ */
+export function expandirEventos(grafo: Grafo): string[] {
+  const celdas: string[] = [];
+  for (const [clave, nodo] of grafo.nodos) {
+    if (!nodo.ast) continue;
+    let hay = false;
+    const t = (n: Nodo): Nodo => {
+      if (n.tipo === 'funcion' && idDeFuncionRiesgo(n.nombre) === FUNCION_EVENTO.id && n.args.length === 2) {
+        hay = true;
+        const [p, x] = n.args as [Nodo, Nodo];
+        return {
+          tipo: 'binaria',
+          op: '*',
+          izq: { tipo: 'funcion', nombre: 'RIESGO.BERNOULLI', args: [t(p)], pos: n.pos },
+          der: t(x),
+          pos: n.pos,
+        };
+      }
+      return mapearHijos(n, t);
+    };
+    const nuevo = t(nodo.ast);
+    if (hay) {
+      reemplazarAst(grafo, clave, nuevo);
+      celdas.push(clave);
+    }
+  }
+  return celdas;
 }
 
 /** ¿Es este nodo una llamada a una distribución RIESGO (no a una de resultados)? */
@@ -134,7 +170,9 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
   const out: RiesgoEnGrafo = {
     entradas: [], claves: [], claveDeRef: new Map(), celdaDeEntrada: new Map(), descripciones: new Map(),
     conversiones: [], reescritas: [], reescrituras: new Map(), motivosReescritura: new Map(), noCompatibles: new Map(), errores: [], duplicadas: [],
+    eventos: expandirEventos(grafo),
   };
+  const deEvento = new Set(out.eventos);
 
   const candidatas: string[] = [];
   for (const [clave, nodo] of grafo.nodos) {
@@ -185,7 +223,8 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
       if (esLlamadaDistribucion(n)) {
         k++;
         const ref = llamadas > 1 ? `${clave} (${k})` : clave;
-        const nombreK = llamadas > 1 ? `${nombre} (${k})` : nombre;
+        // En un riesgo del registro (T8), la primera es si ocurre y el resto, el impacto.
+        const nombreK = deEvento.has(clave) ? `${nombre} (${k === 1 ? 'ocurre' : 'impacto'})` : llamadas > 1 ? `${nombre} (${k})` : nombre;
         const hojaVirtual = `\u0001${ref}`;
         const claveVirtual = `${hojaVirtual}!A1`;
         const celdaVirtual: Nodo = { tipo: 'celda', ref: { hoja: hojaVirtual, col: 1, fila: 1 }, pos: n.pos };

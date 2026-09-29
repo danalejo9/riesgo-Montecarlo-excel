@@ -6,7 +6,7 @@
  */
 
 import {
-  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from './funcionesRiesgo.ts';
 
 /** Lo que enseñan fuera de la simulación (B2). */
@@ -119,6 +119,14 @@ export function metadatosFunciones(): object {
       parameters: FUNCION_CORRELACION.parametros.map((p, i) => ({
         name: p.nombre, description: p.descripcion, type: i === 2 ? 'number' : 'any', dimensionality: 'scalar',
       })),
+    }, {
+      // T8: un riesgo del registro (BERNOULLI × impacto).
+      id: FUNCION_EVENTO.id,
+      name: FUNCION_EVENTO.id,
+      description: `${FUNCION_EVENTO.descripcion} ${FUERA}`,
+      result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
+      parameters: FUNCION_EVENTO.parametros.map((p) => ({ name: p.nombre, description: p.descripcion, type: 'number', dimensionality: 'scalar' })),
     }])),
   };
 }

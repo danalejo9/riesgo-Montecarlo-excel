@@ -68,6 +68,7 @@ export {
   esFuncionDeResultado,
   esFuncionParametrica,
   FUNCION_CORRELACION,
+  FUNCION_EVENTO,
   FUNCION_SALIDA,
   FUNCIONES_RESULTADO,
   leerNodoRiesgo,

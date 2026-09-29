@@ -38,6 +38,8 @@ export interface EntradasDeFunciones {
   motivosReescritura: Map<string, string>;
   /** Reescritas que el modo compatible no puede simular (B1b), con el motivo. */
   noCompatibles: Map<string, string>;
+  /** Celdas con `RIESGO.EVENTO` (T8, registro de riesgos). */
+  eventos: string[];
 }
 
 /**
@@ -66,6 +68,7 @@ export function entradasDeFunciones(
     reescrituras: r.reescrituras,
     motivosReescritura: r.motivosReescritura,
     noCompatibles: r.noCompatibles,
+    eventos: r.eventos,
   };
 }
 

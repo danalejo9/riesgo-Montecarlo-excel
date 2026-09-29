@@ -100,11 +100,18 @@ const LIBRO: Record<string, Celda> = {
   B29: { formula: 'RIESGO.TRIANGULAR(DATE(2027,1,1),DATE(2027,2,1),DATE(2027,4,1))', formato: 'dd/mm/yyyy' },
   A30: { valor: 'Fin de obra' },
   B30: { formula: 'RIESGO.SALIDA("Fin de obra")+B29+RIESGO.NORMAL(90,10)', formato: 'dd/mm/yyyy' },
+  // Registro de riesgos (T8).
+  A32: { valor: 'Retraso de permisos' },
+  B32: { formula: 'RIESGO.EVENTO(0.3,RIESGO.TRIANGULAR(10000,20000,60000))' },
+  A33: { valor: 'Avería grave' },
+  B33: { formula: 'RIESGO.EVENTO(0.1,50000)' },
+  A34: { valor: 'Coste con riesgos' },
+  B34: { formula: 'RIESGO.SALIDA("Coste con riesgos")+B14+B32+B33' },
 };
 
 /** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
 const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
-const FILAS_USADAS = 30;
+const FILAS_USADAS = 34;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -194,7 +201,7 @@ function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): 
         hay = true;
         return {
           tipo: 'funcion', nombre: '_BANCO.RIESGO', pos: x.pos,
-          args: [{ tipo: 'texto', valor: clave, pos: x.pos }, { tipo: 'texto', valor: idDeFuncionRiesgo(x.nombre) ?? '', pos: x.pos }, ...x.args],
+          args: [{ tipo: 'texto', valor: clave, pos: x.pos }, { tipo: 'texto', valor: idDeFuncionRiesgo(x.nombre) ?? '', pos: x.pos }, ...x.args.map(cambiar)],
         };
       }
       // Las que declaran algo valen lo que en Excel: 0 la salida, el coeficiente la correlación.

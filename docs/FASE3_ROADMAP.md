@@ -674,7 +674,7 @@ este bloque y deja T7, T8 y T9 para después de la etapa 2)*:
   (triangular entre dos fechas) que se enseña como fecha y no como número de
   serie, y salidas de fecha («fecha de fin del proyecto») con percentiles en
   fechas. Muy de gestión de proyectos.
-- **T8. Registro de riesgos** *(después de la etapa 2)*: cada riesgo como probabilidad × impacto (un
+- **T8. Registro de riesgos** ✅ 29/09 en el panel (`RIESGO.EVENTO`, `excel/registroRiesgos.ts`; falta llevarlo a la hoja volcada y al informe PDF) *(después de la etapa 2)*: cada riesgo como probabilidad × impacto (un
   sí/no y una distribución del coste o del retraso), declarado en una tabla
   de la hoja, con su propia vista: qué riesgos pesan más en el total. Es como
   se trabaja el riesgo en obra y en proyectos, y ningún complemento de
@@ -703,7 +703,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
 pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
-~~T7~~ ✅ 29/09, **T8, T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
+~~T7, T8~~ ✅ 29/09, **T9** → C3, C4 → resto de B, D (con D4), E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por

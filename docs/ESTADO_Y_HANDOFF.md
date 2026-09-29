@@ -1072,6 +1072,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     informe; `lectura.ts` con `fecha`; volcado con `"días"` en la dispersión.
     Banco: B29–B30 con formato. **Siguiente**: T8 (registro de riesgos).
 
+49. [x] **T8 (2026-09-29)**. `FUNCION_EVENTO`; `expandirEventos` en
+    `riesgoEnGrafo.ts` (EVENTO → BERNOULLI × impacto, dentro del análisis;
+    nombres «(ocurre)»/«(impacto)»), `eventos` en el resultado;
+    `excel/registroRiesgos.ts` (p, impacto, valor esperado y desviación
+    exactos desde las distribuciones), `registroRiesgos` en la simulación,
+    `RegistroRiesgos` en Resultados. En Excel, `EVENTO` = modo(Bernoulli) ×
+    impacto (con B1b si es la única función de la celda). Banco: B32–B34.
+    **Siguiente**: T9 (opciones de decisión).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

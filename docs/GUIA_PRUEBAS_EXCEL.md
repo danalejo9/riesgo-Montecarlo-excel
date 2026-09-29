@@ -192,6 +192,8 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N14. Fechas** (T7 del plan, nuevo): haz T9.
 
+**N15. Registro de riesgos** (T8 del plan, nuevo): haz T10.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
@@ -723,6 +725,21 @@ en C52 (ya tiene formato de fecha) y `=RIESGO.NORMAL(90;10)` en C53. C54 es
   terminar antes (en torno al **58 %**).
 - En «Cómo se muestrearon las entradas», C52 sale en fechas.
 - «Volcar a una hoja» e «Informe PDF»: fechas también (la desviación, en días).
+
+**T10. Registro de riesgos** (T8 del plan, nuevo; «Pruebas», sección 11,
+filas 57–59). Escribe `=RIESGO.EVENTO(0,3;RIESGO.TRIANGULAR(10000;20000;60000))`
+en C57 y `=RIESGO.EVENTO(0,1;50000)` en C58.
+- Nada más escribirlas, en «Valores fijos» (media), C57 enseña **9.000** y
+  C58 **5.000**: su valor esperado (probabilidad × impacto medio).
+- Marca C59 como salida y simula. Esperado:
+  - Media de C59 en torno a **14.000**.
+  - En Resultados, sección **«Registro de riesgos»**: los dos riesgos, con
+    su probabilidad (30 % y 10 %), su impacto, el valor esperado (9.000 y
+    5.000) y su parte del total (64 % y 36 %), de más a menos.
+  - En «Qué la mueve más», cada riesgo aparece como «… (ocurre)» y, el
+    primero, también «… (impacto)».
+- Con el motor **Compatible**: C58 sí (una sola función); C57 avisa de que
+  tiene varias funciones en la fórmula (pon el impacto en otra celda).
 
 ---
 

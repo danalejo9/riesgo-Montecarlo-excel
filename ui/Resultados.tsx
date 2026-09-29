@@ -44,6 +44,7 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
 import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
+import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
 import {
@@ -379,6 +380,8 @@ export function Resultados({
           )}
         </section>
       ))}
+
+      {resultado.registroRiesgos && resultado.registroRiesgos.length > 0 && <RegistroRiesgos filas={resultado.registroRiesgos} />}
 
       {alCambiarEscenarios && (
         <Escenarios
@@ -785,6 +788,53 @@ export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly 
 }
 
 const TODAS = '__todas__';
+
+/**
+ * El registro de riesgos (T8): cada `RIESGO.EVENTO` con su probabilidad, su
+ * impacto y su valor esperado (p × impacto medio), de más a menos, y cuánto
+ * es del total. Lo que pesa cada uno en una salida concreta, en el tornado.
+ */
+function RegistroRiesgos({ filas }: { filas: readonly FilaRiesgo[] }) {
+  const total = filas.reduce((s, f) => s + (f.valorEsperado ?? 0), 0);
+  const conValor = filas.filter((f) => f.valorEsperado !== null);
+  const mayor = Math.max(...conValor.map((f) => Math.abs(f.valorEsperado as number)), 0);
+  return (
+    <section>
+      <Plegable id="registro" titulo={<h2>Registro de riesgos</h2>} abierta
+        resumen={`${filas.length} riesgo${filas.length === 1 ? '' : 's'} · esperado ${numero(total)}`}>
+        <div className="tabla-desplazable">
+          <table className="tabla-resumen sin-clic registro-riesgos">
+            <thead>
+              <tr><th>Riesgo · impacto</th><th>Prob.</th><th title="Probabilidad × impacto medio">Esperado</th><th>Del total</th></tr>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr key={f.celda}>
+                  <td title={f.celda}>{f.nombre}<span className="tenue impacto-registro">{f.impacto}</span></td>
+                  <td>{f.probabilidad === null ? 'variable' : pct(f.probabilidad)}</td>
+                  <td>{f.valorEsperado === null ? '—' : numero(f.valorEsperado)}</td>
+                  <td>
+                    {f.valorEsperado !== null && total !== 0 && (
+                      <span className="barra-registro">
+                        <span style={{ width: `${mayor > 0 ? Math.round((Math.abs(f.valorEsperado) / mayor) * 30) : 0}px` }} />
+                        {pct(f.valorEsperado / total)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="tenue">
+          Esperado: probabilidad × impacto medio, lo que aporta cada riesgo de media (ocurra o no).
+          Entre todos, {numero(total)}. Lo que pesa cada uno en una salida concreta, y su incertidumbre,
+          lo dice «Qué la mueve más» (sus entradas «ocurre» e «impacto»).
+        </p>
+      </Plegable>
+    </section>
+  );
+}
 
 /**
  * Cómo se muestreó cada entrada (C9): los valores que de verdad se generaron,

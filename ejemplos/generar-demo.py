@@ -435,6 +435,21 @@ for fila, texto, formato in ((52, "escribe =RIESGO.TRIANGULAR(FECHA(2027;1;1);FE
 p["C54"] = "=C52+C53"
 p["C54"].number_format = 'dd/mm/yyyy'
 
+# 11. Registro de riesgos (T8): cada riesgo, probabilidad × impacto.
+etiqueta(56, "11. REGISTRO DE RIESGOS (prueba T10)", True)
+etiqueta(57, "Retraso de permisos")
+etiqueta(58, "Avería grave")
+etiqueta(59, "Coste de los riesgos")
+for fila, texto in ((57, "escribe =RIESGO.EVENTO(0,3;RIESGO.TRIANGULAR(10000;20000;60000))"),
+                    (58, "escribe =RIESGO.EVENTO(0,1;50000)")):
+    c3 = p.cell(fila, 3)
+    c3.fill = PARA_ESCRIBIR
+    c3.number_format = '#,##0'
+    c = p.cell(fila, 9, texto)
+    c.font = Font(italic=True, color="666666")
+p["C59"] = "=C57+C58"
+p["C59"].number_format = '#,##0'
+
 # 5. Datos históricos para "Ajustar a datos" (prueba E): 40 precios con cola
 #    a la derecha (lognormal de media ~120), deterministas.
 p["K4"] = "5. PRECIOS HISTÓRICOS (prueba E)"

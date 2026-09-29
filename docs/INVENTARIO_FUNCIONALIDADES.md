@@ -92,7 +92,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | T5 | T5 | Manual, tutorial y pruebas con textos | **Tú** |
 | T6 | T6 | ✅ Salidas de sí/no (VERDADERO/FALSO): probabilidad y qué lo decide | **Tú** (confirmado 28/09) |
 | T7 | T7 | ✅ (29/09, falta Excel real) Entradas y salidas de fecha (percentiles en fechas, dispersión en días), según el formato de la celda | Después de la etapa 2 |
-| T8 | T8 | Registro de riesgos: probabilidad × impacto en una tabla de la hoja | Después de la etapa 2 |
+| T8 | T8 | ✅ (29/09, falta Excel real) Registro de riesgos: `RIESGO.EVENTO(p; impacto)` en una tabla de la hoja y su vista en Resultados (valor esperado y parte del total). Falta en la hoja volcada y el informe PDF | Después de la etapa 2 |
 | T9 | T9 | Opciones de decisión (A / B / C) simuladas y comparadas lado a lado | Después de la etapa 2 |
 
 ### Etapa 2: funciones RIESGO completas y la cinta (≈ 6–8 días)

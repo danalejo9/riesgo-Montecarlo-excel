@@ -19,7 +19,7 @@
 
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
-  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
 import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
 import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
@@ -176,4 +176,16 @@ asociar(FUNCION_CORRELACION.id, (_a: unknown, _b: unknown, coeficiente: unknown)
     throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'El coeficiente de RIESGO.CORRELACION tiene que estar entre -1 y 1');
   }
   return coeficiente;
+});
+
+// T8: un riesgo del registro. Fuera de la simulación, en «Valores fijos» vale
+// p × impacto (su valor esperado, si el modo es la media); en «Aleatorio», el
+// impacto o 0. Con Excel en el bucle (una sola función en la celda), el sorteo
+// de «ocurre» de esta iteración.
+asociar(FUNCION_EVENTO.id, (probabilidad: number, impacto: number, invocacion?: unknown) => {
+  if (!(probabilidad >= 0 && probabilidad <= 1)) {
+    throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, 'La probabilidad de RIESGO.EVENTO tiene que estar entre 0 y 1');
+  }
+  const ocurre = enModo({ type: 'bernoulli', p: probabilidad }, FUNCION_EVENTO.id, celdaDe([invocacion]));
+  return (ocurre as number) * impacto;
 });

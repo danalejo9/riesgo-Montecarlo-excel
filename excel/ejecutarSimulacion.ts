@@ -46,6 +46,7 @@ import {
 } from './informe.ts';
 import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNCION, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
 import { celdasConFormatoFecha } from './formatoCeldas.ts';
+import { registroDeRiesgos } from './registroRiesgos.ts';
 import { leerLibro } from './lectorLibro.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
 
@@ -168,6 +169,11 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
   }
+  // T8: el registro de riesgos, antes de reescribir las fórmulas (necesita la forma BERNOULLI × impacto).
+  const registro = registroDeRiesgos(deFunciones, grafo, (clave) => {
+    const nodo = grafo.nodos.get(clave);
+    return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : clave;
+  });
   if (deFunciones.entradas.length > 0) {
     modelo = { ...modelo, inputs: [...modelo.inputs, ...deFunciones.entradas] };
     clavesEntrada.push(...deFunciones.claves);
@@ -239,8 +245,10 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const dirSalidas = clavesSalida.map(direccionDe);
   const dirEntradas = modelo.inputs.map((e, i) => direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)));
   const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])]).catch(() => new Set<string>());
-  const terminar = (r: ResultadoSimulacionPanel) =>
-    conFechas(conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados), modelo, dirSalidas, dirEntradas, fechas);
+  const terminar = (r: ResultadoSimulacionPanel) => {
+    const f = conFechas(conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados), modelo, dirSalidas, dirEntradas, fechas);
+    return f.ok && registro.length > 0 ? { ...f, registroRiesgos: registro } : f;
+  };
 
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };

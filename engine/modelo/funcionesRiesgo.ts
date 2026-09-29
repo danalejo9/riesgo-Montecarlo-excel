@@ -161,6 +161,21 @@ export const FUNCION_CORRELACION = {
   ],
 } as const;
 
+/**
+ * `RIESGO.EVENTO(probabilidad; impacto)` (T8, registro de riesgos): un riesgo
+ * que ocurre con esa probabilidad y, si ocurre, cuesta el impacto (un número o
+ * una función RIESGO). Es `RIESGO.BERNOULLI(p) × impacto`: el motor la expande
+ * así antes de analizar (`expandirEventos`).
+ */
+export const FUNCION_EVENTO = {
+  id: 'EVENTO',
+  descripcion: 'Un riesgo del registro: ocurre con la probabilidad dada y, si ocurre, vale el impacto (0 si no ocurre).',
+  parametros: [
+    { nombre: 'probabilidad', descripcion: 'Entre 0 y 1 (0,3 = un 30 %)' },
+    { nombre: 'impacto', descripcion: 'Lo que cuesta si ocurre: un número o una función RIESGO, p. ej. RIESGO.TRIANGULAR(10;20;50)' },
+  ],
+} as const;
+
 /** ¿Es `RIESGO.<id>` una función que declara algo (salida, correlación)? */
 export function esFuncionDeDeclaracion(id: string): boolean {
   return id === FUNCION_SALIDA.id || id === FUNCION_CORRELACION.id;
@@ -328,6 +343,10 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
   }
   if (esFuncionDeDeclaracion(id)) {
     return { ok: false, motivo: `RIESGO.${id} declara algo del modelo: no es una distribución` };
+  }
+  if (id === FUNCION_EVENTO.id) {
+    // Solo llega aquí mal escrita: bien escrita, `expandirEventos` ya la ha convertido.
+    return { ok: false, motivo: 'RIESGO.EVENTO necesita 2 argumentos: probabilidad; impacto' };
   }
   if (id === FUNCION_CATEGORIA.id || id === FUNCION_DISCRETA.id) {
     if (raiz.args.length !== 2) return { ok: false, motivo: `RIESGO.${id} necesita 2 argumentos: valores; pesos` };
