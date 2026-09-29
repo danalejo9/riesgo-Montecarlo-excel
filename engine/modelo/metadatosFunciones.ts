@@ -14,9 +14,11 @@ const FUERA = 'Fuera de la simulación devuelve la media, u otro valor fijo o un
  * Volátiles (B2): en el modo «Aleatorio» cada recálculo (F9) tiene que
  * sortear otra vez, y al cambiar de modo basta un recálculo para que todas
  * enseñen lo nuevo. Las de resultados (B6) no: valen lo mismo hasta que se
- * vuelve a simular.
+ * vuelve a simular. Con su propia dirección (B1b): durante una simulación con
+ * Excel en el bucle, la función de una celda que conserva su fórmula devuelve
+ * el sorteo que le toca.
  */
-const VOLATIL = { volatile: true };
+const VOLATIL = { volatile: true, requiresAddress: true };
 
 export function metadatosFunciones(): object {
   return {

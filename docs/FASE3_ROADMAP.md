@@ -334,6 +334,14 @@ Estimaciones en días de trabajo efectivo.
   - No acelera el compatible: sigue siendo un recálculo por iteración.
 
   Estimación: 2–3 d con B1 hecho.
+  ✅ **Hecho el 29/09**: las celdas que son solo la función siguen como
+  antes (se escribe el valor, por lotes); las reescritas (dentro de una
+  operación, parámetros aleatorios) conservan la fórmula y su función
+  devuelve el sorteo de la iteración (`simulacionEnExcel` en
+  `excel/modoLibroCompartido.ts`, `sorteoEnCurso` en `ui/funciones.ts`); con
+  alguna, una iteración por viaje. No admitidas (aviso): varias funciones en
+  una fórmula, `TRUNCAR` con parámetros aleatorios. En el banco, compatible y
+  rápido dan exactamente lo mismo. **Falta Excel real** (N9).
 - **B4. Más funciones, las que el motor ya sabe muestrear**:
   `RIESGO.DISCRETA({valores};{pesos})`, truncado (`RIESGO.TRUNCAR` o argumento
   opcional de mínimo/máximo), `RIESGO.LOGNORMAL2` (parámetros del logaritmo).

@@ -27,6 +27,7 @@ import { compilarPlan } from '../engine/compiler/plan.ts';
 import { construirGrafo } from '../engine/graph/index.ts';
 import {
   aplicarReescrituras,
+  PREFIJO_DINAMICA,
   describirMotivo,
   elegirMotor,
   prepararEntradas,
@@ -168,15 +169,26 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     ]);
   }
 
-  if (eleccion.motor === 'compatible' && deFunciones.reescritas.length > 0) {
-    return fallo('modelo', 'Hay funciones RIESGO que solo puede simular el motor rápido.', [
-      ...deFunciones.reescritas.map((c) => `${c} ${deFunciones.motivosReescritura.get(c) ?? 'tiene una función RIESGO que no es toda la fórmula'}.`),
+  // B1b: con Excel en el bucle, una celda reescrita conserva su fórmula y su
+  // función devuelve el sorteo de cada iteración; salvo las que no se pueden.
+  const imposibles = eleccion.motor === 'compatible' ? deFunciones.reescritas.filter((c) => deFunciones.noCompatibles.has(c)) : [];
+  if (imposibles.length > 0) {
+    return fallo('modelo', 'Hay funciones RIESGO que el modo compatible no puede simular.', [
+      ...imposibles.map((c) => `${c} ${deFunciones.noCompatibles.get(c)}.`),
       ...(modelo.settings.engine === 'compatible'
         ? ['En Configuración está elegido el motor compatible: pon «Automático» o «Rápido».']
         : ['El modelo necesita el motor compatible por esto:', ...motivosLegibles(eleccion)]),
-      'Con Excel en el bucle, esas funciones solo devolverían su media. Pon la función sola en su celda con argumentos fijos, o haz que el resto del modelo lo pueda calcular el motor rápido.',
     ]);
   }
+  // Las entradas virtuales (B7) no son celdas: en el compatible las sortea la
+  // función de su celda. De cada una, su celda y qué se le pasa.
+  const sorteosPorClave = new Map<string, { celda: string; tipo: 'muestra' | 'uniforme' }>();
+  deFunciones.entradas.forEach((e, i) => {
+    const clave = deFunciones.claves[i] as string;
+    if (clave.startsWith('\u0001')) {
+      sorteosPorClave.set(clave, { celda: deFunciones.celdaDeEntrada.get(e.id) ?? clave, tipo: e.id.startsWith(PREFIJO_DINAMICA) ? 'uniforme' : 'muestra' });
+    }
+  });
 
   const n = modelo.settings.iterations;
   const semilla = modelo.settings.seed;
@@ -192,6 +204,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     const r = await porElCompatible({
       ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
       congelarPantalla: peticion.congelarPantalla ?? false,
+      sorteosPorClave,
     });
     // Con Excel en el bucle, repetir tandas costaría minutos cada una: se
     // simulan las iteraciones fijadas y se dice que el modo automático no se
@@ -382,7 +395,9 @@ function porElRapido(
   });
 }
 
-async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
+async function porElCompatible(
+  args: Comun & { sorteosPorClave?: ReadonlyMap<string, { celda: string; tipo: 'muestra' | 'uniforme' }> },
+): Promise<ResultadoSimulacionPanel> {
   const { clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar } = args;
 
   // Con Excel en el bucle no hay bloques: se necesitan las N muestras de cada
@@ -391,11 +406,17 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
   // mismas muestras con la misma semilla** — si no, comparar los dos modos
   // sería comparar dos experimentos distintos.
   const resueltas = resolverEntradas(args.definiciones, semilla, n);
-  const entradas = resueltas.map((def) => ({
+  const deCelda = resueltas.filter((def) => !args.sorteosPorClave?.has(def.clave));
+  const entradas = deCelda.map((def) => ({
     direccion: def.clave,
     muestras: generarTramoDeEntrada(def, semilla, 0, n),
     ...(def.categorias ? { categorias: def.categorias } : {}),
   }));
+  // B1b: las que sortea la función de su celda (misma semilla, mismas muestras).
+  const sorteos = resueltas.flatMap((def) => {
+    const s = args.sorteosPorClave?.get(def.clave);
+    return s ? [{ clave: def.clave, direccion: s.celda, tipo: s.tipo, muestras: generarTramoDeEntrada(def, semilla, 0, n), ...(def.categorias ? { categorias: def.categorias } : {}) }] : [];
+  });
 
   const r = await simularEnExcel({
     entradas,
@@ -403,6 +424,7 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
     iteraciones: n,
     retenerMuestra: LIMITE_MUESTRA_SENSIBILIDAD,
     congelarPantalla: args.congelarPantalla ?? false,
+    ...(sorteos.length > 0 ? { sorteos } : {}),
     ...(args.modelo.settings.locale ? { nombresLogicos: desdeLocaleDelModelo(args.modelo.settings.locale) } : {}),
     progreso: (a) =>
       progreso?.({
@@ -422,7 +444,10 @@ async function porElCompatible(args: Comun): Promise<ResultadoSimulacionPanel> {
   }
 
   const largo = Math.min(LIMITE_MUESTRA_SENSIBILIDAD, r.iteracionesCompletadas);
-  const muestrasEntrada = new Map(entradas.map((e) => [e.direccion, e.muestras.subarray(0, largo)] as const));
+  const muestrasEntrada = new Map([
+    ...entradas.map((e) => [e.direccion, e.muestras.subarray(0, largo)] as const),
+    ...sorteos.map((x) => [x.clave, x.muestras.subarray(0, largo)] as const),
+  ]);
 
   return {
     ok: true,

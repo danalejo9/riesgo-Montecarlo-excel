@@ -34,11 +34,14 @@ import {
   simularCompatible,
   type AvanceCompatible,
   type EntradaCompatible,
+  type LibroCalculable,
   type ResultadoCompatible,
 } from '../engine/compatible/index.ts';
 import { hayRecuperacionPendiente, iniciarProteccion, restaurarDesdeRecuperacion } from '../engine/modelo/guardian.ts';
 import { cargarAlmacenGuardian } from './almacenGuardian.ts';
 import { crearLibroCalculable } from './libroCalculable.ts';
+import { empezarSimulacionEnExcel, terminarSimulacionEnExcel, type SorteoEnCelda } from './modoLibroCompartido.ts';
+import { normalizarDireccion } from './resultadosEnHoja.ts';
 
 /**
  * Iteraciones por viaje a Excel (F5b). Con 20, la hoja se repinta 20 veces
@@ -60,6 +63,12 @@ export interface PeticionCompatible {
   nombresLogicos?: { verdadero: string; falso: string };
   /** No repintar la hoja en cada iteración (F5). */
   congelarPantalla?: boolean;
+  /**
+   * B1b: celdas que conservan su fórmula RIESGO y cuya función devuelve en
+   * cada iteración el sorteo que le toca. Con alguna, se va de una iteración
+   * por viaje: la función tiene que saber en qué iteración está.
+   */
+  sorteos?: readonly ({ direccion: string } & SorteoEnCelda)[];
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }
@@ -97,13 +106,25 @@ export async function simularEnExcel(peticion: PeticionCompatible): Promise<Resp
     if (!proteccion.ok) return { ok: false as const, error: { iteracion: 0, motivo: proteccion.error } };
     await almacen.aplicar();
 
+    const sorteos = peticion.sorteos ?? [];
     try {
-      const libro = crearLibroCalculable(context, refs, peticion.salidas, {
+      const base = crearLibroCalculable(context, refs, peticion.salidas, {
         congelarPantalla: peticion.congelarPantalla ?? false,
         categorias: peticion.entradas.map((e) => e.categorias),
       });
-      return await simularCompatible({ libro, lote: LOTE_COMPATIBLE, ...peticion });
+      if (sorteos.length === 0) return await simularCompatible({ libro: base, lote: LOTE_COMPATIBLE, ...peticion });
+      // B1b: antes de cada recálculo se dice a las funciones qué iteración toca.
+      const enCurso = empezarSimulacionEnExcel(new Map(sorteos.map((x) => [normalizarDireccion(x.direccion), x] as const)));
+      let siguiente = 0;
+      const libro: LibroCalculable = {
+        calcularIteracion: (valores) => {
+          enCurso.iteracion = siguiente++;
+          return base.calcularIteracion(valores);
+        },
+      };
+      return await simularCompatible({ libro, lote: 1, ...peticion });
     } finally {
+      terminarSimulacionEnExcel();
       restaurarDesdeRecuperacion(almacen);
       await almacen.aplicar();
     }

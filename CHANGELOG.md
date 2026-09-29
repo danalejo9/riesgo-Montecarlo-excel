@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Etapa 2 — B1b: las funciones RIESGO sortean con Excel en el bucle (2026-09-29)
+
+**Añadido**
+- El **modo compatible** simula ya una función RIESGO **dentro de una
+  operación** o **con parámetros que cambian** (antes solo el motor rápido):
+  la celda conserva su fórmula y la función devuelve en cada iteración el
+  mismo sorteo que usaría el motor rápido. Con alguna de estas celdas se va de
+  una iteración por viaje a Excel (más lento, pero correcto).
+- Siguen sin admitirse en el compatible, con un aviso: varias funciones RIESGO
+  en la misma fórmula, y `RIESGO.TRUNCAR` con parámetros que cambian.
+- Banco de pruebas: calcula las funciones RIESGO con las de verdad
+  (`ui/funciones.ts`), así que su modo compatible prueba también esto.
+
 ### Etapa 2 — B3: la cinta actúa sin abrir el panel (2026-09-29)
 
 **Añadido**

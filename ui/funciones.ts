@@ -21,11 +21,11 @@ import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_TRUNCAR,
   construirSpecRiesgo, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
-import { valorEnModo } from '../engine/modelo/valorFijo.ts';
+import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
 import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
-import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
+import { modoLibroEnMemoria, simulacionEnExcel } from '../excel/modoLibroCompartido.ts';
 import {
-  almacenEnMemoria, anotarCeldaPendiente, buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, valorFuncionResultado,
+  almacenEnMemoria, anotarCeldaPendiente, buscarSalida, CLAVE_ALMACEN_RESULTADOS, leerAlmacen, normalizarDireccion, valorFuncionResultado,
   type AlmacenResultadosHoja,
 } from '../excel/resultadosEnHoja.ts';
 
@@ -41,8 +41,32 @@ const asociar: typeof CustomFunctions.associate = (id, f) => {
   if (typeof CustomFunctions !== 'undefined') CustomFunctions.associate(id, f);
 };
 
+/** La invocación que Excel pasa al final (`requiresAddress`): la celda de la función. */
+function celdaDe(args: readonly unknown[]): string | undefined {
+  const ultimo = args[args.length - 1] as { address?: unknown } | undefined;
+  return ultimo && typeof ultimo === 'object' && typeof ultimo.address === 'string' ? ultimo.address : undefined;
+}
+
+/**
+ * B1b: en una simulación con Excel en el bucle, lo que toca en esta celda en
+ * esta iteración (o nada, si la celda no sortea por su función).
+ */
+function sorteoEnCurso(spec: DistributionSpec | string, celda: string | undefined): number | string | undefined {
+  const sim = simulacionEnExcel();
+  if (!sim || !celda) return undefined;
+  const s = sim.porCelda.get(normalizarDireccion(celda));
+  if (!s) return undefined;
+  const x = s.muestras[sim.iteracion] as number;
+  if (s.tipo === 'muestra') return s.categorias ? (s.categorias[Math.round(x)] ?? '') : x;
+  // Un uniforme: el cuantil con los parámetros de esta iteración.
+  if (typeof spec === 'string') throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, spec);
+  return valorAleatorio(spec, x);
+}
+
 /** El valor de la celda en el modo del libro, o el error de Excel si la distribución no vale. */
-function enModo(spec: DistributionSpec | string, nombre: string): number | string {
+function enModo(spec: DistributionSpec | string, nombre: string, celda?: string): number | string {
+  const sorteo = sorteoEnCurso(spec, celda);
+  if (sorteo !== undefined) return sorteo;
   if (typeof spec === 'string') throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidNumber, spec);
   try {
     return valorEnModo(spec, modoLibroEnMemoria());
@@ -52,20 +76,20 @@ function enModo(spec: DistributionSpec | string, nombre: string): number | strin
 }
 
 for (const f of FUNCIONES_RIESGO) {
-  asociar(f.id, (...args: number[]) => enModo(construirSpecRiesgo(f.id, args.slice(0, f.parametros.length)), f.id));
+  asociar(f.id, (...args: number[]) => enModo(construirSpecRiesgo(f.id, args.slice(0, f.parametros.length)), f.id, celdaDe(args)));
 }
 
 // T4: el valor más probable de una entrada de texto. Los argumentos llegan
 // como matrices (rango o lista), se aplanan en el mismo orden.
-asociar(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][]) => {
+asociar(FUNCION_CATEGORIA.id, (valores: unknown[][], pesos: unknown[][], invocacion?: unknown) => {
   const r = categoriaDesdeListas(valores.flat(), pesos.flat());
-  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_CATEGORIA.id);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_CATEGORIA.id, celdaDe([invocacion]));
 });
 
 // B4: la media de una discreta, y una función RIESGO acotada.
-asociar(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][]) => {
+asociar(FUNCION_DISCRETA.id, (valores: unknown[][], pesos: unknown[][], invocacion?: unknown) => {
   const r = discretaDesdeListas(valores.flat(), pesos.flat());
-  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_DISCRETA.id);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_DISCRETA.id, celdaDe([invocacion]));
 });
 
 asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
@@ -78,9 +102,9 @@ asociar(FUNCION_TRUNCAR.id, (valor: number, minimo: number, maximo: number) => {
 });
 
 // I1: la media de los datos históricos.
-asociar(FUNCION_EMPIRICA.id, (datos: unknown[][]) => {
+asociar(FUNCION_EMPIRICA.id, (datos: unknown[][], invocacion?: unknown) => {
   const r = empiricaDesdeLista(datos.flat());
-  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_EMPIRICA.id);
+  return enModo(typeof r === 'string' ? r : r.spec, FUNCION_EMPIRICA.id, celdaDe([invocacion]));
 });
 
 // B6: los resultados de la última simulación. El almacén se relee en cada

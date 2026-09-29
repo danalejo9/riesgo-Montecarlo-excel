@@ -148,6 +148,20 @@ todo antes desde el panel y ciérralo):
 - Abre el panel: C5 y C6 están en Entradas con su nombre legible («Precio
   unitario»…) y C32 en Salidas.
 
+**N9. RIESGO dentro de operaciones, con Excel en el bucle** (B1b, nuevo;
+era F15). En la hoja «Pruebas», con F12 escrito (C34–C36) y C37 como salida:
+- Simula con el motor **Automático** y apunta la media y la desviación de C37.
+- En ⚙, motor **Compatible**, las **mismas iteraciones** (pon 1.000 en los
+  dos) y simula.
+- Esperado: **ya no sale el error** de F15; simula (más despacio: con estas
+  funciones va de una iteración por viaje a Excel) y da **la misma media y la
+  misma desviación** que el motor rápido.
+- Mientras simula, C35 y C36 **conservan su fórmula** (míralo en la barra de
+  fórmulas): es la propia función la que devuelve el valor de cada iteración.
+- Sigue sin admitirse, con un aviso claro: dos funciones RIESGO en la misma
+  fórmula, o `RIESGO.TRUNCAR` con parámetros que cambian.
+- Vuelve el motor a **Automático**.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

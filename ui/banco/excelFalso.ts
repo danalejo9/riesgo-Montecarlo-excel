@@ -22,9 +22,14 @@
  */
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
+import { REGISTRO } from '../../engine/functions/registry.ts';
+import { reemplazarAst } from '../../engine/graph/index.ts';
+import { esLlamadaDistribucion, idDeFuncionRiesgo } from '../../engine/modelo/index.ts';
+import { coercionNumerica } from '../../engine/values/coercion.ts';
+import type { Nodo } from '../../engine/parser/ast.ts';
 import { claveCelda, columnaDeLetras } from '../../engine/parser/index.ts';
 import { construirGrafo, type FormulaCelda, type ValorCelda } from '../../engine/graph/index.ts';
-import { LOGICO, NUMERO, TEXTO, numeroEn, textoEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
+import { LOGICO, NUMERO, TEXTO, desdeEscalar, numeroEn, textoEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
 
 interface Celda {
   formula?: string;
@@ -104,6 +109,7 @@ function recalcular(): void {
   }
 
   const { grafo } = construirGrafo(formulas, valores);
+  conFuncionesRiesgo(grafo);
 
   // Celda a celda: las funciones RIESGO no las calcula el motor (en Excel las
   // calcula el complemento), y una sola no debe dejar sin recalcular el resto.
@@ -123,6 +129,65 @@ function recalcular(): void {
       : tipo === TEXTO ? (textoEn(columna, 0) ?? '')
       : tipo === LOGICO ? numeroEn(columna, 0) !== 0
       : '#VALUE!';
+  }
+}
+
+/**
+ * Las funciones RIESGO del banco: las de verdad (`ui/funciones.ts`), cargadas
+ * con un `CustomFunctions` de mentira. Cada llamada de una fórmula se
+ * sustituye por `_BANCO.RIESGO("Modelo!B20"; "NORMAL"; args…)`, para que la
+ * función sepa su celda como en Excel (y así el modo compatible del banco
+ * pruebe también B1b). Solo argumentos numéricos: es lo que usa el banco.
+ */
+const funcionesRiesgo = new Map<string, (...args: unknown[]) => unknown>();
+(globalThis as unknown as { CustomFunctions: unknown }).CustomFunctions = {
+  associate: (id: string, f: (...args: unknown[]) => unknown) => funcionesRiesgo.set(id, f),
+  Error: class extends Error {},
+  ErrorCode: { invalidNumber: '#NUM!', invalidName: '#NAME?', invalidValue: '#VALUE!', notAvailable: '#N/A' },
+};
+void import('../funciones.ts');
+
+(REGISTRO as Record<string, (typeof REGISTRO)[string]>)['_BANCO.RIESGO'] = (args, n) => {
+  const [dir, id, ...resto] = args.map((a) => a.columnas[0]);
+  const direccion = dir ? String(valorEn(dir)) : '';
+  const f = funcionesRiesgo.get(id ? String(valorEn(id)) : '');
+  const valores = resto.map((c) => (c ? coercionNumerica(c, 0) : NaN));
+  let v: unknown;
+  try {
+    v = f ? f(...valores, { address: direccion }) : '#NAME?';
+  } catch {
+    v = '#NUM!';
+  }
+  const valor: ValorEscalar = typeof v === 'number' ? { tipo: NUMERO, numero: v } : { tipo: TEXTO, texto: String(v) };
+  return desdeEscalar(valor, n);
+};
+
+function valorEn(c: import('../../engine/values/columna.ts').Columna): unknown {
+  const t = tipoEn(c, 0);
+  return t === TEXTO ? textoEn(c, 0) : numeroEn(c, 0);
+}
+
+function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): void {
+  for (const [clave, nodo] of grafo.nodos) {
+    if (!nodo.ast) continue;
+    let hay = false;
+    const cambiar = (x: Nodo): Nodo => {
+      // En un booleano: si no, el `if` estrecha el tipo y el resto no ve funciones.
+      const esDistribucion: boolean = esLlamadaDistribucion(x);
+      if (esDistribucion && x.tipo === 'funcion') {
+        hay = true;
+        return {
+          tipo: 'funcion', nombre: '_BANCO.RIESGO', pos: x.pos,
+          args: [{ tipo: 'texto', valor: clave, pos: x.pos }, { tipo: 'texto', valor: idDeFuncionRiesgo(x.nombre) ?? '', pos: x.pos }, ...x.args],
+        };
+      }
+      if (x.tipo === 'funcion') return { ...x, args: x.args.map(cambiar) };
+      if (x.tipo === 'binaria') return { ...x, izq: cambiar(x.izq), der: cambiar(x.der) };
+      if (x.tipo === 'unaria' || x.tipo === 'porcentaje') return { ...x, arg: cambiar(x.arg) };
+      return x;
+    };
+    const nuevo = cambiar(nodo.ast);
+    if (hay) reemplazarAst(grafo, clave, nuevo);
   }
 }
 

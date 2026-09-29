@@ -91,6 +91,12 @@ export interface RiesgoEnGrafo {
   reescrituras: Map<string, Nodo>;
   /** Por qué se reescribió cada celda, en palabras del usuario. */
   motivosReescritura: Map<string, string>;
+  /**
+   * Celdas reescritas que el modo compatible **no** puede simular (B1b), con
+   * el motivo. Las demás las simula Excel: su función devuelve en cada
+   * iteración el sorteo que le toca.
+   */
+  noCompatibles: Map<string, string>;
   errores: string[];
   /** Celdas que están en el panel y además tienen RIESGO: manda el panel. */
   duplicadas: string[];
@@ -126,7 +132,7 @@ export function contieneFuncionResultado(ast: Nodo): boolean {
 export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGrafo): RiesgoEnGrafo {
   const out: RiesgoEnGrafo = {
     entradas: [], claves: [], claveDeRef: new Map(), celdaDeEntrada: new Map(), descripciones: new Map(),
-    conversiones: [], reescritas: [], reescrituras: new Map(), motivosReescritura: new Map(), errores: [], duplicadas: [],
+    conversiones: [], reescritas: [], reescrituras: new Map(), motivosReescritura: new Map(), noCompatibles: new Map(), errores: [], duplicadas: [],
   };
 
   const candidatas: string[] = [];
@@ -170,6 +176,7 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
     const llamadas = contarLlamadas(nodo.ast);
     let k = 0;
     let conParametros = false;
+    let truncarConParametros = false;
     const errores: string[] = [];
     const nuevas: Array<{ entrada: EntradaRiskModel; claveVirtual: string; descripcion?: string }> = [];
 
@@ -218,6 +225,7 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
             return n;
           }
           etiqueta = `${FUNCION_TRUNCAR.id}:${idInterior}`;
+          truncarConParametros = true;
           args = [transformar(a), transformar(b), ...interior.args.map(transformar)];
         } else {
           errores.push(`RIESGO.${id} con valores que cambian en cada iteración todavía no se admite: sus rangos tienen que ser fijos`);
@@ -254,6 +262,14 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
       clave,
       conParametros ? 'tiene una función RIESGO con parámetros que cambian en cada iteración' : 'tiene una función RIESGO dentro de una operación',
     );
+    // B1b: con Excel en el bucle, la función de la celda devuelve su sorteo.
+    // Hace falta saber qué llamada es (una por celda) y poder devolver el
+    // valor de la distribución entera (TRUNCAR solo ve el valor de dentro).
+    if (llamadas > 1) {
+      out.noCompatibles.set(clave, 'tiene varias funciones RIESGO en la misma fórmula; con Excel en el bucle, pon cada una en su celda');
+    } else if (truncarConParametros) {
+      out.noCompatibles.set(clave, 'tiene RIESGO.TRUNCAR con parámetros que cambian en cada iteración, que solo simula el motor rápido');
+    }
   }
   return out;
 }

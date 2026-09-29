@@ -1020,11 +1020,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     «Acciones» en el manifiesto. En el banco, `window.__cinta(accion)`.
     **Siguiente**: B1b.
 
+43. [x] **B1b (2026-09-29)**. `noCompatibles` en `riesgoEnGrafo.ts`;
+    `sorteosPorClave` en `ejecutarSimulacion.ts` (las entradas virtuales no
+    se escriben: las sortea la función de su celda); `simularEnExcel` con
+    `sorteos` (lote 1 y `iteracion` en `simulacionEnExcel`); funciones con
+    `requiresAddress`. **Etapa 2 terminada en código** (B1, B2, B3, B1b):
+    falta la ronda del usuario (bloque N de la guía).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
-2. **Etapa 2: B1** (runtime compartido), que es el primer cambio del
-   manifiesto; después B2, B3 y B1b.
+2. ~~Etapa 2~~ ✅ en código el 29/09 (B1, B2, B3, B1b). **El usuario
+   recorre el bloque N de la guía**; arreglar lo que falle.
 3. Después, etapa 2: B1–B3 (runtime compartido, modo
    determinista/probabilístico, cinta que actúa) y **B1b** (las funciones
    RIESGO sortean en el motor compatible: casos 2 y 3 de B7 con Excel en el

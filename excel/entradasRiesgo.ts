@@ -36,6 +36,8 @@ export interface EntradasDeFunciones {
   reescrituras: Map<string, Nodo>;
   /** Por qué se reescribió cada una. */
   motivosReescritura: Map<string, string>;
+  /** Reescritas que el modo compatible no puede simular (B1b), con el motivo. */
+  noCompatibles: Map<string, string>;
 }
 
 /**
@@ -63,6 +65,7 @@ export function entradasDeFunciones(
     reescritas: r.reescritas,
     reescrituras: r.reescrituras,
     motivosReescritura: r.motivosReescritura,
+    noCompatibles: r.noCompatibles,
   };
 }
 
