@@ -1117,6 +1117,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     histograma). Pruebas `distribucionesB5.test.ts` (KS, frecuencias,
     momentos, cuantiles de tablas). **Siguiente**: D2–D4.
 
+54. [x] **D2–D4 (2026-09-29)**. D4: `TornadoCambio` (medias del primer y
+    último décimo de la araña) con conmutador en «Qué la mueve más» y en el
+    informe. D2: `excel/estres.ts` (tramos por percentiles de la entrada o
+    categoría, sobre `resultado.iteraciones`) y `Estres` en Resultados. D3:
+    `marcarSerie` en `ui/marcar.ts` (fila o columna, hasta 50),
+    `celdasDelRango` en `direcciones.ts`, `leerVecinos` y `nombresDeSerie`.
+    Los errores de Excel ya no son etiquetas. **Siguiente**: E (uso del
+    panel), H, U1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

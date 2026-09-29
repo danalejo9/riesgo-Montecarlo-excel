@@ -4,8 +4,9 @@
  */
 
 import { describirDistribucion, generarId, type DistributionSpec, type EntradaRiskModel, type ModeloRiesgo, type SalidaRiskModel } from '../engine/modelo/index.ts';
-import { leerNombresSugeridos } from '../excel/etiquetasEnExcel.ts';
-import { nombreUnico } from '../excel/nombreSugerido.ts';
+import { leerNombresSugeridos, leerVecinos } from '../excel/etiquetasEnExcel.ts';
+import { nombresDeSerie, nombreUnico } from '../excel/nombreSugerido.ts';
+import { celdasDelRango } from '../excel/direcciones.ts';
 import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 
 const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangular')?.porDefecto ?? {
@@ -75,8 +76,42 @@ export async function nombreLegible(modelo: ModeloRiesgo, ref: string): Promise<
   }
 }
 
+/** Como mucho, estas celdas en una serie de salidas. */
+const MAX_SERIE = 50;
+
+/** Una salida por celda de una fila o columna seleccionada (D3), con nombres de serie. */
+async function marcarSerie(modelo: ModeloRiesgo, sel: SeleccionLeida): Promise<ResultadoMarcar> {
+  if (sel.filas > 1 && sel.columnas > 1) {
+    return { ok: false, aviso: `Has seleccionado ${sel.filas} × ${sel.columnas} celdas. Para una serie de salidas, selecciona una fila o una columna.` };
+  }
+  const refs = celdasDelRango(sel.direccion);
+  if (refs.length === 0) return { ok: false, aviso: `No se entiende la selección ${sel.direccion}.` };
+  if (refs.length > MAX_SERIE) return { ok: false, aviso: `Una serie de salidas admite como mucho ${MAX_SERIE} celdas (has seleccionado ${refs.length}).` };
+  const ya = new Set(modelo.outputs.map((s) => s.ref));
+  const nuevas = refs.filter((r) => !ya.has(r) && !modelo.inputs.some((e) => e.ref === r));
+  if (nuevas.length === 0) return { ok: false, aviso: 'Esas celdas ya están en el modelo.' };
+  let nombres: string[];
+  try {
+    nombres = nombresDeSerie(nuevas, await leerVecinos(nuevas), sel.filas === 1 ? 'fila' : 'columna');
+  } catch {
+    nombres = nuevas;
+  }
+  const usados = [...modelo.inputs, ...modelo.outputs].map((x) => x.name);
+  const salidas: SalidaRiskModel[] = nuevas.map((ref, i) => {
+    const name = nombreUnico(nombres[i] ?? ref, ref, usados);
+    usados.push(name);
+    return { id: generarId('out'), name, ref };
+  });
+  return { ok: true, modelo: { ...modelo, outputs: [...modelo.outputs, ...salidas] }, id: (salidas[0] as SalidaRiskModel).id };
+}
+
 /** Añade la celda seleccionada al modelo como entrada o como salida. */
 export async function marcarSeleccion(modelo: ModeloRiesgo, como: 'entrada' | 'salida'): Promise<ResultadoMarcar> {
+  if (como === 'salida') {
+    // D3: una fila o una columna de celdas (los años de un flujo de caja) es una serie de salidas.
+    const sel = await leerSeleccion();
+    if (sel.filas * sel.columnas > 1) return marcarSerie(modelo, sel);
+  }
   const sel = await celdaSeleccionada();
   if (typeof sel === 'string') return { ok: false, aviso: sel };
   const ref = sel.direccion;

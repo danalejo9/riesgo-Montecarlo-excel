@@ -202,6 +202,29 @@ F20 y F21 (sección 9 de «Pruebas»).
 
 **N19. Distribuciones nuevas** (B5 del plan, nuevo): haz F22.
 
+**N20. Cambio en la salida** (D4 del plan, nuevo). Simula la demo con el
+VAN como salida y abre «Qué la mueve más»: arriba hay dos botones,
+**Correlación** (el tornado de siempre) y **Cambio en la salida**. En el
+segundo, cada barra va de la media del VAN cuando esa entrada está en su 10 %
+más bajo a cuando está en su 10 % más alto, en euros; pasa el ratón para leer
+los dos valores. El orden puede no coincidir con el de correlación: este mide
+«cuánto dinero mueve». También sale en el informe PDF («Cuánto mueve cada
+entrada»).
+
+**N21. Estrés** (D2 del plan, nuevo). En la misma salida, abre **«Estrés:
+una entrada en un extremo»**: elige una entrada (p. ej. el precio) y «su 10 %
+más bajo». La tabla compara la media, p5, p50 y p95 del VAN de siempre con
+los de esas iteraciones, y el cambio; con umbral, también su probabilidad.
+Es instantáneo (no vuelve a simular). Prueba con una entrada de texto (la
+zona, si la tienes marcada): se elige la categoría.
+
+**N22. Una serie de salidas** (D3 del plan, nuevo). En «Modelo», selecciona
+**D28:H28** (los flujos de caja libres de los años 1 a 5) y pulsa «Añadir la
+selección como salida»: se crean cinco salidas llamadas **«Flujo de caja
+libre · Año 1»** … **«· Año 5»**. Simula: en «Comparar salidas», el
+**abanico** muestra la serie año a año. Una selección de varias filas y
+columnas avisa de que hay que elegir una fila o una columna.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

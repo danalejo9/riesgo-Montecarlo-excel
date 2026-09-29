@@ -423,6 +423,15 @@ section > .plegable:first-child { border-top: 0; margin-top: 0; }
 .media-caja { fill: var(--texto); }
 .abanico-exterior { fill: var(--acento); fill-opacity: 0.15; }
 .abanico-interior { fill: var(--acento); fill-opacity: 0.35; }
+/* D2: los dos selectores del estrés, en una fila si caben. */
+.fila-estres { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+/* D4: tornado de cambio en la salida. */
+.grafico button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }
+.barra-cambio.sube { fill: var(--sube); }
+.barra-cambio.baja { fill: var(--baja); }
+.conmutador { display: inline-flex; border: 1px solid var(--borde); border-radius: 4px; overflow: hidden; margin: 2px 0 8px; }
+.conmutador button { border: 0; border-radius: 0; background: none; padding: 3px 10px; font-size: 12px; color: var(--texto); cursor: pointer; }
+.conmutador button[aria-pressed='true'] { background: var(--acento); color: var(--fondo); }
 .leyenda-series { flex-wrap: wrap; row-gap: 2px; }
 .tornado-contribucion { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
 

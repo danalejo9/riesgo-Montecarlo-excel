@@ -135,9 +135,9 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 24 | B5 | ✅ (29/09, falta Excel real) Distribuciones nuevas: t de Student, logística, log-logística, Pareto, geométrica, binomial negativa, hipergeométrica, uniforme entera, Trigen, general/histograma | **Tú** (lista de funciones) |
 | 25 | B7 | ✅ (28/09) `RIESGO.*` con celdas o cálculos como argumentos (`=RIESGO.NORMAL(B2;15)`), dentro de operaciones y con parámetros que dependen de otra celda aleatoria (los dos últimos, solo con el motor rápido) | **Tú** (prueba E4) |
 | 26 | C6 | Percentiles configurables | Plan |
-| 27 | D2 | Análisis de estrés: fijar una entrada en un percentil | Plan |
-| 28 | D3 | Salidas que son un rango (C28:H28 como una salida por periodos) | Plan |
-| 29 | D4 | **Tornado de cambio en la salida**: cuánto sube o baja la media (o un percentil) de la salida entre el valor bajo y el alto de cada entrada, en unidades de la salida | **Nuevo** |
+| 27 | D2 | ✅ (29/09, falta Excel real) Análisis de estrés: fijar una entrada en un percentil | Plan |
+| 28 | D3 | ✅ (29/09, falta Excel real) Salidas que son un rango (C28:H28 como una salida por periodos) | Plan |
+| 29 | D4 | ✅ (29/09, falta Excel real) **Tornado de cambio en la salida**: cuánto sube o baja la media (o un percentil) de la salida entre el valor bajo y el alto de cada entrada, en unidades de la salida | **Nuevo** |
 | 30 | E1 | Tabla con todas las entradas (incluidas las `RIESGO.*`) y edición rápida | Plan |
 | 31 | E2 | Matriz de correlaciones visible y editable | Plan |
 | 32 | E3 | Deshacer el último cambio del modelo | Plan |

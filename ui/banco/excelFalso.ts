@@ -515,4 +515,4 @@ export const hojaVolcada: {
 };
 
 /** Las celdas del libro falso, para el desplegable de selección. */
-export const CELDAS = [...Object.keys(LIBRO).filter((r) => r.startsWith('B')), 'D12:E14'];
+export const CELDAS = [...Object.keys(LIBRO).filter((r) => r.startsWith('B')), 'D12:E14', 'B24:B25', 'B32:B33'];

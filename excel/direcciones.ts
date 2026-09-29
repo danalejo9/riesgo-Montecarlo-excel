@@ -97,3 +97,17 @@ export function claveDesdeDireccion(direccion: string, hojaActiva?: string): str
 export function claveComparable(direccion: string): string | undefined {
   return claveDesdeDireccion(direccion.replace(/\$/g, ''));
 }
+
+/** Las celdas de `Hoja!D28:H28`, de izquierda a derecha y de arriba abajo. */
+export function celdasDelRango(direccion: string): string[] {
+  const { hoja, rango } = partirDireccion(direccion);
+  const m = /^\$?([A-Za-z]{1,3})\$?(\d{1,7}):\$?([A-Za-z]{1,3})\$?(\d{1,7})$/.exec(rango);
+  if (!m) return [];
+  const letras = (n: number): string => (n <= 0 ? '' : letras(Math.floor((n - 1) / 26)) + String.fromCharCode(65 + ((n - 1) % 26)));
+  const col = (l: string) => [...l.toUpperCase()].reduce((a, c) => a * 26 + (c.charCodeAt(0) - 64), 0);
+  const [c1, c2] = [col(m[1] as string), col(m[3] as string)].sort((a, b) => a - b) as [number, number];
+  const [f1, f2] = [Number(m[2]), Number(m[4])].sort((a, b) => a - b) as [number, number];
+  const out: string[] = [];
+  for (let f = f1; f <= f2; f++) for (let c = c1; c <= c2; c++) { const celda = `${letras(c)}${f}`; out.push(hoja ? componerDireccion(hoja, celda) : celda); }
+  return out;
+}

@@ -58,7 +58,7 @@ import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import { duracion, formatoDe, leerNumero, miles, numero, type FormatoValor } from './formato.ts';
 import { Plegable } from './Plegable.tsx';
-import { Abanico, CajasSalidas, CurvasSuperpuestas, Dispersion } from './Graficos.tsx';
+import { Abanico, CajasSalidas, CurvasSuperpuestas, Dispersion, Estres, TornadoCambio } from './Graficos.tsx';
 
 export function Resultados({
   modelo,
@@ -366,13 +366,24 @@ export function Resultados({
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
             <Plegable id="tornado" titulo="Qué la mueve más" abierta
               resumen={salida.sensibilidad[0]?.nombre}>
-              <Tornado filas={salida.sensibilidad} muestra={resultado.muestraSensibilidad} r2={salida.r2} />
+              <Sensibilidad salida={salida} muestra={resultado.muestraSensibilidad} />
             </Plegable>
           )}
 
           {resultado.iteraciones && resultado.iteraciones.salidas.some((s) => s.id === salida.id) && resultado.iteraciones.entradas.some((e) => !e.categorias) && (
             <Plegable id="dispersion" titulo="Dispersión con una entrada">
               <Dispersion iteraciones={resultado.iteraciones} idSalida={salida.id} formato={formatoDe(salida.fecha)} />
+            </Plegable>
+          )}
+
+          {resultado.iteraciones && resultado.iteraciones.salidas.some((s) => s.id === salida.id) && resultado.iteraciones.entradas.length > 0 && (
+            <Plegable id="estres" titulo="Estrés: una entrada en un extremo">
+              <Estres
+                iteraciones={resultado.iteraciones}
+                idSalida={salida.id}
+                formato={formatoDe(salida.fecha)}
+                {...(umbralDe(salida.id) ? { umbral: { valor: (umbralDe(salida.id) as UmbralRiskModel).value, sentido: (umbralDe(salida.id) as UmbralRiskModel).direction } } : {})}
+              />
             </Plegable>
           )}
 
@@ -838,6 +849,25 @@ export function QueTieneQuePasar({ colas, conTitulo = true }: { colas: readonly 
 }
 
 const TODAS = '__todas__';
+
+/** «Qué la mueve más»: por correlación (el tornado de siempre) o por cambio en la salida (D4). */
+function Sensibilidad({ salida, muestra }: { salida: ResultadoSalida; muestra?: number }) {
+  const [vista, setVista] = useState<'correlacion' | 'cambio'>('correlacion');
+  const conCambio = Boolean(salida.arana && salida.arana.length > 0);
+  return (
+    <>
+      {conCambio && (
+        <div className="conmutador" role="group" aria-label="Cómo medir la sensibilidad">
+          <button type="button" aria-pressed={vista === 'correlacion'} onClick={() => setVista('correlacion')}>Correlación</button>
+          <button type="button" aria-pressed={vista === 'cambio'} onClick={() => setVista('cambio')}>Cambio en la salida</button>
+        </div>
+      )}
+      {vista === 'cambio' && conCambio
+        ? <TornadoCambio curvas={salida.arana ?? []} media={salida.resumen.media} formato={formatoDe(salida.fecha)} />
+        : <Tornado filas={salida.sensibilidad ?? []} {...(muestra !== undefined ? { muestra } : {})} {...(salida.r2 !== undefined ? { r2: salida.r2 } : {})} />}
+    </>
+  );
+}
 
 /** Como mucho, estas iteraciones a la hoja (C3): más, y Excel tarda en escribirlas y en abrir el libro. */
 const LIMITE_EXPORTAR = 100_000;

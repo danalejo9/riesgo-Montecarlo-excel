@@ -31,6 +31,8 @@ function comoEtiqueta(v: Vecino): string | null {
   if (typeof v !== 'string') return null;
   const t = limpiar(v);
   if (t === '' || /^[-+]?[\d.,\s%€$]+$/.test(t)) return null;
+  // Un error de Excel (#N/A, #¿NOMBRE?, #DIV/0!…) no es una etiqueta.
+  if (/^#\S{1,14}$/.test(t)) return null;
   return t.length > LARGO_MAXIMO ? `${t.slice(0, LARGO_MAXIMO - 1)}…` : t;
 }
 
@@ -68,6 +70,36 @@ export function nombreSugerido(ref: string, izquierda: readonly Vecino[], arriba
 }
 
 /** Si el nombre ya lo usa otra celda del modelo, se le añade la suya para distinguirlas. */
+/** La etiqueta de texto más cercana de una franja (la primera que lo sea), o `null`. */
+export function primeraEtiqueta(vecinos: readonly Vecino[]): string | null {
+  for (const v of vecinos) {
+    const e = comoEtiqueta(v);
+    if (e) return e;
+  }
+  return null;
+}
+
+/**
+ * Nombres para una serie de salidas (D3): una fila de celdas (los años de un
+ * flujo de caja) o una columna. La etiqueta común sale del lado de la serie
+ * (la izquierda de la primera celda de una fila) y el periodo de cada una, del
+ * otro lado (la cabecera de encima): «Flujo de caja libre · Año 3».
+ */
+export function nombresDeSerie(
+  refs: readonly string[],
+  vecinos: ReadonlyMap<string, { izquierda: Vecino[]; arriba: Vecino[] }>,
+  orientacion: 'fila' | 'columna',
+): string[] {
+  const primera = vecinos.get(refs[0] as string);
+  const base = primera ? primeraEtiqueta(orientacion === 'fila' ? primera.izquierda : primera.arriba) : null;
+  return refs.map((ref) => {
+    const v = vecinos.get(ref);
+    const periodo = v ? primeraEtiqueta(orientacion === 'fila' ? v.arriba : v.izquierda) : null;
+    if (base && periodo) return `${base} · ${periodo}`;
+    return base ? `${base} (${soloCelda(ref)})` : v ? nombreSugerido(ref, v.izquierda, v.arriba) : ref;
+  });
+}
+
 export function nombreUnico(nombre: string, ref: string, usados: Iterable<string>): string {
   const ocupados = new Set(usados);
   if (nombre === ref || !ocupados.has(nombre)) return nombre;

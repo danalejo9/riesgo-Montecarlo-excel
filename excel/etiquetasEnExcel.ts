@@ -17,7 +17,16 @@ function columnaANumero(letras: string): number {
  * (un nombre definido ya es legible) se devuelven tal cual.
  */
 export async function leerNombresSugeridos(refs: readonly string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
+  const vecinos = await leerVecinos(refs);
+  return new Map(refs.map((ref) => {
+    const v = vecinos.get(ref);
+    return [ref, v ? nombreSugerido(ref, v.izquierda, v.arriba) : ref] as const;
+  }));
+}
+
+/** Las franjas de la izquierda y de encima de cada celda, la más cercana primero. Las que no son una celda suelta no están. */
+export async function leerVecinos(refs: readonly string[]): Promise<Map<string, { izquierda: Vecino[]; arriba: Vecino[] }>> {
+  const out = new Map<string, { izquierda: Vecino[]; arriba: Vecino[] }>();
   if (refs.length === 0) return out;
 
   return Excel.run(async (context) => {
@@ -25,16 +34,10 @@ export async function leerNombresSugeridos(refs: readonly string[]): Promise<Map
     const pedidos: Array<{ ref: string; izq?: Excel.Range; arr?: Excel.Range }> = [];
 
     for (const ref of refs) {
-      if (!esDireccionDirecta(ref)) {
-        out.set(ref, ref);
-        continue;
-      }
+      if (!esDireccionDirecta(ref)) continue;
       const { hoja, rango } = partirDireccion(ref);
       const m = /^\$?([A-Za-z]{1,3})\$?(\d{1,7})$/.exec(rango);
-      if (!m) {
-        out.set(ref, ref);
-        continue;
-      }
+      if (!m) continue;
       const col = columnaANumero(m[1] as string) - 1; // desde 0
       const fila = Number(m[2]) - 1;
       const ws = hoja ? context.workbook.worksheets.getItem(hoja) : activa;
@@ -54,7 +57,7 @@ export async function leerNombresSugeridos(refs: readonly string[]): Promise<Map
       // invierte para que la más cercana vaya primero.
       const izquierda = ((izq?.values?.[0] ?? []) as Vecino[]).slice().reverse();
       const arriba = ((arr?.values ?? []) as Vecino[][]).map((f) => f[0]).reverse();
-      out.set(ref, nombreSugerido(ref, izquierda, arriba));
+      out.set(ref, { izquierda, arriba });
     }
     return out;
   });

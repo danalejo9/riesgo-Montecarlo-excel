@@ -5,6 +5,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### D2, D3 y D4: estrés, series de salidas y cambio en la salida (2026-09-29)
+
+**Añadido**
+- **Cambio en la salida** (D4): en «Qué la mueve más», un segundo tornado,
+  en unidades de la salida: la media cuando cada entrada está en su 10 % más
+  bajo y en el más alto. También en el informe PDF.
+- **Estrés** (D2): la salida con una entrada en su 10 % o 25 % más bajo o
+  alto, en torno a su mediana, o en una categoría, frente a la de siempre
+  (media, p5, p50, p95 y umbral), al instante con las iteraciones retenidas.
+- **Series de salidas** (D3): marcar como salida una fila o columna de celdas
+  (hasta 50) crea una salida por celda con nombres de serie («Flujo de caja
+  libre · Año 3»), lista para el abanico.
+
+**Arreglado**
+- Un error de Excel (#N/A, #¿NOMBRE?…) ya no se toma como nombre de una celda.
+
 ### B5: distribuciones nuevas (2026-09-29)
 
 **Añadido**

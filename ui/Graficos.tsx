@@ -7,6 +7,7 @@
 import { useMemo, useState } from 'react';
 
 import type { IteracionesSimuladas } from '../excel/iteraciones.ts';
+import { estres, TRAMOS_ESTRES } from '../excel/estres.ts';
 import type { ResultadoSalida } from '../excel/informe.ts';
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { formatoDe, numero, type FormatoValor } from './formato.ts';
@@ -191,4 +192,140 @@ export function Abanico({ salidas }: { salidas: readonly ResultadoSalida[] }) {
 
 function recortar(t: string, n: number): string {
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
+}
+
+/**
+ * Tornado de cambio en la salida (D4): la media de la salida cuando cada
+ * entrada está en su décimo más bajo y en el más alto, en unidades de la
+ * salida. El de correlaciones dice «cuánto se parecen»; este, «cuánto mueve».
+ * Sale de las medias por décimos de la araña.
+ */
+export function TornadoCambio({ curvas, media, formato }: { curvas: readonly { id: string; nombre: string; medias: number[] }[]; media: number; formato: FormatoValor }) {
+  const [todas, setTodas] = useState(false);
+  const filas = curvas
+    .filter((c) => c.medias.length >= 2)
+    .map((c) => ({ ...c, bajo: c.medias[0] as number, alto: c.medias[c.medias.length - 1] as number }))
+    .sort((a, b) => Math.abs(b.alto - b.bajo) - Math.abs(a.alto - a.bajo));
+  if (filas.length === 0) return null;
+  const visibles = todas ? filas : filas.slice(0, 8);
+  const lo = Math.min(media, ...visibles.map((f) => Math.min(f.bajo, f.alto)));
+  const hi = Math.max(media, ...visibles.map((f) => Math.max(f.bajo, f.alto)));
+  const IZQ = 96;
+  const FILA = 20;
+  const ALTO = visibles.length * FILA + 22;
+  const aX = (x: number) => IZQ + ((x - lo) / (hi - lo || 1)) * (ANCHO - IZQ - 8);
+  return (
+    <figure className="grafico">
+      <svg viewBox={`0 0 ${ANCHO} ${ALTO}`} role="img" aria-label="Cambio en la salida entre el décimo bajo y el alto de cada entrada">
+        <line className="rejilla" x1={aX(media)} y1={2} x2={aX(media)} y2={ALTO - 18} />
+        {visibles.map((f, i) => {
+          const y = 4 + i * FILA;
+          const sube = f.alto >= f.bajo;
+          return (
+            <g key={f.id}>
+              <title>{`${f.nombre}: en su décimo más bajo, la salida vale de media ${formato.valor(f.bajo)}; en el más alto, ${formato.valor(f.alto)}.`}</title>
+              <text className="eje" x={IZQ - 6} y={y + 11} textAnchor="end">{recortar(f.nombre, 16)}</text>
+              <rect className={`barra-cambio ${sube ? 'sube' : 'baja'}`} x={aX(Math.min(f.bajo, f.alto))} y={y + 3} width={Math.max(1, Math.abs(aX(f.alto) - aX(f.bajo)))} height={FILA - 8} rx={2} />
+            </g>
+          );
+        })}
+        <text className="eje" x={IZQ} y={ALTO - 4}>{formato.valor(lo)}</text>
+        <text className="eje" x={aX(media)} y={ALTO - 4} textAnchor="middle">media</text>
+        <text className="eje" x={ANCHO - 8} y={ALTO - 4} textAnchor="end">{formato.valor(hi)}</text>
+      </svg>
+      {filas.length > 8 && (
+        <button type="button" className="enlace" onClick={() => setTodas(!todas)}>
+          {todas ? 'Ver solo las 8 primeras' : `Ver las ${filas.length} entradas`}
+        </button>
+      )}
+      <figcaption className="tenue">
+        Cada barra va de la media de la salida cuando esa entrada está en su 10 % más bajo a cuando está en su 10 %
+        más alto, en unidades de la salida (azul: sube con la entrada; rojo: baja). Pasa el ratón por una barra para
+        leer los dos valores.
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Estrés (D2): la salida cuando una entrada se queda en una parte de su
+ * rango, frente a la de siempre. Con las iteraciones retenidas, al instante.
+ */
+export function Estres({
+  iteraciones,
+  idSalida,
+  formato,
+  umbral,
+}: {
+  iteraciones: IteracionesSimuladas;
+  idSalida: string;
+  formato: FormatoValor;
+  umbral?: { valor: number; sentido: 'below' | 'above' };
+}) {
+  const [id, setId] = useState(iteraciones.entradas[0]?.id ?? '');
+  const [tramo, setTramo] = useState(TRAMOS_ESTRES.length - 1);
+  const entrada = iteraciones.entradas.find((e) => e.id === id) ?? iteraciones.entradas[0];
+  if (!entrada) return null;
+  const categorias = entrada.categorias;
+  const indice = categorias ? Math.min(tramo, categorias.length - 1) : Math.min(tramo, TRAMOS_ESTRES.length - 1);
+  const t = TRAMOS_ESTRES[indice] ?? (TRAMOS_ESTRES[0] as (typeof TRAMOS_ESTRES)[number]);
+  const r = estres(
+    iteraciones, entrada.id, idSalida,
+    categorias ? { tipo: 'categoria', indice } : { tipo: 'percentiles', desde: t.desde, hasta: t.hasta },
+    umbral,
+  );
+  const fe = formatoDe(entrada.fecha);
+  const fila = (etq: string, a: number, b: number, esProb = false) => {
+    const v = (x: number) => (esProb ? `${(x * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : formato.valor(x));
+    const d = b - a;
+    return (
+      <tr key={etq}>
+        <td>{etq}</td>
+        <td>{v(a)}</td>
+        <td>{v(b)}</td>
+        <td>{d === 0 ? '' : `${d > 0 ? '+' : '−'}${esProb ? `${(Math.abs(d) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} pt` : formato.dispersion(Math.abs(d))}`}</td>
+      </tr>
+    );
+  };
+  return (
+    <div>
+      <div className="fila-estres">
+        <label className="selector-salida">
+          <span className="tenue">Con</span>
+          <select value={entrada.id} onChange={(e) => { setId(e.target.value); setTramo(TRAMOS_ESTRES.length - 1); }}>
+            {iteraciones.entradas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+          </select>
+        </label>
+        <label className="selector-salida">
+          <span className="tenue">en</span>
+          <select value={indice} onChange={(e) => setTramo(Number(e.target.value))}>
+            {categorias
+              ? categorias.map((c, i) => <option key={c} value={i}>«{c}»</option>)
+              : TRAMOS_ESTRES.map((x, i) => <option key={x.etiqueta} value={i}>{x.etiqueta}</option>)}
+          </select>
+        </label>
+      </div>
+      {r ? (
+        <>
+          <div className="tabla-desplazable">
+            <table className="tabla-resumen sin-clic">
+              <thead><tr><th /><th>Siempre</th><th>Con eso</th><th>Cambio</th></tr></thead>
+              <tbody>
+                {fila('Media', r.base.media, r.estres.media)}
+                {fila('p5', r.base.p5, r.estres.p5)}
+                {fila('p50', r.base.p50, r.estres.p50)}
+                {fila('p95', r.base.p95, r.estres.p95)}
+                {r.base.probUmbral !== undefined && r.estres.probUmbral !== undefined && fila('Umbral', r.base.probUmbral, r.estres.probUmbral, true)}
+              </tbody>
+            </table>
+          </div>
+          <p className="tenue">
+            {r.limites ? `${entrada.nombre} entre ${fe.valor(r.limites.desde)} y ${fe.valor(r.limites.hasta)}: ` : ''}
+            {r.estres.n.toLocaleString('es-ES')} de {r.base.n.toLocaleString('es-ES')} iteraciones. Sin volver a simular: son las
+            iteraciones en que la entrada cayó ahí, con el resto de entradas como vinieran.
+          </p>
+        </>
+      ) : <p className="tenue">No hay iteraciones con esa condición.</p>}
+    </div>
+  );
 }

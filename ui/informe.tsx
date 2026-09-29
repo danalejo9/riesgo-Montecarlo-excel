@@ -12,7 +12,7 @@ import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../ex
 import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
   MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
-import { Abanico, CajasSalidas, CurvasSuperpuestas } from './Graficos.tsx';
+import { Abanico, CajasSalidas, CurvasSuperpuestas, TornadoCambio } from './Graficos.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -212,6 +212,13 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
           <div><h3>Qué pasa si cada entrada se mueve</h3><Arana curvas={s.arana} /></div>
         )}
       </div>
+
+      {s.arana && s.arana.length > 0 && (
+        <div className="graficos-informe">
+          <h3>Cuánto mueve cada entrada</h3>
+          <TornadoCambio curvas={s.arana} media={s.resumen.media} formato={formatoDe(s.fecha)} />
+        </div>
+      )}
 
       {s.colas?.map((c) => (
         <div key={c.cola}>
