@@ -35,7 +35,16 @@ import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../exce
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
 import { abrirVentana, type Ventana } from '../excel/ventana.ts';
 import { codificarJson } from '../excel/codificacion.ts';
-import { vistaDeCelda, vistaPorDefecto } from '../excel/explorador.ts';
+import { listaDelModelo, vistaDeCelda, vistaPorDefecto, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
+
+/** Lo que el panel manda al explorador (U3.1, U3.4). */
+interface MensajeExplorador {
+  vista?: VistaExplorador;
+  motivo?: string;
+  lista?: ListaModelo;
+  pestana?: 'distribucion' | 'lista';
+}
+import { rangoDesdeDireccion } from '../excel/rangos.ts';
 import { actualizarCintaIteraciones, ITERACIONES_CINTA } from '../excel/cinta.ts';
 import { escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { leerSeleccion } from '../excel/seleccion.ts';
@@ -52,7 +61,7 @@ import {
   type AvanceSimulacion,
   type ResultadoSimulacionPanel,
 } from '../excel/ejecutarSimulacion.ts';
-import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { modeloVacio, resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
 import { Configuracion } from './Configuracion.tsx';
 import { crearPoolNavegador } from './motor/poolNavegador.ts';
@@ -273,13 +282,17 @@ export function Panel() {
   // U3.1: el explorador de distribución. Enseña la celda seleccionada y la
   // sigue mientras está abierto (y la vuelve a mandar tras cada simulación).
   const explorador = useRef<{ ventana: Ventana; dejar?: () => Promise<void>; direccion: string } | null>(null);
-  const mensajeExplorador = useCallback((direccion: string) => {
+  const mensajeExplorador = useCallback((direccion: string): MensajeExplorador => {
     const { resultado: r, modelo: m } = ultimo.current;
     const umbrales = new Map((m?.outputs ?? []).filter((o) => o.threshold).map((o) => [o.id, o.threshold as { value: number; direction: 'below' | 'above' }]));
     const v = vistaDeCelda(direccion, r?.ok ? r : null, umbrales);
-    return v.ok ? { vista: v.vista } : { motivo: v.motivo };
+    const lista = m ? listaDelModelo(m, r?.ok ? r : null, (id) => {
+      const e = m.inputs.find((x) => x.id === id);
+      return e ? resumirDistribucion(e.dist) : '';
+    }) : undefined;
+    return { ...(v.ok ? { vista: v.vista } : { motivo: v.motivo }), ...(lista ? { lista } : {}) };
   }, []);
-  const abrirExplorador = useCallback(async () => {
+  const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' = 'distribucion') => {
     let direccion = '';
     try {
       direccion = (await leerSeleccion()).direccion;
@@ -288,15 +301,35 @@ export function Panel() {
     }
     const r = ultimo.current.resultado;
     let mensaje = mensajeExplorador(direccion);
-    if ('motivo' in mensaje) {
+    if (!mensaje.vista) {
       const porDefecto = vistaPorDefecto(r?.ok ? r : null);
-      if (porDefecto.ok) mensaje = { vista: porDefecto.vista };
+      if (porDefecto.ok) mensaje = { ...(mensaje.lista ? { lista: mensaje.lista } : {}), vista: porDefecto.vista };
     }
+    mensaje = { ...mensaje, pestana: pestanaVentana };
     const abierta = explorador.current;
     if (abierta && abierta.ventana.enviar(mensaje)) return;
     const ventana = await abrirVentana('explorador.html', await codificarJson(mensaje), {
       alto: 75,
       ancho: 60,
+      // U3.4: pulsar una fila de la lista selecciona esa celda en la hoja.
+      alRecibir: (texto) => {
+        let pedido: { accion?: string; ref?: string } = {};
+        try {
+          pedido = JSON.parse(texto) as typeof pedido;
+        } catch {
+          return;
+        }
+        if (pedido.accion !== 'ir' || !pedido.ref) return;
+        const ref = pedido.ref;
+        if (explorador.current) {
+          explorador.current.direccion = ref;
+          explorador.current.ventana.enviar(mensajeExplorador(ref));
+        }
+        void Excel.run(async (ctx) => {
+          rangoDesdeDireccion(ctx, ref).select();
+          await ctx.sync();
+        }).catch(() => {});
+      },
       alCerrar: () => {
         void explorador.current?.dejar?.().catch(() => {});
         explorador.current = null;
@@ -418,6 +451,7 @@ export function Panel() {
         cambiar({ ...m, settings: { ...m.settings, iterations: n } });
       })),
       manejarDesdeLaCinta('verDistribucion', () => abrirExplorador()),
+      manejarDesdeLaCinta('verListaModelo', () => abrirExplorador('lista')),
       manejarDesdeLaCinta('ajustarDatos', async () => {
         setPestana('modelo');
         setPedidoAjuste((x) => x + 1);

@@ -169,3 +169,68 @@ export function vistaPorDefecto(resultado: SimulacionCompletada | null): Resulta
   }
   return { ok: false, motivo: 'La última simulación no tiene salidas numéricas que enseñar.' };
 }
+
+/** Una fila de la lista del modelo (U3.4). */
+export interface FilaLista {
+  nombre: string;
+  ref: string;
+  /** Entrada: su distribución en palabras. Salida de texto: el valor más frecuente. */
+  detalle: string;
+  /** Del panel, o de una función RIESGO escrita en la celda. */
+  origen: 'panel' | 'funcion';
+  fecha?: boolean;
+  /** De la última simulación, si la hay. */
+  media?: number;
+  p5?: number;
+  p95?: number;
+}
+
+export interface ListaModelo {
+  entradas: FilaLista[];
+  salidas: FilaLista[];
+  /** Sin simulación, la lista enseña solo el modelo (sin cifras). */
+  conSimulacion: boolean;
+}
+
+/**
+ * Todas las entradas y salidas: las del panel y las que declaran las
+ * funciones RIESGO del libro (esas solo se conocen tras simular), con sus
+ * cifras de la última simulación. Una salida de texto enseña su valor más
+ * frecuente.
+ */
+export function listaDelModelo(
+  modelo: { inputs: readonly { id: string; name: string; ref: string }[]; outputs: readonly { id: string; name: string; ref: string }[] },
+  resultado: SimulacionCompletada | null,
+  resumir: (id: string) => string,
+): ListaModelo {
+  const muestreadas = new Map((resultado?.entradas ?? []).map((e) => [e.id, e] as const));
+  const entradas: FilaLista[] = modelo.inputs.map((e) => {
+    const m = muestreadas.get(e.id);
+    return {
+      nombre: e.name, ref: e.ref, detalle: m?.distribucion ?? resumir(e.id), origen: 'panel',
+      ...(m?.fecha ? { fecha: true } : {}),
+      ...(m && !m.frecuencias ? { media: m.media, p5: m.percentiles.p5, p95: m.percentiles.p95 } : {}),
+    };
+  });
+  for (const f of resultado?.entradasDeFunciones ?? []) {
+    const m = f.id ? muestreadas.get(f.id) : undefined;
+    entradas.push({
+      nombre: f.nombre && f.nombre !== f.ref ? f.nombre : f.ref, ref: f.ref, detalle: f.distribucion, origen: 'funcion',
+      ...(m?.fecha ? { fecha: true } : {}),
+      ...(m && !m.frecuencias ? { media: m.media, p5: m.percentiles.p5, p95: m.percentiles.p95 } : {}),
+    });
+  }
+  const delPanel = new Set(modelo.outputs.map((o) => o.id));
+  const salidas: FilaLista[] = resultado
+    ? resultado.salidas.map((s) => {
+        const moda = s.categorias?.[0];
+        return {
+          nombre: s.nombre, ref: s.ref, origen: delPanel.has(s.id) ? 'panel' : 'funcion',
+          detalle: moda ? `«${moda.valor}» ${(moda.proporcion * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : '',
+          ...(s.fecha ? { fecha: true } : {}),
+          ...(!moda && s.resumen.n > 0 ? { media: s.resumen.media, ...(s.resumen.percentiles.p5 !== undefined ? { p5: s.resumen.percentiles.p5 } : {}), ...(s.resumen.percentiles.p95 !== undefined ? { p95: s.resumen.percentiles.p95 } : {}) } : {}),
+        } satisfies FilaLista;
+      })
+    : modelo.outputs.map((o) => ({ nombre: o.name, ref: o.ref, detalle: '', origen: 'panel' as const }));
+  return { entradas, salidas, conSimulacion: resultado !== null };
+}

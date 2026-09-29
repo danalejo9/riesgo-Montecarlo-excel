@@ -16,6 +16,7 @@ const ICONOS = {
   pdf: `<path d="M14 4 H40 L52 16 V60 H14 Z" fill="#fff" stroke="${ROJO}" stroke-width="4" stroke-linejoin="round"/><path d="M40 4 V16 H52" fill="none" stroke="${ROJO}" stroke-width="4" stroke-linejoin="round"/><rect x="20" y="28" width="26" height="5" fill="${ROJO}"/><rect x="20" y="38" width="26" height="5" fill="${ROJO}"/><rect x="20" y="48" width="16" height="5" fill="${ROJO}"/>`,
   ayuda: `<circle cx="32" cy="32" r="27" fill="${AZUL}"/><path d="M24 25 C24 14 40 14 40 24 C40 32 32 31 32 40" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="32" cy="50" r="4" fill="#fff"/>`,
   ejemplos: `<rect x="16" y="6" width="38" height="46" rx="3" fill="${OCRE}" opacity=".45"/><rect x="10" y="12" width="38" height="46" rx="3" fill="#fff" stroke="${OCRE}" stroke-width="4"/><path d="M18 26 H40 M18 36 H40 M18 46 H32" stroke="${OCRE}" stroke-width="4"/>`,
+  lista: `<rect x="6" y="10" width="10" height="10" fill="#E3B505"/><rect x="22" y="12" width="36" height="6" fill="${GRIS}"/><rect x="6" y="27" width="10" height="10" fill="${VERDE}"/><rect x="22" y="29" width="36" height="6" fill="${GRIS}"/><rect x="6" y="44" width="10" height="10" fill="#E3B505"/><rect x="22" y="46" width="36" height="6" fill="${GRIS}"/>`,
   diagnostico: `<path d="M4 34 H18 L24 18 L34 50 L42 26 L46 34 H60" stroke="${GRIS}" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`,
 };
 

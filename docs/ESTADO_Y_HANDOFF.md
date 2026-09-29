@@ -1251,6 +1251,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     de `vistaPrevia` del ejemplo por defecto). Visto en el banco.
     **Siguiente**: U3.4.
 
+69. [x] **U3.4 (2026-09-29)**. `listaDelModelo` (`excel/explorador.ts`) y
+    pestaña «Entradas y salidas» en `ui/explorador.tsx` (una sola ventana
+    por complemento en Office: lista y explorador comparten); la fila manda
+    `{accion:'ir', ref}` con `hablarAlPanel` y el panel selecciona la celda y
+    reenvía la vista. Botón `btnListaModelo` (`verListaModelo`). De paso:
+    `esTodaLaFormula` (`excel/entradasRiesgo.ts`): una RIESGO dentro de una
+    operación no hereda el formato de fecha de la celda. **Siguiente**: la
+    ronda del usuario (N1–N38); U3.5–U3.6 si los confirma.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -42,7 +42,7 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N37** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N38** (sección N, justo después de la 0).
 >   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
@@ -487,6 +487,17 @@ panel (▸) y pulsa **«¿Cuál elegir? Ver el catálogo»**.
 - Pulsa **Lognormal**: el catálogo se cierra, la entrada pasa a lognormal y
   su vista previa cambia. Dime si los grupos te sirven para elegir o si
   cambiarías alguno.
+
+**N38. Entradas y salidas** (U3.4, nuevo). Con la demo simulada, pulsa en
+la cinta **Entradas y salidas** (grupo Análisis).
+- Esperado: la ventana del explorador en su pestaña **«Entradas y
+  salidas»**: dos tablas con todas las entradas (las del panel y las de
+  funciones RIESGO, marcadas «· función») y todas las salidas, con su
+  distribución o su valor más frecuente, y media, p5 y p95.
+- Pulsa una fila: Excel **selecciona esa celda** y la ventana pasa a la
+  pestaña «Distribución» con esa entrada o salida.
+- En «Pruebas» (rellena), la entrada de «Fin de obra» si la hubiera dentro
+  de una suma con fecha se lee en días, no como una fecha de 1900.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

@@ -58,3 +58,6 @@
 .ayuda-pagina h3 { font-size: 14px; margin: 16px 0 4px; }
 .tabla-estadisticas td.texto { text-align: left; padding-bottom: 8px; }
 .tabla-estadisticas th { vertical-align: top; white-space: nowrap; }
+.pestanas-ventana { margin-bottom: 16px; }
+.tabla-lista tbody tr { cursor: pointer; }
+.tabla-lista td { font-variant-numeric: tabular-nums; }

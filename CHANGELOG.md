@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U3.4: lista de entradas y salidas (2026-09-29)
+
+**Añadido**
+- Botón **Entradas y salidas** en la cinta (grupo Análisis): la ventana del
+  explorador, en su pestaña de lista, con todas las entradas (del panel y de
+  funciones RIESGO) y salidas, su distribución o su valor más frecuente, y
+  media, p5 y p95. Pulsar una fila la selecciona en la hoja y enseña su
+  distribución. Excel solo deja una ventana por complemento: por eso lista y
+  explorador comparten ventana, con dos pestañas.
+
+**Corregido**
+- Una función RIESGO dentro de una operación en una celda con fecha
+  (`=B29+RIESGO.NORMAL(90;10)`) se enseñaba como fecha (`Normal(30/03/1900;
+  10 días)`); es una duración: ahora `Normal(90; 10)`.
+
 ### U3.3: catálogo visual de distribuciones (2026-09-29)
 
 **Añadido**

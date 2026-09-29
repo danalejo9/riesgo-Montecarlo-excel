@@ -43,6 +43,11 @@ export async function abrirVentana(
 
   if (!mostrar || !office?.EventType) {
     const w = window.open(url, pagina, `width=${Math.round(opciones.ancho * 10)},height=${Math.round(opciones.alto * 8)}`);
+    const alMensaje = (e: MessageEvent) => {
+      const m = e.data as { riesgoPanel?: string; datos?: unknown } | null;
+      if (e.origin === window.location.origin && m?.riesgoPanel === pagina) opciones.alRecibir?.(JSON.stringify(m.datos));
+    };
+    window.addEventListener('message', alMensaje);
     const ventana: Ventana = {
       enviar: (d) => {
         if (!w || w.closed) return false;
@@ -94,6 +99,20 @@ export async function abrirVentana(
       ok(ventana);
     });
   });
+}
+
+/** Del lado de la ventana: le dice algo al panel (`messageParent`; en el banco, `postMessage` al que la abrió). */
+export function hablarAlPanel(pagina: string, datos: unknown): void {
+  const ui = (globalThis as unknown as { Office?: { context?: { ui?: { messageParent?: (m: string) => void } } } }).Office?.context?.ui;
+  if (typeof ui?.messageParent === 'function') {
+    try {
+      ui.messageParent(JSON.stringify(datos));
+      return;
+    } catch {
+      // fuera de una ventana de Office: se prueba con el que la abrió
+    }
+  }
+  window.opener?.postMessage({ riesgoPanel: pagina, datos }, window.location.origin);
 }
 
 /**

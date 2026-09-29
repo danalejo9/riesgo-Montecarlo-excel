@@ -377,6 +377,21 @@
                     <FunctionName>verDistribucion</FunctionName>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="btnListaModelo">
+                  <Label resid="btnListaModelo.Label" />
+                  <Supertip>
+                    <Title resid="btnListaModelo.Label" />
+                    <Description resid="btnListaModelo.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoLista.16" />
+                    <bt:Image size="32" resid="IconoLista.32" />
+                    <bt:Image size="80" resid="IconoLista.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>verListaModelo</FunctionName>
+                  </Action>
+                </Control>
                 <Control xsi:type="Button" id="btnAjustar">
                   <Label resid="btnAjustar.Label" />
                   <Supertip>
@@ -604,6 +619,9 @@
         <bt:Image id="IconoDiagnostico.16" DefaultValue="https://localhost:9090/icon-diagnostico-16.png" />
         <bt:Image id="IconoDiagnostico.32" DefaultValue="https://localhost:9090/icon-diagnostico-32.png" />
         <bt:Image id="IconoDiagnostico.80" DefaultValue="https://localhost:9090/icon-diagnostico-80.png" />
+        <bt:Image id="IconoLista.16" DefaultValue="https://localhost:9090/icon-lista-16.png" />
+        <bt:Image id="IconoLista.32" DefaultValue="https://localhost:9090/icon-lista-32.png" />
+        <bt:Image id="IconoLista.80" DefaultValue="https://localhost:9090/icon-lista-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -650,6 +668,7 @@
         <bt:String id="ejObra.Label" DefaultValue="Presupuesto de obra" />
         <bt:String id="ejCartera.Label" DefaultValue="Cartera de inversiones" />
         <bt:String id="ejSerie.Label" DefaultValue="Serie de precios" />
+        <bt:String id="btnListaModelo.Label" DefaultValue="Entradas y salidas" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
@@ -681,6 +700,7 @@
         <bt:String id="ejObra.Tooltip" DefaultValue="Partidas con mínimo, más probable y máximo, y dos riesgos que pueden ocurrir o no." />
         <bt:String id="ejCartera.Tooltip" DefaultValue="Tres activos con rentabilidades inciertas, dos de ellos correlacionados." />
         <bt:String id="ejSerie.Tooltip" DefaultValue="Un precio que evoluciona año a año con crecimiento incierto, y un tipo de interés que vuelve a su media." />
+        <bt:String id="btnListaModelo.Tooltip" DefaultValue="Abre una ventana con todas las entradas y salidas del modelo y sus cifras; pulsa una para seleccionarla en la hoja y ver su distribución." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

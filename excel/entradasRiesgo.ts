@@ -15,6 +15,7 @@
 import type { FormulaCelda, Grafo } from '../engine/graph/index.ts';
 import type { Nodo } from '../engine/parser/ast.ts';
 import { analizarRiesgoEnGrafo, type EntradaRiskModel } from '../engine/modelo/index.ts';
+import { NOMBRE_CUANTIL } from '../engine/functions/riesgo.ts';
 
 export interface EntradasDeFunciones {
   entradas: EntradaRiskModel[];
@@ -88,4 +89,19 @@ export function resolverConFunciones(
   if (deFunciones.claves.length === 0) return resolver;
   const propias = deFunciones.claveDeRef ?? new Map(deFunciones.claves.map((c) => [c, c] as const));
   return (ref) => propias.get(ref) ?? resolver(ref);
+}
+
+/**
+ * ¿La distribución de esta entrada es **toda** la fórmula de su celda? Solo
+ * entonces el formato de la celda (una fecha, T7) es también el de la
+ * entrada: en `=B29+RIESGO.NORMAL(90;10)` la celda es una fecha, pero la
+ * normal es una duración en días. Las del panel siempre lo son.
+ */
+export function esTodaLaFormula(d: Pick<EntradasDeFunciones, 'celdaDeEntrada' | 'reescrituras'>, idEntrada: string): boolean {
+  const celda = d.celdaDeEntrada.get(idEntrada);
+  if (celda === undefined) return true;
+  const raiz = d.reescrituras.get(celda);
+  if (!raiz) return true; // sin reescribir: la función es la celda entera (caso 1)
+  if (raiz.tipo === 'celda') return (raiz.ref.hoja ?? '').startsWith('\u0001');
+  return raiz.tipo === 'funcion' && raiz.nombre === NOMBRE_CUANTIL;
 }

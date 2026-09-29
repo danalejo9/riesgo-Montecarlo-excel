@@ -58,6 +58,7 @@ if (typeof Office === 'undefined') {
     ...Object.fromEntries(ITERACIONES_CINTA.map((n) => [`iteraciones${n}`, () => pedirAlPanel(`iteraciones:${n}`)])),
     iteracionesOtra: () => mostrar('configuracion'),
     verDistribucion: () => pedirAlPanel('verDistribucion'),
+    verListaModelo: () => pedirAlPanel('verListaModelo'),
     ajustarDatos: () => pedirAlPanel('ajustarDatos'),
     verEscenarios: () => pedirAlPanel('verEscenarios'),
     volcarHoja: () => pedirAlPanel('volcarHoja'),

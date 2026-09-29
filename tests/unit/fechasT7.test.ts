@@ -63,3 +63,19 @@ describe('en la tabla de entradas', () => {
     expect(resumirDistribucionFecha({ type: 'normal', mean: d, stdDev: 21.5 })).toMatch(/^Normal\(01\/01\/2027; 21,5 días\)$/);
   });
 });
+
+describe('entrada dentro de una operación en una celda con fecha', () => {
+  it('solo hereda el formato si la función es toda la fórmula', async () => {
+    const { esTodaLaFormula } = await import('../../excel/entradasRiesgo.ts');
+    const virtual = { tipo: 'celda', ref: { hoja: '\u0001H!B30', col: 1, fila: 1 }, pos: 0 } as const;
+    const suma = { tipo: 'binaria', op: '+', izq: { tipo: 'celda', ref: { col: 2, fila: 29 }, pos: 0 }, der: virtual, pos: 0 } as const;
+    const d = {
+      celdaDeEntrada: new Map([['rf_a', 'H!B29'], ['rf_b', 'H!B30'], ['rf_c', 'H!B31']]),
+      reescrituras: new Map<string, never>([['H!B30', suma as never], ['H!B31', virtual as never]]),
+    };
+    expect(esTodaLaFormula(d, 'rf_a')).toBe(true); // sin reescribir
+    expect(esTodaLaFormula(d, 'rf_b')).toBe(false); // =B29+RIESGO.NORMAL(90;10)
+    expect(esTodaLaFormula(d, 'rf_c')).toBe(true); // toda la celda, reescrita a su celda virtual
+    expect(esTodaLaFormula(d, 'in_panel')).toBe(true);
+  });
+});

@@ -62,7 +62,7 @@ export type {
   ResultadoSimulacionPanel,
   SimulacionCompletada,
 } from './informe.ts';
-import { entradasDeFunciones, resolverConFunciones } from './entradasRiesgo.ts';
+import { entradasDeFunciones, esTodaLaFormula, resolverConFunciones } from './entradasRiesgo.ts';
 import { analisisDeTexto } from './analisisTexto.ts';
 import { entradasMuestreadas } from './entradasMuestreadas.ts';
 import { indiceDeTextos } from './nombreSugerido.ts';
@@ -260,8 +260,10 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     return nodo ? componerDireccion(nodo.hoja, `${letrasDeColumna(nodo.col)}${nodo.fila}`) : clave;
   };
   const dirSalidas = clavesSalida.map(direccionDe);
-  const dirEntradas = modelo.inputs.map((e, i) => direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)));
-  const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])]).catch(() => new Set<string>());
+  // Una entrada dentro de una operación (`=B29+RIESGO.NORMAL(90;10)`) no hereda el formato de su celda: '' no lo tiene.
+  const dirEntradas = modelo.inputs.map((e, i) =>
+    esTodaLaFormula(deFunciones, e.id) ? direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)) : '');
+  const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])].filter(Boolean)).catch(() => new Set<string>());
   // H6 y H7: avisos de coherencia y por dónde llega cada entrada a cada salida.
   const avisosCoherencia = avisosDeCoherencia(grafo, modelo.inputs, clavesEntrada, clavesSalida, direccionDe);
   const trazado = trazarDependencias(grafo, modelo.inputs, clavesEntrada, modelo.outputs.map((s, i) => ({ nombre: s.name, clave: clavesSalida[i] as string })), direccionDe);

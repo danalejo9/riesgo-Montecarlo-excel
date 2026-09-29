@@ -115,3 +115,27 @@ describe('catálogo visual (U3.3)', () => {
     for (const d of CATALOGO_DISTRIBUCIONES) expect(vistaPrevia(d.porDefecto), d.tipo).not.toBeNull();
   });
 });
+
+describe('lista de entradas y salidas (U3.4)', () => {
+  it('las del panel y las de funciones, con sus cifras; sin simulación, solo el modelo', async () => {
+    const { listaDelModelo } = await import('../../excel/explorador.ts');
+    const modelo = { inputs: [{ id: 'in_p', name: 'Precio', ref: 'Hoja1!B2' }], outputs: [{ id: 'van', name: 'VAN', ref: 'Hoja1!$B$10' }] };
+    const conFunciones = { ...RESULTADO, entradasDeFunciones: [{ id: 'rf_x', ref: 'Hoja1!C5', distribucion: 'Normal(100; 10)', nombre: 'Demanda' }] } as SimulacionCompletada;
+    const l = listaDelModelo(modelo, conFunciones, () => 'Triangular(1; 2; 3)');
+    expect(l.conSimulacion).toBe(true);
+    expect(l.entradas.map((e) => [e.nombre, e.origen, e.detalle])).toEqual([
+      ['Precio', 'panel', 'Uniforme(0; 100)'],
+      ['Demanda', 'funcion', 'Normal(100; 10)'],
+    ]);
+    expect(l.entradas[0]).toMatchObject({ media: 50, p5: 5, p95: 95 });
+    expect(l.salidas.map((s) => [s.nombre, s.origen, s.detalle])).toEqual([['Gama', 'funcion', '«Alta» 100 %'], ['VAN', 'panel', '']]);
+    expect(l.salidas[1]?.media).toBe(49.995);
+
+    const sin = listaDelModelo(modelo, null, () => 'Triangular(1; 2; 3)');
+    expect(sin).toEqual({
+      conSimulacion: false,
+      entradas: [{ nombre: 'Precio', ref: 'Hoja1!B2', detalle: 'Triangular(1; 2; 3)', origen: 'panel' }],
+      salidas: [{ nombre: 'VAN', ref: 'Hoja1!$B$10', detalle: '', origen: 'panel' }],
+    });
+  });
+});

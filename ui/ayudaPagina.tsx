@@ -31,7 +31,7 @@ const GRUPOS_CINTA: [string, string][] = [
   ['Celdas', 'Marca la celda seleccionada como entrada (amarillo) o salida (verde), sin abrir el panel. Quitar resaltado devuelve los colores de antes.'],
   ['Simulación', 'Iteraciones elige cuántas (la actual aparece desactivada; «Otra cantidad…» abre Configuración). Simular corre el modelo.'],
   ['Modo del libro', 'Qué enseñan las celdas con funciones RIESGO fuera de la simulación: un valor fijo (la media) o uno al azar que cambia con F9.'],
-  ['Análisis', 'Ver distribución abre una ventana con la distribución de la celda seleccionada y la sigue al seleccionar otra. Ajustar a datos propone distribuciones para una columna de datos seleccionada. Escenarios guarda y compara simulaciones.'],
+  ['Análisis', 'Ver distribución abre una ventana con la distribución de la celda seleccionada y la sigue al seleccionar otra. Entradas y salidas abre la misma ventana con la lista del modelo: pulsa una fila para ir a esa celda. Ajustar a datos propone distribuciones para una columna de datos seleccionada. Escenarios guarda y compara simulaciones.'],
   ['Informes', 'Volcar a una hoja escribe los resultados con sus gráficos; Informe PDF los abre listos para imprimir.'],
   ['Ayuda', 'Esta ventana, los modelos de ejemplo (se escriben en una hoja nueva) y el diagnóstico del complemento.'],
 ];
