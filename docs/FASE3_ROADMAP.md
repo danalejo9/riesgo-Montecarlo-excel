@@ -478,12 +478,12 @@ Estimaciones en días de trabajo efectivo.
   que dice «cuánto se parecen» pero no «cuánto dinero mueve».
 
 ### E. Uso del panel — 2–4 d
-- **E1. Vista de todas las entradas** en una tabla (nombre, celda,
+- **E1. Vista de todas las entradas** ✅ 29/09 en una tabla (nombre, celda,
   distribución, correlaciones), incluidas las `RIESGO.*` del libro, con
   edición rápida.
-- **E2. Matriz de correlaciones** visible y editable como tabla.
-- **E3. Deshacer** el último cambio del modelo.
-- **E4. Ayuda contextual**: qué es cada distribución, cada gráfico y cada
+- **E2. Matriz de correlaciones** ✅ 29/09 visible y editable como tabla.
+- **E3. Deshacer** ✅ 29/09 (30 cambios, agrupando lo escrito de seguido) el último cambio del modelo.
+- **E4. Ayuda contextual** ✅ 29/09 (`ui/ayuda.tsx`, textos reutilizables en el manual): qué es cada distribución, cada gráfico y cada
   número, sin salir del panel.
 - **E5. Nombres legibles automáticos** *(27/09)*: al marcar una celda,
   proponer como nombre el texto de su izquierda (B5 «Precio unitario») o de
@@ -703,7 +703,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
 pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
-~~T7, T8, T9, C3, C4, B5, D2–D4~~ ✅ 29/09, E, H, U1 → F según los
+~~T7, T8, T9, C3, C4, B5, D2–D4, E1–E4~~ ✅ 29/09 → H, U1, E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por

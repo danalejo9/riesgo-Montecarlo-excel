@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### E1–E4: todas las entradas, matriz de correlaciones, deshacer y ayuda (2026-09-29)
+
+**Añadido**
+- **Deshacer** (E3): botón «↶ Deshacer» y Ctrl+Z (fuera de un campo), hasta
+  30 cambios del modelo; lo que se escribe de seguido cuenta como uno.
+- **Todas las entradas** (E1): tabla con las del panel y, tras simular, las
+  funciones RIESGO del libro.
+- **Matriz de correlaciones** (E2): todas las entradas numéricas en una
+  tabla editable (triángulo superior); avisa con nombres si el conjunto es
+  imposible.
+- **Ayuda contextual** (E4): «¿Qué es esto?» bajo las cifras y en cada
+  sección de Resultados y en la matriz de correlaciones.
+
 ### D2, D3 y D4: estrés, series de salidas y cambio en la salida (2026-09-29)
 
 **Añadido**

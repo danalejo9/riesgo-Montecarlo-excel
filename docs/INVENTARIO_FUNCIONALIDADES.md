@@ -138,10 +138,10 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 27 | D2 | ✅ (29/09, falta Excel real) Análisis de estrés: fijar una entrada en un percentil | Plan |
 | 28 | D3 | ✅ (29/09, falta Excel real) Salidas que son un rango (C28:H28 como una salida por periodos) | Plan |
 | 29 | D4 | ✅ (29/09, falta Excel real) **Tornado de cambio en la salida**: cuánto sube o baja la media (o un percentil) de la salida entre el valor bajo y el alto de cada entrada, en unidades de la salida | **Nuevo** |
-| 30 | E1 | Tabla con todas las entradas (incluidas las `RIESGO.*`) y edición rápida | Plan |
-| 31 | E2 | Matriz de correlaciones visible y editable | Plan |
-| 32 | E3 | Deshacer el último cambio del modelo | Plan |
-| 33 | E4 | Ayuda contextual (qué es cada distribución, gráfico y número) | Estudio |
+| 30 | E1 | ✅ (29/09) Tabla con todas las entradas (incluidas las `RIESGO.*`) y edición rápida | Plan |
+| 31 | E2 | ✅ (29/09) Matriz de correlaciones visible y editable | Plan |
+| 32 | E3 | ✅ (29/09) Deshacer el último cambio del modelo | Plan |
+| 33 | E4 | ✅ (29/09) Ayuda contextual (qué es cada distribución, gráfico y número) | Estudio |
 | 34 | U1 | **Asistente del primer modelo y plantillas** (proyecto de inversión, presupuesto…): paso a paso para quien empieza | **Nuevo** (el estudio pedía «asistentes») |
 | 35 | H3 | Simulaciones en serie (precio 100 / 110 / 120, lado a lado) | Plan |
 | 36 | H4 | Búsqueda de objetivo con riesgo («¿qué precio deja P(VAN<0) bajo el 10 %?») | Plan |

@@ -225,6 +225,24 @@ libre · Año 1»** … **«· Año 5»**. Simula: en «Comparar salidas», el
 **abanico** muestra la serie año a año. Una selección de varias filas y
 columnas avisa de que hay que elegir una fila o una columna.
 
+**N23. Deshacer** (E3 del plan, nuevo). En «Modelo», añade dos entradas y
+cambia una distribución. Aparece **↶ Deshacer** arriba: cada pulsación
+deshace un cambio (añadir, quitar, cambiar una distribución, un nombre
+escrito de seguido cuenta como uno). También con **Ctrl+Z** si no estás
+escribiendo en un campo. Hasta 30 cambios; se pierde al cerrar el panel.
+
+**N24. Matriz de correlaciones y todas las entradas** (E1 y E2, nuevo). En
+«Modelo», bajo las entradas:
+- **Todas las entradas**: una tabla con las del panel (pulsa una para
+  abrirla) y, tras simular, las funciones RIESGO del libro, en gris.
+- **Matriz de correlaciones**: escribe 0,8 entre dos entradas y pulsa Intro;
+  en la ficha de ambas pone «1 correlación(es)». Si escribes algo imposible
+  (0,8, 0,8 y −0,8 entre tres), un aviso con sus nombres explica por qué.
+
+**N25. Ayuda** (E4, nuevo). En Resultados, «¿Qué es esto?» bajo las cifras y
+dentro de cada sección: explica en dos o tres frases qué es cada número y
+cada gráfico. Dime si falta en algún sitio o si algo no se entiende.
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

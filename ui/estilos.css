@@ -423,6 +423,20 @@ section > .plegable:first-child { border-top: 0; margin-top: 0; }
 .media-caja { fill: var(--texto); }
 .abanico-exterior { fill: var(--acento); fill-opacity: 0.15; }
 .abanico-interior { fill: var(--acento); fill-opacity: 0.35; }
+.barra-deshacer { margin: 0 0 8px; text-align: right; }
+/* E4: ayuda contextual. */
+.ayuda { margin: 2px 0 6px; }
+.enlace-ayuda { background: none; border: 0; padding: 0; color: var(--acento); cursor: pointer; font-size: 12px; text-decoration: underline dotted; }
+.texto-ayuda { margin: 4px 0 0; padding: 6px 8px; font-size: 12px; background: color-mix(in srgb, var(--acento) 8%, transparent); border-radius: 4px; }
+/* E1: la tabla de todas las entradas. */
+.todas-entradas tbody tr { cursor: pointer; }
+.todas-entradas tr.del-libro { cursor: default; color: var(--tenue); }
+/* E2: la matriz de correlaciones. */
+.matriz-correlaciones td, .matriz-correlaciones th { padding: 2px 3px; text-align: center; }
+.matriz-correlaciones th[scope='row'] { text-align: left; white-space: nowrap; font-weight: 400; }
+.matriz-correlaciones td.diagonal { color: var(--tenue); }
+.celda-matriz { width: 3.6em; padding: 2px 3px; text-align: center; font-size: 12px; }
+.celda-matriz[aria-invalid='true'] { border-color: var(--error-borde); }
 /* D2: los dos selectores del estrés, en una fila si caben. */
 .fila-estres { display: flex; flex-wrap: wrap; gap: 6px 10px; }
 /* D4: tornado de cambio en la salida. */

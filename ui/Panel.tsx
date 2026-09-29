@@ -67,6 +67,10 @@ export function pestanaDeFragmento(hash: string): Pestana {
 
 const PREFIJO_FALLO_GUARDADO = 'El modelo no se pudo guardar:';
 
+/** Cuántos cambios se pueden deshacer, y cuánto tiempo entre dos para que cuenten como uno (E3). */
+const MAX_DESHACER = 30;
+const AGRUPAR_CAMBIOS_MS = 1000;
+
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDeFragmento(window.location.hash));
@@ -184,7 +188,26 @@ export function Panel() {
     })();
   }, []);
 
-  const cambiarModelo = useCallback((m: ModeloRiesgo) => {
+  // E3: deshacer. Cada cambio apunta el modelo anterior; los que llegan
+  // seguidos (escribir un nombre letra a letra) cuentan como uno solo.
+  const modeloActual = useRef<ModeloRiesgo | null>(null);
+  modeloActual.current = modelo;
+  const historial = useRef<ModeloRiesgo[]>([]);
+  const ultimoApunte = useRef(0);
+  const [puedeDeshacer, setPuedeDeshacer] = useState(false);
+
+  const cambiarModelo = useCallback((m: ModeloRiesgo, opciones?: { sinHistorial?: boolean }) => {
+    const previo = modeloActual.current;
+    if (!opciones?.sinHistorial && previo && previo !== m) {
+      const ahora = Date.now();
+      if (ahora - ultimoApunte.current > AGRUPAR_CAMBIOS_MS) {
+        historial.current.push(previo);
+        if (historial.current.length > MAX_DESHACER) historial.current.shift();
+      }
+      ultimoApunte.current = ahora;
+      setPuedeDeshacer(true);
+    }
+    modeloActual.current = m;
     setModelo(m);
 
     // El resaltado solo se rehace cuando cambian **las celdas**, no en cada
@@ -214,6 +237,26 @@ export function Panel() {
       (e: unknown) => setGuardado({ estado: 'fallo', detalle: mensajeDe(e) }),
     );
   }, []);
+
+  const deshacer = useCallback(() => {
+    const previo = historial.current.pop();
+    if (previo) cambiarModelo(previo, { sinHistorial: true });
+    ultimoApunte.current = 0;
+    setPuedeDeshacer(historial.current.length > 0);
+  }, [cambiarModelo]);
+
+  // Ctrl+Z (o ⌘Z) fuera de un campo de texto: dentro, deshace lo escrito, como siempre.
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      e.preventDefault();
+      deshacer();
+    };
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, [deshacer]);
 
   const simular = useCallback(async () => {
     if (!modelo) return;
@@ -389,6 +432,8 @@ export function Panel() {
           <Modelo
             modelo={modelo}
             alCambiar={cambiarModelo}
+            {...(puedeDeshacer ? { alDeshacer: deshacer } : {})}
+            {...(resultado?.ok && resultado.entradasDeFunciones ? { entradasDelLibro: resultado.entradasDeFunciones } : {})}
             alSimular={() => void simular()}
             ocupado={simulando}
             ritmo={ritmo}

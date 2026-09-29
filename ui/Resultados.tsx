@@ -58,6 +58,7 @@ import type { UmbralRiskModel } from '../engine/modelo/index.ts';
 import type { Precision } from '../engine/stats/index.ts';
 import { duracion, formatoDe, leerNumero, miles, numero, type FormatoValor } from './formato.ts';
 import { Plegable } from './Plegable.tsx';
+import { Ayuda } from './ayuda.tsx';
 import { Abanico, CajasSalidas, CurvasSuperpuestas, Dispersion, Estres, TornadoCambio } from './Graficos.tsx';
 
 export function Resultados({
@@ -238,6 +239,7 @@ export function Resultados({
       {varias && resultado.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
         <section>
           <Plegable id="comparar-salidas" titulo={<h2>Comparar salidas</h2>} resumen="caja, curvas, abanico">
+            <Ayuda tema="comparar" />
             <h3>Caja y bigotes</h3>
             <CajasSalidas salidas={resultado.salidas} />
             <h3>Curvas acumuladas</h3>
@@ -306,6 +308,7 @@ export function Resultados({
             <div><span className="cifra">{formatoDe(salida.fecha).dispersion(salida.resumen.desviacion)}</span><span className="cifra-nombre">desviación</span></div>
           </div>
 
+          <Ayuda tema="cifras" />
           <LecturaSalida salida={salida} umbral={umbralDe(salida.id)} />
 
           {salida.noNumericas !== undefined && salida.noNumericas > 0 && (
@@ -366,18 +369,21 @@ export function Resultados({
           {salida.sensibilidad && salida.sensibilidad.length > 0 && (
             <Plegable id="tornado" titulo="Qué la mueve más" abierta
               resumen={salida.sensibilidad[0]?.nombre}>
+              <Ayuda tema="tornado" />
               <Sensibilidad salida={salida} muestra={resultado.muestraSensibilidad} />
             </Plegable>
           )}
 
           {resultado.iteraciones && resultado.iteraciones.salidas.some((s) => s.id === salida.id) && resultado.iteraciones.entradas.some((e) => !e.categorias) && (
             <Plegable id="dispersion" titulo="Dispersión con una entrada">
+              <Ayuda tema="dispersion" />
               <Dispersion iteraciones={resultado.iteraciones} idSalida={salida.id} formato={formatoDe(salida.fecha)} />
             </Plegable>
           )}
 
           {resultado.iteraciones && resultado.iteraciones.salidas.some((s) => s.id === salida.id) && resultado.iteraciones.entradas.length > 0 && (
             <Plegable id="estres" titulo="Estrés: una entrada en un extremo">
+              <Ayuda tema="estres" />
               <Estres
                 iteraciones={resultado.iteraciones}
                 idSalida={salida.id}
@@ -389,6 +395,7 @@ export function Resultados({
 
           <Plegable id="percentiles" titulo="Estadísticos y percentiles"
             resumen={`${formatoDe(salida.fecha).valor(salida.resumen.min)} … ${formatoDe(salida.fecha).valor(salida.resumen.max)}`}>
+            <Ayuda tema="percentiles" />
             <dl>
               <dt>Media</dt><dd>{formatoDe(salida.fecha).valor(salida.resumen.media)}</dd>
               <dt>Desviación</dt><dd>{formatoDe(salida.fecha).dispersion(salida.resumen.desviacion)}</dd>
@@ -408,6 +415,7 @@ export function Resultados({
           </Plegable>
 
           <Plegable id="acumulada" titulo="Probabilidad acumulada">
+            <Ayuda tema="acumulada" />
             <CurvaAcumulada
               puntos={salida.cdf}
               referencia={comparando ? salidaDeReferencia(comparando, salida.id)?.cdf : undefined}
@@ -418,12 +426,14 @@ export function Resultados({
 
           {salida.riesgo && (
             <Plegable id="riesgo" titulo="Medidas de riesgo" resumen="VaR, CVaR, forma">
+              <Ayuda tema="riesgo" />
               <MedidasDeRiesgo riesgo={salida.riesgo} conTitulo={false} formato={formatoDe(salida.fecha)} />
             </Plegable>
           )}
 
           {salida.colas && salida.colas.length > 0 && (
             <Plegable id="colas" titulo="Qué tiene que pasar" resumen="en el 10 % más bajo o más alto">
+              <Ayuda tema="colas" />
               <QueTieneQuePasar colas={salida.colas} conTitulo={false} />
             </Plegable>
           )}
@@ -886,6 +896,7 @@ function TablaDecisiones({ decisiones, idSalida, formato }: { decisiones: Result
   const texto = filas.some((f) => f.s.moda !== undefined);
   return (
     <Plegable id="decisiones" titulo="Comparar decisiones" abierta resumen={decisiones.celdas.map((c) => c.nombre).join(' · ')}>
+      <Ayuda tema="decisiones" />
       <div className="tabla-desplazable">
         <table className="tabla-resumen sin-clic">
           <thead>
@@ -933,6 +944,7 @@ function RegistroRiesgos({ filas }: { filas: readonly FilaRiesgo[] }) {
     <section>
       <Plegable id="registro" titulo={<h2>Registro de riesgos</h2>} abierta
         resumen={`${filas.length} riesgo${filas.length === 1 ? '' : 's'} · esperado ${numero(total)}`}>
+        <Ayuda tema="registro" />
         <div className="tabla-desplazable">
           <table className="tabla-resumen sin-clic registro-riesgos">
             <thead>

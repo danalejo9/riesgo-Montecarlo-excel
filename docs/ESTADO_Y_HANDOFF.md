@@ -1126,6 +1126,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Los errores de Excel ya no son etiquetas. **Siguiente**: E (uso del
     panel), H, U1.
 
+55. [x] **E1–E4 (2026-09-29)**. E3: historial en `Panel.tsx`
+    (`modeloActual`, `historial`, agrupa cambios en 1 s, 30 como mucho;
+    Ctrl+Z fuera de campos), `alDeshacer` en Modelo. E1: tabla «Todas las
+    entradas» (las del libro por `entradasDelLibro`, de la última
+    simulación). E2: `MatrizCorrelaciones` en `EditorCorrelaciones.tsx`
+    (triángulo superior, escribe los dos lados; errores con nombres). E4:
+    `ui/ayuda.tsx` (`AYUDA`, `Ayuda`). **Siguiente**: H (resto) y U1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

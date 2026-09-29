@@ -21,6 +21,7 @@ import { leerNombresSugeridos } from '../excel/etiquetasEnExcel.ts';
 import { nombreUnico } from '../excel/nombreSugerido.ts';
 import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
 import {
+  agruparCorrelaciones,
   resumirDistribucion,
   type EntradaRiskModel,
   type ModeloRiesgo,
@@ -31,7 +32,9 @@ import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
 import { AjusteDatos } from './AjusteDatos.tsx';
 import { Compartir, useFormulasCompartidas } from './Compartir.tsx';
-import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
+import { EditorCorrelaciones, MatrizCorrelaciones } from './EditorCorrelaciones.tsx';
+import { Plegable } from './Plegable.tsx';
+import { Ayuda } from './ayuda.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
 import { marcarSeleccion } from './marcar.ts';
@@ -140,6 +143,8 @@ export function Modelo({
   ritmo,
   alMedirRitmo,
   alAbrirConfiguracion,
+  alDeshacer,
+  entradasDelLibro,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
@@ -149,6 +154,10 @@ export function Modelo({
   ritmo: RitmoGuardado | null;
   alMedirRitmo: (r: RitmoGuardado) => void;
   alAbrirConfiguracion?: () => void;
+  /** Deshacer el último cambio del modelo (E3); sin él, no hay nada que deshacer. */
+  alDeshacer?: () => void;
+  /** Las entradas que declaran funciones RIESGO del libro, de la última simulación (E1). */
+  entradasDelLibro?: readonly { ref: string; distribucion: string; nombre?: string }[];
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -214,6 +223,14 @@ export function Modelo({
   return (
     <>
       {aviso && <p className="aviso-linea">{aviso}</p>}
+
+      {alDeshacer && (
+        <p className="barra-deshacer">
+          <button type="button" className="secundario" onClick={alDeshacer} title="Deshace el último cambio del modelo (también Ctrl+Z fuera de un campo)">
+            ↶ Deshacer
+          </button>
+        </p>
+      )}
 
       {preparadoParaCompartir && compartir}
 
@@ -293,6 +310,54 @@ export function Modelo({
         <button type="button" onClick={() => void anadirEntrada()} disabled={ocupado}>
           Añadir la selección como entrada
         </button>
+
+        {modelo.inputs.length + (entradasDelLibro?.length ?? 0) >= 2 && (
+          <Plegable id="todas-entradas" titulo="Todas las entradas"
+            resumen={`${modelo.inputs.length} del panel${entradasDelLibro?.length ? ` · ${entradasDelLibro.length} del libro` : ''}`}>
+            <div className="tabla-desplazable">
+              <table className="tabla-resumen todas-entradas">
+                <thead><tr><th>Entrada</th><th>Celda</th><th>Distribución</th><th title="Correlaciones">ρ</th></tr></thead>
+                <tbody>
+                  {modelo.inputs.map((e) => (
+                    <tr key={e.id} onClick={() => setAbierta(e.id)} title="Abrir para editarla">
+                      <td>{e.name}</td>
+                      <td className="tenue">{e.ref}</td>
+                      <td>{resumirDistribucion(e.dist)}</td>
+                      <td>{e.correlations.length || ''}</td>
+                    </tr>
+                  ))}
+                  {(entradasDelLibro ?? []).map((e, i) => (
+                    <tr key={`${e.ref}-${i}`} className="del-libro" title="Una función RIESGO escrita en la celda: se cambia en la hoja">
+                      <td>{e.nombre ?? e.ref}</td>
+                      <td className="tenue">{e.ref}</td>
+                      <td>{e.distribucion}</td>
+                      <td className="tenue">libro</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="tenue">
+              Pulsa una del panel para abrirla y editarla. Las del libro son funciones RIESGO escritas en las celdas (las de
+              la última simulación): se cambian en la hoja.
+            </p>
+          </Plegable>
+        )}
+
+        {modelo.inputs.filter((e) => e.dist.type !== 'categorical').length >= 2 && (
+          <Plegable id="matriz-correlaciones" titulo="Matriz de correlaciones"
+            resumen={(() => {
+              const n = modelo.inputs.reduce((s, e) => s + e.correlations.length, 0) / 2;
+              return n === 0 ? 'todas independientes' : `${Math.round(n)} pareja${Math.round(n) === 1 ? '' : 's'}`;
+            })()}>
+            <Ayuda tema="correlaciones" />
+            <MatrizCorrelaciones modelo={modelo} alCambiar={alCambiar} problemas={(() => {
+              const r = agruparCorrelaciones(modelo.inputs);
+              // Los mensajes nombran los identificadores internos: se cambian por los nombres.
+              return r.ok ? [] : r.errores.map((t) => modelo.inputs.reduce((x, e) => x.split(`"${e.id}"`).join(`«${e.name}»`), t));
+            })()} />
+          </Plegable>
+        )}
       </section>
 
       <section>
