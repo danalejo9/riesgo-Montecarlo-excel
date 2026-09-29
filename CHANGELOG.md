@@ -5,6 +5,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U1: asistente del primer modelo y plantillas (2026-09-29)
+
+**Añadido**
+- Con el modelo vacío, **«Tu primer modelo»**: los cuatro pasos en corto y
+  tres **plantillas** que se escriben en una hoja nueva, con las funciones
+  RIESGO ya puestas (entradas, salidas con `RIESGO.SALIDA`, riesgos con
+  `RIESGO.EVENTO` y una correlación): proyecto de inversión, presupuesto de
+  obra y cartera. Se simulan sin marcar nada.
+
 ### H6 y H7: avisos de coherencia y trazado de dependencias (2026-09-29)
 
 **Añadido**

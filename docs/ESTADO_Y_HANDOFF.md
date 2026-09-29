@@ -1142,6 +1142,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     se calculó»). H3 queda cubierta por `RIESGO.DECISION`. **Siguiente**:
     U1 (asistente y plantillas), H4, H5, H8.
 
+57. [x] **U1 (2026-09-29)**. `excel/plantillas.ts` (tres plantillas como
+    datos: celdas con texto, número o fórmula en la forma de
+    `Range.formulas`), `excel/escribirPlantilla.ts` (hoja nueva con nombre
+    libre), `PrimerModelo` en `Modelo.tsx` con el modelo vacío.
+    `plantillasU1.test.ts` simula cada plantilla con todo el camino del
+    panel. Banco: la hoja nueva admite `getRange`. **Siguiente**: H4, H5,
+    H8; después F según los libros, G y M.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -253,6 +253,16 @@ cada gráfico. Dime si falta en algún sitio o si algo no se entiende.
 - En «Cómo se calculó», **«Por dónde llega cada entrada»**: para cada
   entrada, el camino de celdas hasta cada salida (p. ej. C5 → … → C32).
 
+**N27. Asistente y plantillas** (U1 del plan, nuevo). En un libro nuevo
+(sin modelo), abre el panel: «Tu primer modelo» explica los cuatro pasos y
+ofrece tres plantillas. Pulsa **Proyecto de inversión**: aparece una hoja
+«Inversión» con las funciones RIESGO ya puestas. Pulsa **Simular** sin
+marcar nada: sale el **VAN** (media en torno a **30.000 €**, con mucha
+dispersión). Prueba también **Presupuesto de obra** (coste total en torno a
+**323.000 €**, con «Registro de riesgos») y **Cartera** (valor al cabo de un
+año en torno a **105.500 €**; cambia la correlación de B9 a 0 y el p5
+mejora).
+
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.

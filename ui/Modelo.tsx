@@ -34,6 +34,8 @@ import { AjusteDatos } from './AjusteDatos.tsx';
 import { Compartir, useFormulasCompartidas } from './Compartir.tsx';
 import { EditorCorrelaciones, MatrizCorrelaciones } from './EditorCorrelaciones.tsx';
 import { Plegable } from './Plegable.tsx';
+import { PLANTILLAS, type Plantilla } from '../excel/plantillas.ts';
+import { escribirPlantilla } from '../excel/escribirPlantilla.ts';
 import { Ayuda } from './ayuda.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
@@ -231,6 +233,8 @@ export function Modelo({
           </button>
         </p>
       )}
+
+      {modelo.inputs.length === 0 && modelo.outputs.length === 0 && <PrimerModelo />}
 
       {preparadoParaCompartir && compartir}
 
@@ -463,5 +467,49 @@ export function Modelo({
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * El asistente del primer modelo (U1): los cuatro pasos, en corto, y tres
+ * plantillas que se escriben en una hoja nueva listas para simular.
+ */
+function PrimerModelo() {
+  const [hecho, setHecho] = useState<string | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
+  const [escribiendo, setEscribiendo] = useState(false);
+  const crear = async (p: Plantilla) => {
+    setEscribiendo(true);
+    setFallo(null);
+    try {
+      const hoja = await escribirPlantilla(p);
+      setHecho(`«${p.nombre}» está en la hoja «${hoja}». Pulsa Simular (abajo): sus entradas y salidas ya están en las fórmulas.`);
+    } catch (e) {
+      setFallo(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEscribiendo(false);
+    }
+  };
+  return (
+    <section className="primer-modelo">
+      <h2>Tu primer modelo</h2>
+      <ol className="pasos">
+        <li><strong>Las entradas inciertas.</strong> Selecciona en la hoja una celda cuyo valor no conoces (un precio, unas unidades, un plazo) y pulsa «Añadir la selección como entrada».</li>
+        <li><strong>Su distribución.</strong> Despliégala (▸) y elige cómo puede variar: si sabes el mínimo, el más probable y el máximo, una triangular.</li>
+        <li><strong>La salida.</strong> Selecciona el resultado que te importa (el beneficio, el coste total) y pulsa «Añadir la selección como salida».</li>
+        <li><strong>Simula.</strong> En Resultados verás la media, el rango probable y qué entrada pesa más.</li>
+      </ol>
+      <p className="tenue">¿Prefieres empezar por un ejemplo que ya funciona? Se escribe en una hoja nueva de este libro:</p>
+      <div className="plantillas">
+        {PLANTILLAS.map((p) => (
+          <button key={p.id} type="button" className="secundario plantilla" disabled={escribiendo} onClick={() => void crear(p)} title={p.descripcion}>
+            <strong>{p.nombre}</strong>
+            <span className="tenue">{p.descripcion}</span>
+          </button>
+        ))}
+      </div>
+      {hecho && <p className="aviso-ok">{hecho}</p>}
+      {fallo && <p className="aviso-linea">{fallo}</p>}
+    </section>
   );
 }

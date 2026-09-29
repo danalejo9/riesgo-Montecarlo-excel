@@ -142,7 +142,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 31 | E2 | ✅ (29/09) Matriz de correlaciones visible y editable | Plan |
 | 32 | E3 | ✅ (29/09) Deshacer el último cambio del modelo | Plan |
 | 33 | E4 | ✅ (29/09) Ayuda contextual (qué es cada distribución, gráfico y número) | Estudio |
-| 34 | U1 | **Asistente del primer modelo y plantillas** (proyecto de inversión, presupuesto…): paso a paso para quien empieza | **Nuevo** (el estudio pedía «asistentes») |
+| 34 | U1 | ✅ (29/09, falta Excel real) **Asistente del primer modelo y plantillas** (proyecto de inversión, presupuesto…): paso a paso para quien empieza | **Nuevo** (el estudio pedía «asistentes») |
 | 35 | H3 | ✅ (29/09, con `RIESGO.DECISION`) Simulaciones en serie (precio 100 / 110 / 120, lado a lado) | Plan |
 | 36 | H4 | Búsqueda de objetivo con riesgo («¿qué precio deja P(VAN<0) bajo el 10 %?») | Plan |
 | 37 | H5 | Series temporales (paseo aleatorio, reversión a la media) | Plan |

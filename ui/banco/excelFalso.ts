@@ -504,6 +504,17 @@ export const hojaVolcada: {
     }),
     freezePanes: { freezeRows: () => {} },
     getUsedRange: () => ({ format: { autofitColumns: () => {} } }),
+    // Las plantillas (U1) escriben celda a celda: se apuntan en `filas` como [ref, valor].
+    getRange: (ref: string) => ({
+      set values(v: unknown[][]) {
+        hojaVolcada.filas.push([ref, v[0]?.[0]]);
+      },
+      set formulas(v: unknown[][]) {
+        hojaVolcada.filas.push([ref, v[0]?.[0]]);
+      },
+      set numberFormat(_v: unknown[][]) {},
+      format: { font: {}, columnWidth: 0 },
+    }),
     charts: {
       add: () => {
         hojaVolcada.graficos += 1;
