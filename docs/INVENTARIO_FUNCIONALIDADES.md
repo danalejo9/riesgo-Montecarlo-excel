@@ -148,7 +148,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 37 | H5 | Series temporales (paseo aleatorio, reversión a la media) | Plan |
 | 38 | H6 | ✅ (29/09) Avisos de coherencia del modelo | Plan |
 | 39 | H7 | ✅ (29/09) Trazado de dependencias (qué salidas dependen de cada entrada) | Plan |
-| 40 | H8 | Migración del modelo guardado entre versiones | Plan |
+| 40 | H8 | ✅ (29/09) Migración del modelo guardado entre versiones | Plan |
 | 41 | H9 | Manual de usuario en español y más libros de ejemplo | Plan |
 | 42 | H10 | Libros compartidos en OneDrive/SharePoint (coautoría) | Estudio |
 | 43 | F1 | `DESREF` con desplazamientos constantes; `LAMBDA` | Plan |

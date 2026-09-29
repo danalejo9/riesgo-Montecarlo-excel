@@ -1158,6 +1158,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Panel (no toca los resultados actuales). Banco: 16 simulaciones en
     19 s antes de la parada anticipada. **Siguiente**: H5, H8.
 
+59. [x] **H8 (2026-09-29)**. `migrarRiskModel` en `riskModel.ts` (cadena
+    `MIGRACIONES_RISK_MODEL`, vacía; copia con `structuredClone`; versión
+    más nueva → no se toca, pedir actualizar). `validarRiskModel` migra
+    antes de validar. **Siguiente**: H5 (series temporales), después F, G, M.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

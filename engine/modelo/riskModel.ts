@@ -24,6 +24,44 @@ import type { MetodoMuestreo } from '../sampling/types.ts';
 
 export const VERSION_ESQUEMA_RISK_MODEL = 1;
 
+/**
+ * Migraciones del modelo guardado (H8): la de la clave `n` convierte un
+ * modelo de la versión `n` en uno de la `n + 1`. Hoy no hay ninguna (solo
+ * existe la v1); cuando cambie el esquema, se añade aquí la que toque y los
+ * libros antiguos se abren sin perder nada. Cada una recibe una copia.
+ */
+export type MigracionRiskModel = (m: Record<string, unknown>) => Record<string, unknown>;
+export const MIGRACIONES_RISK_MODEL: Readonly<Record<number, MigracionRiskModel>> = {};
+
+/**
+ * Pone al día un modelo guardado. Uno de una versión **más nueva** que la del
+ * complemento no se toca (se perdería lo que esta versión no entiende): se
+ * pide actualizar el complemento.
+ */
+export function migrarRiskModel(
+  m: Record<string, unknown>,
+  migraciones: Readonly<Record<number, MigracionRiskModel>> = MIGRACIONES_RISK_MODEL,
+  actual: number = VERSION_ESQUEMA_RISK_MODEL,
+): { ok: true; modelo: Record<string, unknown>; desde: number } | { ok: false; motivo: string } {
+  const v = m.schema;
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) {
+    return { ok: false, motivo: `Versión de esquema no reconocida (${JSON.stringify(v)}). Esta versión del complemento solo entiende RiskModel v${actual}.` };
+  }
+  if (v > actual) {
+    return {
+      ok: false,
+      motivo: `El modelo se guardó con una versión más nueva del complemento (RiskModel v${v}; esta entiende hasta la v${actual}). Actualiza el complemento para abrirlo; no se ha tocado nada.`,
+    };
+  }
+  let modelo = structuredClone(m);
+  for (let n = v; n < actual; n++) {
+    const migrar = migraciones[n];
+    if (!migrar) return { ok: false, motivo: `No hay forma de pasar un modelo de la v${n} a la v${n + 1}.` };
+    modelo = { ...migrar(modelo), schema: n + 1 };
+  }
+  return { ok: true, modelo, desde: v };
+}
+
 /** `'auto'` decide solo (Fase 2 §4); `'fast'`/`'compatible'` fuerzan el motor. */
 export type MotorSimulacion = 'auto' | 'fast' | 'compatible';
 
@@ -166,13 +204,16 @@ const MOTORES: readonly MotorSimulacion[] = ['auto', 'fast', 'compatible'];
  * imposibles se descarta con el mismo mensaje que vería cualquier otro
  * consumidor de esa distribución.
  */
-export function validarRiskModel(json: unknown): ResultadoValidacion {
+export function validarRiskModel(entrada: unknown): ResultadoValidacion {
   const errores: string[] = [];
 
-  if (typeof json !== 'object' || json === null) {
+  if (typeof entrada !== 'object' || entrada === null) {
     return { ok: false, errores: ['El modelo no es un objeto JSON.'] };
   }
-  const m = json as Record<string, unknown>;
+  // H8: un modelo de una versión anterior se pone al día antes de validarlo.
+  const migrado = migrarRiskModel(entrada as Record<string, unknown>);
+  if (!migrado.ok) return { ok: false, errores: [migrado.motivo] };
+  const m = migrado.modelo;
 
   if (m.schema !== VERSION_ESQUEMA_RISK_MODEL) {
     return {

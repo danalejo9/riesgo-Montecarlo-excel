@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### H8: migración del modelo guardado (2026-09-29)
+
+**Añadido**
+- Los modelos guardados de versiones anteriores del esquema se ponen al día
+  al abrirse (cadena de migraciones, hoy vacía: solo existe la v1). Un libro
+  guardado con una versión **más nueva** del complemento no se toca y se
+  pide actualizar el complemento.
+
 ### H4: búsqueda de objetivo con riesgo (2026-09-29)
 
 **Añadido**

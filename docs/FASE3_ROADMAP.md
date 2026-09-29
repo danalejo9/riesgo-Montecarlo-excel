@@ -575,7 +575,7 @@ Añadido en la segunda revisión con el usuario (25/09).
   entradas que no afectan a ninguna salida.
 - **H7. Trazado de dependencias** ✅ 29/09 (camino más corto, en «Cómo se calculó»): qué salidas dependen de cada entrada y por
   qué celdas intermedias pasa, para detectar entradas mal conectadas.
-- **H8. Migración del modelo guardado**: cuando cambie el esquema de
+- **H8. Migración del modelo guardado** ✅ 29/09 (`migrarRiskModel`, `MIGRACIONES_RISK_MODEL`; aviso para versiones más nuevas): cuando cambie el esquema de
   `RiskModel`, que los libros de versiones anteriores se abran sin perder
   nada (hoy un esquema desconocido se rechaza, sin migrar).
 - **H9. Manual de usuario en español** y más libros de ejemplo (proyecto de
@@ -703,7 +703,7 @@ Va **al final** porque enseña las funcionalidades de los demás bloques.
 **Orden propuesto**: A → ~~E5, E6, C7, E7, E8, F4~~ ✅ 28/09 → ~~C8, C9, F5~~
 ✅ 28/09 → ~~T1–T6~~ ✅ 28/09 (salvo el manual, T5) → **ronda completa de
 pruebas con la guía reescrita** ✅ 29/09 (todo OK salvo T2, arreglado; ver `ESTADO_Y_HANDOFF.md` punto 39) → B1–B3 → **B1b** → ~~U2, C10~~ ✅ 29/09 (ronda del 29/09) → ~~C1, C2, C5, I1, B4, D1, H2~~ ✅ 28/09 (adelantados: no tocan el manifiesto) → ~~B7, B6~~ ✅ 28/09 (SALIDA y CORRELACION el 29/09) (tampoco tocan el manifiesto; B6 pasa a leer del libro con B1) → ~~I2~~ ✅ 29/09 →
-~~T7, T8, T9, C3, C4, B5, D2–D4, E1–E4, H6, H7, U1, H4~~ ✅ 29/09 → H5, H8, E, H, U1 → F según los
+~~T7, T8, T9, C3, C4, B5, D2–D4, E1–E4, H6, H7, U1, H4, H8~~ ✅ 29/09 → H5, E, H, U1 → F según los
 libros → G →
 **M (libros tutoriales y manual)** → I3.
 **Pruebas en Excel (decidido el 28/09)**: no se prueba cada desarrollo por

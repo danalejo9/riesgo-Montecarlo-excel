@@ -55,11 +55,12 @@ describe('validarRiskModel', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('rechaza un esquema desconocido, sin intentar migrar', () => {
+  it('rechaza un esquema más nuevo que el complemento y pide actualizarlo (H8)', () => {
     const m = { ...modeloBase(), schema: 2 };
     const r = validarRiskModel(m);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errores[0]).toMatch(/esquema/i);
+    if (!r.ok) expect(r.errores[0]).toMatch(/versión más nueva/i);
+    expect(validarRiskModel({ ...modeloBase(), schema: 'x' }).ok).toBe(false);
   });
 
   it('rechaza algo que no es un objeto', () => {
