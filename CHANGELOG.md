@@ -5,6 +5,23 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W7: escenarios «¿qué pasa si?» (2026-09-30)
+
+**Añadido**
+- Hoja **«Escenarios»**: cada fila, un cambio (duración en % o en días,
+  predecesoras para hacer en paralelo, costo por día, probabilidad o
+  impacto de un riesgo, quitar un riesgo, aplicar su respuesta, trabajar
+  sábados o domingos, mover el inicio); las filas con el mismo nombre
+  forman un escenario. «Crear hoja «Escenarios»» la escribe con ejemplos
+  tomados del propio cronograma.
+- **Comparar escenarios** (pestaña Cronograma, «¿Qué pasa si…?»): cada
+  escenario se simula con los mismos números aleatorios que la base, así
+  que la diferencia es solo la del cambio. Por escenario: P80, adelanto
+  del P80, adelanto medio con su margen al 95 % (y el que tendría con
+  simulaciones independientes), en qué parte de los casos termina antes,
+  costo P80 y probabilidad de cumplir cada hito. En el panel, en la hoja
+  «Cronograma (escenarios)» y en el informe PDF. Guía Q74–Q75.
+
 ### W6: ejemplos por sector y primeros pasos (2026-09-30)
 
 **Añadido**

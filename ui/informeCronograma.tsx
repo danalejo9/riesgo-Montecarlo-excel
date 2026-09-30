@@ -15,6 +15,9 @@ import { BarrasConvergencia, CurvaS, GanttImpreso, HistogramaFechas, MatrizConso
 import { miles } from './formato.ts';
 import { textosInforme as T } from './textos/es.ts';
 
+/** Un número con coma decimal, como en el resto del informe. */
+const decimal = (x: number) => x.toLocaleString('es-ES', { maximumFractionDigits: 2 });
+
 const COLOR_SEMAFORO = { verde: '#2e9e5b', amarillo: '#d9a400', rojo: '#e34948', info: '#8a8f98' } as const;
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 
@@ -176,6 +179,28 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
             </tbody>
           </table>
         )}
+      </section>
+    ),
+    escenarios: d.escenarios && (
+      <section>
+        <h2>Escenarios «¿qué pasa si?»</h2>
+        {d.escenarios.narrativa.map((l) => <p key={l} className="lectura">{l}</p>)}
+        <table className="comparacion tabla-informe">
+          <thead>
+            <tr><th>{T.escenarioCol}</th><th>P80</th><th>{T.adelantoP80}</th><th>{T.adelantoMedio}</th><th>{T.terminaAntes}</th>{d.escenarios.base.costoP80 !== undefined && <th>{T.costoP80}</th>}</tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">{T.escenarioBase}</th><td>{textoFecha(d.escenarios.base.p80)}</td><td /><td /><td />{d.escenarios.base.costoP80 !== undefined && <td>{textoMoneda(d.escenarios.base.costoP80)}</td>}</tr>
+            {d.escenarios.filas.map((x) => (
+              <tr key={x.nombre}>
+                <th scope="row">{x.nombre}<br /><span className="tenue">{x.cambios.join('; ')}</span></th>
+                <td>{textoFecha(x.p80)}</td><td>{`${decimal(x.adelantoP80)} d`}</td><td>{`${decimal(x.adelantoMedio)} d ± ${decimal(x.ic95)}`}</td><td>{`${Math.round(x.probAntes * 100)} %`}</td>
+                {d.escenarios!.base.costoP80 !== undefined && <td>{x.costoP80 !== undefined ? textoMoneda(x.costoP80) : ''}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="tenue">{T.escenariosNotaInforme}</p>
       </section>
     ),
     seguimiento: d.seguimiento && (

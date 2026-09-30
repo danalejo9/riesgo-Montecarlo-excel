@@ -1244,6 +1244,38 @@ enseña «Primeros pasos» con cinco pasos. Esperado:
 - «Ocultar» la esconde y deja un enlace «Primeros pasos»; al cerrar y abrir
   el panel sigue oculta. El enlace la vuelve a enseñar.
 
+**Q74. Escenarios «¿qué pasa si?» (W7).** Con el ejemplo de vivienda (Q72)
+simulado (10.000, PERT, «Antes de mitigar»), abre «¿Qué pasa si…?» y pulsa
+«Crear hoja «Escenarios»». Esperado:
+- La hoja trae «Acelerar: Estructura en concreto» (−20 % a la 7), «Sin el
+  riesgo: Demora en la licencia de construcción» (quitar R2) y «Todas las
+  respuestas» (R1 a R4), y a la derecha la lista de cambios posibles.
+- «Comparar escenarios»: una frase por escenario y la tabla. Acelerar la
+  estructura adelanta el P80 unos 10 días y termina antes en el 100 % de
+  los casos (margen ± 0: el cambio es seguro); quitar R2, unos 7 días y
+  antes solo en ≈ 34 % (cuando R2 no ocurre no cambia nada); todas las
+  respuestas, unos 9 días.
+- Al pasar el ratón por el adelanto medio, el margen con simulaciones
+  independientes es mucho mayor: es lo que ganan los mismos números.
+- La hoja «Cronograma (escenarios)» con la base y los tres; el informe PDF
+  con la sección «Escenarios «¿qué pasa si?»».
+- Pulsar otra vez «Crear hoja «Escenarios»» no la toca.
+
+**Q75. Escribir escenarios propios (W7).** En «Escenarios», añade estas
+filas y compara (10.000 iteraciones). Esperado (±2 días):
+- `Sábados | Trabajar sábados | | No` (la vivienda ya trabaja sábados):
+  retrasa el P80 ≈ 48 días; termina después en el 100 % de los casos.
+- `Domingos | Trabajar domingos | | Sí`: adelanta ≈ 34 días.
+- `Paralelo | Predecesoras | 8 | 7CC+20` (la mampostería empieza a los 20
+  días de la estructura): adelanta ≈ 21 días.
+- `Tarde | Inicio del proyecto | |` y una fecha 30 días después del inicio:
+  retrasa ≈ 30 días.
+- En todos, el margen del adelanto medio es de ± 0,1 días o menos; con
+  simulaciones independientes sería de ± 0,4 a 0,5.
+- `Ciclo | Predecesoras | 1 | 17`: el panel avisa de que «Ciclo» no se
+  puede calcular (dependencia circular) y compara los demás.
+- `X | Contratar magos | 1 |`: error con la fila, «no es un cambio conocido».
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

@@ -8,7 +8,7 @@
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
   plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO, HOJA_RANGOS_TIPO, plantillaRangosTipo,
-  HOJA_CALENDARIOS, hojaCalendarios, HOJA_CLIMA, plantillaClima, HOJA_HITOS, plantillaHitos,
+  HOJA_CALENDARIOS, hojaCalendarios, HOJA_CLIMA, plantillaClima, HOJA_HITOS, plantillaHitos, HOJA_ESCENARIOS,
   type CronogramaImportado, type HojaAEscribir, type HojaGantt, type HojasEjemplo, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
@@ -30,6 +30,7 @@ async function valoresDeHoja(context: Excel.RequestContext, nombre: string): Pro
 
 export async function leerHojasCronograma(): Promise<{
   actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][]; calendarios?: unknown[][]; clima?: unknown[][]; hitos?: unknown[][];
+  escenarios?: unknown[][];
 }> {
   return Excel.run(async (context) => ({
     actividades: await valoresDeHoja(context, HOJA_ACTIVIDADES),
@@ -40,6 +41,7 @@ export async function leerHojasCronograma(): Promise<{
     calendarios: await valoresDeHoja(context, HOJA_CALENDARIOS),
     clima: await valoresDeHoja(context, HOJA_CLIMA),
     hitos: await valoresDeHoja(context, HOJA_HITOS),
+    escenarios: await valoresDeHoja(context, HOJA_ESCENARIOS),
   }));
 }
 
@@ -235,6 +237,17 @@ export async function escribirCronogramaImportado(imp: CronogramaImportado, codi
     }
     await escribirHoja(context, hojaActividadesDe(imp.cronograma, `Cronograma importado de ${imp.fuente}: ${imp.proyecto}. Añade mínimo, más probable y máximo para simular.`, codigoMoneda), true);
   });
+}
+
+/** W7: la hoja «Escenarios» con sus ejemplos. `false` si ya existía (no se toca). */
+export async function escribirPlantillaEscenarios(h: HojaAEscribir): Promise<boolean> {
+  return Excel.run(async (context) => escribirHoja(context, h, false));
+}
+
+/** W7: la hoja con la comparación de los escenarios (se reemplaza). */
+export async function escribirHojaEscenarios(h: HojaAEscribir): Promise<string> {
+  await Excel.run(async (context) => escribirHoja(context, h, true));
+  return h.nombre;
 }
 
 /** W6: un ejemplo por sector. Reemplaza «Calendario», «Riesgos de plazo», «Hitos» y «Actividades» (que queda activa). */

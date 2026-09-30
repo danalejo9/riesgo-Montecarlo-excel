@@ -1588,6 +1588,27 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     vitest vieron (el navegador sí): corregido. Guía Q72–Q73.
     **Siguiente**: W7 (escenarios «¿qué pasa si?»).
 
+100. [x] **W7 (2026-09-30)**. `engine/cronograma/escenarios.ts`:
+    `leerEscenarios` (hoja «Escenarios»: once tipos de cambio, IDs o
+    categorías, porcentajes como 0,2, 20 o «20 %»), `aplicarEscenario` (no
+    toca los originales), `compararEscenarios` y `compararConBase` (todo
+    en fechas, para poder comparar calendarios distintos: diferencia
+    iteración a iteración, media, margen al 95 % pareado y el que tendría
+    con números independientes, P(antes/igual/después), costo P80, hitos),
+    `narrativaEscenarios`, `plantillaEscenarios` (ejemplos del propio
+    cronograma: sábados, acelerar la crítica más larga, quitar el riesgo
+    mayor, todas las respuestas) y `hojaEscenarios`. Los flujos van por ID,
+    así que quitar un riesgo o cambiar la lógica no mueve los números del
+    resto. Un escenario con un ciclo se informa y los demás siguen. Panel
+    («¿Qué pasa si…?»; reutiliza la simulación de «antes» si tiene las
+    mismas opciones), hoja «Cronograma (escenarios)» y sección del PDF
+    (las plantillas guardadas la reciben sola). `cronogramaW7.test.ts`:
+    un cambio fijo de −2 días da exactamente +2 días en todas las
+    iteraciones (margen 0), un escenario es idéntico a simular a mano el
+    cronograma cambiado, trabajar sábados nunca termina después. Guía
+    Q74–Q75. **Con esto el bloque W queda completo** (W1–W7); H e I
+    siguen aplazados.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

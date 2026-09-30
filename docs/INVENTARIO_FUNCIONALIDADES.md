@@ -218,7 +218,7 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | W4 | P7 | Merge bias explicado con un gráfico | **Tú** | ✅ 30/09 (falta Excel: Q69) |
 | W5 | P7 | `RIESGO.CRONOGRAMA("Hito")` en el modelo de costos | **Tú** | ✅ 30/09 (falta Excel: Q70–Q71) |
 | W6 | P7 | Plantillas por sector y guía de primer uso | **Tú** | ✅ 30/09 (falta Excel: Q72–Q73) |
-| W7 | P7 | Escenarios «¿qué pasa si?» | **Tú** | ⬜ |
+| W7 | P7 | Escenarios «¿qué pasa si?» | **Tú** | ✅ 30/09 (falta Excel: Q74–Q75) |
 | H, I | — | Referencias de SECOP; cadenas de eventos | **Tú** | aplazados (30/09) |
 
 ### Otros productos, fuera de este complemento (decidido el 25/09)

@@ -17,13 +17,14 @@ import {
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
   reservaContingencia, type NivelReserva, type SinRiesgos,
   riesgosActivos, evaluarRegistro, hojaRegistro, colorDe, type Registro,
-  leerRangosTipo, publicarPlan, EJEMPLOS_SECTOR, hojasDeEjemplo, type IdSector, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
+  leerRangosTipo, publicarPlan, EJEMPLOS_SECTOR, hojasDeEjemplo, type IdSector,
+  compararEscenarios, hojaEscenarios, leerEscenarios, narrativaEscenarios, plantillaEscenarios, type ComparacionEscenarios, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import {
-  escribirCeldasActividades, escribirCronogramaImportado, escribirEjemploSector, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
+  escribirCeldasActividades, escribirCronogramaImportado, escribirEjemploSector, escribirHojaEscenarios, escribirPlantillaEscenarios, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
   escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma, escribirPlantillaRangosTipo, escribirHojaRegistro,
 } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
@@ -74,6 +75,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   // W6: el ejemplo por sector elegido y si falta confirmar que reemplaza lo que hay.
   const [sector, setSector] = useState<IdSector>('vivienda');
   const [confirmarEjemplo, setConfirmarEjemplo] = useState(false);
+  // W7: la última comparación de escenarios.
+  const [queSi, setQueSi] = useState<{ cmp: ComparacionEscenarios; narrativa: string[]; hoja: string } | null>(null);
   const archivo = useRef<HTMLInputElement>(null);
   const [pctMenos, setPctMenos] = useState(10);
   const [pctMas, setPctMas] = useState(25);
@@ -201,6 +204,52 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  const crearHojaEscenarios = async () => {
+    if (!datos) return;
+    try {
+      setNota(await escribirPlantillaEscenarios(plantillaEscenarios(datos.cron, datos.riesgos)) ? T.escenariosCreada : T.escenariosYaExiste);
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
+  /** W7: la base (los riesgos activos, como «antes») y cada escenario, con las opciones de la simulación. */
+  const compararQueSi = async () => {
+    if (!datos) return;
+    cancelado.current = false;
+    const hilos = crearHilosPlazo(hilosEfectivos(leerPreferenciaHilos()));
+    try {
+      const hojas = await leerHojasCronograma();
+      const lectura = leerEscenarios(hojas.escenarios, datos.cron, datos.riesgos);
+      setProblemas(lectura.problemas);
+      if (lectura.escenarios.length === 0) {
+        if (lectura.problemas.length === 0) setNota(T.sinEscenarios);
+        return;
+      }
+      setOcupado(T.comparandoEscenarios(0, 1));
+      const op = {
+        iteraciones, forma, semilla: OPCIONES_PLAZO_POR_DEFECTO.semilla, ceder,
+        debeCancelar: () => cancelado.current,
+        alAvanzar: (h: number, t: number) => setOcupado(T.comparandoEscenarios(h, t)),
+      };
+      const simular: typeof simularPlazo = (c, rs, o) =>
+        hilos ? simularPlazoEnParalelo(c, rs, o, hilos.para(c, rs, o), hilos.hilos) : simularPlazo(c, rs, o);
+      // La simulación que ya se hizo sirve de base si es la de «antes» con las mismas opciones.
+      const reutilizable = simulado && simulado.escenario === 'antes' && !simulado.r.cancelada
+        && simulado.r.iteraciones === iteraciones && simulado.r.forma === forma ? simulado.r : undefined;
+      const cmp = await compararEscenarios(datos.cron, datos.riesgos, lectura.escenarios, op, simular, reutilizable);
+      setProblemas([...lectura.problemas, ...cmp.problemas]);
+      const narrativa = narrativaEscenarios(cmp, textoFecha);
+      const hoja = await escribirHojaEscenarios(hojaEscenarios(cmp, textoFecha));
+      setQueSi({ cmp, narrativa, hoja });
+    } catch (e) {
+      alFallar(e);
+    } finally {
+      hilos?.cerrar();
+      setOcupado(null);
+    }
+  };
+
   const verCronograma = async () => {
     if (!resultado || !datos) return;
     try {
@@ -273,6 +322,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         salud,
         ...(simulado ? { simulado } : {}),
         ...(simulado?.comparacion ? { comparacion: simulado.comparacion } : {}),
+        ...(queSi ? { escenarios: queSi } : {}),
         ...(registro ? { registro } : {}),
         seguimiento,
         plantilla: await plantillaDelLibro(),
@@ -494,9 +544,53 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
             </p>
           )}
           {seguimiento.length > 0 && <Seguimiento lista={seguimiento} />}
+          <Plegable id="cronograma-quesi" titulo={T.queSi} resumen={queSi ? `${queSi.cmp.escenarios.length}` : ''}>
+            <p className="tenue">{T.queSiIntro}</p>
+            <p>
+              <button type="button" onClick={crearHojaEscenarios} disabled={ocupado !== null || !datos}>{T.crearEscenarios}</button>{' '}
+              <button type="button" onClick={compararQueSi} disabled={ocupado !== null || !datos || salud.bloquea}>{T.compararEscenarios}</button>
+            </p>
+            {queSi && <TablaEscenarios q={queSi} />}
+          </Plegable>
         </>
       )}
     </section>
+  );
+}
+
+/** W7: la comparación de escenarios con la base. */
+function TablaEscenarios({ q }: { q: { cmp: ComparacionEscenarios; narrativa: string[]; hoja: string } }) {
+  const d = (x: number) => (Math.round(x * 10) / 10).toLocaleString('es-ES');
+  const conCosto = q.cmp.base.costos !== undefined;
+  return (
+    <>
+      {q.narrativa.map((t, i) => <p key={i}>{t}</p>)}
+      <table>
+        <thead>
+          <tr>
+            <th>{T.escenarioCol}</th><th>P80</th><th>{T.adelantoP80}</th><th>{T.adelantoMedio}</th><th>{T.terminaAntes}</th>
+            {conCosto && <th>{T.costoCol}</th>}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">{T.escenarioBase}</th><td>{textoFecha(q.cmp.base.fechas.p80)}</td><td /><td /><td />
+            {conCosto && <td>{textoMoneda(q.cmp.base.costos!.p80)}</td>}
+          </tr>
+          {q.cmp.escenarios.map((e) => (
+            <tr key={e.nombre} title={e.cambios.join('\n')}>
+              <th scope="row">{e.nombre}</th>
+              <td>{textoFecha(e.r.fechas.p80)}</td>
+              <td>{T.diasNat(d(e.adelantoP80))}</td>
+              <td title={T.margenPareado(d(e.ic95), d(e.ic95Independientes))}>{T.diasNat(d(e.adelantoMedio))} ± {d(e.ic95)}</td>
+              <td>{Math.round(e.probAntes * 100)} %</td>
+              {conCosto && <td>{e.r.costos ? textoMoneda(e.r.costos.p80) : ''}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="tenue">{T.escenariosNota} {T.resultadoEscenariosEn(q.hoja)}</p>
+    </>
   );
 }
 

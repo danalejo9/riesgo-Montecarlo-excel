@@ -6,7 +6,7 @@
 
 import {
   reservaContingencia, tendencia, vistaGantt, type Reserva, type SinRiesgos, type ComparacionMitigacion, type Instantanea, type Registro, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
-  type ResultadoSimulacionPlazo, type VistaGantt,
+  type ResultadoSimulacionPlazo, type VistaGantt, type ComparacionEscenarios,
 } from '../engine/cronograma/index.ts';
 import type { PlantillaInforme } from './plantillaInforme.ts';
 
@@ -65,6 +65,12 @@ export interface DatosInformeCronograma {
     costoRespuestas: number;
     porRespuesta: ComparacionMitigacion['porRespuesta'];
   };
+  /** W7: los escenarios «¿qué pasa si?» comparados con la base. */
+  escenarios?: {
+    narrativa: string[];
+    base: { p80: number; costoP80?: number };
+    filas: Array<{ nombre: string; cambios: string[]; p80: number; adelantoP80: number; adelantoMedio: number; ic95: number; probAntes: number; costoP80?: number }>;
+  };
   gantt: VistaGantt & { truncado: boolean };
   /** V10: el registro de riesgos con la matriz. */
   registro?: Registro;
@@ -81,6 +87,7 @@ export function datosInformeCronograma(e: {
   salud?: InformeSalud | null;
   simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: SinRiesgos }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
+  escenarios?: { cmp: ComparacionEscenarios; narrativa: string[] };
   seguimiento?: readonly Instantanea[];
   registro?: Registro;
   plantilla: PlantillaInforme;
@@ -180,6 +187,18 @@ export function datosInformeCronograma(e: {
       despues: { p80: cmp.despues.fechas.p80, ...(cmp.despues.costos ? { costoP80: cmp.despues.costos.p80 } : {}) },
       costoRespuestas: cmp.costoRespuestas,
       porRespuesta: cmp.porRespuesta,
+    };
+  }
+  if (e.escenarios && e.escenarios.cmp.escenarios.length > 0) {
+    const { cmp, narrativa } = e.escenarios;
+    const r1 = (x: number) => Math.round(x * 10) / 10;
+    datos.escenarios = {
+      narrativa,
+      base: { p80: cmp.base.fechas.p80, ...(cmp.base.costos ? { costoP80: cmp.base.costos.p80 } : {}) },
+      filas: cmp.escenarios.map((x) => ({
+        nombre: x.nombre, cambios: x.cambios, p80: x.r.fechas.p80, adelantoP80: r1(x.adelantoP80), adelantoMedio: r1(x.adelantoMedio),
+        ic95: Math.round(x.ic95 * 100) / 100, probAntes: Math.round(x.probAntes * 1000) / 1000, ...(x.r.costos ? { costoP80: x.r.costos.p80 } : {}),
+      })),
     };
   }
   return datos;

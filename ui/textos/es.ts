@@ -17,6 +17,24 @@ export const textosCronograma = {
   plantillaAyuda: 'Crea las hojas «Actividades», «Calendario» y «Riesgos de plazo» con un ejemplo, si no existen.',
   plantillaCreada: (hojas: string[]) =>
     hojas.length === 0 ? 'Las hojas ya existían: no se ha tocado nada.' : `Creadas: ${lista(hojas)}.`,
+  // W7: escenarios «¿qué pasa si?».
+  queSi: '¿Qué pasa si…?',
+  queSiIntro: 'Compara cambios al plan con la base, con los mismos números aleatorios: la diferencia es solo la del cambio. Los cambios se escriben en la hoja «Escenarios».',
+  crearEscenarios: 'Crear hoja «Escenarios»',
+  escenariosCreada: 'Hoja «Escenarios» creada con ejemplos de tu cronograma. Edítalos y pulsa «Comparar escenarios».',
+  escenariosYaExiste: 'La hoja «Escenarios» ya existe: no se ha tocado.',
+  compararEscenarios: 'Comparar escenarios',
+  sinEscenarios: 'La hoja «Escenarios» no tiene ningún escenario (o no existe): créala con el botón.',
+  comparandoEscenarios: (h: number, t: number) => `Simulando escenarios… ${Math.round((100 * h) / Math.max(1, t))} %`,
+  escenarioCol: 'Escenario',
+  adelantoP80: 'Adelanto del P80',
+  adelantoMedio: 'Adelanto medio',
+  terminaAntes: 'Termina antes',
+  escenarioBase: 'Base',
+  diasNat: (d: string) => `${d} d`,
+  margenPareado: (pareado: string, independiente: string) => `± ${pareado} d al 95 % (con simulaciones independientes serían ± ${independiente} d)`,
+  escenariosNota: 'Adelantos en días naturales: positivo, el escenario termina antes que la base.',
+  resultadoEscenariosEn: (hoja: string) => `Tabla completa en la hoja «${hoja}».`,
   // W6: ejemplos por sector y guía de primer uso.
   ejemplo: 'Crear ejemplo',
   ejemploAyuda: 'Escribe un cronograma completo del sector elegido (actividades con rangos y costos, riesgos típicos con su respuesta, calendario y un hito con multa), listo para calcular y simular. Cámbialo por tu proyecto.',
@@ -214,6 +232,13 @@ export const textosGantt = {
 
 /** V3: el informe PDF (común a costos y cronograma) y su plantilla. */
 export const textosInforme = {
+  // W7: escenarios.
+  escenarioCol: 'Escenario',
+  adelantoP80: 'Adelanto del P80',
+  adelantoMedio: 'Adelanto medio (± 95 %)',
+  terminaAntes: 'Termina antes',
+  escenarioBase: 'Base (sin cambios)',
+  escenariosNotaInforme: 'Cada escenario se simuló con los mismos números aleatorios que la base; los adelantos están en días naturales (positivo: termina antes).',
   imprimir: 'Imprimir o guardar como PDF',
   imprimirAyuda: 'En el cuadro de impresión, elige «Guardar como PDF» como impresora.',
   margenesAyuda: 'Para ver el pie y el número de página, deja activados «Encabezados y pies de página» en Más opciones.',
