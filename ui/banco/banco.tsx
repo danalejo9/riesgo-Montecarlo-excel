@@ -11,7 +11,7 @@ import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { avisarSeleccion, CELDAS, hojasMatriz, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
+import { avisarSeleccion, CELDAS, hojasMatriz, hojaVolcada, instalarExcelFalso, rellenos, seleccion, avisarCambioHoja } from './excelFalso.ts';
 import { pedirAlPanel } from '../acciones.ts';
 
 instalarExcelFalso();
@@ -23,6 +23,8 @@ instalarExcelFalso();
 // dibuja una cuadrícula, así que esta es la única forma de comprobarlo.
 (globalThis as unknown as Record<string, unknown>).__hojaVolcada = hojaVolcada;
 (globalThis as unknown as Record<string, unknown>).__hojasMatriz = hojasMatriz;
+// V11: simular que el usuario editó una hoja (la vista previa del plazo lo escucha).
+(globalThis as unknown as Record<string, unknown>).__cambiarHoja = avisarCambioHoja;
 
 function Banco() {
   const [celda, setCelda] = useState(seleccion.ref);

@@ -244,6 +244,12 @@ export function avisarSeleccion(): void {
   for (const f of alSeleccionar) void f();
 }
 
+/** V11: `worksheets.onChanged`. El banco (o una prueba) lo dispara con `__cambiarHoja(nombre)`. */
+const alCambiarHoja = new Set<(e: { worksheetId: string }) => Promise<void> | void>();
+export function avisarCambioHoja(nombre: string): void {
+  for (const f of alCambiarHoja) void f({ worksheetId: nombre });
+}
+
 /**
  * El relleno de cada celda, que aquí no se ve pero sí se puede comprobar: el
  * banco lo enseña como texto, y así se verifica que el resaltado pinta las
@@ -516,6 +522,12 @@ export function instalarExcelFalso(): void {
         load: () => {},
         getItem: (nombre?: string) => (nombre && hojasMatriz.has(nombre) ? hojaMatriz(nombre) : hojaFalsa),
         getActiveWorksheet: () => hojaFalsa,
+        onChanged: {
+          add: (f: (e: { worksheetId: string }) => Promise<void> | void) => {
+            alCambiarHoja.add(f);
+            return { context: undefined, remove: () => alCambiarHoja.delete(f) };
+          },
+        },
         getItemOrNullObject: (nombre?: string) =>
           nombre && hojasMatriz.has(nombre) ? hojaMatriz(nombre) : { isNullObject: true, load: () => {}, delete: () => {} },
         // El volcado crea una hoja nueva. El banco no dibuja cuadrícula, así

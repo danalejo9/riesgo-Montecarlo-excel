@@ -250,6 +250,10 @@ estimaciones, y después lo que da exactitud de obra.
 | 10 | **V10** (J) | **Registro de riesgos completo**: matriz de probabilidad e impacto con colores, responsable, estado, fechas de revisión, riesgos cualitativos y riesgos solo de costo | Gestión de riesgos completa en un solo sitio | 3–4 d |
 | 11 | **V11** (K) | **Simulación rápida mientras se edita**, **configurable**: activar o no, cuántas iteraciones (p. ej. 500–2.000) y cada cuánto; con el resultado marcado como «vista previa» | Respuesta inmediata al cambiar el cronograma | 1 d |
 
+**Estado al 30/09:** V1–V11 hechos en código, cada uno con su referencia
+en el libro de pruebas (cuando hay números) y sus pruebas en la guía
+(Q42–Q66). Falta la ronda en Excel (Windows, Web y Mac), MS Project y P6.
+
 **Total:** unos 30–40 días. Cada etapa V amplía el libro de pruebas del
 cronograma (con su referencia calculada aparte cuando haya números) y añade
 pruebas al bloque Q de la guía.

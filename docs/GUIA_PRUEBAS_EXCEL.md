@@ -1118,6 +1118,26 @@ Materializado»; Impacto cualitativo 7 → «nivel de 1 a 5»; una fila sin
 impactos, sin costo y sin nivel → «faltan el impacto mínimo y el máximo (si
 no afecta al plazo: …)». Al terminar, deshaz los cambios.
 
+**Q65. Vista previa mientras editas (V11).** Con el libro de pruebas, calcula.
+En «Simulación del plazo» marca **Vista previa mientras editas** y elige
+«1.000 iteraciones» y «tras 1 s sin cambios». En «Actividades», cambia la
+Estructura (7) a 60 días (mínimo 55, más probable 60, máximo 80) y deja de
+escribir: en uno o dos segundos aparece la tarjeta **VISTA PREVIA** con la
+hora y P50 ≈ 24/09/2027, P80 ≈ 11/10/2027 (orientativo: 1.000 iteraciones).
+No se escribe ninguna hoja. Si ya habías simulado, añade «la última
+simulación completa decía 24/08/2027». Vuelve a 30 / 27 / 30 / 42: la
+vista previa vuelve a P80 ≈ 24/08/2027. Escribir en otra hoja (p. ej. una
+celda de «Cronograma (resultado)») no la dispara. Las preferencias son de
+este equipo: cierra y abre el panel y siguen marcadas.
+
+**Q66. Vista previa: casos límite.** Mientras corre «Simular el plazo», los
+cambios no lanzan vista previa (la completa manda). Con un error en
+«Actividades» (una predecesora que no existe), la tarjeta dice «Las hojas
+tienen errores…». Con «tras 10 s», teclea varios cambios seguidos: una sola
+vista previa al final. En Excel sin avisos de cambios (versiones antiguas),
+el panel lo dice y la vista previa se actualiza con «Calcular cronograma».
+Desmárcala al terminar.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

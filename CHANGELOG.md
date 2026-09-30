@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V11: vista previa del plazo mientras se edita (2026-09-30)
+
+**Añadido**
+- En «Simulación del plazo», **Vista previa mientras editas**, configurable
+  (iteraciones: 500, 1.000 o 2.000; espera tras el último cambio: 1, 3 o
+  10 s). Al editar las hojas de entrada del cronograma, recalcula y simula
+  con pocas iteraciones y lo enseña como **vista previa**, sin escribir en
+  el libro. Es una preferencia de este equipo.
+- Guía Q65–Q66.
+
 ### V10: registro de riesgos completo (2026-09-30)
 
 **Añadido**

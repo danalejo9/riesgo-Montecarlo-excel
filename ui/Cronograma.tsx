@@ -30,6 +30,7 @@ import { datosInformeCronograma } from '../excel/informeCronograma.ts';
 import { codificarInforme } from '../excel/informeImprimible.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
+import { ControlesVistaPrevia, TarjetaVistaPrevia, useVistaPrevia } from './VistaPreviaPlazo.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { descargarDirecto, esEscritorio, type ArchivoDescarga } from './descarga.ts';
 import { HistogramaFechas, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
@@ -72,6 +73,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const [pctMas, setPctMas] = useState(25);
   const [escenario, setEscenario] = useState<'antes' | 'despues' | 'comparar'>('antes');
   const [seguimiento, setSeguimiento] = useState<Instantanea[]>([]);
+  // V11: la vista previa mientras se edita (preferencia de este equipo).
+  const previa = useVistaPrevia(ocupado, forma);
 
   if (!tieneCapacidad('cronograma')) {
     return <section><p className="aviso-linea">{T.sinCapacidad}</p></section>;
@@ -117,6 +120,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         setRegistro(reg);
         await escribirHojaRegistro(hojaRegistro(reg));
       } else setRegistro(null);
+      if (previa.prefs.activa) setTimeout(previa.tras, 0);
     } catch (e) {
       alFallar(e);
     } finally {
@@ -408,6 +412,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       {salud && (
         <>
           <h3>{T.simulacion}</h3>
+          <ControlesVistaPrevia prefs={previa.prefs} cambiar={previa.cambiar} sinEventos={previa.sinEventos} deshabilitado={false} />
+          {previa.vista && <TarjetaVistaPrevia v={previa.vista} {...(simulado ? { completa: simulado.r } : {})} />}
           {datos && datos.riesgos.length === 0 && <p className="tenue">{T.sinRiesgos}</p>}
           <p>
             <label>{T.iteraciones}{' '}

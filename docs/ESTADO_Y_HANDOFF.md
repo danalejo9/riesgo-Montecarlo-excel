@@ -1488,6 +1488,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     «En seguimiento» no se reconocía. Guía Q63–Q64. **Siguiente**: V11
     (simulación rápida configurable).
 
+91. [x] **V11 (2026-09-30)**. `ui/vistaPrevia.ts` (preferencias de este
+    equipo: activa, 500/1.000/2.000 iteraciones, espera 1/3/10 s;
+    `Programador`: la última edición manda, nunca dos a la vez, repite si
+    hubo cambios mientras corría), `excel/cambiosCronograma.ts`
+    (`worksheets.onChanged`, ExcelApi 1.9; solo las hojas de entrada),
+    `ui/VistaPreviaPlazo.tsx` (hook, controles y tarjeta «VISTA PREVIA»; no
+    escribe en el libro; cede ante la simulación completa). Banco:
+    `__cambiarHoja`. Guía Q65–Q66. **Bloque V completo en código**
+    (V1–V11). **Siguiente**: la ronda de pruebas del usuario (N, Q1–Q66) y
+    los arreglos que salgan; pista B (licencia, precio, publicación).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
