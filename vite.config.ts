@@ -91,6 +91,8 @@ export default defineConfig({
         explorador: resolve(__dirname, 'ui/explorador.html'),
         // P3c: «Ver cronograma», el Gantt interactivo, también en ventana flotante.
         gantt: resolve(__dirname, 'ui/gantt.html'),
+        // V9: descargar el archivo para MS Project o P6 desde el navegador del sistema.
+        exportar: resolve(__dirname, 'ui/exportar.html'),
         // U3.2: la ayuda de la cinta, también en ventana flotante.
         ayuda: resolve(__dirname, 'ui/ayuda.html'),
         // El banco de pruebas (`/banco/`): el panel sobre un Excel de mentira,

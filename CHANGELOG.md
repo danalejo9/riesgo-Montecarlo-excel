@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V9: exportar a MS Project y a P6 (2026-09-30)
+
+**Añadido**
+- **Exportar a MS Project** (XML) y **Exportar a P6** (XER) en la pestaña
+  Cronograma: el proyecto entero (calendarios, relaciones, restricciones,
+  avance, fechas del CPM) y, si hay simulación, el Fin P50, el Fin P80 y la
+  criticidad de cada actividad en campos personalizados (Fecha1, Fecha2,
+  Número1 / campos de usuario de P6).
+- En Excel de escritorio el archivo se descarga desde una página en el
+  navegador del sistema; en la Web, directamente.
+- El importador de P6 lee también la restricción secundaria.
+- Guía Q61–Q62.
+
 ### V8: clima probabilístico (2026-09-30)
 
 **Añadido**

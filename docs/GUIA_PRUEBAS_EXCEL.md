@@ -1070,6 +1070,29 @@ el ID de una actividad ni una categoría». Pon todos los meses en 0: la
 simulación vuelve a las cifras sin clima. Al terminar, borra la hoja «Clima»
 (o déjala en cero) para las demás pruebas.
 
+**Q61. Exportar a MS Project (V9).** Con el libro de pruebas, calcula y
+simula (10.000, PERT). Pulsa **Exportar a MS Project**. En Excel en la Web
+se descarga «Cronograma-riesgo.xml»; en Excel de escritorio se abre una
+página en el navegador con el botón «Descargar…». Ábrelo en MS Project
+(Archivo → Abrir). Esperado: las 20 tareas con sus relaciones (FC, CC, FF,
+CF, retardos y el adelanto), el calendario «Proyecto» con los festivos, y
+las fechas iguales a «Esperado» (fin 16/07/2027). Añade las columnas
+**Fecha1** («Fin P50 (QSRA)»), **Fecha2** («Fin P80 (QSRA)») y **Número1**
+(«Criticidad % (QSRA)»): p. ej. la Estructura, crítica en torno al 99 %.
+Vuelve a importar ese XML con «Importar de MS Project o P6»: la
+verificación dice que todas las fechas coinciden. Si no tienes MS Project,
+anótalo y haz solo la reimportación.
+
+**Q62. Exportar a P6.** Igual con **Exportar a P6** («Cronograma-riesgo.xer»,
+en Windows-1252 para que P6 lea las tildes). En P6: Archivo → Importar →
+Primavera PM (XER). Esperado: actividades, relaciones, calendarios, la EDT
+por categoría y los campos de usuario «Fin P50 (QSRA)», «Fin P80 (QSRA)» y
+«Criticidad % (QSRA)». Con avance (Q26) y calendarios por actividad (Q56),
+exporta de nuevo: en el XER viajan también las fechas reales, lo que queda,
+los calendarios de cada actividad y las dos restricciones de la actividad
+17; en el XML de MS Project, la 17 solo lleva la de inicio (el panel lo
+avisa: MS Project admite una restricción más la fecha límite).
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

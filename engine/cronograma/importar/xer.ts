@@ -152,15 +152,18 @@ export function leerXer(texto: string): CronogramaImportado {
     if (calT) a.calendario = calT;
     const w = wbs.get(x.wbs_id ?? '');
     if (w && w.proj_node_flag !== 'Y' && w.wbs_name) a.categoria = w.wbs_name;
-    const fr = serieDeIso(x.cstr_date);
-    switch (x.cstr_type) {
-      case 'CS_MSOA': if (fr !== undefined) a.inicioNoAntesDe = fr; break;
-      case 'CS_MSOB': if (fr !== undefined) a.inicioNoDespuesDe = fr; break;
-      case 'CS_MEOA': if (fr !== undefined) a.terminarNoAntesDe = fr; break;
-      case 'CS_MEOB': if (fr !== undefined) a.terminarNoDespuesDe = fr; break;
-      case 'CS_MSO': case 'CS_MANDSTART': if (fr !== undefined) { a.inicioNoAntesDe = fr; a.inicioNoDespuesDe = fr; } break;
-      case 'CS_MEO': case 'CS_MANDFIN': if (fr !== undefined) { a.terminarNoAntesDe = fr; a.terminarNoDespuesDe = fr; } break;
-      case 'CS_ALAP': avisos.push(`«${id}» es «lo más tarde posible»: se calcula lo antes posible.`); break;
+    // La restricción principal y la secundaria (cstr_type2) de P6.
+    for (const [tipoR, fechaR] of [[x.cstr_type, x.cstr_date], [x.cstr_type2, x.cstr_date2]] as const) {
+      const fr = serieDeIso(fechaR);
+      switch (tipoR) {
+        case 'CS_MSOA': if (fr !== undefined) a.inicioNoAntesDe = fr; break;
+        case 'CS_MSOB': if (fr !== undefined) a.inicioNoDespuesDe = fr; break;
+        case 'CS_MEOA': if (fr !== undefined) a.terminarNoAntesDe = fr; break;
+        case 'CS_MEOB': if (fr !== undefined) a.terminarNoDespuesDe = fr; break;
+        case 'CS_MSO': case 'CS_MANDSTART': if (fr !== undefined) { a.inicioNoAntesDe = fr; a.inicioNoDespuesDe = fr; } break;
+        case 'CS_MEO': case 'CS_MANDFIN': if (fr !== undefined) { a.terminarNoAntesDe = fr; a.terminarNoDespuesDe = fr; } break;
+        case 'CS_ALAP': avisos.push(`«${id}» es «lo más tarde posible»: se calcula lo antes posible.`); break;
+      }
     }
     const estado = x.status_code ?? 'TK_NotStart';
     if (estado === 'TK_Complete') {

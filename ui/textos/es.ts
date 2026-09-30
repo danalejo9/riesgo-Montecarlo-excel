@@ -88,6 +88,12 @@ export const textosCronograma = {
   retornoCol: 'Retorno',
   marcaCronograma: 'cronograma',
   informe: 'Informe PDF',
+  nombreExportado: 'Cronograma',
+  exportarMsp: 'Exportar a MS Project',
+  exportarP6: 'Exportar a P6',
+  exportarAyuda: 'Un archivo con el cronograma y, si has simulado, el Fin P50, el Fin P80 y la criticidad de cada actividad en campos personalizados, para abrirlo en MS Project (XML) o Primavera P6 (XER).',
+  exportado: (n: string) => `Archivo «${n}» preparado.`,
+  exportarGrande: 'El archivo es demasiado grande para abrirlo en el navegador desde Excel de escritorio: usa Excel en la Web para descargarlo.',
   informeAyuda: 'Abre el informe ejecutivo para imprimir o guardar como PDF, con la plantilla del libro (Configuración → Informe PDF). Incluye la última simulación, si la hay.',
   seguimiento: 'Seguimiento en el tiempo',
   seguimientoAyuda: 'Guarda esta simulación como instantánea en la hoja «Cronograma (seguimiento)», con su fecha de corte, para ver cómo evolucionan el P50, el P80 y el costo de un corte a otro. Con la misma fecha de corte, reemplaza la anterior.',
@@ -232,4 +238,15 @@ export const textosPlantilla = {
   sinGuardar: 'Hay cambios sin guardar.',
   noSeLeyo: (m: string) => `No se pudo leer la plantilla del libro (${m}): se muestra la de por defecto.`,
   noSeGuardo: (m: string) => `No se pudo guardar la plantilla: ${m}`,
+} as const;
+
+/** V9: exportar a MS Project y P6. */
+export const textosExportar = {
+  titulo: 'Exportar el cronograma',
+  preparando: 'Preparando el archivo…',
+  nada: 'No hay archivo que descargar',
+  nadaAyuda: 'Esta página se abre desde la pestaña Cronograma del complemento, con «Exportar a MS Project» o «Exportar a P6».',
+  descargar: (n: string) => `Descargar ${n}`,
+  ayudaMsp: 'En MS Project: Archivo → Abrir → elige el .xml (como proyecto nuevo o combinándolo con el tuyo). Fin P50 y Fin P80 están en Fecha1 y Fecha2, y la criticidad en Número1: añádelas como columnas.',
+  ayudaP6: 'En P6: Archivo → Importar → Primavera PM (XER). Fin P50, Fin P80 y Criticidad están como campos de usuario de las actividades («… (QSRA)»).',
 } as const;

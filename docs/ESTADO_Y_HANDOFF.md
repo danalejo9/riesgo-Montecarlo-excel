@@ -1464,6 +1464,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     sin expuestas = sin clima exacto, relojes = sin relojes, hilos. Guía
     Q59–Q60. **Siguiente**: V9 (exportar a MS Project y P6).
 
+89. [x] **V9 (2026-09-30)**. `exportar.ts`: `exportarMspdi` (proyecto
+    entero: calendarios, tareas con CalendarUID, relaciones, restricción +
+    Deadline, avance; Fecha1/Fecha2/Número1 = Fin P50/Fin P80/criticidad con
+    alias; Texto1 = categoría; Texto2 = ID si no es numérico) y `exportarXer`
+    (CALENDAR con clndr_data, PROJECT, PROJWBS por categoría, TASK con
+    restricción principal y secundaria, TASKPRED, UDFTYPE/UDFVALUE);
+    `aWindows1252`. El importador de P6 lee ahora `cstr_type2`. Panel:
+    «Exportar a MS Project» / «Exportar a P6» (descarga directa en la Web;
+    en escritorio, `exportar.html` en el navegador del sistema). Pruebas de
+    ida y vuelta con los importadores (base, calendarios, avance). Guía
+    Q61–Q62. **Siguiente**: V10 (registro de riesgos completo).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

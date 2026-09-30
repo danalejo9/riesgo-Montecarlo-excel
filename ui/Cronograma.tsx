@@ -14,7 +14,7 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
-  leerRangosTipo, agregarInstantanea, hojaSeguimiento, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
+  leerRangosTipo, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
@@ -30,6 +30,7 @@ import { codificarInforme } from '../excel/informeImprimible.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
+import { descargarDirecto, esEscritorio, type ArchivoDescarga } from './descarga.ts';
 import { HistogramaFechas, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
@@ -203,6 +204,33 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  /** V9: el cronograma (y la última simulación) como XML de MS Project o XER de P6. */
+  const exportar = async (formato: 'msp' | 'p6') => {
+    if (!resultado || !datos) return;
+    try {
+      const e = (formato === 'msp' ? exportarMspdi : exportarXer)({
+        cronograma: datos.cron, filas: resultado.filas, proyecto: T.nombreExportado,
+        ...(simulado && !simulado.r.cancelada ? { simulacion: simulado.r } : {}),
+      });
+      const archivo: ArchivoDescarga = formato === 'msp'
+        ? { nombre: e.nombreArchivo, texto: e.texto, tipo: 'application/xml' }
+        : { nombre: e.nombreArchivo, texto: e.texto, tipo: 'text/plain', windows1252: true };
+      if (esEscritorio()) {
+        const codigo = await codificarJson(archivo);
+        if (codigo.length > 1_500_000) {
+          setNota(T.exportarGrande);
+          return;
+        }
+        abrirEnNavegador(`${new URL('/exportar.html', window.location.href).href}#d=${codigo}`);
+      } else {
+        descargarDirecto(archivo.windows1252 ? aWindows1252(archivo.texto) : new TextEncoder().encode(archivo.texto), archivo.nombre, archivo.tipo);
+      }
+      setNota([T.exportado(e.nombreArchivo), ...e.avisos].join(' '));
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
   /** V3: el informe PDF, con la plantilla del libro y lo último calculado y simulado. */
   const abrirInforme = async () => {
     if (!resultado || !datos) return;
@@ -341,6 +369,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
           <p>
             <button type="button" onClick={verCronograma} disabled={ocupado !== null || !datos}>{T.verCronograma}</button>{' '}
             <button type="button" onClick={abrirInforme} disabled={ocupado !== null || !datos} title={T.informeAyuda}>{T.informe}</button>{' '}
+            <button type="button" onClick={() => void exportar('msp')} disabled={ocupado !== null || !datos} title={T.exportarAyuda}>{T.exportarMsp}</button>{' '}
+            <button type="button" onClick={() => void exportar('p6')} disabled={ocupado !== null || !datos} title={T.exportarAyuda}>{T.exportarP6}</button>{' '}
             <span className="tenue">{T.verCronogramaAyuda}</span>
           </p>
         </>
