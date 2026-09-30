@@ -43,6 +43,8 @@ export interface DatosInformeCronograma {
     hitos?: ResultadoSimulacionPlazo['hitos'];
     /** W2: la reserva de contingencia al P80. */
     reserva?: Reserva;
+    /** W4: las convergencias con más sesgo. */
+    convergencias?: ResultadoSimulacionPlazo['convergencias'];
     multas?: ResultadoSimulacionPlazo['multas'];
     sinRiesgosP80?: number;
     costos?: {
@@ -147,6 +149,7 @@ export function datosInformeCronograma(e: {
       ...(s.impacto ? { sinRiesgosP80: s.impacto.sinRiesgos.p80 } : {}),
       ...(r.hitos ? { hitos: r.hitos } : {}),
       ...(!r.cancelada ? { reserva: reservaContingencia(r, s.impacto, 'p80') } : {}),
+      ...(r.convergencias.length > 0 ? { convergencias: r.convergencias.slice(0, 5) } : {}),
       ...(r.multas ? { multas: r.multas } : {}),
       ...(r.costos
         ? {

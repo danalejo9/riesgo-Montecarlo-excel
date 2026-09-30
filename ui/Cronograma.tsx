@@ -34,7 +34,7 @@ import { Plegable } from './Plegable.tsx';
 import { ControlesVistaPrevia, TarjetaVistaPrevia, useVistaPrevia } from './VistaPreviaPlazo.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { descargarDirecto, esEscritorio, type ArchivoDescarga } from './descarga.ts';
-import { HistogramaFechas, MatrizConsolidada, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { BarrasConvergencia, HistogramaFechas, MatrizConsolidada, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
@@ -514,6 +514,7 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
       {s.narrativa.map((l) => <p key={l}>{l}</p>)}
       {r.hitos && r.hitos.length > 0 && <Hitos r={r} />}
       {!r.cancelada && <ReservaContingencia r={r} impacto={impacto} />}
+      {r.convergencias.length > 0 && <Convergencias r={r} />}
       {s.comparacion && <Comparacion c={s.comparacion} />}
       <Histograma r={r} />
       {r.costos && <Nube r={r} />}
@@ -603,6 +604,28 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
     max = Math.max(max, f);
   }
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
+}
+
+/** W4: el sesgo de convergencia: la que más pesa, en gráfico; las siguientes, en tabla. */
+function Convergencias({ r }: { r: ResultadoSimulacionPlazo }) {
+  const [c, ...resto] = r.convergencias;
+  if (!c) return null;
+  return (
+    <Plegable id="cronograma-convergencias" titulo={T.convergencias} resumen={T.convergenciasResumen(r.convergencias.length)}>
+      <BarrasConvergencia c={c} textos={{ titulo: T.convergenciaGrafico(c.nombre, textoFecha(c.inicioPlan)), todas: T.convergenciaTodas, independientes: T.convergenciaIndependientes }} />
+      {resto.length > 0 && (
+        <table>
+          <thead><tr><th>{T.convergenciaCol}</th><th>{T.aTiempoCol}</th><th>{T.ramasCol}</th></tr></thead>
+          <tbody>
+            {resto.slice(0, 4).map((x) => (
+              <tr key={x.id}><td>{x.nombre}</td><td>{Math.round(x.probATiempo * 100)} %</td><td>{x.ramas.map((y) => `${Math.round(y.probATiempo * 100)} %`).join(' · ')}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="tenue">{T.convergenciasNota}</p>
+    </Plegable>
+  );
 }
 
 /** W2: la reserva de contingencia al nivel elegido y de dónde sale. */

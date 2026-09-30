@@ -268,3 +268,37 @@ export function MatrizConsolidada({ amenazas, oportunidades, textos }: {
     </table>
   );
 }
+
+/**
+ * W4: el sesgo de convergencia de una actividad: la probabilidad de que cada
+ * ruta llegue a tiempo y la de que lleguen todas (la de la convergencia),
+ * que es menor que la de cualquiera.
+ */
+export function BarrasConvergencia({ c, textos }: {
+  c: { nombre: string; probATiempo: number; probProducto: number; ramas: ReadonlyArray<{ id: string; nombre: string; probATiempo: number }> };
+  textos: { titulo: string; todas: string; independientes: string };
+}) {
+  const filas = [...c.ramas.map((x) => ({ k: x.id, nombre: x.nombre, p: x.probATiempo, fuerte: false })), { k: '__todas', nombre: textos.todas, p: c.probATiempo, fuerte: true }];
+  const W = 300;
+  const IZQ = 118;
+  const FILA = 18;
+  const H = filas.length * FILA + 14;
+  const x = (p: number) => IZQ + p * (W - IZQ - 34);
+  return (
+    <figure style={{ margin: '8px 0' }}>
+      <figcaption className="tenue" style={{ fontSize: 12 }}>{textos.titulo}</figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={textos.titulo}>
+        {filas.map((f, i) => (
+          <g key={f.k} transform={`translate(0,${i * FILA})`}>
+            <text x={IZQ - 4} y={12} fontSize="9" textAnchor="end" fill="currentColor" fontWeight={f.fuerte ? 700 : 400}>{f.nombre.length > 24 ? `${f.nombre.slice(0, 23)}…` : f.nombre}</text>
+            <rect x={IZQ} y={3} width={Math.max(1, x(f.p) - IZQ)} height={FILA - 6} fill={f.fuerte ? 'var(--baja, #e34948)' : 'var(--acento)'} opacity={f.fuerte ? 0.9 : 0.6} rx={2} />
+            <text x={x(f.p) + 3} y={12} fontSize="9" fill="currentColor">{Math.round(f.p * 100)} %</text>
+          </g>
+        ))}
+        {/* Lo que daría si las rutas fueran independientes: el producto. */}
+        <line x1={x(c.probProducto)} x2={x(c.probProducto)} y1={(filas.length - 1) * FILA + 1} y2={filas.length * FILA - 1} stroke="currentColor" strokeDasharray="2 2" />
+        <text x={IZQ} y={H - 2} fontSize="8" fill="currentColor" className="tenue">{textos.independientes}</text>
+      </svg>
+    </figure>
+  );
+}

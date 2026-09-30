@@ -11,7 +11,7 @@ import type { IdSeccionCronograma } from '../excel/plantillaInforme.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { COLORES_ZONA, colorDe } from '../engine/cronograma/registro.ts';
-import { CurvaS, GanttImpreso, HistogramaFechas, MatrizConsolidada, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { BarrasConvergencia, CurvaS, GanttImpreso, HistogramaFechas, MatrizConsolidada, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { miles } from './formato.ts';
 import { textosInforme as T } from './textos/es.ts';
 
@@ -75,6 +75,21 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
             <tr><th scope="row">{T.reservaTotal}</th><th>{Math.round(s.reserva.dias * 10) / 10}</th>{s.reserva.costo !== undefined && <th>{textoMoneda(s.reserva.costo)}</th>}</tr>
           </tbody>
         </table>
+      </section>
+    ),
+    convergencias: s?.convergencias && s.convergencias.length > 0 && (
+      <section>
+        <h2>Convergencias: por qué el P80 cae después del cronograma</h2>
+        <BarrasConvergencia c={s.convergencias[0]!} textos={{ titulo: T.convergenciaGrafico(s.convergencias[0]!.nombre, textoFecha(s.convergencias[0]!.inicioPlan)), todas: T.convergenciaTodas, independientes: T.convergenciaIndependientes }} />
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>{T.convergenciaCol}</th><th>{T.inicioPlanCol}</th><th>{T.aTiempoCol}</th><th>{T.ramasCol}</th></tr></thead>
+          <tbody>
+            {s.convergencias.map((x) => (
+              <tr key={x.id}><th scope="row">{x.nombre}</th><td>{textoFecha(x.inicioPlan)}</td><td>{pct(x.probATiempo)}</td><td>{x.ramas.map((y) => `${y.nombre} ${pct(y.probATiempo)}`).join(' · ')}</td></tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="tenue nota-informe">{T.convergenciasNota}</p>
       </section>
     ),
     fechas: s && (

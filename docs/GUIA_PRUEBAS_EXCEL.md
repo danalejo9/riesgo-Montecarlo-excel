@@ -1183,6 +1183,19 @@ bloque «Reserva de contingencia al P80» con los totales al P50 y al P90; en
 el PDF, la sección «Reserva de contingencia». (Las cifras de las partes son
 de 10.000 iteraciones y la semilla por defecto.)
 
+**Q69. Convergencias: por qué el P80 cae después (W4).** Con el libro de
+pruebas, simula (10.000, PERT). Esperado:
+- Un párrafo: «En “Excavación” se juntan 2 rutas: cada una llega a tiempo
+  (01/03/2027) en el 20–34 % de los casos, pero las dos a la vez solo en el
+  7 %; es el sesgo de convergencia: basta con que una se retrase.»
+- **Por qué el P80 cae después: convergencias** (4 puntos): el gráfico de
+  Excavación (Diseño detallado 34 %, Movilización de obra 20 %, «Todas a la
+  vez» 7 % en rojo, y la marca punteada de «si fueran independientes») y la
+  tabla con Montaje del ascensor (3 %: ascensor 83 %, cubierta 3 %),
+  Limpieza final (2 %) y Acabados interiores (3 %).
+- En «Cronograma (simulación)», el bloque «Convergencia (sesgo de
+  convergencia)»; en el PDF, la sección de convergencias.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

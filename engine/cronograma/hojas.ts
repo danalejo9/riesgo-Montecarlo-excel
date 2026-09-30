@@ -237,6 +237,19 @@ export function hojaSimulacionPlazo(
     v.push(['']);
   }
 
+  // W4: las convergencias con más sesgo.
+  if (r.convergencias.length > 0) {
+    encabezados.push(v.length);
+    v.push(['Convergencia (sesgo de convergencia)', 'Inicio según el cronograma', 'Empieza a tiempo', 'Si las rutas fueran independientes', 'Rutas que llegan: a tiempo']);
+    const c0 = v.length;
+    for (const c of r.convergencias.slice(0, 5)) {
+      v.push([`${c.id} · ${c.nombre}`, c.inicioPlan, c.probATiempo, c.probProducto, c.ramas.map((x) => `${x.nombre} ${Math.round(x.probATiempo * 100)} %`).join('; ')]);
+    }
+    fechaEn(c0, 1, v.length - c0);
+    pctEn(c0, 2, v.length - c0, 2);
+    v.push(['']);
+  }
+
   // W2: la reserva de contingencia al P80 y su reparto; los totales al P50 y al P90.
   if (!r.cancelada) {
     const res = reservaContingencia(r, impacto, 'p80');

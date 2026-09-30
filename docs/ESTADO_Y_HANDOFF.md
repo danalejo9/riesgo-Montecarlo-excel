@@ -1543,6 +1543,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     el motor tenía razón. Pendiente: los ejemplos publicados de GAO y AACE,
     cuando se tengan los documentos. **Siguiente**: W4 (merge bias).
 
+97. [x] **W4 (2026-09-30)**. `PlazoPreparado.convergencias` (actividades
+    pendientes con ≥ 2 predecesoras FC sin retardo y su inicio del
+    cronograma); en cada iteración se cuenta si la convergencia empieza a
+    tiempo y si cada rama llega a tiempo (exacto; la primera versión con
+    contadores por día mezclaba redondeos y una prueba lo detectó).
+    `ResultadoSimulacionPlazo.convergencias` (a tiempo, producto si fueran
+    independientes, ramas), frase en el resumen, `BarrasConvergencia` en el
+    panel y el PDF, bloque en la hoja. Guía Q69. **Siguiente**: W5
+    (`RIESGO.CRONOGRAMA("Hito")`).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

@@ -93,6 +93,19 @@ export interface ResultadoHito {
   multaMedia: number;
 }
 
+export interface Convergencia {
+  id: string;
+  nombre: string;
+  /** Inicio según el cronograma (serie). */
+  inicioPlan: number;
+  /** P(la convergencia empieza en su fecha o antes). */
+  probATiempo: number;
+  /** Lo mismo si las rutas fueran independientes: el producto de las de cada una. */
+  probProducto: number;
+  inicioP80: number;
+  ramas: Array<{ id: string; nombre: string; probATiempo: number; finP80: number }>;
+}
+
 export interface ResultadoSimulacionPlazo {
   iteraciones: number;
   semilla: number;
@@ -114,6 +127,14 @@ export interface ResultadoSimulacionPlazo {
   histograma: Array<{ dia: number; fecha: number; cuenta: number }>;
   actividades: ActividadSimulada[];
   riesgos: Array<{ id: string; nombre: string; probabilidad: number; ocurrio: number }>;
+  /**
+   * W4: el sesgo de convergencia (*merge bias*), para las actividades donde
+   * se juntan dos o más rutas fin‑comienzo: la probabilidad de que cada ruta
+   * llegue a tiempo (a la fecha del cronograma) y la de que la convergencia
+   * empiece a tiempo, que exige que lleguen todas. Las de mayor diferencia
+   * primero.
+   */
+  convergencias: Convergencia[];
   /** W1: los hitos contractuales: probabilidad de cumplir, fechas y multa. */
   hitos?: ResultadoHito[];
   /** W1: la multa total por iteración (si algún hito tiene multa), resumida. */
@@ -274,6 +295,8 @@ export interface PlazoPreparado {
   clima?: ClimaSimulado;
   /** W1: los hitos contractuales con el índice de su actividad. */
   hitos: Array<{ h: HitoContractual; a: number }>;
+  /** W4: las convergencias (dos o más predecesoras fin‑comienzo sin retardo) y su inicio en el cronograma (eje). */
+  convergencias: Array<{ s: number; ramas: number[]; plan: number }>;
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada (`ef` y `ls`, solo con relojes). */
   trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[]; ef?: Float64Array; ls?: Float64Array };
 }
@@ -321,7 +344,7 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
   }
   const salientes: RelSal[][] = Array.from({ length: n }, () => []);
   entrantes.forEach((lista, s2) => lista.forEach(({ p, t, r }) => (salientes[p] as RelSal[]).push({ s: s2, t, r })));
-  return {
+  const preparado: PlazoPreparado = {
     n,
     orden,
     entrantes,
@@ -364,7 +387,23 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
           ),
         }
       : {}),
+    convergencias: [],
   };
+  preparado.convergencias = convergenciasDe(preparado);
+  return preparado;
+}
+
+/** W4: las actividades pendientes donde convergen dos o más rutas fin‑comienzo sin retardo, con su inicio en el cronograma. */
+function convergenciasDe(p: PlazoPreparado): PlazoPreparado['convergencias'] {
+  const es = new Float64Array(p.n);
+  cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional, p.relojes, undefined, es);
+  const out: PlazoPreparado['convergencias'] = [];
+  for (let s = 0; s < p.n; s++) {
+    if ((p.condicional[s] as number) >= 0 || p.red.sinLogica[s] || p.red.estado[s] !== 'pendiente') continue;
+    const ramas = (p.entrantes[s] as Rel[]).filter((x) => x.t === 0 && x.r === 0 && (p.condicional[x.p] as number) < 0).map((x) => x.p);
+    if (ramas.length >= 2) out.push({ s, ramas, plan: es[s] as number });
+  }
+  return out;
 }
 
 /** La duración de una actividad; con P10/P90 (V6) y forma triangular, los extremos de la triangular equivalente. */
@@ -415,6 +454,9 @@ export interface AcumuladorPlazo {
   veces: number[];
   /** W1: suma de la multa de cada hito. */
   multaSuma: Float64Array;
+  /** W4: iteraciones en que cada convergencia empieza a tiempo, y en que cada una de sus ramas llega a tiempo (seguidas). */
+  convATiempo: Float64Array;
+  ramaATiempo: Float64Array;
 }
 
 export function nuevoAcumulador(p: PlazoPreparado): AcumuladorPlazo {
@@ -432,6 +474,8 @@ export function nuevoAcumulador(p: PlazoPreparado): AcumuladorPlazo {
     syy: 0,
     veces: p.riesgos.map(() => 0),
     multaSuma: new Float64Array(p.hitos.length),
+    convATiempo: new Float64Array(p.convergencias.length),
+    ramaATiempo: new Float64Array(p.convergencias.reduce((s, c) => s + c.ramas.length, 0)),
   };
 }
 
@@ -576,6 +620,27 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
           if (ef > (fin[k] as number)) fin[k] = ef;
         }
       }
+    }
+    // 3a. W4: ¿empieza cada convergencia a tiempo? ¿llega a tiempo cada una de sus rutas?
+    if (p.convergencias.length > 0) {
+      let j = 0;
+      p.convergencias.forEach((c, ci) => {
+        const bs = c.s * B;
+        const tope = c.plan + 1e-9;
+        let n = 0;
+        for (let k = 0; k < b; k++) if ((es[bs + k] as number) <= tope) n++;
+        acc.convATiempo[ci] = (acc.convATiempo[ci] as number) + n;
+        for (const pr of c.ramas) {
+          const bp = pr * B;
+          let m = 0;
+          for (let k = 0; k < b; k++) {
+            const f = ef ? (ef[bp + k] as number) : (es[bp + k] as number) + (dur[bp + k] as number);
+            if (f <= tope) m++;
+          }
+          acc.ramaATiempo[j] = (acc.ramaATiempo[j] as number) + m;
+          j++;
+        }
+      });
     }
     // 3b. Costo de la iteración (P5): por día de cada actividad y por día del proyecto.
     if (costoTramo) {
@@ -829,6 +894,8 @@ export function combinarAcumuladores(p: PlazoPreparado, partes: readonly Acumula
     t.syy += x.syy;
     x.veces.forEach((v, j) => (t.veces[j] = (t.veces[j] as number) + v));
     x.multaSuma.forEach((v, j) => (t.multaSuma[j] = (t.multaSuma[j] as number) + v));
+    x.convATiempo.forEach((v, j) => (t.convATiempo[j] = (t.convATiempo[j] as number) + v));
+    x.ramaATiempo.forEach((v, j) => (t.ramaATiempo[j] = (t.ramaATiempo[j] as number) + v));
   }
   return t;
 }
@@ -848,7 +915,7 @@ export function transferiblesDe(acc: AcumuladorPlazo): ArrayBuffer[] {
   agregar(acc.cuentaFin.cuentas);
   acc.inicios.forEach((c) => agregar(c.cuentas));
   acc.fines.forEach((c) => agregar(c.cuentas));
-  [acc.critica, acc.sx, acc.sxx, acc.sxy, acc.multaSuma].forEach(agregar);
+  [acc.critica, acc.sx, acc.sxx, acc.sxy, acc.multaSuma, acc.convATiempo, acc.ramaATiempo].forEach(agregar);
   return out;
 }
 
@@ -916,6 +983,7 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
     actividades,
     riesgos: p.riesgos.map((x, j) => ({ id: x.r.id, nombre: x.r.nombre, probabilidad: x.r.probabilidad, ocurrio: (acc.veces[j] as number) / M })),
     ...(p.hitos.length > 0 ? { hitos: resultadoHitos(p, acc, M) } : {}),
+    convergencias: convergencias(p, acc),
     ...(multaIter && acc.hechas > 0 ? { multas: resumenMultas(multaIter, multaDeterminista(p)) } : {}),
     cal: (f: number) => fechaDia(diaFin(f)),
     unidad: p.relojes ? 'naturales' : 'laborables',
@@ -923,6 +991,32 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
       ? { costos: conRangos(analizarCostos(finProyecto, costoIter, costoDeterminista(p), det, (q) => fechaDia(q)), costoBase, p.costosInciertos.length) }
       : {}),
   };
+}
+
+/** W4: las convergencias, de mayor a menor sesgo (la ruta más floja menos la convergencia). */
+function convergencias(p: PlazoPreparado, acc: AcumuladorPlazo): Convergencia[] {
+  const M = Math.max(1, acc.hechas);
+  const fechaDia = (d: number) => p.cal.fechaDeIndice(d);
+  let j = 0;
+  const out = p.convergencias.map((c, ci): Convergencia => {
+    const hito = (p.duraciones[c.s] as number) === 0;
+    const ramas = c.ramas.map((pr) => ({
+      id: (p.actividades[pr] as { id: string }).id, nombre: (p.actividades[pr] as { nombre: string }).nombre,
+      probATiempo: (acc.ramaATiempo[j++] as number) / M,
+      finP80: fechaDia(cuantilDias(acc.fines[pr] as ContadorDias, 0.8)),
+    }));
+    return {
+      id: (p.actividades[c.s] as { id: string }).id, nombre: (p.actividades[c.s] as { nombre: string }).nombre,
+      // Un hito se enseña el día en que terminan sus predecesoras.
+      inicioPlan: fechaDia(hito ? diaFin(c.plan) : Math.floor(c.plan + 1e-9)),
+      probATiempo: (acc.convATiempo[ci] as number) / M,
+      probProducto: ramas.reduce((x, r) => x * r.probATiempo, 1),
+      inicioP80: fechaDia(cuantilDias(acc.inicios[c.s] as ContadorDias, 0.8)),
+      ramas,
+    };
+  });
+  const sesgo = (c: Convergencia) => Math.min(...c.ramas.map((r) => r.probATiempo)) - c.probATiempo;
+  return acc.hechas > 0 ? out.sort((a, b) => sesgo(b) - sesgo(a)) : [];
 }
 
 /** W1: cada hito contractual: probabilidad de cumplir su fecha, P50/P80 y multa media. */
@@ -1101,7 +1195,10 @@ function cpmDeterminista(
   relojes?: readonly Reloj[],
   /** W1: si se da, el fin temprano de cada actividad. */
   efOut?: Float64Array,
+  /** W4: si se da, el inicio temprano de cada actividad. */
+  esOut?: Float64Array,
 ): number {
+  if (esOut && !efOut) efOut = new Float64Array(dur.length);
   const es = new Float64Array(dur.length);
   let fin = 0;
   if (relojes) {
@@ -1122,6 +1219,7 @@ function cpmDeterminista(
       if (d > 0) v0 = rs.alinearInicio(v0);
       es[s] = v0;
       ef[s] = rs.avanzar(v0, d);
+      if (esOut) esOut[s] = v0;
       if ((ef[s] as number) > fin) fin = ef[s] as number;
     }
     return fin;
@@ -1140,6 +1238,7 @@ function cpmDeterminista(
     }
     es[s] = v0;
     if (efOut) efOut[s] = v0 + d;
+    if (esOut) esOut[s] = v0;
     if (v0 + d > fin) fin = v0 + d;
   }
   return fin;

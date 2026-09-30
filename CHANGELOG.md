@@ -5,6 +5,15 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W4: el sesgo de convergencia explicado (2026-09-30)
+
+**Añadido**
+- **Por qué el P80 cae después: convergencias**: en cada punto donde se
+  juntan rutas, la probabilidad de que cada una llegue a tiempo y la de que
+  lleguen todas (con un gráfico de barras y la referencia «si fueran
+  independientes»), y una frase en el resumen. En el panel, la hoja de la
+  simulación y el informe PDF. Guía Q69.
+
 ### W3: casos de validación publicables (2026-09-30)
 
 **Añadido**

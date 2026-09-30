@@ -55,6 +55,17 @@ export function narrativaPlazo(
     out.push(`Hay multa por retraso en el ${pct(r.multas.probAlguna)} de los casos: de media ${dinero(r.multas.media)} y, en el P80, ${dinero(r.multas.p80)} (ya incluidas en el costo).`);
   }
 
+  // W4: la convergencia que más retrasa, con sus números.
+  const conv = r.convergencias?.[0];
+  if (conv) {
+    const ps = conv.ramas.map((x) => x.probATiempo);
+    const [lo, hi] = [Math.min(...ps), Math.max(...ps)];
+    if (lo - conv.probATiempo >= 0.05) {
+      const rango = Math.round(lo * 100) === Math.round(hi * 100) ? pct(lo) : `${Math.round(lo * 100)}–${pct(hi)}`;
+      out.push(`En «${conv.nombre}» se juntan ${conv.ramas.length} rutas: cada una llega a tiempo (${textoFecha(conv.inicioPlan)}) en el ${rango} de los casos, pero ${conv.ramas.length === 2 ? 'las dos' : `las ${conv.ramas.length}`} a la vez solo en el ${pct(conv.probATiempo)}; es el sesgo de convergencia: basta con que una se retrase.`);
+    }
+  }
+
   const principal = impacto?.porRiesgo.find((x) => x.diasP80 > 0);
   if (principal) out.push(`El riesgo que más pesa es «${principal.nombre}»: sin él, el P80 se adelantaría ${dias(principal.diasP80)}.`);
 
