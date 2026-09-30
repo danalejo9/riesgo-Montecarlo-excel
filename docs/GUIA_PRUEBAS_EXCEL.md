@@ -47,6 +47,9 @@
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
 > - Pendientes de antes: **W6** y **W7** (Excel para la Web).
+> - **Sigue siendo lo primero** aunque haya empezado el módulo Cronograma
+>   (plan del 30/09, `docs/PLAN_CRONOGRAMA_QSRA.md` §4, pista A): lo que
+>   falle aquí se arregla antes de avanzar allí. Sus pruebas serán el bloque Q.
 >
 > Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
 > anteriores: es referencia, no hace falta repetirlo.

@@ -59,7 +59,8 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | # | Código | Funcionalidad | Origen | Estado |
 |---|---|---|---|---|
 | 1 | A | Tu prueba **K**, y repetir **W5**, **J4** y **G3** | Plan | ⬜ tú |
-| 2 | E10 | **Decidir licencia y precio** (bloquea la publicación, no el desarrollo) | Estudio | ⬜ tú |
+| 1b | N | **Ronda del bloque N** (guía, «Ronda del 29/09»): repetir **N4**; **N5**, **N7–N39**; **W6**, **W7** (Web) y la prueba en Mac. Lista completa en `PLAN_CRONOGRAMA_QSRA.md` §4, pista A. Va **antes** que el cronograma | Pruebas | ⬜ tú |
+| 2 | E10 | **Decidir licencia y precio** (bloquea la publicación, no el desarrollo). Sigue pendiente (decisión 22, 30/09); moneda configurable (decisión 23) | Estudio | ⬜ tú |
 
 ### Etapa 1: lo que pediste en las pruebas — ✅ hecha el 28/09 (falta tu prueba, bloque L de la guía)
 
@@ -185,6 +186,21 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 54 | E12 | Narrativa de resultados con reglas (se adelanta en parte con C7) | Estudio |
 | 55 | I3 | Ajuste avanzado: colas extremas (GPD), datos censurados, mezclas | **Tú** (investigación) |
 
+### Módulo Cronograma (QSRA) — aprobado el 30/09, en paralelo (≈ 35–45 días)
+
+Diagnóstico y decisión en `PLAN_CRONOGRAMA_QSRA.md`: **dentro de este
+complemento**, no como producto aparte. Las pruebas N van primero.
+
+| # | Código | Funcionalidad | Origen | Estado |
+|---|---|---|---|---|
+| P0 | P0 | Plantilla «Actividades», predecesoras `3FS+2d`, capa de capacidades por licencia, catálogo de textos, moneda configurable | Estudios QSRA + **Tú** | ⬜ |
+| P1 | P1 | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance | Estudios QSRA | ⬜ |
+| P2 | P2 | Chequeo de salud del cronograma (DCMA‑14) con semáforo | Estudios QSRA | ⬜ |
+| P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ⬜ |
+| P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ⬜ |
+| P5 | P5 | Costo + plazo en la misma simulación: costos que dependen del tiempo y JCL | Estudios QSRA | ⬜ |
+| P6 | P6 | (v2) Clima, mitigación antes/después, ramificación, rangos por sector | Estudios QSRA | ⬜ |
+
 ### Otros productos, fuera de este complemento (decidido el 25/09)
 
 | Producto | Origen |
@@ -213,6 +229,8 @@ Cálculo en la nube, cualquier uso de IA externa (quitado a petición tuya el
 | Otros programas para el futuro | Tabla «Otros productos» |
 | Estudio de mercado 1 (multiplataforma, compartir, precio, tornado, ajuste) | Hechos, salvo precio (E10) |
 | Estudio 2 + motor de ajuste | Bloque I (I1, I2, I3) |
+| Tres estudios de riesgo de cronograma (QSRA), 30/09 | Módulo Cronograma, P0–P6 (`PLAN_CRONOGRAMA_QSRA.md`) |
+| No perder de vista las pruebas N | Fila 1b y pista A del plan: van primero |
 | Quitar lo de la IA | ✅ quitado |
 | Gráfico de distribución en el ajuste (D1) | I1 |
 | Color para las celdas con fórmula del complemento (E1) | E8 |

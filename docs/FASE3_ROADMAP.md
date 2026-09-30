@@ -177,6 +177,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 | E12 | Diferenciadores: depurador de escenarios, conversor de @RISK, narrativa local | 8–12 d | ⬜ después de la v1.0 (§1.2) |
+| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | ⬜ aprobado el 30/09, en paralelo con E9–E11 (§E13) |
 
 **Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
 salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el
@@ -206,6 +207,18 @@ obligatorio.
 6. **E10: decidir licencia y precio.** Decisión del usuario; bloquea la publicación.
 7. §2.1 en su orden (B1–B3, C1–C2–C5 + I1, B4–B6, D1, H2, I2, C3–C4…).
 8. **E12**, después de la v1.0.
+
+**Orden de trabajo desde el 2026-09-30** (decisiones 19–23; detalle en
+[`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4). Tres pistas en paralelo:
+
+- **Pista A — pruebas en Excel, primero.** Bloque N de la guía: repetir N4, y
+  N5, N7–N39; W6 y W7 (Web); prueba de humo en Mac (E9a). Lo que falle se
+  arregla **antes** de seguir con la pista C. Después, F2 (con el dato de N30)
+  y las funciones que salgan en N31.
+- **Pista B — producto.** E9, E10 (licencia y precio pendientes, hosting,
+  catálogo de textos, moneda configurable) y E11. La v1 de costos se publica
+  cuando esté lista, sin esperar al cronograma.
+- **Pista C — módulo Cronograma** (§E13): P0 → P5.
 
 Todo el trabajo de producto (E9–E11) no es técnico, pero sin él esto no llega a
 nadie más que a su autor.
@@ -964,7 +977,14 @@ complemento tiene que llegar a alguien que no seas tú.
   propone una suscripción **mensual, pública y sin permanencia** (orientativo: 29–49 $
   al mes) con prueba gratuita. Encaja con este producto. **No** entra la parte de
   «créditos de cálculo en la nube» del estudio: rompe la promesa de cálculo local.
-  Decisión del usuario, junto con la de licencia.
+  Decisión del usuario, junto con la de licencia. **Sigue pendiente (decisión 22,
+  30/09)**: ni dos planes, ni plan único, ni perpetuo por ahora. Para no bloquear
+  nada, el código lleva una **capa de capacidades** (`licencia/capacidades.ts`:
+  ¿`cronograma`? ¿`jcl`?) en la que encaja cualquier modelo.
+- **Moneda e idiomas** (decisión 23, 30/09). Mercado hispanohablante primero, con
+  precios en USD pero **moneda fácil de cambiar**: precios en configuración, nunca
+  en el código; las plantillas dejan de fijar `"€"` (`excel/plantillas.ts`). Otros
+  idiomas después, como paquetes sobre el catálogo de textos.
 - **La ficha del producto debe contar lo que ya se tiene**: cálculo 100 % local, Windows
   + Mac + Web con un solo código, y libros que siguen funcionando al compartirlos sin el
   complemento (E4). Son las tres quejas principales del mercado.
@@ -1011,6 +1031,26 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 **Qué NO entra:** cópulas, optimización y el catálogo ampliado de distribuciones. Siguen sin fecha (§1.2).
 
 **Criterio de hecho:** el depurador enseña la iteración del percentil 5 del libro de demostración y su valor coincide con el que dio la simulación; el conversor traduce un libro de @RISK de ejemplo sin pérdidas silenciosas.
+
+---
+
+## E13 — Módulo Cronograma (bloque P)  *(nueva el 2026-09-30)*
+
+**Entregable:** análisis cuantitativo de riesgo de cronograma (QSRA) dentro del mismo complemento, integrado con el modelo de costos. Diagnóstico, decisión y arquitectura en [`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md). Se trabaja en paralelo con E9–E11, y las pruebas del bloque N van siempre primero.
+
+| Etapa | Contenido | Esfuerzo |
+|---|---|---|
+| P0 | Tipos, plantilla «Actividades», lector, parser de predecesoras (`3FS+2d`), capa de capacidades por licencia, catálogo de textos del módulo, moneda configurable en plantillas | 3–4 d |
+| P1 | CPM determinista (`engine/cronograma/cpm.ts`): FS/SS/FF/SF con retardos, calendarios laborables, restricciones, avance | 8–10 d |
+| P2 | Chequeo de salud tipo DCMA‑14 + puntos de convergencia, con semáforo que bloquea o avisa | 3–4 d |
+| P3 | Monte Carlo del cronograma: CPM vectorizado por bloques en workers, 3 puntos por categoría, *risk drivers* (AACE 57R‑09), eventos; curva S, P50/P80/P90, criticidad, tornado en días, «quitar un riesgo», *merge bias*, Gantt probabilístico, PDF | 10–12 d |
+| P4 | Importadores MSPDI (XML de MS Project) y XER (P6) en TypeScript, con verificación contra las fechas de origen | 6–8 d |
+| P5 | Costo‑plazo: hitos como entradas del modelo de costos (`RIESGO.CRONOGRAMA`), costos dependientes del tiempo, dispersión y JCL | 5–7 d |
+| P6 | (v2) Clima probabilístico, escenarios pre/post mitigación, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
+
+**Criterio de hecho (P0–P5):** el libro de ejemplo del cronograma pasa el chequeo, su CPM determinista coincide con las fechas de un XML de MS Project y un XER de ejemplo, el *merge bias* coincide con el valor analítico, 5.000 actividades × 10.000 iteraciones corren en menos de 10 s en Excel Web o Mac, y la dispersión costo‑fecha sale de la misma simulación. Pruebas en Excel: bloque Q de la guía.
+
+**Qué NO entra:** edición de Gantt ni de lógica compleja (no somos un programador de proyectos), `.mpp` binario, nube propia, IA externa, Event Chain Methodology, Reference Class Forecasting, Rust/WASM sin benchmark.
 
 ---
 

@@ -1,6 +1,6 @@
 # Estado del proyecto y traspaso de contexto
 
-**Última actualización:** 2026-09-26 (roadmap reordenado con el estudio de mercado, ver §9 «Siguiente acción» y `FASE3_ROADMAP.md` §1.2)
+**Última actualización:** 2026-09-30 (módulo «Cronograma» aprobado: decisiones 19–23 y plan de trabajo en tres pistas en [`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md); las pruebas N siguen primero)
 **Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada**. El motor tiene ya el **canal de valores completo** (los cinco tipos de celda de Excel) y el **Nivel 1 de funciones de criterio**; el libro de fidelidad pasa **31/31 sin excepciones**. Lo que queda de E3 necesita Excel de verdad (ver §9.12).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
@@ -74,6 +74,11 @@ Los cinco hechos que hay que tener presentes:
 | 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
 | 17 | **Configuración regional** (separador decimal) | **Se lee de Office al crear el modelo y se guarda en el libro** (`RiskModel v1`) | Ni se pregunta al usuario ni se relee en cada ejecución: el libro queda reproducible entre máquinas con idiomas distintos, que es lo que necesita un producto que van a compartir 100+ personas. Ver §9.14 |
 | 18 | **Prioridades tras el estudio de mercado** (2026-09-26) | La arquitectura se mantiene; se reordena: tornado y ajuste de distribuciones primero, prueba de humo en Excel Web y Mac adelantada, Web Worker en el navegador, y `RISK.*` sin romper los libros compartidos | Ver `FASE3_ROADMAP.md` §1.2. Rechazados expresamente: créditos de cálculo en la nube, explicaciones con IA externa, integración con matrices dinámicas y Python, WASM sin benchmark |
+| 19 | **Riesgo de cronograma (QSRA)** (2026-09-30, tras tres estudios de mercado) | **Un solo producto**: se amplía este complemento con un módulo «Cronograma», no se hace otro complemento ni otro programa. Gratis o código abierto, descartado | Motor nuevo en `engine/cronograma/` que reutiliza muestreo, workers, estadística, informes y registro de riesgos. El JCL (costo + plazo en la misma iteración) solo es posible así. Ver [`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) |
+| 20 | Orden entre la v1 de costos y el cronograma | **En paralelo**: la v1 se publica cuando esté lista, sin esperar al cronograma. **Las pruebas en Excel (bloque N) van primero**: si algo falla, se arregla antes de avanzar en el cronograma | Tres pistas: A (pruebas N), B (producto E9–E11), C (bloque P) |
+| 21 | Fuentes de cronograma | **Tabla de Excel, MS Project (XML) y Primavera P6 (XER)**, las tres | Importadores en TypeScript (MPXJ no corre en Office.js). El `.mpp` binario no se lee: «Guardar como XML» |
+| 22 | Modelo de precio | **Pendiente** (ni dos planes, ni plan único, ni perpetuo, por ahora) | Capa de capacidades por licencia (`licencia/capacidades.ts`) para que cualquier modelo encaje sin tocar los módulos |
+| 23 | Mercado | **Hispanohablante en general** primero; precios en USD, pero **la moneda debe cambiarse fácilmente**; otros idiomas después, como paquetes | Precios en configuración, plantillas sin moneda fija, textos nuevos en un catálogo (`ui/textos/`) |
 
 ### Consecuencia arquitectónica principal
 
@@ -1267,8 +1272,19 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `estadoSimulando` en `excel/cinta.ts`. Banco: detener a los 60 ms deja
     la simulación «cancelada». **Siguiente**: la ronda del usuario (N1–N39).
 
+71. [x] **Plan del módulo Cronograma (2026-09-30)**. Revisados los tres
+    estudios de QSRA del usuario. Decisiones 19–23 (§3). Plan de trabajo en
+    tres pistas en [`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4:
+    A = pruebas N pendientes (N4 repetir, N5, N7–N39, W6, W7, Mac), B =
+    producto (E9–E11), C = bloque P (P0–P6). Solo documentación; el código
+    empieza en P0. **Siguiente**: la ronda del usuario (bloque N) y, en
+    paralelo, P0.
+
 **Siguiente acción al retomar**, en orden de valor:
 
+0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
+   pista A (pruebas N, **primero**; lo que falle se arregla antes de seguir),
+   pista B (licencia, precio, publicación) y pista C (cronograma, desde P0).
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
 2. ~~Etapa 2~~ ✅ en código el 29/09 (B1, B2, B3, B1b). **El usuario
    recorre el bloque N de la guía**; arreglar lo que falle.

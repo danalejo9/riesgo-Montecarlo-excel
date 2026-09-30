@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Plan: módulo Cronograma (QSRA) (2026-09-30)
+
+**Añadido (documentación)**
+- `docs/PLAN_CRONOGRAMA_QSRA.md`: diagnóstico de los tres estudios de riesgo
+  de cronograma, decisión (un solo producto con un módulo «Cronograma»; gratis
+  u open‑source descartado), arquitectura (`engine/cronograma/`, CPM
+  vectorizado, chequeo de salud, *risk drivers*, importadores XML/XER, JCL) y
+  plan de trabajo en tres pistas: A = pruebas N pendientes (primero), B =
+  producto, C = bloque P (P0–P6).
+- Decisiones 19–23 en `ESTADO_Y_HANDOFF.md`; etapa E13 y orden del 30/09 en
+  `FASE3_ROADMAP.md`; filas en `INVENTARIO_FUNCIONALIDADES.md`.
+
 ### U3.5 y U3.6: clic derecho y Detener (2026-09-29)
 
 **Añadido**
