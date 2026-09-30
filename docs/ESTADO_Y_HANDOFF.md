@@ -1382,6 +1382,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     de escenario y `Comparacion` en el panel. Pruebas: «después» sin riesgos
     = sin riesgos exacto; costo de respuesta suma exacta. **Siguiente**: V2.
 
+82. [x] **V2 (2026-09-30)**. `RiesgoPlazo.rama`, `idRama`; en
+    `prepararPlazo`, una actividad condicional por rama (`condicional[]`,
+    máscaras `ocurre[j]` por bloque): dura 0 y sus relaciones no cuentan si
+    no ocurre; estadísticas solo cuando ocurre; el determinista la ignora.
+    Pruebas exactas: prob. 1 = añadirla al cronograma; prob. 0 = sin ella.
+    **Siguiente**: V3 (informe PDF configurable, los dos frentes).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

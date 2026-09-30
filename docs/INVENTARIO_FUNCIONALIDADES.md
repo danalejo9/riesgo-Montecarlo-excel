@@ -202,8 +202,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ✅ 30/09 (falta Excel: Q31–Q35, y tus cronogramas reales) |
 | P5 | P5 | Costo + plazo en la misma simulación: costos que dependen del tiempo y JCL | Estudios QSRA | ✅ 30/09 JCL y hoja «Plazo simulado» para el modelo de costos (falta Excel: Q36–Q40) |
 | V1 | P6 | Mitigación antes y después (respuestas, costo, ahorro por unidad invertida) | **Tú** (30/09) | ✅ 30/09 (falta Excel: Q42–Q44) |
-| V2 | P6 | Riesgos que añaden trabajo (ramificación probabilística) | **Tú** | ⬜ siguiente |
-| V3 | P6 | Informe ejecutivo PDF configurable, costos y cronograma (título, logo, pie, secciones) | **Tú** | ⬜ |
+| V2 | P6 | Riesgos que añaden trabajo (ramificación probabilística) | **Tú** | ✅ 30/09 (falta Excel: Q45) |
+| V3 | P6 | Informe ejecutivo PDF configurable, costos y cronograma (título, logo, pie, secciones) | **Tú** | ⬜ siguiente |
 | V4 | P6 | Incertidumbre en los costos de cada actividad | **Tú** | ⬜ |
 | V5 | P6 | Seguimiento en el tiempo (instantáneas y tendencia del P80) | **Tú** | ⬜ |
 | V6 | P6 | Rangos por sector y ayudas para estimar (P10/P90, avisos de optimismo) | **Tú** | ⬜ |

@@ -44,7 +44,17 @@ export interface RiesgoPlazo {
   /** Lo que cuesta aplicar la respuesta (seguro: se paga aunque el riesgo no ocurra). */
   costoRespuesta?: number;
   despues?: { probabilidad: number; impactoMin: number; impactoMasProbable: number; impactoMax: number; costo?: number };
+  /**
+   * Ramificación probabilística (V2): si el riesgo ocurre, aparece una
+   * actividad nueva (reproceso, trámite extra) que va después de `despuesDe`
+   * y antes de `antesDe` (fin‑comienzo). Si no ocurre, no existe: ni dura ni
+   * crea dependencias.
+   */
+  rama?: { nombre: string; min: number; masProbable: number; max: number; despuesDe: string[]; antesDe: string[] };
 }
+
+/** El ID de la actividad que añade un riesgo: `R6+`. */
+export const idRama = (r: RiesgoPlazo) => `${r.id}+`;
 
 /** ¿Tiene este riesgo una respuesta que cambie algo? */
 export const tieneMitigacion = (r: RiesgoPlazo) => r.despues !== undefined || (r.costoRespuesta ?? 0) > 0 || !!r.respuesta;
@@ -89,6 +99,12 @@ export function leerRiesgosPlazo(
     id: ['id'],
     // Lo específico antes que lo general: «Probabilidad después» empieza como «Probabilidad».
     pDesp: ['probabilidad despues'],
+    ramaNombre: ['actividad nueva', 'actividad que anade'],
+    ramaMin: ['duracion nueva min', 'duracion nueva, min'],
+    ramaMp: ['duracion nueva mas probable', 'duracion nueva probable'],
+    ramaMax: ['duracion nueva max'],
+    ramaDespues: ['despues de'],
+    ramaAntes: ['antes de'],
     minDesp: ['impacto minimo despues', 'impacto min despues'],
     mpDesp: ['impacto mas probable despues', 'impacto probable despues'],
     maxDesp: ['impacto maximo despues', 'impacto max despues'],
@@ -121,25 +137,56 @@ export function leerRiesgosPlazo(
     const error = (m: string) => problemas.push({ gravedad: 'error', hoja, fila, mensaje: `Fila ${fila} (riesgo «${id}»): ${m}` });
     const p = fraccion(celda('probabilidad'), true);
     if (p === undefined || p < 0 || p > 1) { error('la probabilidad debe estar entre 0 % y 100 %'); continue; }
-    const a = fraccion(celda('min'), false);
-    const b = fraccion(celda('max'), false);
-    const mRaw = celda('mp');
-    const m = mRaw === '' || mRaw === undefined ? undefined : fraccion(mRaw, false);
-    if (a === undefined || b === undefined) { error('faltan el impacto mínimo y el máximo'); continue; }
-    const mp = m ?? (a + b) / 2;
-    if (!(a <= mp && mp <= b)) { error('el impacto debe cumplir mínimo ≤ más probable ≤ máximo'); continue; }
-    if (a < -0.9) { error('un impacto no puede acortar más del 90 %'); continue; }
+    const vacioC = (x: unknown) => x === '' || x === undefined || x === null;
+    const listaIds = (x: unknown) => {
+      const t = String(x ?? '').trim();
+      return t.split(t.includes(';') ? ';' : ',').map((s) => s.trim()).filter(Boolean);
+    };
 
-    const afectadas: string[] = [];
-    const texto = String(celda('actividades') ?? '').trim();
-    for (const token of texto.split(texto.includes(';') ? ';' : ',').map((t) => t.trim()).filter(Boolean)) {
-      if (ids.has(token)) afectadas.push(token);
-      else if (porCategoria.has(normalizar(token))) afectadas.push(...(porCategoria.get(normalizar(token)) as string[]));
-      else error(`«${token}» no es el ID de una actividad ni una categoría`);
+    // V2: la actividad que añade, si la hay.
+    let rama: RiesgoPlazo['rama'];
+    const ramaNombre = String(celda('ramaNombre') ?? '').trim();
+    if (ramaNombre) {
+      const rMin = numeroDe(celda('ramaMin'));
+      const rMax = numeroDe(celda('ramaMax'));
+      const rMp = vacioC(celda('ramaMp')) ? undefined : numeroDe(celda('ramaMp'));
+      if (rMin === undefined || rMax === undefined) { error('la actividad nueva necesita «Duración nueva mínima» y «máxima»'); continue; }
+      const rmp = rMp ?? (rMin + rMax) / 2;
+      if (!(0 <= rMin && rMin <= rmp && rmp <= rMax)) { error('la duración nueva debe cumplir 0 ≤ mínima ≤ más probable ≤ máxima'); continue; }
+      const despuesDe = listaIds(celda('ramaDespues'));
+      const antesDe = listaIds(celda('ramaAntes'));
+      const malos = [...despuesDe, ...antesDe].filter((x) => !ids.has(x));
+      if (malos.length > 0) { error(`«${malos.join('», «')}» no es el ID de una actividad (en «Después de» / «Antes de»)`); continue; }
+      if (despuesDe.length === 0 && antesDe.length === 0) { error('la actividad nueva necesita «Después de» o «Antes de» (IDs)'); continue; }
+      rama = { nombre: ramaNombre, min: rMin, masProbable: rmp, max: rMax, despuesDe, antesDe };
     }
-    if (afectadas.length === 0) {
-      if (texto === '') error('no dice a qué actividades afecta');
-      continue;
+
+    const texto = String(celda('actividades') ?? '').trim();
+    const sinImpacto = texto === '' && vacioC(celda('min')) && vacioC(celda('max'));
+    let a = 0;
+    let b = 0;
+    let mp = 0;
+    const afectadas: string[] = [];
+    if (!(rama && sinImpacto)) {
+      const a0 = fraccion(celda('min'), false);
+      const b0 = fraccion(celda('max'), false);
+      const mRaw = celda('mp');
+      const m = vacioC(mRaw) ? undefined : fraccion(mRaw, false);
+      if (a0 === undefined || b0 === undefined) { error('faltan el impacto mínimo y el máximo'); continue; }
+      a = a0;
+      b = b0;
+      mp = m ?? (a + b) / 2;
+      if (!(a <= mp && mp <= b)) { error('el impacto debe cumplir mínimo ≤ más probable ≤ máximo'); continue; }
+      if (a < -0.9) { error('un impacto no puede acortar más del 90 %'); continue; }
+      for (const token of listaIds(texto)) {
+        if (ids.has(token)) afectadas.push(token);
+        else if (porCategoria.has(normalizar(token))) afectadas.push(...(porCategoria.get(normalizar(token)) as string[]));
+        else error(`«${token}» no es el ID de una actividad ni una categoría`);
+      }
+      if (afectadas.length === 0) {
+        if (texto === '') error('no dice a qué actividades afecta (o qué actividad nueva añade)');
+        continue;
+      }
     }
     const nombre = String(celda('nombre') ?? '').trim() || id;
     const costoCrudo = celda('costo');
@@ -148,6 +195,7 @@ export function leerRiesgosPlazo(
     const riesgo: RiesgoPlazo = {
       id, nombre, probabilidad: p, impactoMin: a, impactoMasProbable: mp, impactoMax: b, actividades: [...new Set(afectadas)], fila,
       ...(costo !== undefined ? { costo } : {}),
+      ...(rama ? { rama } : {}),
     };
 
     // V1: la mitigación.

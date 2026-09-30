@@ -861,6 +861,26 @@ el costo P80 es **US$ 1.337.365** (ya incluye los US$ 28.000). Vuelve a
 «Antes de mitigar»: P80 24/08/2027 otra vez. Si borras todas las columnas I–P,
 el desplegable desaparece.
 
+**Q45. Un riesgo que añade trabajo (V2).** En «Riesgos de plazo», fila 9
+(debajo de R5), escribe: ID `R6`, Riesgo «Hallazgo de suelo blando en la
+excavación», Probabilidad `20 %`, deja vacíos los impactos y «Actividades
+afectadas», y en las columnas nuevas (Q a V): Actividad nueva «Rediseño de
+cimentación», Duración nueva mínima `10`, más probable `15`, máxima `25`,
+Después de `5`, Antes de `6`. Calcula y simula («Antes de mitigar», 10.000,
+PERT). Esperado:
+- **P50 13/08/2027, P80 31/08/2027, P90 08/09/2027** (antes: 11/08, 24/08 y
+  31/08).
+- En «Riesgos de plazo» del panel: R6 **+5** días de P80 (el segundo, tras
+  las lluvias).
+- En «Cronograma (simulación)», una fila más al final: «R6+ · Rediseño de
+  cimentación (si ocurre R6)», crítica en el **20 %** de los casos (solo
+  existe cuando ocurre) y sus fechas P10–P90.
+- El cronograma sin incertidumbre (Q2) **no cambia**: 16/07/2027. La rama
+  solo existe en la simulación.
+Prueba un error: «Después de» `6` y «Antes de» `5` → «Una actividad nueva
+de “Riesgos de plazo” crea una dependencia circular…». Al terminar, borra la
+fila 9 (las cifras de las demás pruebas son sin R6).
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

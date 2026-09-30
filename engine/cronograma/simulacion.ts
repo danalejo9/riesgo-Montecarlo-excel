@@ -29,7 +29,7 @@ import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
 import { muestreadorDuracion, type Muestreador } from './muestreo.ts';
 import { parametrosRed, type ParametrosRed } from './red.ts';
-import type { RiesgoPlazo } from './riesgos.ts';
+import { idRama, type RiesgoPlazo } from './riesgos.ts';
 import type { Cronograma } from './tipos.ts';
 
 export type FormaDuracion = 'pert' | 'triangular';
@@ -218,27 +218,57 @@ export interface PlazoPreparado {
   cal: IndiceLaborable;
   actividades: Array<{ id: string; nombre: string }>;
   forma: FormaDuracion;
+  /** V2: para cada actividad, el índice del riesgo cuya rama es (−1 si es una actividad normal). */
+  condicional: number[];
   /** Costos (P5): por día de cada actividad, fijos en total e indirecto por día del proyecto. */
   costoDia: number[];
   costoFijo: number;
   costoIndirectoDia: number;
   hayCostos: boolean;
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada. */
-  trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array };
+  trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[] };
 }
 
 export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op: { semilla: number; forma: FormaDuracion }): PlazoPreparado {
   const acts = c.actividades;
-  const n = acts.length;
+  const n0 = acts.length;
   const resuelta = resolverRed(acts);
   if (!resuelta.ok) throw new Error(resuelta.problemas.map((x) => x.mensaje).join('; '));
-  const { orden, enCiclo } = ordenTopologico(n, resuelta.preds);
-  if (enCiclo.length > 0) throw new Error('El cronograma tiene una dependencia circular');
   const cal = new IndiceLaborable(c.calendario, c.inicio);
   const red = parametrosRed(c, cal);
   const indice = new Map(acts.map((a, i) => [a.id, i]));
-  const entrantes = acts.map((a) => a.predecesoras.map((r) => ({ p: indice.get(r.predecesora) as number, t: TIPO[r.tipo], r: r.retardo })));
-  const salientes: RelSal[][] = acts.map(() => []);
+  const entrantes: Rel[][] = acts.map((a) => a.predecesoras.map((r) => ({ p: indice.get(r.predecesora) as number, t: TIPO[r.tipo], r: r.retardo })));
+
+  // V2: cada riesgo con rama añade una actividad condicional al final.
+  const ramas = riesgos.map((r, j) => ({ r, j })).filter((x) => x.r.rama);
+  const condicional = new Array<number>(n0).fill(-1);
+  const nombres = acts.map((a) => ({ id: a.id, nombre: a.nombre }));
+  const extra = { dists: [] as Array<Muestreador | null>, fijas: [] as number[], flujos: [] as number[] };
+  for (const { r, j } of ramas) {
+    const rama = r.rama as NonNullable<RiesgoPlazo['rama']>;
+    const idx = entrantes.length;
+    entrantes.push(rama.despuesDe.map((id) => ({ p: indice.get(id) as number, t: 0, r: 0 })));
+    for (const id of rama.antesDe) (entrantes[indice.get(id) as number] as Rel[]).push({ p: idx, t: 0, r: 0 });
+    condicional.push(j);
+    nombres.push({ id: idRama(r), nombre: `${rama.nombre} (si ocurre ${r.id})` });
+    extra.dists.push(muestreadorDuracion(rama.min, rama.masProbable, rama.max, op.forma));
+    extra.fijas.push(rama.masProbable);
+    extra.flujos.push(streamOf(`rama:${r.id}`));
+    red.estado.push('pendiente');
+    red.minInicio.push(red.corte);
+    red.minFin.push(-Infinity);
+    red.maxFin.push(Infinity);
+    red.maxInicio.push(Infinity);
+    red.sinLogica.push(false);
+    red.transcurrido.push(0);
+    red.escala.push(1);
+  }
+  const n = entrantes.length;
+  const { orden, enCiclo } = ordenTopologico(n, entrantes.map((l) => l.map((x) => x.p)));
+  if (enCiclo.length > 0) {
+    throw new Error(n > n0 ? 'Una actividad nueva de «Riesgos de plazo» crea una dependencia circular (revisa «Después de» y «Antes de»)' : 'El cronograma tiene una dependencia circular');
+  }
+  const salientes: RelSal[][] = Array.from({ length: n }, () => []);
   entrantes.forEach((lista, s2) => lista.forEach(({ p, t, r }) => (salientes[p] as RelSal[]).push({ s: s2, t, r })));
   return {
     n,
@@ -248,10 +278,12 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     minInicio: red.minInicio,
     red,
     conAvance: red.sinLogica.some(Boolean) || red.minFin.some(Number.isFinite) || red.maxFin.some(Number.isFinite) || red.maxInicio.some(Number.isFinite),
-    dists: acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null)),
-    fijas: acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion)),
-    duraciones: acts.map((a) => a.duracion),
-    flujos: acts.map((a) => streamOf(`plazo:${a.id}`)),
+    dists: [...acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null)), ...extra.dists],
+    fijas: [...acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion)), ...extra.fijas],
+    // Sin incertidumbre, las ramas no ocurren: duran 0 en el cronograma determinista.
+    duraciones: [...acts.map((a) => a.duracion), ...ramas.map(() => 0)],
+    flujos: [...acts.map((a) => streamOf(`plazo:${a.id}`)), ...extra.flujos],
+    condicional,
     riesgos: riesgos.map((r) => ({
       r,
       ocurre: streamOf(`riesgo-plazo:${r.id}#ocurre`),
@@ -259,13 +291,13 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
       dist: muestreadorDuracion(r.impactoMin, r.impactoMasProbable, r.impactoMax, 'pert'),
       afectadas: r.actividades.map((id) => indice.get(id)).filter((i): i is number => i !== undefined),
     })),
-    costoDia: acts.map((a) => a.costoPorDia ?? 0),
+    costoDia: [...acts.map((a) => a.costoPorDia ?? 0), ...ramas.map(() => 0)],
     costoFijo: acts.reduce((s2, a) => s2 + (a.costoFijo ?? 0), 0) + (c.costoAdicional ?? 0),
     costoIndirectoDia: c.costoIndirectoDia ?? 0,
     hayCostos: acts.some((a) => a.costoPorDia || a.costoFijo) || !!c.costoIndirectoDia || !!c.costoAdicional || riesgos.some((r) => r.costo),
     semilla: op.semilla,
     cal,
-    actividades: acts.map((a) => ({ id: a.id, nombre: a.nombre })),
+    actividades: nombres,
     forma: op.forma,
   };
 }
@@ -318,8 +350,16 @@ export const bloquePlazo = (n: number) => Math.max(16, Math.min(2048, Math.floor
 export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: number, hasta: number): void {
   const { n, orden, entrantes, salientes, minInicio, dists, fijas, flujos, semilla } = p;
   const B = bloquePlazo(n);
-  p.trabajo ??= { dur: new Float64Array(n * B), es: new Float64Array(n * B), lf: new Float64Array(n * B), fin: new Float64Array(B), costo: new Float64Array(B) };
-  const { dur, es, lf, fin, costo } = p.trabajo;
+  p.trabajo ??= {
+    dur: new Float64Array(n * B), es: new Float64Array(n * B), lf: new Float64Array(n * B), fin: new Float64Array(B), costo: new Float64Array(B),
+    ocurre: p.riesgos.map(() => new Uint8Array(B)),
+  };
+  const { dur, es, lf, fin, costo, ocurre } = p.trabajo;
+  /** La máscara «ocurrió» de la rama que es la actividad `a`, o null si `a` es normal. */
+  const mascara = (a: number) => {
+    const j = p.condicional[a] as number;
+    return j < 0 ? null : (ocurre[j] as Uint8Array);
+  };
   const finTramo = new Float64Array(Math.max(0, hasta - desde));
   const costoTramo = p.hayCostos ? new Float64Array(Math.max(0, hasta - desde)) : undefined;
 
@@ -342,14 +382,24 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
     if (costoTramo) costo.fill(p.costoFijo);
     p.riesgos.forEach((x, j) => {
       const costoRiesgo = x.r.costo ?? 0;
+      const m = ocurre[j] as Uint8Array;
+      m.fill(0);
       for (let k = 0; k < b; k++) {
         if (uniformAt(semilla, x.ocurre, i0 + k) >= x.r.probabilidad) continue;
+        m[k] = 1;
         acc.veces[j] = (acc.veces[j] as number) + 1;
         if (costoTramo) costo[k] = (costo[k] as number) + costoRiesgo;
         const f = 1 + (x.dist ? x.dist.muestra(semilla, x.impacto, i0 + k) : x.r.impactoMasProbable);
         for (const a of x.afectadas) dur[a * B + k] = (dur[a * B + k] as number) * f;
       }
     });
+    // 2a. V2: las ramas solo duran en las iteraciones en que su riesgo ocurre.
+    for (let a = 0; a < n; a++) {
+      const m = mascara(a);
+      if (!m) continue;
+      const base = a * B;
+      for (let k = 0; k < b; k++) if (!m[k]) dur[base + k] = 0;
+    }
     // 2b. Avance: solo lo que queda tiene incertidumbre y sufre los riesgos.
     if (p.conAvance) {
       for (let a = 0; a < n; a++) {
@@ -369,7 +419,15 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       const entra = p.red.sinLogica[s2] ? [] : (entrantes[s2] as Rel[]);
       for (const { p: pr, t, r } of entra) {
         const bp = pr * B;
-        if (t === 0) {
+        const mp = mascara(pr);
+        if (mp) {
+          // De una rama (siempre fin‑comienzo): solo cuenta si la rama ocurrió.
+          for (let k = 0; k < b; k++) {
+            if (!mp[k]) continue;
+            const v = (es[bp + k] as number) + (dur[bp + k] as number) + r;
+            if (v > (es[bs + k] as number)) es[bs + k] = v;
+          }
+        } else if (t === 0) {
           for (let k = 0; k < b; k++) {
             const v = (es[bp + k] as number) + (dur[bp + k] as number) + r;
             if (v > (es[bs + k] as number)) es[bs + k] = v;
@@ -421,7 +479,14 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       for (let k = 0; k < b; k++) lf[bp + k] = fin[k] as number;
       for (const { s: s2, t, r } of salientes[pr] as RelSal[]) {
         const bs = s2 * B;
-        if (t === 0) {
+        const ms = mascara(s2);
+        if (ms) {
+          for (let k = 0; k < b; k++) {
+            if (!ms[k]) continue;
+            const v = (lf[bs + k] as number) - (dur[bs + k] as number) - r;
+            if (v < (lf[bp + k] as number)) lf[bp + k] = v;
+          }
+        } else if (t === 0) {
           for (let k = 0; k < b; k++) {
             const v = (lf[bs + k] as number) - (dur[bs + k] as number) - r;
             if (v < (lf[bp + k] as number)) lf[bp + k] = v;
@@ -475,6 +540,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       const ini = acc.inicios[a] as ContadorDias;
       const fi = acc.fines[a] as ContadorDias;
       const terminada = p.red.estado[a] === 'terminada';
+      const mr = mascara(a);
       let crit = 0;
       let x1 = 0;
       let x2 = 0;
@@ -482,6 +548,8 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       for (let k = 0; k < b; k++) {
         const d = dur[ba + k] as number;
         const e = es[ba + k] as number;
+        // Una rama solo cuenta en las iteraciones en que existe.
+        if (mr && !mr[k]) continue;
         if (!terminada && (lf[ba + k] as number) - d - e < 1e-9) crit++;
         contar(ini, diaInicio(e, d));
         contar(fi, diaFin(e + d));
@@ -544,7 +612,7 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
   const cuantiles = (c: ContadorDias): FechasPercentil => ({
     p10: fechaDia(cuantilDias(c, 0.1)), p50: fechaDia(cuantilDias(c, 0.5)), p80: fechaDia(cuantilDias(c, 0.8)), p90: fechaDia(cuantilDias(c, 0.9)),
   });
-  const det = cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red);
+  const det = cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional);
 
   const finProyecto = new Float64Array(acc.hechas);
   const costoIter = p.hayCostos ? new Float64Array(acc.hechas) : null;
@@ -610,7 +678,7 @@ function costoDeterminista(p: PlazoPreparado): number {
   p.duraciones.forEach((d, i) => {
     c += (p.costoDia[i] as number) * ((p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number));
   });
-  return c + p.costoIndirectoDia * cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red);
+  return c + p.costoIndirectoDia * cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional);
 }
 
 /** Percentil «el primero con acumulado ≥ q» sobre un arreglo ordenado. */
@@ -732,6 +800,7 @@ function cpmDeterminista(
   orden: readonly number[],
   entrantes: ReadonlyArray<ReadonlyArray<{ p: number; t: number; r: number }>>,
   red: ParametrosRed,
+  condicional: readonly number[],
 ): number {
   const es = new Float64Array(dur.length);
   let fin = 0;
@@ -740,6 +809,7 @@ function cpmDeterminista(
     const d = dur[s] as number;
     if (!red.sinLogica[s]) {
       for (const { p, t, r } of entrantes[s] as Array<{ p: number; t: number; r: number }>) {
+        if ((condicional[p] as number) >= 0) continue; // las ramas no existen sin incertidumbre
         const dp = dur[p] as number;
         const v = t === 0 ? (es[p] as number) + dp + r : t === 1 ? (es[p] as number) + r : t === 2 ? (es[p] as number) + dp + r - d : (es[p] as number) + r - d;
         if (v > v0) v0 = v;

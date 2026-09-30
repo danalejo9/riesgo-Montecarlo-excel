@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V2: riesgos que añaden trabajo (2026-09-30)
+
+**Añadido**
+- Un riesgo de «Riesgos de plazo» puede **añadir una actividad** si ocurre
+  (ramificación probabilística): Actividad nueva, Duración nueva mínima,
+  más probable y máxima, Después de y Antes de (IDs, fin‑comienzo). Solo
+  existe en las iteraciones en que el riesgo ocurre: si no, ni dura ni crea
+  dependencias. Puede combinarse con el alargamiento en % de otras
+  actividades. Aparece en los resultados como «… (si ocurre R6)».
+- Una rama que cierra un ciclo se dice con un error claro.
+- Libro de pruebas: columnas vacías para la rama; guía Q45.
+
 ### V1: mitigación antes y después (2026-09-30)
 
 **Añadido**

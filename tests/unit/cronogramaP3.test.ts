@@ -352,3 +352,61 @@ describe('mitigación antes y después (V1)', () => {
     expect([...ret].sort((a, b) => b - a)).toEqual(ret);
   });
 });
+
+describe('riesgos que añaden trabajo (V2)', () => {
+  const fijo: Cronograma = { ...cron, actividades: cron.actividades.map((a) => ({ ...a, tresPuntos: undefined })) };
+  const rama = (p: number, d: [number, number, number], despuesDe = ['5'], antesDe = ['6']) => ({
+    id: 'R9', nombre: 'Hallazgo en la excavación', probabilidad: p, impactoMin: 0, impactoMasProbable: 0, impactoMax: 0, actividades: [],
+    rama: { nombre: 'Rediseño de cimentación', min: d[0], masProbable: d[1], max: d[2], despuesDe, antesDe },
+  });
+  const op = { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: 5000 };
+
+  it('con probabilidad 1 y duración fija, es como añadir la actividad al cronograma', async () => {
+    const s = await simularPlazo(fijo, [rama(1, [10, 10, 10])], op);
+    const conX: Cronograma = {
+      ...fijo,
+      actividades: [
+        ...fijo.actividades.map((a) => (a.id === '6' ? { ...a, predecesoras: [...a.predecesoras, { predecesora: 'X', tipo: 'FS' as const, retardo: 0 }] } : a)),
+        { id: 'X', nombre: 'X', duracion: 10, predecesoras: [{ predecesora: '5', tipo: 'FS' as const, retardo: 0 }] },
+      ],
+    };
+    const r = calcularCPM(conX);
+    if (!r.ok) throw new Error('cpm');
+    expect(new Set(s.finProyecto)).toEqual(new Set([r.duracionProyecto]));
+    expect(s.determinista.dias).toBe(118); // sin incertidumbre, la rama no existe
+    expect(s.actividades.at(-1)).toMatchObject({ id: 'R9+', nombre: 'Rediseño de cimentación (si ocurre R9)', criticidad: 1 });
+  });
+
+  it('con probabilidad 0 no existe: ni dura ni crea dependencias', async () => {
+    const s = await simularPlazo(cron, [rama(0, [10, 15, 25], ['3'], ['17'])], op);
+    const sin = await simularPlazo(cron, [], op);
+    expect(Array.from(s.finProyecto)).toEqual(Array.from(sin.finProyecto));
+  });
+
+  it('en serie con la ruta crítica, alarga el proyecto justo en la fracción de iteraciones en que ocurre', async () => {
+    const s = await simularPlazo(fijo, [rama(0.3, [10, 10, 10])], { ...op, iteraciones: 20_000 });
+    const alargadas = Array.from(s.finProyecto).filter((f) => f > 118.5).length / s.finProyecto.length;
+    expect(alargadas).toBeCloseTo(0.3, 1);
+    expect(s.actividades.at(-1)!.criticidad).toBeCloseTo(0.3, 1);
+    expect(s.riesgos[0]!.ocurrio).toBeCloseTo(0.3, 1);
+  });
+
+  it('se lee de «Riesgos de plazo» (sin impacto porcentual) y avisa de los errores', () => {
+    const enc = ['ID', 'Riesgo', 'Probabilidad', 'Impacto mínimo', 'Impacto máximo', 'Actividades afectadas', 'Actividad nueva',
+      'Duración nueva mínima', 'Duración nueva más probable', 'Duración nueva máxima', 'Después de', 'Antes de'];
+    const { riesgos, problemas } = leerRiesgosPlazo([
+      enc,
+      ['R9', 'Hallazgo', 0.2, '', '', '', 'Rediseño', 10, 15, 25, '5', '6'],
+      ['R10', 'Mal', 0.2, '', '', '', 'Algo', 5, '', 3, '5', '6'],
+      ['R11', 'Sin lugar', 0.2, '', '', '', 'Algo', 5, '', 8, '', ''],
+      ['R12', 'ID malo', 0.2, '', '', '', 'Algo', 5, '', 8, '99', ''],
+    ], cron.actividades);
+    expect(riesgos).toHaveLength(1);
+    expect(riesgos[0]!.rama).toEqual({ nombre: 'Rediseño', min: 10, masProbable: 15, max: 25, despuesDe: ['5'], antesDe: ['6'] });
+    expect(problemas.map((p) => p.fila)).toEqual([3, 4, 5]);
+  });
+
+  it('una rama que cierra un ciclo es un error claro', async () => {
+    await expect(simularPlazo(cron, [rama(0.5, [1, 2, 3], ['6'], ['5'])], op)).rejects.toThrow(/dependencia circular/);
+  });
+});

@@ -476,7 +476,10 @@ CAB_R = ["ID", "Riesgo", "Probabilidad", "Impacto mínimo", "Impacto más probab
          "Actividades afectadas", "Costo si ocurre",
          # Mitigación (V1): opcional.
          "Respuesta", "Responsable", "Costo de la respuesta", "Probabilidad después", "Impacto mínimo después",
-         "Impacto más probable después", "Impacto máximo después", "Costo si ocurre después"]
+         "Impacto más probable después", "Impacto máximo después", "Costo si ocurre después",
+         # Riesgos que añaden trabajo (V2): vacías aquí; la guía (Q45) pide añadir un riesgo que las usa.
+         "Actividad nueva", "Duración nueva mínima", "Duración nueva más probable", "Duración nueva máxima",
+         "Después de", "Antes de"]
 for j, t in enumerate(CAB_R, start=1):
     c = rie.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -495,7 +498,7 @@ for i, r in enumerate(RIESGOS, start=4):
                 continue
             c = rie.cell(row=i, column=j, value=v)
             c.number_format = DINERO if j in (11, 16) else ("0%" if j >= 12 else "General")
-for j, w in enumerate([6, 44, 12, 15, 20, 15, 22, 15, 40, 20, 18, 18, 20, 24, 20, 22], start=1):
+for j, w in enumerate([6, 44, 12, 15, 20, 15, 22, 15, 40, 20, 18, 18, 20, 24, 20, 22, 26, 20, 24, 20, 12, 12], start=1):
     rie.column_dimensions[get_column_letter(j)].width = w
 
 sal = wb.create_sheet("Esperado (salud)")
