@@ -824,6 +824,14 @@ simulado. (Se conserva la distribución del plazo, no la iteración: si el
 modelo de costos tiene otras entradas relacionadas con el cronograma, esa
 correlación no se ve; para eso está la JCL de Q36.)
 
+**Q41. Rellenar los rangos vacíos.** En el libro de Q31 (importado de MS
+Project, sin rangos): bajo la salud aparece **Rellenar los rangos vacíos**
+con «mínimo − 10 %» y «máximo + 25 %». Púlsalo. Esperado: «Rangos añadidos a
+18 actividades» (las 20 menos los 2 hitos); por ejemplo la estructura queda
+27 / 30 / 37,5. La salud deja de avisar por la incertidumbre y ya se puede
+simular: **P50 23/07/2027, P80 28/07/2027, P90 29/07/2027** (sin hoja de
+riesgos). Cambia un rango a mano y vuelve a pulsar: esa fila no se toca.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

@@ -13,3 +13,4 @@ export * from './gantt.ts';
 export * from './hiloPlazo.ts';
 export * from './red.ts';
 export * from './importar/index.ts';
+export * from './rangos.ts';

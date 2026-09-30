@@ -8,7 +8,7 @@
 import { useRef, useState } from 'react';
 
 import {
-  calcularCPM, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
+  calcularCPM, completarRangos, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
   type CronogramaImportado, type Verificacion, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
@@ -17,7 +17,7 @@ import {
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
-import { escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
+import { escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
@@ -53,6 +53,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const cancelado = useRef(false);
   const [importado, setImportado] = useState<{ imp: CronogramaImportado; ver: Verificacion; confirmar: boolean } | null>(null);
   const archivo = useRef<HTMLInputElement>(null);
+  const [pctMenos, setPctMenos] = useState(10);
+  const [pctMas, setPctMas] = useState(25);
 
   if (!tieneCapacidad('cronograma')) {
     return <section><p className="aviso-linea">{T.sinCapacidad}</p></section>;
@@ -187,6 +189,22 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  const rellenar = async () => {
+    try {
+      const hojas = await leerHojasCronograma();
+      const r = completarRangos(hojas.actividades ?? [], pctMenos / 100, pctMas / 100);
+      if ('error' in r) {
+        setNota(r.error);
+        return;
+      }
+      await escribirCeldasActividades(r.cambios);
+      await calcular();
+      setNota(T.rellenados(r.actividades));
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
   const plantilla = async () => {
     try {
       setNota(T.plantillaCreada(await escribirPlantillaCronograma()));
@@ -244,6 +262,13 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       )}
 
       {salud && <Salud informe={salud} />}
+      {salud && salud.comprobaciones.some((c) => c.codigo === 'incertidumbre' && c.estado !== 'verde') && (
+        <p title={T.rellenarAyuda}>
+          <button type="button" onClick={rellenar} disabled={ocupado !== null}>{T.rellenarRangos}</button>{' '}
+          <label>{T.menos}<input type="number" min={0} max={90} value={pctMenos} onChange={(e) => setPctMenos(Number(e.target.value))} style={{ width: 48 }} /> %</label>{' '}
+          <label>{T.mas}<input type="number" min={0} max={500} value={pctMas} onChange={(e) => setPctMas(Number(e.target.value))} style={{ width: 48 }} /> %</label>
+        </p>
+      )}
 
       {salud && (
         <>

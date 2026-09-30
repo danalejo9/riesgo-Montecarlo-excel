@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
-  calcularCPM, calendarioDeClndr, hojaActividadesDe, hojaCalendarioDe, importarCronograma, leerCronograma, leerMspdi, leerXer,
+  calcularCPM, calendarioDeClndr, completarRangos, hojaActividadesDe, hojaCalendarioDe, importarCronograma, leerCronograma, leerMspdi, leerXer,
   textoRelacion, verificarContraFuente,
 } from '../../engine/cronograma/index.ts';
 import { leerHojaComoMatriz } from '../helpers/leerHoja.ts';
@@ -158,5 +158,27 @@ describe('elegir el lector', () => {
     const bytes = Uint8Array.from([...texto].map((c) => (c === 'ó' ? 0xf3 : c.charCodeAt(0))));
     const imp = importarCronograma('p6.xer', bytes);
     expect(imp.cronograma.actividades[0]!.nombre).toBe('Cimentación');
+  });
+});
+
+describe('rellenar rangos vacíos', () => {
+  it('tras importar: −10 % / +25 % en las que no tienen, sin tocar hitos ni las que ya tienen', () => {
+    const imp = importarCronograma('demo-cronograma.xml', archivo('demo-cronograma.xml'));
+    const valores = hojaActividadesDe(imp.cronograma, 'x').valores.map((f) => [...f]);
+    valores[5]![4] = 1; valores[5]![6] = 99; // la actividad 3 ya tiene rango: no se toca
+    const r = completarRangos(valores);
+    if ('error' in r) throw new Error(r.error);
+    expect(r.actividades).toBe(17); // 20 − 2 hitos − 1 con rango
+    for (const c of r.cambios) valores[c.fila]![c.col] = c.valor;
+    const lectura = leerCronograma(valores, hojaCalendarioDe(imp.cronograma).valores);
+    expect(lectura.problemas).toEqual([]);
+    const est = lectura.cronograma!.actividades.find((a) => a.id === '7')!;
+    expect(est.tresPuntos).toEqual({ min: 27, masProbable: 30, max: 37.5 });
+    expect(lectura.cronograma!.actividades.find((a) => a.id === '3')!.tresPuntos).toEqual({ min: 1, masProbable: 20, max: 99 });
+    expect(lectura.cronograma!.actividades.find((a) => a.id === '19')!.tresPuntos).toBeUndefined();
+  });
+  it('porcentajes fuera de rango o sin encabezado: error', () => {
+    expect(completarRangos([['ID', 'Duración']], 1.5)).toHaveProperty('error');
+    expect(completarRangos([['a']])).toHaveProperty('error');
   });
 });

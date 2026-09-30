@@ -1362,6 +1362,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     propia (manifiesto nuevo, y el mismo resultado). **Siguiente**:
     calendarios por actividad; rangos por defecto por sector (P6).
 
+79. [x] **Rellenar rangos (2026-09-30)**. `rangos.ts` (`completarRangos`
+    sobre la matriz de la hoja: cambios celda a celda, sin tocar hitos,
+    terminadas ni filas con rango), `escribirCeldasActividades`. Visto en
+    el banco: importar → rellenar → simular. **Calendarios por actividad:
+    aplazados a propósito** (cambio grande en el núcleo, poco frecuente en
+    pymes; los importadores avisan). **Siguiente**: la ronda de pruebas del
+    usuario (N y Q1–Q41) y, con sus resultados, arreglos; después, P6 (v2).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

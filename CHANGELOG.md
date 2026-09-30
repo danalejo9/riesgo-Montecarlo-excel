@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Rellenar los rangos vacíos (2026-09-30)
+
+**Añadido**
+- Botón **Rellenar los rangos vacíos** (cuando la salud avisa de actividades
+  sin rango): mínimo y máximo como % de la duración (por defecto −10 % /
+  +25 %) solo donde faltan; útil tras importar de MS Project o P6, que no
+  traen incertidumbre. Guía: Q41.
+
 ### P5: costo y plazo juntos (JCL) (2026-09-30)
 
 **Añadido**

@@ -186,3 +186,12 @@ export async function escribirCronogramaImportado(imp: CronogramaImportado, codi
     await escribirHoja(context, hojaActividadesDe(imp.cronograma, `Cronograma importado de ${imp.fuente}: ${imp.proyecto}. Añade mínimo, más probable y máximo para simular.`, codigoMoneda), true);
   });
 }
+
+/** Escribe celdas sueltas de «Actividades» (rellenar rangos vacíos). */
+export async function escribirCeldasActividades(cambios: ReadonlyArray<{ fila: number; col: number; valor: number }>): Promise<void> {
+  await Excel.run(async (context) => {
+    const hoja = context.workbook.worksheets.getItem(HOJA_ACTIVIDADES);
+    for (const c of cambios) hoja.getRangeByIndexes(c.fila, c.col, 1, 1).values = [[c.valor]];
+    await context.sync();
+  });
+}
