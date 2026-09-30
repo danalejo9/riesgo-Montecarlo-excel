@@ -216,7 +216,7 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | W2 | P7 | Reserva de contingencia y su reparto por riesgo | **Tú** | ✅ 30/09 (falta Excel: Q68) |
 | W3 | P7 | Casos de validación publicables (GAO, AACE, merge bias) | **Tú** | ✅ 30/09 analíticos y contra Python (`docs/VALIDACION_CRONOGRAMA.md`); ⬜ ejemplos publicados de GAO/AACE |
 | W4 | P7 | Merge bias explicado con un gráfico | **Tú** | ✅ 30/09 (falta Excel: Q69) |
-| W5 | P7 | `RIESGO.CRONOGRAMA("Hito")` en el modelo de costos | **Tú** | ⬜ siguiente |
+| W5 | P7 | `RIESGO.CRONOGRAMA("Hito")` en el modelo de costos | **Tú** | ✅ 30/09 (falta Excel: Q70–Q71) |
 | W6 | P7 | Plantillas por sector y guía de primer uso | **Tú** | ⬜ |
 | W7 | P7 | Escenarios «¿qué pasa si?» | **Tú** | ⬜ |
 | H, I | — | Referencias de SECOP; cadenas de eventos | **Tú** | aplazados (30/09) |

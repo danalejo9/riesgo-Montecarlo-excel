@@ -40,12 +40,15 @@ import {
   esFuncionDeDeclaracion,
   esFuncionDeResultado,
   esFuncionParametrica,
+  FUNCION_CRONOGRAMA,
   FUNCION_EVENTO,
   FUNCION_TRUNCAR,
   idDeFuncionRiesgo,
   leerNodoRiesgo,
+  pedidoDeCronograma,
   type EvaluadorDeArgumento,
   type LectorDeRango,
+  type ProveedorCronograma,
 } from './funcionesRiesgo.ts';
 import type { EntradaRiskModel } from './riskModel.ts';
 
@@ -63,6 +66,8 @@ export interface OpcionesRiesgoEnGrafo {
   todas?: boolean;
   /** El nombre legible de una celda (E5). */
   nombrar?: (clave: string, hoja: string, col: number, fila: number) => string;
+  /** W5: las muestras de `RIESGO.CRONOGRAMA`, del cronograma del libro. */
+  cronograma?: ProveedorCronograma;
 }
 
 export interface ConversionRiesgo {
@@ -104,6 +109,12 @@ export interface RiesgoEnGrafo {
   duplicadas: string[];
   /** Celdas con `RIESGO.EVENTO` (T8), ya expandidas a BERNOULLI × impacto. */
   eventos: string[];
+  /**
+   * W5: las entradas que son un `RIESGO.CRONOGRAMA`, por id, con su hito y su
+   * medida. Sus muestras no salen de su distribución (un resumen): las pone
+   * la simulación del cronograma, iteración a iteración.
+   */
+  cronograma: Map<string, { hito: string; medida: string }>;
 }
 
 /**
@@ -171,6 +182,7 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
     entradas: [], claves: [], claveDeRef: new Map(), celdaDeEntrada: new Map(), descripciones: new Map(),
     conversiones: [], reescritas: [], reescrituras: new Map(), motivosReescritura: new Map(), noCompatibles: new Map(), errores: [], duplicadas: [],
     eventos: expandirEventos(grafo),
+    cronograma: new Map(),
   };
   const deEvento = new Set(out.eventos);
 
@@ -200,13 +212,14 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
     const argsAleatorios = [...(grafo.dependencias.get(clave) ?? [])].some((d) => aleatorias.has(d));
     if (esLlamadaDistribucion(nodo.ast) && !argsAleatorios && !argumentosConDistribucion(nodo.ast)) {
       // Caso 1: la celda entera es la distribución, con argumentos fijos.
-      const r = leerNodoRiesgo(nodo.ast, lector, evaluar);
+      const r = leerNodoRiesgo(nodo.ast, lector, evaluar, opciones.cronograma);
       if (!r.ok) {
         out.errores.push(`${clave}: ${r.motivo}`);
         continue;
       }
       const entrada: EntradaRiskModel = { id: `${PREFIJO_FUNCION}${clave}`, name: nombre, ref: clave, dist: r.spec, correlations: [] };
       agregar(out, entrada, clave, clave);
+      anotarCronograma(out, entrada.id, nodo.ast, lector);
       out.conversiones.push({ clave, hoja: nodo.hoja, col: nodo.col, fila: nodo.fila, spec: r.spec, media: r.media });
       continue;
     }
@@ -237,10 +250,14 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
 
         if (!aleatoria) {
           // Caso 2: argumentos fijos, dentro de una operación.
-          const r = leerNodoRiesgo(n, lector, evaluar);
+          const r = leerNodoRiesgo(n, lector, evaluar, opciones.cronograma);
           if (!r.ok) {
             errores.push(r.motivo);
             return n;
+          }
+          if (id === FUNCION_CRONOGRAMA.id) {
+            const pedido = pedidoDeCronograma(n, lector);
+            if (typeof pedido !== 'string') out.cronograma.set(`${PREFIJO_FUNCION}${ref}`, pedido);
           }
           if (r.spec.type === 'categorical') {
             errores.push(`RIESGO.${id} dentro de una operación todavía no se admite: ponla sola en una celda y usa esa celda`);
@@ -317,6 +334,13 @@ export function analizarRiesgoEnGrafo(grafo: Grafo, opciones: OpcionesRiesgoEnGr
 /** Aplica al grafo las reescrituras de los casos 2 y 3. */
 export function aplicarReescrituras(grafo: Grafo, r: Pick<RiesgoEnGrafo, 'reescrituras'>): void {
   for (const [clave, ast] of r.reescrituras) reemplazarAst(grafo, clave, ast);
+}
+
+/** W5: si la llamada es un `RIESGO.CRONOGRAMA`, apunta su hito y su medida. */
+function anotarCronograma(out: RiesgoEnGrafo, id: string, n: Extract<Nodo, { tipo: 'funcion' }>, lector: LectorDeRango): void {
+  if (idDeFuncionRiesgo(n.nombre) !== FUNCION_CRONOGRAMA.id) return;
+  const pedido = pedidoDeCronograma(n, lector);
+  if (typeof pedido !== 'string') out.cronograma.set(id, pedido);
 }
 
 function agregar(out: RiesgoEnGrafo, entrada: EntradaRiskModel, claveGrafo: string, celda: string): void {

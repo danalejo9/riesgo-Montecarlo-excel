@@ -412,7 +412,7 @@ def pert_muestra(rng, a, m, b):
     return a + (b - a) * rng.betavariate(al, be)
 
 
-def monte_carlo(rangos=None, hitos=None):
+def monte_carlo(rangos=None, hitos=None, por_iter=None):
     import random
     rng = random.Random(20270201)
     acts = {a[0]: a for a in ACTIVIDADES}
@@ -477,6 +477,11 @@ def monte_carlo(rangos=None, hitos=None):
         if hitos:
             multas.append(total)
             costo += total
+        # W5: lo que el modelo de costos toma del cronograma en cada iteración (días del proyecto, fecha y multa del 19).
+        if por_iter is not None:
+            d19 = max(0, math.ceil(ef["19"] - 1e-9) - 1)
+            f19, (fc19, pd19, tope19) = DIAS[d19], hitos["19"]
+            por_iter.append((fines[-1] + 1, f19, min(tope19, pd19 * (f19 - fc19).days) if f19 > fc19 else 0.0))
         bases.append(costo)
         # V4: cada costo con rango, sorteado (PERT) alrededor de su valor más probable.
         for k, (fmin, fmax, dmin, dmax) in (rangos or {}).items():
@@ -690,7 +695,38 @@ HITOS_W1 = {
     "13": (dt.date(2027, 6, 30), 500, 15000),    # Montaje del ascensor
     "7": (dt.date(2027, 5, 21), 0, 0),           # Estructura: solo la fecha, sin multa
 }
-HITOS_RES, COSTO_PCT_W1, JCL_W1, MULTA_MEDIA_W1, MULTA_P80_W1, MULTA_PROB_W1 = monte_carlo(hitos=HITOS_W1)
+ITER_W5 = []
+HITOS_RES, COSTO_PCT_W1, JCL_W1, MULTA_MEDIA_W1, MULTA_P80_W1, MULTA_PROB_W1 = monte_carlo(hitos=HITOS_W1, por_iter=ITER_W5)
+
+
+def costos_con_plazo():
+    """W5: el modelo de costos de «Costos con plazo (prueba)», iteración a iteración con el cronograma:
+    obra base (triangular, independiente) + 1.500 por día del proyecto + la multa del hito 19."""
+    import random
+    rng = random.Random(5)
+    totales, fechas = [], []
+    for dias, f19, multa in ITER_W5:
+        base = rng.triangular(900_000, 1_250_000, 1_000_000)
+        totales.append(base + INDIRECTO_W5 * dias + multa)
+        fechas.append(f19)
+    def cuantil(lista, p):
+        return lista[max(1, math.ceil(p * len(lista) - 1e-9)) - 1]
+    t80 = cuantil(sorted(totales), 0.8)
+    fc = HITOS_W1["19"][0]
+    a_tiempo = sum(1 for f in fechas if f <= fc) / len(fechas)
+    conjunta = sum(1 for t, f in zip(totales, fechas) if t <= t80 and f <= fc) / len(fechas)
+    n = len(totales)
+    dias = [x[0] for x in ITER_W5]
+    md, mt = sum(dias) / n, sum(totales) / n
+    cov = sum((a - md) * (b - mt) for a, b in zip(dias, totales)) / n
+    sd = math.sqrt(sum((a - md) ** 2 for a in dias) / n)
+    st = math.sqrt(sum((b - mt) ** 2 for b in totales) / n)
+    return {"media": mt, "p80": t80, "fecha_p80": cuantil(sorted(fechas), 0.8), "a_tiempo": a_tiempo,
+            "conjunta": conjunta, "independientes": 0.8 * a_tiempo, "correlacion": cov / (sd * st)}
+
+
+INDIRECTO_W5 = 1500
+W5 = costos_con_plazo()
 PCT8, CRIT8, COSTO_PCT8, JCL8 = monte_carlo_clima()
 COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
@@ -733,6 +769,8 @@ LINEAS = [
     ("p", "«Clima (prueba)» y «Esperado (clima)»: días perdidos por mes para la obra a la intemperie y el"),
     ("p", "Monte Carlo de referencia con ellos (V8)."),
     ("p", "«Hitos (prueba)» y «Esperado (hitos)»: fechas contractuales y multas por retraso (W1)."),
+    ("p", "«Costos con plazo (prueba)» y «Esperado (costos con plazo)»: un modelo de costos que toma los días"),
+    ("p", "del proyecto y la multa del hito 19 con RIESGO.CRONOGRAMA, en la misma iteración (W5)."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -1085,6 +1123,45 @@ for i, (n, v, fmt) in enumerate([("Multas: probabilidad de alguna", MULTA_PROB_W
     eh.cell(row=i, column=2, value=round(v, 4)).number_format = fmt
 for j, w in enumerate([36, 22, 12, 12, 14], start=1):
     eh.column_dimensions[get_column_letter(j)].width = w
+
+# W5: costos con plazo (RIESGO.CRONOGRAMA).
+cp = wb.create_sheet("Costos con plazo (prueba)")
+cp["A1"] = ("W5: un modelo de costos que toma el plazo del cronograma en la misma iteración. Copia «Hitos (prueba)» como "
+            "«Hitos», escribe las fórmulas de la columna C en la columna B y marca B8 y B7 como salidas.")
+cp["A1"].font = H
+for j, t in enumerate(["Concepto", "Valor", "Escribe en la columna B"], start=1):
+    c = cp.cell(row=2, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+FILAS_W5 = [
+    ("Obra (sin indirectos)", "=RIESGO.TRIANGULAR(900000;1000000;1250000)", DINERO),
+    ("Días del proyecto", '=RIESGO.CRONOGRAMA("Proyecto";"dias")', "0"),
+    ("Indirectos (1.500 por día)", "=B4*1500", DINERO),
+    ("Multa de la entrega (hito 19)", '=RIESGO.CRONOGRAMA("19";"multa")', DINERO),
+    ("Fecha de entrega (hito 19)", '=RIESGO.CRONOGRAMA("19";"fecha")', FECHA),
+    ("Costo total", '=B3+B5+B6+RIESGO.SALIDA("Costo total")', DINERO),
+]
+for i, (n, f, fmt) in enumerate(FILAS_W5, start=3):
+    cp.cell(row=i, column=1, value=n)
+    cp.cell(row=i, column=2).number_format = fmt
+    cp.cell(row=i, column=3, value=f"escribe {f}")
+for j, w in enumerate([32, 16, 60], start=1):
+    cp.column_dimensions[get_column_letter(j)].width = w
+
+ec = wb.create_sheet("Esperado (costos con plazo)")
+ec["A1"] = (f"Referencia en Python de «Costos con plazo (prueba)»: {ITERACIONES_MC} iteraciones, las mismas del cronograma de "
+            "«Esperado (hitos)». Dinero ±2 %, fechas ±1 día, probabilidades ±3 puntos, correlación ±0,05.")
+ec["A1"].font = H
+for i, (n, v, fmt) in enumerate([
+    ("Costo total: media", W5["media"], DINERO), ("Costo total: P80", W5["p80"], DINERO),
+    ("Fecha de entrega (19): P80", W5["fecha_p80"], FECHA), ("Entrega a tiempo (13/08/2027)", W5["a_tiempo"], "0%"),
+    ("Conjunta: costo ≤ P80 y entrega a tiempo", W5["conjunta"], "0%"),
+    ("Lo mismo si fueran independientes (80 % × a tiempo)", W5["independientes"], "0%"),
+    ("Correlación días del proyecto – costo total", W5["correlacion"], "0.00"),
+], start=3):
+    ec.cell(row=i, column=1, value=n)
+    ec.cell(row=i, column=2, value=v if isinstance(v, dt.date) else round(v, 4)).number_format = fmt
+ec.column_dimensions["A"].width = 52
+ec.column_dimensions["B"].width = 18
 
 # V8: clima.
 cl = wb.create_sheet("Clima (prueba)")

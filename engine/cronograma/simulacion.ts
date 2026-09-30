@@ -242,7 +242,7 @@ function fraccionHasta(c: ContadorDias, dia: number): number {
 }
 
 /** Día (índice laborable) en que se enseña un fin temprano `f`; ver `IndiceLaborable.fechaFin`. */
-const diaFin = (f: number) => Math.max(0, Math.ceil(f - 1e-9) - 1);
+export const diaFin = (f: number) => Math.max(0, Math.ceil(f - 1e-9) - 1);
 /** Día en que se enseña un inicio temprano `s`; los hitos, como su fin. */
 const diaInicio = (s: number, d: number) => (d === 0 ? diaFin(s) : Math.floor(s + 1e-9));
 
@@ -297,6 +297,11 @@ export interface PlazoPreparado {
   hitos: Array<{ h: HitoContractual; a: number }>;
   /** W4: las convergencias (dos o más predecesoras fin‑comienzo sin retardo) y su inicio en el cronograma (eje). */
   convergencias: Array<{ s: number; ramas: number[]; plan: number }>;
+  /**
+   * W5: actividades cuyo fin se guarda iteración a iteración (en el eje), para
+   * `RIESGO.CRONOGRAMA` en el modelo de costos. Sin ellas no se guarda nada.
+   */
+  seguir?: number[];
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada (`ef` y `ls`, solo con relojes). */
   trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[]; ef?: Float64Array; ls?: Float64Array };
 }
@@ -441,7 +446,7 @@ function costosInciertos(acts: readonly Actividad[], forma: FormaDuracion): Plaz
 export interface AcumuladorPlazo {
   hechas: number;
   /** Fin del proyecto por iteración, con la iteración en la que empieza cada tramo. */
-  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array; costoBase?: Float64Array; multa?: Float64Array }>;
+  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array; costoBase?: Float64Array; multa?: Float64Array; seguidas?: Float64Array }>;
   cuentaFin: ContadorDias;
   inicios: ContadorDias[];
   fines: ContadorDias[];
@@ -509,6 +514,9 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
   // W1: la multa total de cada iteración, si algún hito tiene multa.
   const conMulta = p.hitos.filter((x) => x.h.multaDia);
   const multaTramo = costoTramo && conMulta.length > 0 ? new Float64Array(costoTramo.length) : undefined;
+  // W5: el fin de las actividades seguidas, actividad a actividad (`j * largo + iteración`).
+  const largo = Math.max(0, hasta - desde);
+  const seguidasTramo = p.seguir && p.seguir.length > 0 ? new Float64Array(p.seguir.length * largo) : undefined;
 
   for (let i0 = desde; i0 < hasta; i0 += B) {
     const b = Math.min(B, hasta - i0);
@@ -620,6 +628,14 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
           if (ef > (fin[k] as number)) fin[k] = ef;
         }
       }
+    }
+    // 3a0. W5: el fin de cada actividad seguida.
+    if (seguidasTramo) {
+      (p.seguir as number[]).forEach((a, j) => {
+        const ba = a * B;
+        const o = j * largo + i0 - desde;
+        for (let k = 0; k < b; k++) seguidasTramo[o + k] = ef ? (ef[ba + k] as number) : (es[ba + k] as number) + (dur[ba + k] as number);
+      });
     }
     // 3a. W4: ¿empieza cada convergencia a tiempo? ¿llega a tiempo cada una de sus rutas?
     if (p.convergencias.length > 0) {
@@ -784,7 +800,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
   }
   acc.tramos.push({
     desde, fin: finTramo, ...(costoTramo ? { costo: costoTramo } : {}), ...(costoBaseTramo ? { costoBase: costoBaseTramo } : {}),
-    ...(multaTramo ? { multa: multaTramo } : {}),
+    ...(multaTramo ? { multa: multaTramo } : {}), ...(seguidasTramo ? { seguidas: seguidasTramo } : {}),
   });
 }
 
@@ -911,6 +927,7 @@ export function transferiblesDe(acc: AcumuladorPlazo): ArrayBuffer[] {
     if (t.costo) agregar(t.costo);
     if (t.costoBase) agregar(t.costoBase);
     if (t.multa) agregar(t.multa);
+    if (t.seguidas) agregar(t.seguidas);
   });
   agregar(acc.cuentaFin.cuentas);
   acc.inicios.forEach((c) => agregar(c.cuentas));
@@ -1060,6 +1077,16 @@ function conRangos(c: ResultadoCostos, base: Float64Array | null, n: number): Re
   if (!base || n === 0) return c;
   const p80SinRangos = cuantilOrdenado(Float64Array.from(base).sort(), 0.8);
   return { ...c, rangos: { n, p80SinRangos, aporteP80: c.p80 - p80SinRangos } };
+}
+
+/**
+ * W5: el plan (duraciones de la hoja, sin riesgos): el fin de cada actividad
+ * y el del proyecto, en el eje, y el costo si hay costos.
+ */
+export function planDe(p: PlazoPreparado): { ef: Float64Array; fin: number; costo?: number } {
+  const ef = new Float64Array(p.n);
+  const fin = cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional, p.relojes, ef);
+  return { ef, fin, ...(p.hayCostos ? { costo: costoDeterminista(p) } : {}) };
 }
 
 /** El costo con las duraciones de la hoja y sin riesgos. */

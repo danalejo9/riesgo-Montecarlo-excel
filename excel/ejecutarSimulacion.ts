@@ -63,6 +63,8 @@ export type {
   SimulacionCompletada,
 } from './informe.ts';
 import { entradasDeFunciones, esTodaLaFormula, resolverConFunciones } from './entradasRiesgo.ts';
+import { enlazarCronograma, recolectorDePedidos, type EnlaceCronograma } from './cronogramaEnCostos.ts';
+import { leerHojasCronograma } from './cronograma.ts';
 import { analisisDeTexto } from './analisisTexto.ts';
 import { entradasMuestreadas } from './entradasMuestreadas.ts';
 import { indiceDeTextos } from './nombreSugerido.ts';
@@ -99,6 +101,9 @@ export interface PeticionSimulacion {
  * no dependa de cuántos núcleos tenga (ver `OpcionesSimulacion.bloquesMinimos`).
  */
 const BLOQUES_MINIMOS = 16;
+
+/** Deja respirar al panel entre bloques del cronograma (W5). */
+const cederAlPanel = () => new Promise<void>((r) => setTimeout(r, 0));
 const COMPRESION_TDIGEST = 100;
 
 export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<ResultadoSimulacionPanel> {
@@ -181,8 +186,28 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     ]);
   }
 
+  // W5: RIESGO.CRONOGRAMA. Una primera pasada del análisis dice qué hitos se
+  // piden (solo los de celdas de las que depende alguna salida); se simula el
+  // cronograma del libro con la semilla del modelo, y la pasada de verdad ya
+  // tiene sus muestras.
+  let enlace: EnlaceCronograma | null = null;
+  let eventosPrevios: string[] = [];
+  if (libro.formulas.some((f) => /CRONOGRAMA\s*\(/i.test(f.formula))) {
+    const recolector = recolectorDePedidos();
+    // Expande RIESGO.EVENTO en el grafo: la segunda pasada ya no los ve, se guardan aquí.
+    eventosPrevios = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre, recolector.proveedor).eventos;
+    if (recolector.pedidos.length > 0) {
+      progreso?.({ fase: 'analizando', mensaje: 'Simulando el cronograma del libro (RIESGO.CRONOGRAMA)…' });
+      const conv0 = modelo.settings.convergence;
+      const nInicial = conv0?.untilConverged ? Math.min(modelo.settings.iterations, conv0.maxIterations) : modelo.settings.iterations;
+      const e = await enlazarCronograma(recolector.pedidos, modelo.settings.seed, nInicial, leerHojasCronograma, { ceder: cederAlPanel, ...(debeCancelar ? { debeCancelar } : {}) });
+      if (!e.ok) return fallo('modelo', 'RIESGO.CRONOGRAMA no puede usar el cronograma del libro.', e.errores);
+      enlace = e.enlace;
+    }
+  }
   // Las celdas con funciones RIESGO.* son entradas aunque no estén en el panel.
-  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre);
+  const deFunciones = entradasDeFunciones(libro.formulas, grafo, clavesEntrada, clavesSalida, textos.nombre, enlace?.proveedor);
+  if (eventosPrevios.length > 0) deFunciones.eventos = [...new Set([...eventosPrevios, ...deFunciones.eventos])];
   if (deFunciones.errores.length > 0) {
     return fallo('modelo', 'Hay funciones RIESGO que no se pueden usar tal como están.', deFunciones.errores);
   }
@@ -278,6 +303,14 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     };
   };
 
+  // W5: con RIESGO.CRONOGRAMA, sus muestras (las del cronograma en cada iteración) van ya hechas.
+  const preparar = async (m: ModeloRiesgo, nIter: number): Promise<ReturnType<typeof prepararEntradas>> => {
+    if (!enlace || deFunciones.cronograma.size === 0) return prepararEntradas(m, resolver, semilla);
+    const fijas = await enlace.fijas(deFunciones.cronograma, nIter);
+    if (!fijas) return { ok: false, errores: ['Se canceló mientras se simulaba el cronograma.'] };
+    return prepararEntradas(m, resolver, semilla, fijas);
+  };
+
   // 4. Simular.
   const comun = { modelo, eleccion, lectura: libro.estadisticas, arranque, objetivo };
 
@@ -293,7 +326,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   }
 
   if (eleccion.motor === 'compatible') {
-    const preparadas = prepararEntradas(modelo, resolver, semilla);
+    const preparadas = await preparar(modelo, n);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     const r = await porElCompatible({
       ...comun, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, progreso, debeCancelar,
@@ -322,7 +355,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       if (debeCancelar?.()) return NaN;
       paso++;
       reemplazarAst(grafo, clave, { tipo: 'numero', valor: x, pos: 0 });
-      const preparadas = prepararEntradas(modelo, resolver, semilla);
+      const preparadas = await preparar(modelo, n);
       if (!preparadas.ok) return NaN;
       const s = await porElRapido({
         ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, debeCancelar, crearPool,
@@ -345,7 +378,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     const combo = combos[c] as number[];
     const etiqueta = etiquetaCombinacion(decisiones, combo);
     fijarCombinacion(grafo, decisiones, combo);
-    const preparadas = prepararEntradas(modelo, resolver, semilla);
+    const preparadas = await preparar(modelo, n);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     const r = await porElRapido({
       ...comun, grafo, definiciones: preparadas.entradas, clavesEntrada, clavesSalida, n, semilla, debeCancelar, crearPool,
@@ -378,7 +411,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   let r: ResultadoSimulacionPanel | null = null;
   for (let ronda = 0; ronda < MAX_TANDAS; ronda++) {
     const deTanda = nTanda === n ? modelo : { ...modelo, settings: { ...modelo.settings, iterations: nTanda } };
-    const preparadas = prepararEntradas(deTanda, resolver, semilla);
+    const preparadas = await preparar(deTanda, nTanda);
     if (!preparadas.ok) return fallo('modelo', 'El modelo no se pudo preparar.', preparadas.errores);
     tandas.push(nTanda);
     r = await porElRapido({

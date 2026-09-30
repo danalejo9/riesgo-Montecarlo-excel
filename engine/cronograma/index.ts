@@ -22,4 +22,6 @@ export * from './clima.ts';
 export * from './exportar.ts';
 export * from './registro.ts';
 export * from './hitos.ts';
+export * from './enCostos.ts';
+export { CLAVE_PLAN_CRONOGRAMA, leerPlanPublicado, valorDelPlan, normalizarTexto, NOMBRES_PROYECTO, type PlanCronogramaPublicado } from './planPublicado.ts';
 export * from './reserva.ts';

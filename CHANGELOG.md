@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W5: el cronograma dentro del modelo de costos (2026-09-30)
+
+**Añadido**
+- **`RIESGO.CRONOGRAMA(hito; medida; valor_fijo)`**: en cualquier celda del
+  modelo de costos, la fecha, los días, el retraso o la multa de un hito (o
+  el costo del proyecto) **en la misma iteración** que los costos. El
+  cronograma del libro se simula con la semilla y las iteraciones del
+  modelo de costos; así la probabilidad conjunta de costo y plazo con
+  cualquier salida es la de verdad. Fuera de la simulación la celda enseña
+  el valor del plan (lo publica el panel Cronograma al calcular) o el valor
+  fijo. Con el motor compatible también, y «Preparar para compartir» deja
+  la celda con su valor. Guía Q70–Q71.
+- Libro de pruebas: «Costos con plazo (prueba)» y «Esperado (costos con
+  plazo)», con la referencia en Python.
+
 ### W4: el sesgo de convergencia explicado (2026-09-30)
 
 **Añadido**

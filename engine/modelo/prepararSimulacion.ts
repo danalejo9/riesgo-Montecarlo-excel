@@ -36,6 +36,12 @@ export function prepararEntradas(
   modelo: ModeloRiesgo,
   resolverRef: (ref: string) => string,
   seed: number,
+  /**
+   * W5: entradas cuyas muestras ya vienen dadas, por id (las de
+   * `RIESGO.CRONOGRAMA`, que salen de la simulación del cronograma). Cada una
+   * con al menos `iterations` valores; se usan los primeros, en orden.
+   */
+  fijas?: ReadonlyMap<string, Float64Array>,
 ): ResultadoPreparacion {
   const agrupacion = agruparCorrelaciones(modelo.inputs);
   if (!agrupacion.ok) return agrupacion;
@@ -48,6 +54,15 @@ export function prepararEntradas(
   const definiciones: DefinicionEntrada[] = [];
 
   for (const entrada of modelo.inputs) {
+    const fija = fijas?.get(entrada.id);
+    if (fija) {
+      if (enGrupo.has(entrada.id)) {
+        return { ok: false, errores: [`«${entrada.name}» sale del cronograma: su relación con las demás ya la da la simulación, no se le puede poner una correlación.`] };
+      }
+      if (fija.length < n) return { ok: false, errores: [`«${entrada.name}»: el cronograma dio ${fija.length} iteraciones y hacen falta ${n}.`] };
+      definiciones.push({ tipo: 'buffer', clave: resolverRef(entrada.ref), buffer: fija.subarray(0, n) });
+      continue;
+    }
     if (enGrupo.has(entrada.id)) continue;
     definiciones.push({
       tipo: 'distribucion',

@@ -1553,6 +1553,25 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     panel y el PDF, bloque en la hoja. Guía Q69. **Siguiente**: W5
     (`RIESGO.CRONOGRAMA("Hito")`).
 
+98. [x] **W5 (2026-09-30)**. `RIESGO.CRONOGRAMA(hito; medida; valor_fijo)`
+    (`FUNCION_CRONOGRAMA`). `engine/cronograma/enCostos.ts`: la fuente
+    (`crearFuenteCronograma`, `fuenteDesdeHojas`) simula el cronograma del
+    libro con la semilla del modelo de costos y guarda, iteración a
+    iteración, el fin de las actividades pedidas (`PlazoPreparado.seguir`,
+    tramos `seguidas`); se amplía por tandas sin cambiar las primeras
+    iteraciones. Medidas: fecha, dias, retraso, multa (contra «Hitos») y
+    costo (del proyecto). En `ejecutarSimulacion`, una primera pasada del
+    análisis recoge los pedidos (solo los de celdas que llegan a una
+    salida), luego se simula el cronograma y `prepararEntradas(…, fijas)`
+    pone esas muestras como buffers. La entrada se describe con un resumen
+    discreto (200 cuantiles) para el panel. Fuera de la simulación: el
+    plan que publica el panel Cronograma (`planPublicado.ts`,
+    `excel/planCronograma.ts`) o el valor fijo. Compartir la congela.
+    Contra Python («Esperado (costos con plazo)»): media y P80 del costo,
+    P80 de la entrega, conjunta 52,8 % (49,0 % si fueran independientes) y
+    correlación 0,35; desalineando una iteración la correlación cae a ~0.
+    Guía Q70–Q71. **Siguiente**: W6 (plantillas por sector).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

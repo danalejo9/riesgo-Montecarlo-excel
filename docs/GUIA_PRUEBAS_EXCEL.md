@@ -1196,6 +1196,32 @@ pruebas, simula (10.000, PERT). Esperado:
 - En «Cronograma (simulación)», el bloque «Convergencia (sesgo de
   convergencia)»; en el PDF, la sección de convergencias.
 
+**Q70. El plazo dentro del modelo de costos (W5).** En el libro de pruebas,
+copia «Hitos (prueba)» como «Hitos» y pulsa «Calcular cronograma». Abre
+«Costos con plazo (prueba)» y escribe en la columna B las fórmulas de la
+columna C (B3 a B8). Esperado, antes de simular:
+- B4 = 118 (días del plan), B7 = 16/07/2027 (fin del plan del hito 19), B6 = 0.
+- `=RIESGO.CRONOGRAMA("99")` da #N/A con «No hay ninguna actividad…»;
+  `=RIESGO.CRONOGRAMA("19";"peso")`, «La medida… no existe».
+- `=RIESGO.CRONOGRAMA("19";"fecha";46600)` enseña 46600 (el valor fijo).
+
+**Q71. Costo y plazo en la misma iteración (W5).** Marca B8 («Costo total»,
+ya declarada con RIESGO.SALIDA) y B7 como salidas y simula 20.000
+iteraciones con la semilla del modelo. Esperado (±2 % el dinero, ±1 día las
+fechas; «Esperado (costos con plazo)»):
+- Costo total: media ≈ 1.263.500, P80 ≈ 1.334.300. P80 de la entrega ≈
+  24/08/2027.
+- En la dispersión de «Costo total» con la entrada «Días del proyecto»
+  (B4), la nube sube hacia la derecha; en su tornado, B4 aparece con una
+  correlación de 0,3 a 0,4. Es la prueba de que costo y plazo salen de la
+  misma iteración: si no, la nube no tendría forma. (La referencia además
+  da la probabilidad conjunta «costo ≤ P80 y entrega ≤ 13/08/2027»: 53 %,
+  frente a 49 % si fueran independientes.)
+- Las entradas del panel incluyen B4, B6 y B7.
+- Borra la hoja «Actividades» y simula: el error dice que RIESGO.CRONOGRAMA
+  no puede usar el cronograma del libro. Deshaz.
+- «Preparar para compartir»: B4, B6 y B7 se quedan con su valor.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

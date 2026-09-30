@@ -20,8 +20,10 @@
 import {
   categoriaDesdeListas, discretaDesdeListas, empiricaDesdeLista, FUNCION_CATEGORIA, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_HISTOGRAMA, FUNCION_TRUNCAR,
   histogramaDesdeLista,
-  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  construirSpecRiesgo, FUNCION_CORRELACION, FUNCION_CRONOGRAMA, FUNCION_DECISION, FUNCION_EVENTO, FUNCION_SALIDA, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from '../engine/modelo/funcionesRiesgo.ts';
+import { valorDelPlan } from '../engine/cronograma/planPublicado.ts';
+import { leerPlanCronograma } from '../excel/planCronograma.ts';
 import { valorAleatorio, valorEnModo } from '../engine/modelo/valorFijo.ts';
 import type { DistributionSpec } from '../engine/modelo/distributionSchema.ts';
 import { modoLibroEnMemoria, simulacionEnExcel } from '../excel/modoLibroCompartido.ts';
@@ -209,3 +211,18 @@ asociar(FUNCION_DECISION.id, ((opciones: unknown[][][]) => {
   }
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.invalidValue, 'RIESGO.DECISION necesita al menos una opción');
 }) as (...args: never[]) => number | string);
+
+// W5: el plazo del módulo Cronograma. Al simular, el motor pone en la celda el
+// valor de cada iteración; fuera, el valor fijo si se da o el del plan que
+// publicó el panel Cronograma al calcular.
+asociar(FUNCION_CRONOGRAMA.id, (async (...args: unknown[]) => {
+  const sorteo = sorteoEnCurso('RIESGO.CRONOGRAMA no sortea con parámetros', celdaDe(args));
+  if (sorteo !== undefined) return sorteo;
+  const [hito, medida, fijo] = args;
+  if (typeof fijo === 'number') return fijo;
+  const texto = (x: unknown) => (x === null || x === undefined || typeof x === 'object' ? '' : String(x));
+  const v = valorDelPlan(await leerPlanCronograma(), texto(hito), texto(medida));
+  if (typeof v === 'number') return v;
+  throw new CustomFunctions.Error(CustomFunctions.ErrorCode.notAvailable, v);
+}) as (...args: never[]) => Promise<number>);
+
