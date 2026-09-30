@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W6: ejemplos por sector y primeros pasos (2026-09-30)
+
+**Añadido**
+- **Ejemplo de…** en la pestaña Cronograma: vivienda, vía, edificio público
+  (por licitación) o software. Escribe un cronograma completo del sector:
+  actividades con lógica, rangos y costos; riesgos típicos con su respuesta
+  (antes y después) y al menos una oportunidad; el calendario de trabajo
+  del sector con el costo indirecto por día, y un hito contractual con su
+  multa. Listo para calcular y simular; pide confirmación si ya hay un
+  cronograma.
+- **Primeros pasos**: una guía de cinco pasos en el panel que se marca sola
+  a medida que se avanza (crear hojas, calcular, salud, riesgos, simular),
+  con la pista de `RIESGO.CRONOGRAMA` para el modelo de costos. Se puede
+  ocultar. Guía Q72–Q73.
+
 ### W5: el cronograma dentro del modelo de costos (2026-09-30)
 
 **Añadido**

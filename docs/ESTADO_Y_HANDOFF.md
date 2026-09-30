@@ -1572,6 +1572,22 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     correlación 0,35; desalineando una iteración la correlación cae a ~0.
     Guía Q70–Q71. **Siguiente**: W6 (plantillas por sector).
 
+99. [x] **W6 (2026-09-30)**. `engine/cronograma/sectores.ts`:
+    `EJEMPLOS_SECTOR` (vivienda, vía, edificio público, software) y
+    `hojasDeEjemplo(id, inicio)`, que da las hojas «Actividades»,
+    «Calendario» (con días laborables del sector y costo indirecto),
+    «Riesgos de plazo» (con respuesta antes/después y una oportunidad) y
+    «Hitos» (fecha contractual = fin del plan + margen, con multa). Los
+    datos son plausibles, no normativos. En el panel, «Ejemplo de…» +
+    «Crear ejemplo» (confirma si ya hay cronograma) y la guía «Primeros
+    pasos» (`ui/PrimerUsoCronograma.tsx`), que se marca sola y se puede
+    ocultar. `cronogramaW6.test.ts`: cada ejemplo se lee sin problemas,
+    calcula, no tiene rojos en la salud, simula con su hito (cumple entre
+    el 37 % y el 64 %) y mejora con las respuestas. En el banco apareció un
+    import de `HOJA_CALENDARIO` desde el módulo equivocado que ni `tsc` ni
+    vitest vieron (el navegador sí): corregido. Guía Q72–Q73.
+    **Siguiente**: W7 (escenarios «¿qué pasa si?»).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

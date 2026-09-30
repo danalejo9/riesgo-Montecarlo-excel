@@ -1222,6 +1222,28 @@ fechas; «Esperado (costos con plazo)»):
   no puede usar el cronograma del libro. Deshaz.
 - «Preparar para compartir»: B4, B6 y B7 se quedan con su valor.
 
+**Q72. Ejemplos por sector (W6).** En un libro **nuevo**, pestaña
+Cronograma: elige «Ejemplo de: Vivienda» y pulsa «Crear ejemplo». Esperado:
+- Se crean «Actividades» (17 filas, con mínimo, más probable, máximo,
+  categoría y costos), «Calendario» (inicio hoy, lunes a sábado, costo
+  indirecto 350), «Riesgos de plazo» (6 riesgos con respuesta; R6 es una
+  oportunidad) e «Hitos» (el 17 con su fecha y multa de 150 por día).
+- Se calcula solo: 168 días laborables; la salud sin rojos.
+- Simula (10.000, PERT): P80 ≈ 205 días; el hito «Entrega de la vivienda»
+  cumple en ≈ 64 %; con «Comparar antes/después», el P80 baja.
+- Vuelve a pulsar «Crear ejemplo» con «Vía»: pide confirmar que reemplaza
+  las cuatro hojas. «Cancelar» no toca nada; «Reemplazar» escribe la vía
+  (175 días, lunes a sábado, 7 riesgos). Repite con «Edificio público»
+  (280 días, lunes a viernes; la salud avisa en amarillo de la holgura
+  alta de la importación de equipos, que es realista) y «Software» (120
+  días; el hito es la salida en vivo).
+
+**Q73. Primeros pasos (W6).** En un libro nuevo, la pestaña Cronograma
+enseña «Primeros pasos» con cinco pasos. Esperado:
+- Crear un ejemplo marca ✓ los pasos 1 a 4; simular marca el 5.
+- «Ocultar» la esconde y deja un enlace «Primeros pasos»; al cerrar y abrir
+  el panel sigue oculta. El enlace la vuelve a enseñar.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

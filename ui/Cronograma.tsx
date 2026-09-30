@@ -17,13 +17,13 @@ import {
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
   reservaContingencia, type NivelReserva, type SinRiesgos,
   riesgosActivos, evaluarRegistro, hojaRegistro, colorDe, type Registro,
-  leerRangosTipo, publicarPlan, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
+  leerRangosTipo, publicarPlan, EJEMPLOS_SECTOR, hojasDeEjemplo, type IdSector, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import {
-  escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
+  escribirCeldasActividades, escribirCronogramaImportado, escribirEjemploSector, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
   escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma, escribirPlantillaRangosTipo, escribirHojaRegistro,
 } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
@@ -39,6 +39,7 @@ import { BarrasConvergencia, HistogramaFechas, MatrizConsolidada, MatrizRiesgos,
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
+import { PrimerUso } from './PrimerUsoCronograma.tsx';
 
 type Calculado = Extract<ResultadoCPM, { ok: true }> & { hoja: string };
 interface Simulado {
@@ -70,6 +71,9 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const [forma, setForma] = useState<FormaDuracion>(OPCIONES_PLAZO_POR_DEFECTO.forma);
   const cancelado = useRef(false);
   const [importado, setImportado] = useState<{ imp: CronogramaImportado; ver: Verificacion; confirmar: boolean } | null>(null);
+  // W6: el ejemplo por sector elegido y si falta confirmar que reemplaza lo que hay.
+  const [sector, setSector] = useState<IdSector>('vivienda');
+  const [confirmarEjemplo, setConfirmarEjemplo] = useState(false);
   const archivo = useRef<HTMLInputElement>(null);
   const [pctMenos, setPctMenos] = useState(10);
   const [pctMas, setPctMas] = useState(25);
@@ -343,6 +347,24 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  const crearEjemplo = async (forzar: boolean) => {
+    try {
+      if (!forzar) {
+        const hojas = await leerHojasCronograma();
+        if ((hojas.actividades?.length ?? 0) > 3) {
+          setConfirmarEjemplo(true);
+          return;
+        }
+      }
+      setConfirmarEjemplo(false);
+      await escribirEjemploSector(hojasDeEjemplo(sector, serieLocal(new Date())));
+      await calcular();
+      setNota(T.ejemploCreado((EJEMPLOS_SECTOR.find((e) => e.id === sector) ?? EJEMPLOS_SECTOR[0]!).nombre));
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
   const plantilla = async () => {
     try {
       setNota(T.plantillaCreada(await escribirPlantillaCronograma()));
@@ -367,6 +389,22 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         <input ref={archivo} type="file" accept=".xml,.xer,.mpp" style={{ display: 'none' }}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void leerArchivo(f); }} />
       </p>
+      <p title={T.ejemploAyuda}>
+        <label>{T.ejemploSector}{' '}
+          <select value={sector} onChange={(e) => { setSector(e.target.value as IdSector); setConfirmarEjemplo(false); }} disabled={ocupado !== null}>
+            {EJEMPLOS_SECTOR.map((e) => <option key={e.id} value={e.id} title={e.descripcion}>{e.nombre}</option>)}
+          </select>
+        </label>{' '}
+        <button type="button" onClick={() => void crearEjemplo(false)} disabled={ocupado !== null}>{T.ejemplo}</button>
+      </p>
+      {confirmarEjemplo && (
+        <p className="aviso">
+          {T.ejemploReemplazar}{' '}
+          <button type="button" onClick={() => void crearEjemplo(true)}>{T.reemplazar}</button>{' '}
+          <button type="button" className="secundario" onClick={() => setConfirmarEjemplo(false)}>{T.cancelarImportar}</button>
+        </p>
+      )}
+      <PrimerUso hechos={[resultado !== null || problemas.length > 0, resultado !== null, salud !== null && !salud.comprobaciones.some((c) => c.estado === 'rojo'), (datos?.riesgos.length ?? 0) > 0, simulado !== null]} />
       {importado && <Importado i={importado} alEscribir={escribirImportado} alCancelar={() => setImportado(null)} />}
       {nota && <p className="aviso-ok">{nota}</p>}
 

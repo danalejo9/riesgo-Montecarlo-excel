@@ -9,7 +9,7 @@ import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
   plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO, HOJA_RANGOS_TIPO, plantillaRangosTipo,
   HOJA_CALENDARIOS, hojaCalendarios, HOJA_CLIMA, plantillaClima, HOJA_HITOS, plantillaHitos,
-  type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
+  type CronogramaImportado, type HojaAEscribir, type HojaGantt, type HojasEjemplo, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
 
@@ -234,6 +234,16 @@ export async function escribirCronogramaImportado(imp: CronogramaImportado, codi
       await escribirHoja(context, hojaCalendarios(imp.cronograma.calendarios, imp.cronograma.calendario), true);
     }
     await escribirHoja(context, hojaActividadesDe(imp.cronograma, `Cronograma importado de ${imp.fuente}: ${imp.proyecto}. Añade mínimo, más probable y máximo para simular.`, codigoMoneda), true);
+  });
+}
+
+/** W6: un ejemplo por sector. Reemplaza «Calendario», «Riesgos de plazo», «Hitos» y «Actividades» (que queda activa). */
+export async function escribirEjemploSector(h: HojasEjemplo): Promise<void> {
+  await Excel.run(async (context) => {
+    await escribirHoja(context, h.calendario, true, false);
+    await escribirHoja(context, h.riesgos, true, false);
+    await escribirHoja(context, h.hitos, true, false);
+    await escribirHoja(context, h.actividades, true);
   });
 }
 
