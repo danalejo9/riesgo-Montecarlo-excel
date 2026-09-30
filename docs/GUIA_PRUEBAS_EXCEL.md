@@ -104,8 +104,8 @@ En **PowerShell**, una línea cada vez:
 
 ```
 cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
-git checkout claude/nifty-thompson-xfnqm2
-git pull origin claude/nifty-thompson-xfnqm2
+git checkout claude/optimistic-hamilton-m79w4z
+git pull origin claude/optimistic-hamilton-m79w4z
 npm install
 npm run stop
 npm start
@@ -117,7 +117,7 @@ npm start
 
   ```
   git checkout -- tests/fixtures/fidelidad-tanda7.xlsx tests/fixtures/fidelidad-tanda8.xlsx tests/fixtures/fidelidad-lambda.xlsx
-  git pull origin claude/nifty-thompson-xfnqm2
+  git pull origin claude/optimistic-hamilton-m79w4z
   ```
 
 - `npm run stop` y `npm start` recargan el complemento. Sin ellos no aparecen
@@ -152,7 +152,7 @@ Solo hace falta probar este bloque; lo demás ya pasó.
 
 **Antes de empezar** (imprescindible, porque el manifiesto cambió):
 1. Cierra Excel del todo.
-2. En PowerShell: `git pull origin claude/nifty-thompson-xfnqm2`, luego
+2. En PowerShell: `git pull origin claude/optimistic-hamilton-m79w4z`, luego
    `npm install`, `npm run stop` y `npm start`.
 3. Si la pestaña Riesgo no aparece o se comporta como antes, borra la caché
    de complementos de Office: cierra Excel, borra el contenido de
