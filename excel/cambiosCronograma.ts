@@ -4,9 +4,9 @@
  * vista previa se actualiza solo con «Calcular cronograma».
  */
 
-import { HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS, HOJA_CLIMA, HOJA_RIESGOS } from '../engine/cronograma/index.ts';
+import { HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS, HOJA_CLIMA, HOJA_HITOS, HOJA_RIESGOS } from '../engine/cronograma/index.ts';
 
-export const HOJAS_ENTRADA_CRONOGRAMA = new Set([HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS, HOJA_RIESGOS, HOJA_CLIMA]);
+export const HOJAS_ENTRADA_CRONOGRAMA = new Set([HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS, HOJA_RIESGOS, HOJA_CLIMA, HOJA_HITOS]);
 
 /** Llama a `alCambiar` cuando cambia alguna hoja de entrada. Devuelve cómo dejar de escuchar, o `null` si Excel no avisa. */
 export async function escucharCambiosCronograma(alCambiar: (hoja: string) => void): Promise<(() => Promise<void>) | null> {

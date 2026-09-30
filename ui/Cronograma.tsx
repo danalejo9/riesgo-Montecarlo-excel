@@ -87,7 +87,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     try {
       const hojas = await leerHojasCronograma();
       setSeguimiento(leerSeguimiento(hojas.seguimiento));
-      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios, hojas.clima);
+      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios, hojas.clima, hojas.hitos);
       const cron = lectura.cronograma;
       if (!cron) {
         setProblemas(lectura.problemas);
@@ -511,6 +511,7 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
         </div>
       )}
       {s.narrativa.map((l) => <p key={l}>{l}</p>)}
+      {r.hitos && r.hitos.length > 0 && <Hitos r={r} />}
       {s.comparacion && <Comparacion c={s.comparacion} />}
       <Histograma r={r} />
       {r.costos && <Nube r={r} />}
@@ -600,6 +601,30 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
     max = Math.max(max, f);
   }
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
+}
+
+/** W1: los hitos contractuales: si se cumplen, cuándo y cuánto cuestan en multas. */
+function Hitos({ r }: { r: ResultadoSimulacionPlazo }) {
+  const hitos = r.hitos ?? [];
+  const peor = Math.min(...hitos.map((h) => h.probCumplir));
+  return (
+    <Plegable id="cronograma-hitos" abierta titulo={T.hitos} resumen={T.hitosResumen(hitos.length, peor)}>
+      <table>
+        <thead><tr><th>{T.hitoCol}</th><th>{T.fechaContractualCol}</th><th>{T.probCumplirCol}</th><th>P80</th><th>{T.margenCol}</th>{r.multas && <th>{T.multaMediaCol}</th>}</tr></thead>
+        <tbody>
+          {hitos.map((h) => (
+            <tr key={h.id}>
+              <td>{h.nombre}</td><td>{textoFecha(h.fecha)}</td>
+              <td style={{ color: h.probCumplir < 0.5 ? 'var(--baja, #e34948)' : undefined }}>{Math.round(h.probCumplir * 100)} %</td>
+              <td>{textoFecha(h.p80)}</td><td>{h.margenP80 >= 0 ? `+${T.diasN(h.margenP80)}` : `−${T.diasN(-h.margenP80)}`}</td>
+              {r.multas && <td>{h.multaDia ? textoMoneda(h.multaMedia) : '—'}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {r.multas && <p className="tenue">{T.multasResumen(r.multas.probAlguna, textoMoneda(r.multas.media), textoMoneda(r.multas.p80))}</p>}
+    </Plegable>
+  );
 }
 
 /** V10: las matrices de probabilidad e impacto (consolidada, amenazas, oportunidades) y lo que pide atención. */

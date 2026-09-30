@@ -1147,6 +1147,29 @@ vista previa al final. En Excel sin avisos de cambios (versiones antiguas),
 el panel lo dice y la vista previa se actualiza con «Calcular cronograma».
 Desmárcala al terminar.
 
+**Q67. Hitos contractuales y multas (W1).** «Plantilla de cronograma» crea
+la hoja **«Hitos»** (vacía: no hace nada). En el libro de pruebas crea una
+hoja «Hitos» y copia desde la fila 3 la tabla de **«Hitos (prueba)»**:
+Entrega al cliente (19) el 13/08/2027 con US$ 2.000 por día y tope
+US$ 60.000; Montaje del ascensor (13) el 30/06/2027 con US$ 500 y tope
+US$ 15.000; Estructura (7) el 21/05/2027 sin multa. Calcula y simula («Antes
+de mitigar», 10.000, PERT). Esperado:
+- El **plazo no cambia** (P80 24/08/2027); el costo P80 sube a
+  **US$ 1.370.859** (antes 1.343.353) porque incluye las multas; JCL 78 %.
+- Tabla **Hitos contractuales** en el panel: Entrega **61 %** (P80
+  24/08/2027, −11 días, multa media ≈ US$ 10.060), Montaje **40 %** (P80
+  14/07/2027, −14 días, ≈ US$ 3.624), Estructura **12 %** (P80 14/06/2027,
+  −24 días, sin multa). Y «Multa por retraso en el 61 % de los casos: media
+  US$ 13.684; P80 US$ 29.000».
+- Los textos: «El hito “Estructura” cumple su fecha contractual (21/05/2027)
+  en el 12 % de los casos; su P80 es el 14/06/2027, 24 días después.», etc.
+- En «Cronograma (simulación)», el bloque «Hito contractual» con las mismas
+  cifras; en el informe PDF, la sección «Hitos contractuales y multas».
+- Compara con **«Esperado (hitos)»** (Python): probabilidades ±3 puntos,
+  fechas ±1 día, dinero ±2–5 %.
+- Errores: un ID que no existe, una fecha escrita como texto, una multa
+  negativa o un hito repetido dan su mensaje.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

@@ -40,6 +40,8 @@ export interface DatosInformeCronograma {
     histograma: ResultadoSimulacionPlazo['histograma'];
     diaCronograma: number;
     riesgos: Array<ImpactoRiesgo & { ocurrio: number }>;
+    hitos?: ResultadoSimulacionPlazo['hitos'];
+    multas?: ResultadoSimulacionPlazo['multas'];
     sinRiesgosP80?: number;
     costos?: {
       determinista: number; media: number; p10: number; p50: number; p80: number; p90: number;
@@ -141,6 +143,8 @@ export function datosInformeCronograma(e: {
       diaCronograma: Math.max(0, Math.ceil(r.determinista.dias - 1e-9) - 1),
       riesgos: (s.impacto?.porRiesgo ?? []).map((x) => ({ ...x, ocurrio: r.riesgos.find((y) => y.id === x.id)?.ocurrio ?? NaN })),
       ...(s.impacto ? { sinRiesgosP80: s.impacto.sinRiesgos.p80 } : {}),
+      ...(r.hitos ? { hitos: r.hitos } : {}),
+      ...(r.multas ? { multas: r.multas } : {}),
       ...(r.costos
         ? {
             costos: {

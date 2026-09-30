@@ -29,6 +29,7 @@ import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
 import { extremosDePercentiles, muestreadorDuracion, type Muestreador } from './muestreo.ts';
 import { ClimaSimulado } from './clima.ts';
+import { multaDe, type HitoContractual } from './hitos.ts';
 import { ejeNatural, finPorRelacion, inicioPorRelacion } from './cpmCalendarios.ts';
 import { parametrosRed, parametrosRedEje, type ParametrosRed } from './red.ts';
 import { relojesDe, type Reloj } from './relojes.ts';
@@ -76,6 +77,22 @@ export interface ActividadSimulada {
   fin: FechasPercentil;
 }
 
+export interface ResultadoHito {
+  id: string;
+  nombre: string;
+  /** Fecha contractual (serie). */
+  fecha: number;
+  /** P(terminar el día de la fecha contractual o antes). */
+  probCumplir: number;
+  p50: number;
+  p80: number;
+  /** Días naturales entre el P80 y la fecha contractual (negativo: el P80 se pasa). */
+  margenP80: number;
+  multaDia?: number;
+  /** Multa media del hito (0 si no tiene). */
+  multaMedia: number;
+}
+
 export interface ResultadoSimulacionPlazo {
   iteraciones: number;
   semilla: number;
@@ -97,6 +114,10 @@ export interface ResultadoSimulacionPlazo {
   histograma: Array<{ dia: number; fecha: number; cuenta: number }>;
   actividades: ActividadSimulada[];
   riesgos: Array<{ id: string; nombre: string; probabilidad: number; ocurrio: number }>;
+  /** W1: los hitos contractuales: probabilidad de cumplir, fechas y multa. */
+  hitos?: ResultadoHito[];
+  /** W1: la multa total por iteración (si algún hito tiene multa), resumida. */
+  multas?: { media: number; p80: number; probAlguna: number; determinista: number };
   /** Solo si el cronograma tiene costos (P5). */
   costos?: ResultadoCostos;
   /** Fecha (serie) que se enseña para un valor de `finProyecto`. */
@@ -251,6 +272,8 @@ export interface PlazoPreparado {
   relojProyecto?: Reloj;
   /** V8: el clima, si el cronograma lo tiene. */
   clima?: ClimaSimulado;
+  /** W1: los hitos contractuales con el índice de su actividad. */
+  hitos: Array<{ h: HitoContractual; a: number }>;
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada (`ef` y `ls`, solo con relojes). */
   trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[]; ef?: Float64Array; ls?: Float64Array };
 }
@@ -323,7 +346,9 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     costoFijo: acts.reduce((s2, a) => s2 + (a.costoFijo ?? 0), 0) + (c.costoAdicional ?? 0),
     costoIndirectoDia: c.costoIndirectoDia ?? 0,
     costosInciertos: costosInciertos(acts, op.forma),
-    hayCostos: acts.some((a) => a.costoPorDia || a.costoFijo || a.costoFijoRango || a.costoPorDiaRango) || !!c.costoIndirectoDia || !!c.costoAdicional || riesgos.some((r) => r.costo),
+    hayCostos: acts.some((a) => a.costoPorDia || a.costoFijo || a.costoFijoRango || a.costoPorDiaRango) || !!c.costoIndirectoDia || !!c.costoAdicional || riesgos.some((r) => r.costo)
+      || (c.hitos ?? []).some((h) => h.multaDia),
+    hitos: (c.hitos ?? []).filter((h) => indice.has(h.id)).map((h) => ({ h, a: indice.get(h.id) as number })),
     semilla: op.semilla,
     cal,
     actividades: nombres,
@@ -377,7 +402,7 @@ function costosInciertos(acts: readonly Actividad[], forma: FormaDuracion): Plaz
 export interface AcumuladorPlazo {
   hechas: number;
   /** Fin del proyecto por iteración, con la iteración en la que empieza cada tramo. */
-  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array; costoBase?: Float64Array }>;
+  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array; costoBase?: Float64Array; multa?: Float64Array }>;
   cuentaFin: ContadorDias;
   inicios: ContadorDias[];
   fines: ContadorDias[];
@@ -388,6 +413,8 @@ export interface AcumuladorPlazo {
   sy: number;
   syy: number;
   veces: number[];
+  /** W1: suma de la multa de cada hito. */
+  multaSuma: Float64Array;
 }
 
 export function nuevoAcumulador(p: PlazoPreparado): AcumuladorPlazo {
@@ -404,6 +431,7 @@ export function nuevoAcumulador(p: PlazoPreparado): AcumuladorPlazo {
     sy: 0,
     syy: 0,
     veces: p.riesgos.map(() => 0),
+    multaSuma: new Float64Array(p.hitos.length),
   };
 }
 
@@ -434,6 +462,9 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
   const costoTramo = p.hayCostos ? new Float64Array(Math.max(0, hasta - desde)) : undefined;
   // V4: el costo con los más probables (sin el sorteo de los rangos), para saber cuánto añaden.
   const costoBaseTramo = costoTramo && p.costosInciertos.length > 0 ? new Float64Array(costoTramo.length) : undefined;
+  // W1: la multa total de cada iteración, si algún hito tiene multa.
+  const conMulta = p.hitos.filter((x) => x.h.multaDia);
+  const multaTramo = costoTramo && conMulta.length > 0 ? new Float64Array(costoTramo.length) : undefined;
 
   for (let i0 = desde; i0 < hasta; i0 += B) {
     const b = Math.min(B, hasta - i0);
@@ -554,6 +585,22 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
         const ba = a * B;
         for (let k = 0; k < b; k++) costo[k] = (costo[k] as number) + cd * (dur[ba + k] as number);
       }
+      // W1: las multas de los hitos que terminan después de su fecha contractual (días naturales de retraso).
+      if (multaTramo) {
+        for (const { h, a } of p.hitos) {
+          const j = p.hitos.findIndex((x) => x.h === h);
+          if (!h.multaDia) continue;
+          const ba = a * B;
+          for (let k = 0; k < b; k++) {
+            const f = ef ? (ef[ba + k] as number) : (es[ba + k] as number) + (dur[ba + k] as number);
+            const m = multaDe(h, p.cal.fechaDeIndice(diaFin(f)));
+            if (m === 0) continue;
+            costo[k] = (costo[k] as number) + m;
+            multaTramo[i0 - desde + k] = (multaTramo[i0 - desde + k] as number) + m;
+            acc.multaSuma[j] = (acc.multaSuma[j] as number) + m;
+          }
+        }
+      }
       const ind = p.costoIndirectoDia;
       // V7: con relojes el fin está en días naturales; el indirecto es por día laborable del proyecto.
       const diasProyecto = (f: number) => (p.relojProyecto ? p.relojProyecto.W(f) : f);
@@ -670,7 +717,10 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
     }
     acc.hechas += b;
   }
-  acc.tramos.push({ desde, fin: finTramo, ...(costoTramo ? { costo: costoTramo } : {}), ...(costoBaseTramo ? { costoBase: costoBaseTramo } : {}) });
+  acc.tramos.push({
+    desde, fin: finTramo, ...(costoTramo ? { costo: costoTramo } : {}), ...(costoBaseTramo ? { costoBase: costoBaseTramo } : {}),
+    ...(multaTramo ? { multa: multaTramo } : {}),
+  });
 }
 
 const TIPO_TEXTO = ['FS', 'SS', 'FF', 'SF'] as const;
@@ -778,6 +828,7 @@ export function combinarAcumuladores(p: PlazoPreparado, partes: readonly Acumula
     t.sy += x.sy;
     t.syy += x.syy;
     x.veces.forEach((v, j) => (t.veces[j] = (t.veces[j] as number) + v));
+    x.multaSuma.forEach((v, j) => (t.multaSuma[j] = (t.multaSuma[j] as number) + v));
   }
   return t;
 }
@@ -792,11 +843,12 @@ export function transferiblesDe(acc: AcumuladorPlazo): ArrayBuffer[] {
     agregar(t.fin);
     if (t.costo) agregar(t.costo);
     if (t.costoBase) agregar(t.costoBase);
+    if (t.multa) agregar(t.multa);
   });
   agregar(acc.cuentaFin.cuentas);
   acc.inicios.forEach((c) => agregar(c.cuentas));
   acc.fines.forEach((c) => agregar(c.cuentas));
-  [acc.critica, acc.sx, acc.sxx, acc.sxy].forEach(agregar);
+  [acc.critica, acc.sx, acc.sxx, acc.sxy, acc.multaSuma].forEach(agregar);
   return out;
 }
 
@@ -811,11 +863,13 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
   const finProyecto = new Float64Array(acc.hechas);
   const costoIter = p.hayCostos ? new Float64Array(acc.hechas) : null;
   const costoBase = p.hayCostos && p.costosInciertos.length > 0 ? new Float64Array(acc.hechas) : null;
+  const multaIter = p.hitos.some((x) => x.h.multaDia) && p.hayCostos ? new Float64Array(acc.hechas) : null;
   let k = 0;
   for (const t of [...acc.tramos].sort((a, b) => a.desde - b.desde)) {
     finProyecto.set(t.fin, k);
     if (costoIter && t.costo) costoIter.set(t.costo, k);
     if (costoBase && t.costoBase) costoBase.set(t.costoBase, k);
+    if (multaIter && t.multa) multaIter.set(t.multa, k);
     k += t.fin.length;
   }
 
@@ -861,12 +915,50 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
     histograma,
     actividades,
     riesgos: p.riesgos.map((x, j) => ({ id: x.r.id, nombre: x.r.nombre, probabilidad: x.r.probabilidad, ocurrio: (acc.veces[j] as number) / M })),
+    ...(p.hitos.length > 0 ? { hitos: resultadoHitos(p, acc, M) } : {}),
+    ...(multaIter && acc.hechas > 0 ? { multas: resumenMultas(multaIter, multaDeterminista(p)) } : {}),
     cal: (f: number) => fechaDia(diaFin(f)),
     unidad: p.relojes ? 'naturales' : 'laborables',
     ...(costoIter && acc.hechas > 0
       ? { costos: conRangos(analizarCostos(finProyecto, costoIter, costoDeterminista(p), det, (q) => fechaDia(q)), costoBase, p.costosInciertos.length) }
       : {}),
   };
+}
+
+/** W1: cada hito contractual: probabilidad de cumplir su fecha, P50/P80 y multa media. */
+function resultadoHitos(p: PlazoPreparado, acc: AcumuladorPlazo, M: number): ResultadoHito[] {
+  const fechaDia = (d: number) => p.cal.fechaDeIndice(d);
+  return p.hitos.map(({ h, a }, j) => {
+    const c = acc.fines[a] as ContadorDias;
+    // El último día del eje que cae en la fecha contractual o antes.
+    const limite = p.cal.indiceHasta(h.fecha);
+    const p80 = fechaDia(cuantilDias(c, 0.8));
+    return {
+      id: h.id, nombre: (p.actividades[a] as { nombre: string }).nombre, fecha: h.fecha,
+      probCumplir: limite < 0 ? 0 : fraccionHasta(c, limite),
+      p50: fechaDia(cuantilDias(c, 0.5)), p80, margenP80: h.fecha - p80,
+      ...(h.multaDia ? { multaDia: h.multaDia } : {}),
+      multaMedia: (acc.multaSuma[j] as number) / M,
+    };
+  });
+}
+
+function resumenMultas(multa: Float64Array, determinista: number): NonNullable<ResultadoSimulacionPlazo['multas']> {
+  const ord = Float64Array.from(multa).sort();
+  let suma = 0;
+  let alguna = 0;
+  for (const m of multa) {
+    suma += m;
+    if (m > 0) alguna++;
+  }
+  return { media: suma / multa.length, p80: cuantilOrdenado(ord, 0.8), probAlguna: alguna / multa.length, determinista };
+}
+
+/** W1: la multa con las duraciones de la hoja (el plan): normalmente 0. */
+function multaDeterminista(p: PlazoPreparado): number {
+  const ef = new Float64Array(p.n);
+  cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional, p.relojes, ef);
+  return p.hitos.reduce((s, { h, a }) => s + multaDe(h, p.cal.fechaDeIndice(diaFin(ef[a] as number))), 0);
 }
 
 /** V4: lo que añaden al P80 del costo los rangos de los costos. */
@@ -883,7 +975,7 @@ function costoDeterminista(p: PlazoPreparado): number {
     c += (p.costoDia[i] as number) * ((p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number));
   });
   const fin = cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red, p.condicional, p.relojes);
-  return c + p.costoIndirectoDia * (p.relojProyecto ? p.relojProyecto.W(fin) : fin);
+  return c + p.costoIndirectoDia * (p.relojProyecto ? p.relojProyecto.W(fin) : fin) + (p.hitos.some((x) => x.h.multaDia) ? multaDeterminista(p) : 0);
 }
 
 /** Percentil «el primero con acumulado ≥ q» sobre un arreglo ordenado. */
@@ -1007,12 +1099,14 @@ function cpmDeterminista(
   red: ParametrosRed,
   condicional: readonly number[],
   relojes?: readonly Reloj[],
+  /** W1: si se da, el fin temprano de cada actividad. */
+  efOut?: Float64Array,
 ): number {
   const es = new Float64Array(dur.length);
   let fin = 0;
   if (relojes) {
     // V7: con el reloj de cada actividad (las mismas reglas que `cpmConRelojes`).
-    const ef = new Float64Array(dur.length);
+    const ef = efOut ?? new Float64Array(dur.length);
     for (const s of orden) {
       const d = dur[s] as number;
       const rs = relojes[s] as Reloj;
@@ -1045,6 +1139,7 @@ function cpmDeterminista(
       v0 = Math.max(v0, (red.minFin[s] as number) - d);
     }
     es[s] = v0;
+    if (efOut) efOut[s] = v0 + d;
     if (v0 + d > fin) fin = v0 + d;
   }
   return fin;

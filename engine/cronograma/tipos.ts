@@ -98,11 +98,14 @@ export interface Cronograma {
   costoIndirectoDia?: number;
   /** V8: clima probabilístico (hoja «Clima»). */
   clima?: Clima;
+  /** W1: hitos contractuales (hoja «Hitos»): fecha del contrato y multa por día de retraso. */
+  hitos?: HitoContractual[];
   /** Costo fijo que no es de ninguna actividad, p. ej. el de las respuestas a los riesgos (V1). */
   costoAdicional?: number;
 }
 
 import type { Clima } from './clima.ts';
+import type { HitoContractual } from './hitos.ts';
 
 /** Un problema al leer o al calcular, con dónde está, para enseñarlo tal cual. */
 export interface ProblemaCronograma {

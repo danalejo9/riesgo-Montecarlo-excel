@@ -43,6 +43,18 @@ export function narrativaPlazo(
   }
   if (reserva > 0) out.push(`Para comprometer una fecha con un 80 % de confianza hace falta una reserva de ${dias(reserva)} sobre el cronograma.`);
 
+  // W1: los hitos contractuales (los tres más comprometidos) y las multas.
+  for (const h of [...(r.hitos ?? [])].sort((a, b) => a.probCumplir - b.probCumplir).slice(0, 3)) {
+    const margen = h.margenP80 >= 0
+      ? `su P80 es el ${textoFecha(h.p80)}, ${h.margenP80 === 0 ? 'el mismo día' : `${h.margenP80} ${h.margenP80 === 1 ? 'día' : 'días'} antes`}`
+      : `su P80 es el ${textoFecha(h.p80)}, ${-h.margenP80} ${h.margenP80 === -1 ? 'día' : 'días'} después`;
+    out.push(`El hito «${h.nombre}» cumple su fecha contractual (${textoFecha(h.fecha)}) en el ${pct(h.probCumplir)} de los casos; ${margen}.`);
+  }
+  if (r.multas && r.multas.probAlguna > 0) {
+    const dinero = (x: number) => textoMoneda(x, codigoMoneda);
+    out.push(`Hay multa por retraso en el ${pct(r.multas.probAlguna)} de los casos: de media ${dinero(r.multas.media)} y, en el P80, ${dinero(r.multas.p80)} (ya incluidas en el costo).`);
+  }
+
   const principal = impacto?.porRiesgo.find((x) => x.diasP80 > 0);
   if (principal) out.push(`El riesgo que más pesa es «${principal.nombre}»: sin él, el P80 se adelantaría ${dias(principal.diasP80)}.`);
 

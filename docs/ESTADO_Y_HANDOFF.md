@@ -1514,6 +1514,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     W7 escenarios «¿qué pasa si?» (`PLAN_CRONOGRAMA_QSRA.md` §4.2).
     Aplazados: SECOP y cadenas de eventos. **Siguiente**: W1.
 
+94. [x] **W1 (2026-09-30)**. `hitos.ts` (hoja «Hitos»: `leerHitos`,
+    `plantillaHitos`, `multaDe`: días naturales de retraso × multa, con
+    tope). En la simulación, la multa de cada iteración se suma al costo
+    (y a la JCL); `ResultadoSimulacionPlazo.hitos` (probabilidad de cumplir,
+    P50/P80, margen, multa media) y `.multas` (media, P80, probabilidad,
+    determinista). Resumen en palabras, bloque en «Cronograma (simulación)»,
+    tabla en el panel, sección en el PDF, vista previa atenta a «Hitos».
+    Oráculo Python: «Hitos (prueba)» y «Esperado (hitos)». Guía Q67.
+    **Siguiente**: W2 (reserva de contingencia).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

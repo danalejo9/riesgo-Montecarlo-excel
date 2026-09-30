@@ -412,7 +412,7 @@ def pert_muestra(rng, a, m, b):
     return a + (b - a) * rng.betavariate(al, be)
 
 
-def monte_carlo(rangos=None):
+def monte_carlo(rangos=None, hitos=None):
     import random
     rng = random.Random(20270201)
     acts = {a[0]: a for a in ACTIVIDADES}
@@ -429,6 +429,11 @@ def monte_carlo(rangos=None):
     ina = {a[0]: (indice_desde(a[9]) if a[9] else 0) for a in ACTIVIDADES}
     riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
     fines, crit, costos, fines_dia, bases = [], {a[0]: 0 for a in ACTIVIDADES}, [], [], []
+    # W1: por hito, cuántas veces se cumple, sus días de fin y la multa; y la multa total por iteración.
+    cumple = {k: 0 for k in (hitos or {})}
+    dia_hito = {k: [] for k in (hitos or {})}
+    multa_hito = {k: 0.0 for k in (hitos or {})}
+    multas = []
     fijo = sum(COSTO_FIJO.values())
     for _ in range(ITERACIONES_MC):
         d = {}
@@ -459,6 +464,19 @@ def monte_carlo(rangos=None):
                 crit[p] += 1
         fines.append(max(0, math.ceil(fin - 1e-9) - 1))  # día de fin (índice laborable)
         costo += sum(acts[k][8] * d[k] for k in d) + COSTO_INDIRECTO_DIA * fin
+        total = 0.0
+        for k, (fecha_c, por_dia, tope) in (hitos or {}).items():
+            dia = max(0, math.ceil(ef[k] - 1e-9) - 1)
+            dia_hito[k].append(dia)
+            fecha_fin_h = DIAS[dia]
+            if fecha_fin_h <= fecha_c:
+                cumple[k] += 1
+            m = min(tope, por_dia * (fecha_fin_h - fecha_c).days) if por_dia and fecha_fin_h > fecha_c else 0.0
+            multa_hito[k] += m
+            total += m
+        if hitos:
+            multas.append(total)
+            costo += total
         bases.append(costo)
         # V4: cada costo con rango, sorteado (PERT) alrededor de su valor más probable.
         for k, (fmin, fmax, dmin, dmax) in (rangos or {}).items():
@@ -476,6 +494,11 @@ def monte_carlo(rangos=None):
     costo_pct = {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}
     if rangos:
         return costo_pct, jcl, cuantil(sorted(bases), 0.8), sum(costos) / len(costos)
+    if hitos:
+        por_hito = {k: (cumple[k] / ITERACIONES_MC, DIAS[cuantil(sorted(dia_hito[k]), 0.5)], DIAS[cuantil(sorted(dia_hito[k]), 0.8)],
+                        multa_hito[k] / ITERACIONES_MC) for k in hitos}
+        return (por_hito, costo_pct, jcl, sum(multas) / len(multas), cuantil(sorted(multas), 0.8),
+                sum(1 for m in multas if m > 0) / len(multas))
     return ({p: cuantil(fines_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()},
             costo_pct, jcl)
 
@@ -660,6 +683,14 @@ COSTO_RANGOS = {
 }
 COSTO_PCT_V4, JCL_V4, P80_SIN_RANGOS_V4, MEDIA_V4 = monte_carlo(COSTO_RANGOS)
 PCT7, CRIT7, COSTO_PCT7, JCL7 = monte_carlo_cal()
+
+# W1: hitos contractuales (fecha del contrato, multa por día natural de retraso, tope).
+HITOS_W1 = {
+    "19": (dt.date(2027, 8, 13), 2000, 60000),   # Entrega al cliente
+    "13": (dt.date(2027, 6, 30), 500, 15000),    # Montaje del ascensor
+    "7": (dt.date(2027, 5, 21), 0, 0),           # Estructura: solo la fecha, sin multa
+}
+HITOS_RES, COSTO_PCT_W1, JCL_W1, MULTA_MEDIA_W1, MULTA_P80_W1, MULTA_PROB_W1 = monte_carlo(hitos=HITOS_W1)
 PCT8, CRIT8, COSTO_PCT8, JCL8 = monte_carlo_clima()
 COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
@@ -701,6 +732,7 @@ LINEAS = [
     ("p", "extranjero) para cuatro actividades, con su CPM y su Monte Carlo de referencia (V7)."),
     ("p", "«Clima (prueba)» y «Esperado (clima)»: días perdidos por mes para la obra a la intemperie y el"),
     ("p", "Monte Carlo de referencia con ellos (V8)."),
+    ("p", "«Hitos (prueba)» y «Esperado (hitos)»: fechas contractuales y multas por retraso (W1)."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -1014,6 +1046,45 @@ for i, a in enumerate(ACTIVIDADES, start=13):
     ec.cell(row=i, column=13, value=round(CRIT7[a[0]], 3)).number_format = "0%"
 for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8, 11, 3, 20, 12, 14], start=1):
     ec.column_dimensions[get_column_letter(j)].width = w
+
+# W1: hitos contractuales.
+hp = wb.create_sheet("Hitos (prueba)")
+hp["A1"] = "W1: copia esta tabla (desde la fila 3) en una hoja «Hitos» (la crea «Plantilla de cronograma»)."
+hp["A1"].font = H
+for j, t in enumerate(["Hito (ID)", "Fecha contractual", "Multa por día de retraso", "Tope de la multa", "Nota"], start=1):
+    c = hp.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, (k, (f, m, tope)) in enumerate(HITOS_W1.items(), start=4):
+    hp.cell(row=i, column=1, value=k)
+    hp.cell(row=i, column=2, value=f).number_format = FECHA
+    if m:
+        hp.cell(row=i, column=3, value=m).number_format = DINERO
+        hp.cell(row=i, column=4, value=tope).number_format = DINERO
+    hp.cell(row=i, column=5, value={"19": "Acta de entrega", "13": "Puesta en servicio del ascensor", "7": "Hito de obra (sin multa)"}[k])
+for j, w in enumerate([12, 18, 24, 18, 34], start=1):
+    hp.column_dimensions[get_column_letter(j)].width = w
+
+eh = wb.create_sheet("Esperado (hitos)")
+eh["A1"] = (f"Monte Carlo de referencia con «Hitos (prueba)»: {ITERACIONES_MC} iteraciones en Python (los mismos números que "
+            "«Esperado (simulación)»). Probabilidad ±3 puntos, fechas ±1 día, dinero ±2 %.")
+eh["A1"].font = H
+for j, t in enumerate(["Hito", "Probabilidad de cumplir", "P50", "P80", "Multa media"], start=1):
+    c = eh.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, k in enumerate(HITOS_W1, start=4):
+    pr, p50, p80, mm = HITOS_RES[k]
+    eh.cell(row=i, column=1, value=k)
+    eh.cell(row=i, column=2, value=round(pr, 4)).number_format = "0%"
+    eh.cell(row=i, column=3, value=p50).number_format = FECHA
+    eh.cell(row=i, column=4, value=p80).number_format = FECHA
+    eh.cell(row=i, column=5, value=round(mm, 2)).number_format = DINERO
+for i, (n, v, fmt) in enumerate([("Multas: probabilidad de alguna", MULTA_PROB_W1, "0%"), ("Multas: media", MULTA_MEDIA_W1, DINERO),
+                                 ("Multas: P80", MULTA_P80_W1, DINERO), ("Costo P80 (con multas)", COSTO_PCT_W1[0.8], DINERO),
+                                 ("JCL (con multas)", JCL_W1, "0%")], start=9):
+    eh.cell(row=i, column=1, value=n)
+    eh.cell(row=i, column=2, value=round(v, 4)).number_format = fmt
+for j, w in enumerate([36, 22, 12, 12, 14], start=1):
+    eh.column_dimensions[get_column_letter(j)].width = w
 
 # V8: clima.
 cl = wb.create_sheet("Clima (prueba)")

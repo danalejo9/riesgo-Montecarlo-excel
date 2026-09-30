@@ -42,7 +42,7 @@ export function useVistaPrevia(ocupado: string | null, forma: FormaDuracion) {
     setVista((v) => ({ ...(v ?? { cuando: new Date() }), calculando: true }));
     try {
       const hojas = await leerHojasCronograma();
-      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios, hojas.clima);
+      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios, hojas.clima, hojas.hitos);
       const c = lectura.cronograma;
       if (!c) {
         setVista({ motivo: T.previaErrores, cuando: new Date(), calculando: false });

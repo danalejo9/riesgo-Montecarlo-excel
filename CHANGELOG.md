@@ -5,6 +5,17 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W1: hitos contractuales y multas por retraso (2026-09-30)
+
+**Añadido**
+- Hoja **«Hitos»**: para cada hito del contrato, la fecha contractual y la
+  multa por día natural de retraso con su tope. La simulación da, por hito,
+  la **probabilidad de cumplir** la fecha, su P50 y P80 y la multa media;
+  las multas se suman al costo de cada iteración (y a la JCL).
+- En el panel, el resumen en palabras, la hoja de la simulación y el
+  informe PDF. Libro de pruebas: «Hitos (prueba)» y «Esperado (hitos)»;
+  guía Q67.
+
 ### Registro de riesgos: oportunidades aparte y matriz consolidada (2026-09-30)
 
 **Cambiado**

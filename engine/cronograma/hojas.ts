@@ -216,6 +216,26 @@ export function hojaSimulacionPlazo(
   ];
   v.push(['']);
 
+  // W1: los hitos contractuales.
+  if (r.hitos && r.hitos.length > 0) {
+    encabezados.push(v.length);
+    v.push(['Hito contractual', 'Fecha contractual', 'Probabilidad de cumplir', 'P50', 'P80', 'Margen al P80 (días)', 'Multa por día', 'Multa media']);
+    const h0 = v.length;
+    for (const h of r.hitos) v.push([`${h.id} · ${h.nombre}`, h.fecha, h.probCumplir, h.p50, h.p80, h.margenP80, h.multaDia ?? '', h.multaDia ? h.multaMedia : '']);
+    fechaEn(h0, 1, r.hitos.length);
+    pctEn(h0, 2, r.hitos.length);
+    fechaEn(h0, 3, r.hitos.length, 2);
+    fechas.push({ fila: h0, col: 6, filas: r.hitos.length, cols: 2, formato: formatoMoneda(codigoMoneda) });
+    if (r.multas) {
+      v.push(['Multas por retraso: probabilidad de alguna', r.multas.probAlguna]);
+      pctEn(v.length - 1, 1);
+      v.push(['Multas: media', r.multas.media]);
+      v.push(['Multas: P80', r.multas.p80]);
+      fechas.push({ fila: v.length - 2, col: 1, filas: 2, cols: 1, formato: formatoMoneda(codigoMoneda) });
+    }
+    v.push(['']);
+  }
+
   // P5: costo y plazo juntos.
   const c = r.costos;
   if (c) {

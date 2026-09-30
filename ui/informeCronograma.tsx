@@ -44,6 +44,24 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
         <p className="tenue">{T.rutaCritica}: {d.determinista.rutaCritica.slice(0, 40).join(' → ')}{d.determinista.rutaCritica.length > 40 ? ' → …' : ''}</p>
       </section>
     ),
+    hitos: s?.hitos && s.hitos.length > 0 && (
+      <section>
+        <h2>Hitos contractuales y multas</h2>
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>{T.hitoCol}</th><th>{T.fechaContractualCol}</th><th>{T.probCumplirCol}</th><th>P50</th><th>P80</th><th>{T.margenCol}</th>{s.multas && <th>{T.multaMediaCol}</th>}</tr></thead>
+          <tbody>
+            {s.hitos.map((h) => (
+              <tr key={h.id}>
+                <th scope="row">{h.nombre}</th><td>{textoFecha(h.fecha)}</td><td>{pct(h.probCumplir)}</td><td>{textoFecha(h.p50)}</td><td>{textoFecha(h.p80)}</td>
+                <td>{h.margenP80 >= 0 ? `+${h.margenP80}` : h.margenP80} d</td>
+                {s.multas && <td>{h.multaDia ? textoMoneda(h.multaMedia) : '—'}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {s.multas && <p className="lectura">{T.multas(pct(s.multas.probAlguna), textoMoneda(s.multas.media), textoMoneda(s.multas.p80))}</p>}
+      </section>
+    ),
     fechas: s && (
       <section className="grafico-informe">
         <h2>Fechas de fin</h2>
