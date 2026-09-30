@@ -8,7 +8,9 @@
 > ```
 > cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
 > git checkout -- ejemplos/demo-proyecto-aurora.xlsx
-> git pull origin claude/nifty-thompson-xfnqm2
+> git fetch origin claude/optimistic-hamilton-m79w4z
+> git checkout claude/optimistic-hamilton-m79w4z
+> git pull origin claude/optimistic-hamilton-m79w4z
 > npm install
 > npm run stop
 > npm start
