@@ -10,8 +10,8 @@ import type { DatosInformeCronograma } from '../excel/informeCronograma.ts';
 import type { IdSeccionCronograma } from '../excel/plantillaInforme.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
-import { COLORES_ZONA } from '../engine/cronograma/registro.ts';
-import { CurvaS, GanttImpreso, HistogramaFechas, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { COLORES_ZONA, colorDe } from '../engine/cronograma/registro.ts';
+import { CurvaS, GanttImpreso, HistogramaFechas, MatrizConsolidada, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { miles } from './formato.ts';
 import { textosInforme as T } from './textos/es.ts';
 
@@ -82,7 +82,8 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
     registro: d.registro && (
       <section>
         <h2>Registro y matriz de riesgos</h2>
-        <MatrizRiesgos matriz={d.registro.matriz} />
+        <MatrizConsolidada amenazas={d.registro.matriz} oportunidades={d.registro.matrizOportunidades ?? []} textos={T.matrices} />
+        <p className="tenue nota-informe">{T.matrizNota}</p>
         {d.registro.vencidas > 0 && <p className="lectura">{T.vencidas(d.registro.vencidas)}</p>}
         <table className="comparacion tabla-informe">
           <thead><tr><th>ID</th><th>{T.riesgoCol}</th><th>{T.estadoCol}</th><th>{T.responsableCol}</th><th>{T.revisionCol}</th><th>P × I</th><th>{T.respuestaCol}</th></tr></thead>
@@ -91,7 +92,7 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
               <tr key={f.id} style={f.estado === 'cerrado' ? { opacity: 0.55 } : undefined}>
                 <td>{f.id}</td><th scope="row">{f.nombre}</th><td>{T.estados[f.estado]}</td><td>{f.responsable ?? ''}</td>
                 <td style={f.vencida ? { color: COLORES_ZONA.roja, fontWeight: 600 } : undefined}>{f.revision !== undefined ? textoFecha(f.revision) : ''}</td>
-                <td><span className="punto-semaforo" style={{ background: COLORES_ZONA[f.zona] }} />{f.puntaje}</td>
+                <td><span className="punto-semaforo" style={{ background: colorDe(f.clase ?? 'amenaza', f.puntaje) }} />{f.puntaje}{f.clase === 'oportunidad' ? ` · ${T.oportunidad}` : ''}</td>
                 <td>{f.respuesta ?? ''}</td>
               </tr>
             ))}

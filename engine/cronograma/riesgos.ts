@@ -59,7 +59,7 @@ export interface RiesgoPlazo {
   /** Próxima revisión (fecha de serie). */
   revision?: number;
   categoriaRiesgo?: string;
-  /** Nivel de impacto 1–5 para la matriz, si el usuario lo da (si no, sale de la simulación). */
+  /** Nivel de impacto 1–5 para la matriz (−1 a −5: una oportunidad), si el usuario lo da (si no, sale de la simulación). */
   impactoCualitativo?: number;
   /** Solo para el registro y la matriz: sin impacto que simular. */
   cualitativo?: boolean;
@@ -188,7 +188,8 @@ export function leerRiesgosPlazo(
     // V10: sin impacto en plazo ni actividad nueva, un riesgo puede ser solo de costo o cualitativo.
     const costoPrevio = vacioC(celda('costo')) ? undefined : numeroDe(celda('costo'));
     const cual = vacioC(celda('impactoCual')) ? undefined : numeroDe(celda('impactoCual'));
-    if (cual !== undefined && !(Number.isInteger(cual) && cual >= 1 && cual <= 5)) { error('el impacto cualitativo es un nivel de 1 a 5'); continue; }
+    // De 1 a 5; en negativo (−1 a −5), una oportunidad.
+    if (cual !== undefined && !(Number.isInteger(cual) && Math.abs(cual) >= 1 && Math.abs(cual) <= 5)) { error('el impacto cualitativo es un nivel de 1 a 5 (de −1 a −5 si es una oportunidad)'); continue; }
     const soloCosto = sinImpacto && !rama && costoPrevio !== undefined;
     const cualitativo = sinImpacto && !rama && costoPrevio === undefined && cual !== undefined;
     let a = 0;

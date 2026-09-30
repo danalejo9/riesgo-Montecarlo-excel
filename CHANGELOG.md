@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Registro de riesgos: oportunidades aparte y matriz consolidada (2026-09-30)
+
+**Cambiado**
+- Las **oportunidades** (riesgos que solo acortan o ahorran, o cualitativos
+  con nivel negativo, de −1 a −5) tienen su propia matriz, en azules. La
+  **consolidada** es la matriz doble del PMBOK: amenazas a la izquierda y
+  oportunidades a la derecha, con lo más importante de las dos en el
+  centro. En el panel se elige la vista; la hoja «Registro de riesgos»
+  trae las tres; el informe PDF, la consolidada.
+
 ### V11: vista previa del plazo mientras se edita (2026-09-30)
 
 **Añadido**

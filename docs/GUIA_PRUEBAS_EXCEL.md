@@ -1099,16 +1099,25 @@ revisión e Impacto cualitativo (1–5). Pon R4 en **Cerrado**, a R2 una fecha
 de revisión ya pasada y añade una fila R8 «Mala imagen con los vecinos»,
 Probabilidad 60 %, Impacto cualitativo 3 (sin impactos ni actividades).
 Calcula y simula. Esperado:
-- En el panel, **Registro de riesgos** («5 abiertos · 1 con la revisión
-  vencida») con la **matriz 5 × 5** coloreada: R1 en P3 × I4 y R8 en
-  P4 × I3 (12, naranja), R2 y R3 en amarillo (6), R5 en verde; R4 no está en
-  la matriz y sale gris al final de la lista. Aviso «Revisión vencida: R2».
-- Hoja nueva **«Registro de riesgos»**: la matriz con los colores y la lista
+- En el panel, **Registro de riesgos** («4 amenazas y 1 oportunidades
+  abiertas · 1 con la revisión vencida») con tres vistas: **Consolidada**
+  (la matriz doble: amenazas a la izquierda, I1 → I5; oportunidades a la
+  derecha, I5 → I1; lo más importante de las dos en el centro),
+  **Amenazas** y **Oportunidades**. R1 en P3 × I4 y R8 en P4 × I3 (12,
+  naranja), R2 y R3 en amarillo (6); **R5** (estructura prefabricada, que
+  acorta) va en la de **oportunidades**, en azul. R4 no está en ninguna y
+  sale gris al final de la lista. Aviso «Revisión vencida: R2».
+- Hoja nueva **«Registro de riesgos»**: las tres matrices con sus colores
+  (amenazas de verde a rojo; oportunidades de azul claro a azul) y la lista
+  (con la columna «Clase»)
   (tipo, estado, responsable, revisión —la de R2 en rojo—, niveles, puntaje,
   zona, de dónde sale el impacto, días y costo al P80, respuesta).
 - R4 cerrado **no se simula** (el P80 baja respecto a Q13) y R8, cualitativo,
   tampoco. Con R1 en **Materializado**, se simula como seguro (100 %).
 - Informe PDF: sección «Registro y matriz de riesgos».
+
+Una oportunidad cualitativa: una fila con Impacto cualitativo **−4** (p. ej.
+«Descuento por pronto pago», 80 %) va a la matriz de oportunidades, P5 × I4.
 
 **Q64. Riesgo solo de costo y errores.** Añade R9 «Multa por ruido»,
 Probabilidad 25 %, Costo si ocurre 8.000, sin impactos ni actividades: las

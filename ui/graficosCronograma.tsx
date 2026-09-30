@@ -5,7 +5,7 @@
  */
 
 import { COLORES_GANTT, type VistaGantt } from '../engine/cronograma/gantt.ts';
-import { COLORES_ZONA, zonaDe } from '../engine/cronograma/registro.ts';
+import { COLUMNAS_CONSOLIDADA, colorDe, type Clase } from '../engine/cronograma/registro.ts';
 import { fechaDeSerie, textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 
@@ -211,8 +211,8 @@ export function TendenciaPlazo({ puntos, titulo, nombres }: {
   );
 }
 
-/** V10: La matriz 5 × 5: probabilidad hacia arriba, impacto hacia la derecha; en cada casilla, los IDs. */
-export function MatrizRiesgos({ matriz }: { matriz: string[][][] }) {
+/** V10: una matriz 5 × 5 (amenazas u oportunidades): probabilidad hacia arriba, impacto hacia la derecha; en cada casilla, los IDs. */
+export function MatrizRiesgos({ matriz, clase = 'amenaza' }: { matriz: string[][][]; clase?: Clase }) {
   return (
     <table className="matriz-riesgos" style={{ borderCollapse: 'collapse', fontSize: 11, margin: '6px 0' }}>
       <tbody>
@@ -220,7 +220,7 @@ export function MatrizRiesgos({ matriz }: { matriz: string[][][] }) {
           <tr key={p}>
             <th scope="row" style={{ padding: '0 4px', fontWeight: 400 }} className="tenue">P{p}</th>
             {[1, 2, 3, 4, 5].map((i) => (
-              <td key={i} style={{ background: COLORES_ZONA[zonaDe(p * i)], color: '#1b1b1b', width: 46, height: 26, textAlign: 'center', border: '1px solid #fff' }}>
+              <td key={i} style={{ background: colorDe(clase, p * i), color: '#1b1b1b', width: 46, height: 26, textAlign: 'center', border: '1px solid #fff' }}>
                 {(matriz[p - 1]?.[i - 1] ?? []).join(' ')}
               </td>
             ))}
@@ -232,3 +232,39 @@ export function MatrizRiesgos({ matriz }: { matriz: string[][][] }) {
   );
 }
 
+/**
+ * V10: la matriz consolidada (la doble del PMBOK): amenazas a la izquierda
+ * (I1 → I5) y oportunidades a la derecha (I5 → I1), con la probabilidad
+ * común; lo que más pesa de los dos lados queda en el centro.
+ */
+export function MatrizConsolidada({ amenazas, oportunidades, textos }: {
+  amenazas: string[][][];
+  oportunidades: string[][][];
+  textos: { amenazas: string; oportunidades: string };
+}) {
+  return (
+    <table className="matriz-riesgos" style={{ borderCollapse: 'collapse', fontSize: 10, margin: '6px 0' }}>
+      <tbody>
+        <tr>
+          <th />
+          <th colSpan={5} style={{ fontWeight: 600, textAlign: 'center' }}>{textos.amenazas}</th>
+          <th colSpan={5} style={{ fontWeight: 600, textAlign: 'center' }}>{textos.oportunidades}</th>
+        </tr>
+        {[5, 4, 3, 2, 1].map((p) => (
+          <tr key={p}>
+            <th scope="row" style={{ padding: '0 4px', fontWeight: 400 }} className="tenue">P{p}</th>
+            {COLUMNAS_CONSOLIDADA.map((c, j) => (
+              <td key={j} style={{
+                background: colorDe(c.clase, p * c.i), color: '#1b1b1b', minWidth: 28, height: 24, textAlign: 'center',
+                border: '1px solid #fff', ...(j === 5 ? { borderLeft: '3px solid var(--texto, #333)' } : {}),
+              }}>
+                {((c.clase === 'amenaza' ? amenazas : oportunidades)[p - 1]?.[c.i - 1] ?? []).join(' ')}
+              </td>
+            ))}
+          </tr>
+        ))}
+        <tr><th />{COLUMNAS_CONSOLIDADA.map((c, j) => <th key={j} style={{ fontWeight: 400 }} className="tenue">I{c.i}</th>)}</tr>
+      </tbody>
+    </table>
+  );
+}

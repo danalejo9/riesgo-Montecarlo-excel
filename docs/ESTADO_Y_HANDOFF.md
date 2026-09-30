@@ -1499,6 +1499,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (V1–V11). **Siguiente**: la ronda de pruebas del usuario (N, Q1–Q66) y
     los arreglos que salgan; pista B (licencia, precio, publicación).
 
+92. [x] **Oportunidades en su propia matriz (2026-09-30)**, a pedido del
+    usuario. `esOportunidad` (solo acorta o ahorra, o cualitativa con nivel
+    −1 a −5), `Registro.matrizOportunidades`, escala de azules
+    (`COLORES_OPORTUNIDAD`, `zonaOportunidadDe`, `colorDe`), matriz
+    consolidada doble del PMBOK (`COLUMNAS_CONSOLIDADA`: amenazas I1→I5,
+    oportunidades I5→I1). Panel con las tres vistas; hoja con las tres
+    matrices; PDF con la consolidada.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

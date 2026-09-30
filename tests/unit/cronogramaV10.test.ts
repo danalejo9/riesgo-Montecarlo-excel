@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  COLORES_ZONA, evaluarRegistro, hojaRegistro, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, nivelProbabilidad, riesgosActivos,
+  COLORES_OPORTUNIDAD, COLORES_ZONA, esOportunidad, evaluarRegistro, hojaRegistro, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, nivelProbabilidad, riesgosActivos,
   simularPlazo, zonaDe, OPCIONES_PLAZO_POR_DEFECTO, type Cronograma,
 } from '../../engine/cronograma/index.ts';
 import { leerHojaComoMatriz } from '../helpers/leerHoja.ts';
@@ -104,25 +104,61 @@ describe('matriz de probabilidad e impacto (V10)', () => {
     expect(f('R4')).toMatchObject({ estado: 'cerrado', origenImpacto: 'estimación' });
     // Los cerrados al final y fuera de la matriz; cada abierto en su casilla.
     expect(reg.filas.at(-1)!.id).toBe('R4');
-    const enMatriz = reg.matriz.flat(2);
-    expect(enMatriz.sort()).toEqual(['R1', 'R2', 'R3', 'R5', 'R8']);
+    // R5 (estructura prefabricada, acorta) es una oportunidad: va en su propia matriz.
+    expect(reg.matriz.flat(2).sort()).toEqual(['R1', 'R2', 'R3', 'R8']);
+    expect(reg.matrizOportunidades.flat(2)).toEqual(['R5']);
+    const r5 = imp.porRiesgo.find((x) => x.id === 'R5')!;
+    expect(f('R5')).toMatchObject({ clase: 'oportunidad', origenImpacto: 'simulación' });
+    expect(r5.diasP80).toBeLessThanOrEqual(0);
     expect(reg.matriz[f('R8').nivelP - 1]![f('R8').nivelI - 1]).toContain('R8');
     expect(reg.vencidas).toBe(1);
-    const puntajes = reg.filas.filter((x) => x.estado !== 'cerrado').map((x) => x.puntaje);
+    // Primero las amenazas (de mayor a menor), luego las oportunidades, luego los cerrados.
+    const abiertas = reg.filas.filter((x) => x.estado !== 'cerrado');
+    expect(abiertas.map((x) => x.clase)).toEqual([...abiertas.filter((x) => x.clase === 'amenaza'), ...abiertas.filter((x) => x.clase === 'oportunidad')].map((x) => x.clase));
+    const puntajes = abiertas.filter((x) => x.clase === 'amenaza').map((x) => x.puntaje);
     expect([...puntajes].sort((a, b) => b - a)).toEqual(puntajes);
   });
 
-  it('la hoja: 25 casillas coloreadas, la lista con su zona y la revisión vencida en rojo', () => {
-    const l = leerRiesgosPlazo(hojaRiesgos([[{ ID: 'R8', Riesgo: 'Imagen', Probabilidad: 0.6, 'Impacto cualitativo (1–5)': 3, 'Fecha de revisión': HOY - 10 }]]), cron.actividades);
+  it('qué es una oportunidad', () => {
+    const base = { id: 'X', nombre: 'x', probabilidad: 0.3, impactoMin: 0, impactoMasProbable: 0, impactoMax: 0, actividades: ['7'] };
+    expect(esOportunidad({ ...base, impactoMin: -0.15, impactoMasProbable: -0.1, impactoMax: -0.05 })).toBe(true);
+    expect(esOportunidad({ ...base, impactoMin: -0.1, impactoMax: 0.1 })).toBe(false); // puede ir a cualquier lado: amenaza
+    expect(esOportunidad({ ...base, actividades: [], costo: -5000 })).toBe(true); // un ahorro
+    expect(esOportunidad({ ...base, impactoMin: -0.1, impactoMax: -0.05, costo: 3000 })).toBe(false); // acorta pero cuesta
+    expect(esOportunidad({ ...base, actividades: [], cualitativo: true, impactoCualitativo: -3 })).toBe(true);
+    expect(esOportunidad({ ...base, actividades: [], cualitativo: true, impactoCualitativo: 3 })).toBe(false);
+  });
+
+  it('la hoja: tres matrices coloreadas (amenazas, oportunidades y la consolidada doble) y la lista', () => {
+    const l = leerRiesgosPlazo(hojaRiesgos([
+      [{ ID: 'R8', Riesgo: 'Imagen', Probabilidad: 0.6, 'Impacto cualitativo (1–5)': 3, 'Fecha de revisión': HOY - 10 }],
+      [{ ID: 'R9', Riesgo: 'Descuento por pronto pago', Probabilidad: 0.8, 'Impacto cualitativo (1–5)': -4 }],
+    ]), cron.actividades);
+    expect(l.problemas).toEqual([]);
     const reg = evaluarRegistro({ riesgos: l.riesgos, actividades: cron.actividades, dias: 118, hoy: HOY });
+    expect(reg.matrizOportunidades[4]![3]).toEqual(['R9']); // P5 × I4
     const h = hojaRegistro(reg);
-    const casillas = h.colores!.filter((c) => c.fila >= 4 && c.fila <= 8);
-    expect(casillas).toHaveLength(25);
-    // La esquina de arriba a la derecha (P5 × I5) es roja; la de abajo a la izquierda, verde.
-    expect(casillas.find((c) => c.fila === 4 && c.col === 5)!.color).toBe(COLORES_ZONA.roja);
-    expect(casillas.find((c) => c.fila === 8 && c.col === 1)!.color).toBe(COLORES_ZONA.verde);
+    const fila = (texto: string) => h.valores.findIndex((f) => f[0] === texto);
+    const amenazas = fila('Amenazas') + 2; // la fila de P5
+    const oportunidades = fila('Oportunidades') + 2;
+    const consolidada = h.valores.findIndex((f) => String(f[0]).startsWith('Consolidada')) + 2;
+    const color = (f: number, c: number) => h.colores!.find((x) => x.fila === f && x.col === c)?.color;
+    expect(color(amenazas, 5)).toBe(COLORES_ZONA.roja); // P5 × I5
+    expect(color(amenazas + 4, 1)).toBe(COLORES_ZONA.verde); // P1 × I1
+    expect(color(oportunidades, 5)).toBe(COLORES_OPORTUNIDAD.alta);
+    expect(color(oportunidades + 4, 1)).toBe(COLORES_OPORTUNIDAD['mínima']);
+    // Consolidada: 10 columnas; en el centro (5 y 6) los impactos más altos de cada lado.
+    expect(h.valores[consolidada - 1]!.slice(1)).toEqual([
+      'Amenaza I1', 'Amenaza I2', 'Amenaza I3', 'Amenaza I4', 'Amenaza I5', 'Oportunidad I5', 'Oportunidad I4', 'Oportunidad I3', 'Oportunidad I2', 'Oportunidad I1',
+    ]);
+    expect(color(consolidada, 5)).toBe(COLORES_ZONA.roja);
+    expect(color(consolidada, 6)).toBe(COLORES_OPORTUNIDAD.alta);
+    expect(h.valores[consolidada]![7]).toBe('R9'); // P5, oportunidad I4
+    expect(h.colores!.filter((c) => c.fila >= consolidada && c.fila < consolidada + 5)).toHaveLength(50);
+    // La lista: la revisión vencida de R8 en rojo; R9 marcada como oportunidad.
     const filaR8 = h.valores.findIndex((f) => f[0] === 'R8');
-    expect(h.colores!.some((c) => c.fila === filaR8 && c.col === 6 && c.color === COLORES_ZONA.roja)).toBe(true);
+    expect(h.colores!.some((c) => c.fila === filaR8 && c.col === 7 && c.color === COLORES_ZONA.roja)).toBe(true);
+    expect(h.valores.find((f) => f[0] === 'R9')![2]).toBe('oportunidad');
     expect(h.valores[1]![0]).toContain('1 riesgo con la revisión vencida');
   });
 });

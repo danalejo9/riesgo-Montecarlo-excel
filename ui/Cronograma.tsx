@@ -14,7 +14,7 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
-  riesgosActivos, evaluarRegistro, hojaRegistro, COLORES_ZONA, type Registro,
+  riesgosActivos, evaluarRegistro, hojaRegistro, colorDe, type Registro,
   leerRangosTipo, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
@@ -33,7 +33,7 @@ import { Plegable } from './Plegable.tsx';
 import { ControlesVistaPrevia, TarjetaVistaPrevia, useVistaPrevia } from './VistaPreviaPlazo.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { descargarDirecto, esEscritorio, type ArchivoDescarga } from './descarga.ts';
-import { HistogramaFechas, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { HistogramaFechas, MatrizConsolidada, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
@@ -602,21 +602,32 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
 }
 
-/** V10: la matriz de probabilidad e impacto y lo que pide atención. */
+/** V10: las matrices de probabilidad e impacto (consolidada, amenazas, oportunidades) y lo que pide atención. */
 function RegistroRiesgos({ r }: { r: Registro }) {
+  const [vista, setVista] = useState<'consolidada' | 'amenazas' | 'oportunidades'>('consolidada');
   const abiertos = r.filas.filter((f) => f.estado !== 'cerrado');
-  const rojos = abiertos.filter((f) => f.zona === 'roja').length;
+  const rojos = abiertos.filter((f) => f.clase === 'amenaza' && f.zona === 'roja').length;
+  const oportunidades = abiertos.filter((f) => f.clase === 'oportunidad').length;
   return (
-    <Plegable id="cronograma-registro" abierta={rojos > 0 || r.vencidas > 0} titulo={T.registro} resumen={T.registroResumen(abiertos.length, rojos, r.vencidas)}>
-      <MatrizRiesgos matriz={r.matriz} />
+    <Plegable id="cronograma-registro" abierta={rojos > 0 || r.vencidas > 0} titulo={T.registro} resumen={T.registroResumen(abiertos.length - oportunidades, oportunidades, rojos, r.vencidas)}>
+      <p role="group" aria-label={T.matrizVista} style={{ margin: '4px 0' }}>
+        {(['consolidada', 'amenazas', 'oportunidades'] as const).map((v) => (
+          <button key={v} type="button" className={vista === v ? '' : 'secundario'} aria-pressed={vista === v} onClick={() => setVista(v)} style={{ marginRight: 4 }}>
+            {T.matrices[v]}
+          </button>
+        ))}
+      </p>
+      {vista === 'consolidada' && <MatrizConsolidada amenazas={r.matriz} oportunidades={r.matrizOportunidades} textos={T.matrices} />}
+      {vista === 'amenazas' && <MatrizRiesgos matriz={r.matriz} />}
+      {vista === 'oportunidades' && <MatrizRiesgos matriz={r.matrizOportunidades} clase="oportunidad" />}
       {r.vencidas > 0 && <p className="aviso-linea">{T.vencidas(r.filas.filter((f) => f.vencida).map((f) => f.id).join(', '))}</p>}
       <table>
         <thead><tr><th>ID</th><th>{T.riesgoCol}</th><th>{T.estadoCol}</th><th>{T.puntajeCol}</th><th>{T.responsableCol}</th></tr></thead>
         <tbody>
-          {r.filas.slice(0, 12).map((f) => (
+          {r.filas.filter((f) => vista === 'consolidada' || (vista === 'oportunidades') === (f.clase === 'oportunidad')).slice(0, 12).map((f) => (
             <tr key={f.id} style={f.estado === 'cerrado' ? { opacity: 0.55 } : undefined}>
-              <td>{f.id}</td><td>{f.nombre}</td><td>{T.estados[f.estado]}</td>
-              <td><span style={{ background: COLORES_ZONA[f.zona], color: '#1b1b1b', padding: '0 6px', borderRadius: 3 }}>{f.puntaje}</span></td>
+              <td>{f.id}</td><td>{f.nombre}{f.clase === 'oportunidad' && <span className="tenue"> · {T.oportunidad}</span>}</td><td>{T.estados[f.estado]}</td>
+              <td><span style={{ background: colorDe(f.clase, f.puntaje), color: '#1b1b1b', padding: '0 6px', borderRadius: 3 }}>{f.puntaje}</span></td>
               <td>{f.responsable ?? ''}</td>
             </tr>
           ))}
