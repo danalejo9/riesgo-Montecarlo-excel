@@ -197,6 +197,8 @@ Las pruebas en Excel del módulo de cronograma se añadirán a la guía como blo
 | **P1** | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance. Con tests | 8–10 d |
 | **P2** | Chequeo de salud con semáforo en el panel | 3–4 d |
 | **P3** | Monte Carlo del cronograma: CPM vectorizado en workers, 3 puntos, *drivers* y eventos. Todas las salidas del §3.4. Benchmark | 10–12 d |
+| **P3b** | Simulación repartida en Web Workers (objetivo: 5.000 × 10.000 en menos de 10 s) | 1–2 d |
+| **P3c** | **Vistas del cronograma** (pedido del usuario, 30/09): ventana flotante «Ver cronograma» con Gantt interactivo (barras, flechas FC/CC/FF/CF, zoom, críticas y criticidad en color, franja P10–P90, líneas del cronograma y del P80, predecesoras y sucesoras al pulsar) y hoja «Cronograma (Gantt)» de celdas coloreadas para compartir e imprimir sin el complemento | 2 d |
 | **P4** | Importadores de XML de MS Project y XER de P6, con verificación contra las fechas de origen | 6–8 d |
 | **P5** | Costo‑plazo: hitos como entradas del modelo de costos, costos que dependen del tiempo, JCL | 5–7 d |
 | **P6** (v2) | Clima probabilístico, escenarios antes y después de mitigar, ramificación probabilística, rangos por sector, ayudas de elicitación | — |

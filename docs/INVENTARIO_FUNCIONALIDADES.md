@@ -197,6 +197,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | P1 | P1 | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance | Estudios QSRA | 🟡 núcleo 30/09 (falta avance, más restricciones, calendario por actividad) |
 | P2 | P2 | Chequeo de salud del cronograma (DCMA‑14) con semáforo | Estudios QSRA | ✅ 30/09 (falta Excel: Q11–Q12) |
 | P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ✅ 30/09 (falta Excel: Q13–Q20; falta repartirlo en workers) |
+| P3b | P3b | Simulación del plazo repartida en varios núcleos (Web Workers) | Plan | ⬜ |
+| P3c | P3c | **Ver el cronograma**: ventana con Gantt interactivo (flechas, zoom, criticidad, P10–P90) y hoja «Cronograma (Gantt)» para compartir | **Tú** (30/09) | ⬜ siguiente |
 | P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ⬜ |
 | P5 | P5 | Costo + plazo en la misma simulación: costos que dependen del tiempo y JCL | Estudios QSRA | ⬜ |
 | P6 | P6 | (v2) Clima, mitigación antes/después, ramificación, rangos por sector | Estudios QSRA | ⬜ |
@@ -231,6 +233,7 @@ Cálculo en la nube, cualquier uso de IA externa (quitado a petición tuya el
 | Estudio 2 + motor de ajuste | Bloque I (I1, I2, I3) |
 | Tres estudios de riesgo de cronograma (QSRA), 30/09 | Módulo Cronograma, P0–P6 (`PLAN_CRONOGRAMA_QSRA.md`) |
 | Libro de pruebas propio para el cronograma | ✅ `ejemplos/demo-cronograma.xlsx` + bloque Q de la guía |
+| Ver el cronograma dibujado (Gantt), como otros programas | P3c: ventana interactiva + hoja de Gantt |
 | No perder de vista las pruebas N | Fila 1b y pista A del plan: van primero |
 | Quitar lo de la IA | ✅ quitado |
 | Gráfico de distribución en el ajuste (D1) | I1 |

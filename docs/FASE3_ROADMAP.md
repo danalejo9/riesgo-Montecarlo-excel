@@ -177,7 +177,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 | E12 | Diferenciadores: depurador de escenarios, conversor de @RISK, narrativa local | 8–12 d | ⬜ después de la v1.0 (§1.2) |
-| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, núcleo de P1 ✅, P2 ✅, P3 ✅ (30/09; libro de pruebas propio y bloque Q1–Q20). Siguen P3b (workers), resto de P1, P4 y P5 (§E13) |
+| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, núcleo de P1 ✅, P2 ✅, P3 ✅ (30/09; libro de pruebas propio y bloque Q1–Q20). Orden: P3c (vistas), P3b (workers), resto de P1, P4, P5 (§E13) |
 
 **Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
 salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el
@@ -1044,6 +1044,8 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 | P1 | CPM determinista (`engine/cronograma/cpm.ts`): FS/SS/FF/SF con retardos, calendarios laborables, restricciones, avance | 8–10 d |
 | P2 | Chequeo de salud tipo DCMA‑14 + puntos de convergencia, con semáforo que bloquea o avisa | 3–4 d |
 | P3 | Monte Carlo del cronograma: CPM vectorizado por bloques en workers, 3 puntos por categoría, *risk drivers* (AACE 57R‑09), eventos; curva S, P50/P80/P90, criticidad, tornado en días, «quitar un riesgo», *merge bias*, Gantt probabilístico, PDF | 10–12 d |
+| P3b | Simulación repartida en Web Workers (5.000 × 10.000 < 10 s) | 1–2 d |
+| P3c | Vistas: ventana «Ver cronograma» (Gantt interactivo con flechas, zoom, criticidad, franja P10–P90) y hoja «Cronograma (Gantt)» de celdas coloreadas | 2 d |
 | P4 | Importadores MSPDI (XML de MS Project) y XER (P6) en TypeScript, con verificación contra las fechas de origen | 6–8 d |
 | P5 | Costo‑plazo: hitos como entradas del modelo de costos (`RIESGO.CRONOGRAMA`), costos dependientes del tiempo, dispersión y JCL | 5–7 d |
 | P6 | (v2) Clima probabilístico, escenarios pre/post mitigación, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
