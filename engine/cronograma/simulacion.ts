@@ -30,7 +30,7 @@ import { ordenTopologico, resolverRed } from './cpm.ts';
 import { muestreadorDuracion, type Muestreador } from './muestreo.ts';
 import { parametrosRed, type ParametrosRed } from './red.ts';
 import { idRama, type RiesgoPlazo } from './riesgos.ts';
-import type { Cronograma } from './tipos.ts';
+import type { Actividad, Cronograma } from './tipos.ts';
 
 export type FormaDuracion = 'pert' | 'triangular';
 
@@ -124,6 +124,12 @@ export interface ResultadoCostos {
   jclPlan: number;
   /** El menor percentil q (igual para los dos) con el que el conjunto llega al 80 %. */
   conjunto80: { q: number; fecha: number; dias: number; costo: number } | null;
+  /**
+   * V4, si hay costos con mínimo y máximo: cuántos, el P80 del costo con los
+   * más probables (en las mismas iteraciones) y lo que su incertidumbre
+   * añade al P80.
+   */
+  rangos?: { n: number; p80SinRangos: number; aporteP80: number };
 }
 
 /**
@@ -224,6 +230,12 @@ export interface PlazoPreparado {
   costoDia: number[];
   costoFijo: number;
   costoIndirectoDia: number;
+  /**
+   * V4: los costos con mínimo y máximo. `costoFijo` y `costoDia` llevan el
+   * más probable; en cada iteración se suma la diferencia con lo sorteado
+   * (por día, multiplicada por la duración de esa iteración).
+   */
+  costosInciertos: Array<{ a: number; porDia: boolean; mp: number; dist: Muestreador; flujo: number }>;
   hayCostos: boolean;
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada. */
   trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[] };
@@ -294,12 +306,30 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     costoDia: [...acts.map((a) => a.costoPorDia ?? 0), ...ramas.map(() => 0)],
     costoFijo: acts.reduce((s2, a) => s2 + (a.costoFijo ?? 0), 0) + (c.costoAdicional ?? 0),
     costoIndirectoDia: c.costoIndirectoDia ?? 0,
-    hayCostos: acts.some((a) => a.costoPorDia || a.costoFijo) || !!c.costoIndirectoDia || !!c.costoAdicional || riesgos.some((r) => r.costo),
+    costosInciertos: costosInciertos(acts, op.forma),
+    hayCostos: acts.some((a) => a.costoPorDia || a.costoFijo || a.costoFijoRango || a.costoPorDiaRango) || !!c.costoIndirectoDia || !!c.costoAdicional || riesgos.some((r) => r.costo),
     semilla: op.semilla,
     cal,
     actividades: nombres,
     forma: op.forma,
   };
+}
+
+/**
+ * V4: un muestreador por costo con rango, con su propio flujo de números
+ * aleatorios (`costo-fijo:ID`, `costo-dia:ID`): las duraciones y los riesgos
+ * sortean exactamente lo mismo que sin rangos.
+ */
+function costosInciertos(acts: readonly Actividad[], forma: FormaDuracion): PlazoPreparado['costosInciertos'] {
+  const out: PlazoPreparado['costosInciertos'] = [];
+  acts.forEach((a, i) => {
+    for (const [porDia, mp, rango] of [[false, a.costoFijo, a.costoFijoRango], [true, a.costoPorDia, a.costoPorDiaRango]] as const) {
+      if (!rango || mp === undefined) continue;
+      const dist = muestreadorDuracion(rango.min, mp, rango.max, forma);
+      if (dist) out.push({ a: i, porDia, mp, dist, flujo: streamOf(`${porDia ? 'costo-dia' : 'costo-fijo'}:${a.id}`) });
+    }
+  });
+  return out;
 }
 
 /**
@@ -309,7 +339,7 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
 export interface AcumuladorPlazo {
   hechas: number;
   /** Fin del proyecto por iteración, con la iteración en la que empieza cada tramo. */
-  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array }>;
+  tramos: Array<{ desde: number; fin: Float64Array; costo?: Float64Array; costoBase?: Float64Array }>;
   cuentaFin: ContadorDias;
   inicios: ContadorDias[];
   fines: ContadorDias[];
@@ -362,6 +392,8 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
   };
   const finTramo = new Float64Array(Math.max(0, hasta - desde));
   const costoTramo = p.hayCostos ? new Float64Array(Math.max(0, hasta - desde)) : undefined;
+  // V4: el costo con los más probables (sin el sorteo de los rangos), para saber cuánto añaden.
+  const costoBaseTramo = costoTramo && p.costosInciertos.length > 0 ? new Float64Array(costoTramo.length) : undefined;
 
   for (let i0 = desde; i0 < hasta; i0 += B) {
     const b = Math.min(B, hasta - i0);
@@ -470,6 +502,15 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
         for (let k = 0; k < b; k++) costo[k] = (costo[k] as number) + cd * (dur[ba + k] as number);
       }
       const ind = p.costoIndirectoDia;
+      if (costoBaseTramo) for (let k = 0; k < b; k++) costoBaseTramo[i0 - desde + k] = (costo[k] as number) + ind * (fin[k] as number);
+      // V4: lo sorteado de cada costo con rango, menos el más probable que ya se contó.
+      for (const x of p.costosInciertos) {
+        const ba = x.a * B;
+        for (let k = 0; k < b; k++) {
+          const d = x.dist.muestra(semilla, x.flujo, i0 + k) - x.mp;
+          costo[k] = (costo[k] as number) + (x.porDia ? d * (dur[ba + k] as number) : d);
+        }
+      }
       for (let k = 0; k < b; k++) costoTramo[i0 - desde + k] = (costo[k] as number) + ind * (fin[k] as number);
     }
     // 4. Atrás.
@@ -564,7 +605,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
     }
     acc.hechas += b;
   }
-  acc.tramos.push({ desde, fin: finTramo, ...(costoTramo ? { costo: costoTramo } : {}) });
+  acc.tramos.push({ desde, fin: finTramo, ...(costoTramo ? { costo: costoTramo } : {}), ...(costoBaseTramo ? { costoBase: costoBaseTramo } : {}) });
 }
 
 /** Suma varios acumuladores (de tramos distintos) en uno. */
@@ -598,6 +639,7 @@ export function transferiblesDe(acc: AcumuladorPlazo): ArrayBuffer[] {
   acc.tramos.forEach((t) => {
     agregar(t.fin);
     if (t.costo) agregar(t.costo);
+    if (t.costoBase) agregar(t.costoBase);
   });
   agregar(acc.cuentaFin.cuentas);
   acc.inicios.forEach((c) => agregar(c.cuentas));
@@ -616,10 +658,12 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
 
   const finProyecto = new Float64Array(acc.hechas);
   const costoIter = p.hayCostos ? new Float64Array(acc.hechas) : null;
+  const costoBase = p.hayCostos && p.costosInciertos.length > 0 ? new Float64Array(acc.hechas) : null;
   let k = 0;
   for (const t of [...acc.tramos].sort((a, b) => a.desde - b.desde)) {
     finProyecto.set(t.fin, k);
     if (costoIter && t.costo) costoIter.set(t.costo, k);
+    if (costoBase && t.costoBase) costoBase.set(t.costoBase, k);
     k += t.fin.length;
   }
 
@@ -667,9 +711,16 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
     riesgos: p.riesgos.map((x, j) => ({ id: x.r.id, nombre: x.r.nombre, probabilidad: x.r.probabilidad, ocurrio: (acc.veces[j] as number) / M })),
     cal: (f: number) => fechaDia(diaFin(f)),
     ...(costoIter && acc.hechas > 0
-      ? { costos: analizarCostos(finProyecto, costoIter, costoDeterminista(p), det, (q) => fechaDia(q)) }
+      ? { costos: conRangos(analizarCostos(finProyecto, costoIter, costoDeterminista(p), det, (q) => fechaDia(q)), costoBase, p.costosInciertos.length) }
       : {}),
   };
+}
+
+/** V4: lo que añaden al P80 del costo los rangos de los costos. */
+function conRangos(c: ResultadoCostos, base: Float64Array | null, n: number): ResultadoCostos {
+  if (!base || n === 0) return c;
+  const p80SinRangos = cuantilOrdenado(Float64Array.from(base).sort(), 0.8);
+  return { ...c, rangos: { n, p80SinRangos, aporteP80: c.p80 - p80SinRangos } };
 }
 
 /** El costo con las duraciones de la hoja y sin riesgos. */

@@ -243,7 +243,7 @@ def pert_muestra(rng, a, m, b):
     return a + (b - a) * rng.betavariate(al, be)
 
 
-def monte_carlo():
+def monte_carlo(rangos=None):
     import random
     rng = random.Random(20270201)
     acts = {a[0]: a for a in ACTIVIDADES}
@@ -259,7 +259,7 @@ def monte_carlo():
             sucs[p].append((s_, t, r))
     ina = {a[0]: (indice_desde(a[9]) if a[9] else 0) for a in ACTIVIDADES}
     riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
-    fines, crit, costos, fines_dia = [], {a[0]: 0 for a in ACTIVIDADES}, [], []
+    fines, crit, costos, fines_dia, bases = [], {a[0]: 0 for a in ACTIVIDADES}, [], [], []
     fijo = sum(COSTO_FIJO.values())
     for _ in range(ITERACIONES_MC):
         d = {}
@@ -290,6 +290,13 @@ def monte_carlo():
                 crit[p] += 1
         fines.append(max(0, math.ceil(fin - 1e-9) - 1))  # día de fin (índice laborable)
         costo += sum(acts[k][8] * d[k] for k in d) + COSTO_INDIRECTO_DIA * fin
+        bases.append(costo)
+        # V4: cada costo con rango, sorteado (PERT) alrededor de su valor más probable.
+        for k, (fmin, fmax, dmin, dmax) in (rangos or {}).items():
+            if fmin is not None:
+                costo += pert_muestra(rng, fmin, COSTO_FIJO[k], fmax) - COSTO_FIJO[k]
+            if dmin is not None:
+                costo += (pert_muestra(rng, dmin, acts[k][8], dmax) - acts[k][8]) * d[k]
         costos.append(costo)
     pares = list(zip(fines, costos))
     fines_ord, costos_ord = sorted(fines), sorted(costos)
@@ -298,6 +305,8 @@ def monte_carlo():
     d80, c80 = cuantil(fines_ord, 0.8), cuantil(costos_ord, 0.8)
     jcl = sum(1 for f, c in pares if f <= d80 and c <= c80) / len(pares)
     costo_pct = {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}
+    if rangos:
+        return costo_pct, jcl, cuantil(sorted(bases), 0.8), sum(costos) / len(costos)
     return ({p: cuantil(fines_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()},
             costo_pct, jcl)
 
@@ -329,6 +338,18 @@ def salud():
 
 
 PCT, CRIT, COSTO_PCT, JCL = monte_carlo()
+
+# V4: incertidumbre de los costos. (costo fijo mínimo, máximo, costo por día
+# mínimo, máximo); el más probable es el de «Actividades». Vacías en el
+# escenario base; «Costos inciertos (prueba)» las trae para copiarlas.
+COSTO_RANGOS = {
+    "6": (60000, 85000, None, None),       # cimentación: el acero y el concreto
+    "7": (130000, 190000, 3200, 4600),     # estructura
+    "8": (90000, 130000, None, None),      # ascensor importado: tipo de cambio
+    "14": (55000, 80000, 2200, 3100),      # acabados
+    "10": (None, None, 1600, 2400),        # instalaciones eléctricas
+}
+COSTO_PCT_V4, JCL_V4, P80_SIN_RANGOS_V4, MEDIA_V4 = monte_carlo(COSTO_RANGOS)
 COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
 
@@ -363,6 +384,8 @@ LINEAS = [
     ("p", "«Esperado (salud)» y «Esperado (simulación)»: el semáforo y el Monte Carlo de referencia."),
     ("p", "«Avance (prueba)» y «Esperado (con avance)»: un escenario con fecha de corte, fechas reales,"),
     ("p", "% completado, duración restante y restricciones de fin, con su resultado esperado."),
+    ("p", "«Costos inciertos (prueba)» y «Esperado (costos inciertos)»: mínimo y máximo de algunos costos (V4)"),
+    ("p", "y el Monte Carlo de referencia con ellos."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -390,7 +413,9 @@ CABECERA = ["ID", "Actividad", "Duración (días)", "Predecesoras", "Mínimo", "
             "Máximo", "Categoría", "Costo por día", "Inicio no antes de",
             # Avance y más restricciones (vacías en el escenario base; ver «Avance (prueba)»).
             "Inicio real", "Fin real", "% completado", "Duración restante",
-            "Inicio no después de", "Terminar no antes de", "Terminar no después de", "Costo fijo"]
+            "Inicio no después de", "Terminar no antes de", "Terminar no después de", "Costo fijo",
+            # V4: incertidumbre de los costos (vacías en el escenario base; ver «Costos inciertos (prueba)»).
+            "Costo fijo mínimo", "Costo fijo máximo", "Costo por día mínimo", "Costo por día máximo"]
 for j, t in enumerate(CABECERA, start=1):
     c = act.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -405,7 +430,10 @@ for i, a in enumerate(ACTIVIDADES, start=4):
 for i, a in enumerate(ACTIVIDADES, start=4):
     if a[0] in COSTO_FIJO:
         act.cell(row=i, column=18, value=COSTO_FIJO[a[0]]).number_format = DINERO
-for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13], start=1):
+for i in range(4, 4 + len(ACTIVIDADES)):
+    for j in (19, 20, 21, 22):
+        act.cell(row=i, column=j).number_format = DINERO
+for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19], start=1):
     act.column_dimensions[get_column_letter(j)].width = w
 for i in range(4, 4 + len(ACTIVIDADES)):
     for j in (11, 12, 15, 16, 17):
@@ -568,6 +596,40 @@ for j, w in enumerate([6, 12, 12, 13, 17, 20, 22], start=1):
 hoja_esperado("Esperado (con avance)",
               "CPM esperado con el escenario de «Avance (prueba)» (fecha de corte 15/03/2027), calculado por el script",
               ES2, EF2, LS2, LF2, FIN2, DUR2, ESTADO2)
+
+ci = wb.create_sheet("Costos inciertos (prueba)")
+ci["A1"] = ("V4: copia estos valores en «Actividades», columnas S a V (mismo ID). El costo fijo y el costo por día "
+            "de «Actividades» son los más probables.")
+ci["A1"].font = H
+CAB_CI = ["ID", "Actividad", "Costo fijo mínimo", "Costo fijo máximo", "Costo por día mínimo", "Costo por día máximo"]
+for j, t in enumerate(CAB_CI, start=1):
+    c = ci.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+nombres = {a[0]: a[1] for a in ACTIVIDADES}
+for i, (k, vals) in enumerate(COSTO_RANGOS.items(), start=4):
+    ci.cell(row=i, column=1, value=k)
+    ci.cell(row=i, column=2, value=nombres[k])
+    for j, v in enumerate(vals, start=3):
+        if v is not None:
+            ci.cell(row=i, column=j, value=v).number_format = DINERO
+for j, w in enumerate([6, 32, 17, 17, 19, 19], start=1):
+    ci.column_dimensions[get_column_letter(j)].width = w
+
+ev = wb.create_sheet("Esperado (costos inciertos)")
+ev["A1"] = (f"Monte Carlo de referencia con «Costos inciertos (prueba)»: {ITERACIONES_MC} iteraciones en Python. "
+            "Debe coincidir en ±1 % de costo y ±3 puntos de JCL. El plazo no cambia (los costos no mueven fechas).")
+ev["A1"].font = H
+ev["A3"], ev["B3"] = "Costo", "Valor"
+for c in (ev["A3"], ev["B3"]):
+    c.font, c.fill = CAB, FONDO
+for i, (nombre, v) in enumerate([("Determinista (exacto; con los más probables)", COSTO_DET), ("P10", COSTO_PCT_V4[0.1]),
+                                  ("P50", COSTO_PCT_V4[0.5]), ("P80", COSTO_PCT_V4[0.8]), ("P90", COSTO_PCT_V4[0.9]),
+                                  ("Media", MEDIA_V4), ("P80 con los costos más probables", P80_SIN_RANGOS_V4),
+                                  ("JCL: P(plazo ≤ P80 y costo ≤ P80)", JCL_V4)], start=4):
+    ev.cell(row=i, column=1, value=nombre)
+    ev.cell(row=i, column=2, value=round(v, 4) if nombre.startswith("JCL") else round(v, 2)).number_format = "0%" if nombre.startswith("JCL") else DINERO
+ev.column_dimensions["A"].width = 46
+ev.column_dimensions["B"].width = 16
 
 
 # ---------------------------------------------------------------------------

@@ -1402,6 +1402,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Playwright y el PDF de Chromium (pie y «Página N de M» en cada página).
     Guía Q46–Q48. **Siguiente**: V4 (incertidumbre en costos).
 
+84. [x] **V4 (2026-09-30)**. `Actividad.costoFijoRango/costoPorDiaRango`
+    (columnas «Costo fijo mínimo/máximo», «Costo por día mínimo/máximo»; el
+    más probable es el costo de su columna). En la simulación, un
+    muestreador por costo (misma forma que las duraciones) con flujos
+    propios `costo-fijo:ID` y `costo-dia:ID`: las fechas no cambian ni un
+    decimal. `ResultadoCostos.rangos` (P80 con los más probables en las
+    mismas iteraciones y lo que añade la incertidumbre), en la hoja, el
+    resumen en palabras y el PDF. La plantilla «Actividades» gana «Costo
+    fijo» y las cuatro columnas. Oráculo Python: «Costos inciertos
+    (prueba)» y «Esperado (costos inciertos)». Guía Q49–Q50.
+    **Siguiente**: V5 (seguimiento en el tiempo).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

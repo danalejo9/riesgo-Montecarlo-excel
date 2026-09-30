@@ -46,6 +46,8 @@ export const ENCABEZADO_ACTIVIDADES = [
   'Categoría', 'Costo por día', 'Inicio no antes de',
   // Avance y más restricciones: opcionales, se dejan vacías si no se usan.
   'Inicio real', 'Fin real', '% completado', 'Duración restante', 'Inicio no después de', 'Terminar no antes de', 'Terminar no después de',
+  // Costo fijo (P5) y la incertidumbre de los costos (V4): el valor de «Costo fijo» / «Costo por día» es el más probable.
+  'Costo fijo', 'Costo fijo mínimo', 'Costo fijo máximo', 'Costo por día mínimo', 'Costo por día máximo',
 ];
 
 /** La plantilla: tres actividades de ejemplo que el usuario sobrescribe. */
@@ -63,10 +65,12 @@ export function plantillaActividades(codigoMoneda = MONEDA_POR_DEFECTO): HojaAEs
     formatos: {
       0: '@', 8: formatoMoneda(codigoMoneda), 9: FORMATO_FECHA,
       10: FORMATO_FECHA, 11: FORMATO_FECHA, 12: '0%', 14: FORMATO_FECHA, 15: FORMATO_FECHA, 16: FORMATO_FECHA,
+      17: formatoMoneda(codigoMoneda), 18: formatoMoneda(codigoMoneda), 19: formatoMoneda(codigoMoneda),
+      20: formatoMoneda(codigoMoneda), 21: formatoMoneda(codigoMoneda),
     },
     filaEncabezado: 2,
     primeraFilaDatos: 3,
-    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21],
+    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19],
   };
 }
 
@@ -210,6 +214,11 @@ export function hojaSimulacionPlazo(
     v.push(['P90', c.p90]);
     v.push(['Media', c.media]);
     enDinero(fk, 1, 6);
+    if (c.rangos) {
+      v.push([`P80 con los costos más probables (sin la incertidumbre de ${c.rangos.n} costo${c.rangos.n === 1 ? '' : 's'})`, c.rangos.p80SinRangos]);
+      v.push(['Lo que añade la incertidumbre de los costos al P80', c.rangos.aporteP80]);
+      enDinero(v.length - 2, 1, 2);
+    }
     v.push(['Probabilidad conjunta: plazo ≤ P80 y costo ≤ P80 (JCL)', c.jclP80]);
     pctEn(v.length - 1, 1);
     v.push(['Probabilidad de cumplir a la vez la fecha y el costo del cronograma', c.jclPlan]);
@@ -295,6 +304,8 @@ export function hojaActividadesDe(c: Cronograma, titulo: string, codigoMoneda = 
         a.categoria ?? '', vacio(a.costoPorDia), vacio(a.inicioNoAntesDe),
         vacio(a.inicioReal), vacio(a.finReal), vacio(a.completado), vacio(a.restante),
         vacio(a.inicioNoDespuesDe), vacio(a.terminarNoAntesDe), vacio(a.terminarNoDespuesDe),
+        vacio(a.costoFijo), vacio(a.costoFijoRango?.min), vacio(a.costoFijoRango?.max),
+        vacio(a.costoPorDiaRango?.min), vacio(a.costoPorDiaRango?.max),
       ]),
     ],
   };

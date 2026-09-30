@@ -917,6 +917,36 @@ título de la plantilla (o el del proyecto si lo dejas vacío), el registro
 antes de las entradas, sin «Cómo se calculó», y «Borrador» y el número en
 cada página. Con la plantilla por defecto, el informe es el de siempre.
 
+**Q49. Costos inciertos (V4).** Regenera o vuelve a descargar
+`demo-cronograma.xlsx`: «Actividades» tiene cuatro columnas nuevas (S a V):
+Costo fijo mínimo, Costo fijo máximo, Costo por día mínimo y Costo por día
+máximo, vacías. Copia en ellas los valores de la hoja **«Costos inciertos
+(prueba)»** (siete costos de cinco actividades: 6, 7, 8, 10 y 14). El costo
+fijo (columna R) y el costo por día (I) siguen siendo el valor más
+probable. Calcula y simula («Antes de mitigar», 10.000, PERT). Esperado:
+- El **plazo no cambia**: P50 11/08/2027, P80 24/08/2027, P90 31/08/2027
+  (los costos no mueven fechas).
+- Costo P50 **US$ 1.330.341**, P80 **US$ 1.370.915** (antes, US$ 1.343.353),
+  JCL **74 %**.
+- Un párrafo nuevo: «La incertidumbre de los propios costos (7 costos con
+  mínimo y máximo) añade US$ 27.562 al P80 del costo; con los valores más
+  probables sería US$ 1.343.353.»
+- En «Cronograma (simulación)», bajo el costo: «P80 con los costos más
+  probables…» y «Lo que añade la incertidumbre de los costos al P80».
+- Compara con **«Esperado (costos inciertos)»** (Monte Carlo en Python con
+  otros números aleatorios): costos a ±1 % y JCL a ±3 puntos.
+- El informe PDF (Q47) muestra «Costo P80 con los costos más probables» en
+  «Costo y plazo (JCL)».
+
+**Q50. Errores de los costos inciertos.** En la fila de la actividad 7:
+borra el Costo fijo máximo → «para la incertidumbre del costo fijo hacen
+falta su mínimo y su máximo»; pon un mínimo mayor que el costo fijo →
+«el costo fijo debe cumplir mínimo ≤ costo fijo ≤ máximo»; en la
+actividad 10, borra el Costo fijo (vacío) y escribe un Costo fijo mínimo y
+máximo → «…falta el costo fijo (el valor más probable)». Deshaz los
+cambios al terminar (y borra las columnas S–V para volver a las cifras de
+las demás pruebas).
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

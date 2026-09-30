@@ -161,6 +161,7 @@ export const textosInforme = {
   costoPlan: 'Costo del plan',
   costoMedio: 'Costo medio',
   jclP80: 'JCL (P80 de plazo y costo)',
+  p80SinRangos: 'Costo P80 con los costos más probables',
   jclPlan: 'JCL del plan',
   conjunto80: 'Fecha y costo con 80 % de confianza conjunta',
   nube: 'Costo y fecha de fin, iteración a iteración',

@@ -24,6 +24,7 @@ export function normalizar(s: unknown): string {
 }
 
 type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'costoFijo' | 'inicioNoAntesDe'
+  | 'costoFijoMin' | 'costoFijoMax' | 'costoPorDiaMin' | 'costoPorDiaMax'
   | 'inicioNoDespuesDe' | 'terminarNoAntesDe' | 'terminarNoDespuesDe' | 'inicioReal' | 'finReal' | 'completado' | 'restante';
 
 /** Cada campo con los encabezados que lo identifican (normalizados, por prefijo). */
@@ -38,6 +39,11 @@ const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['min', ['minim', 'min ', 'min', 'optimista']],
   ['max', ['maxim', 'max ', 'max', 'pesimista']],
   ['categoria', ['categoria', 'frente']],
+  // V4: antes que los costos: «Costo fijo mínimo» empieza como «Costo fijo».
+  ['costoFijoMin', ['costo fijo min', 'coste fijo min']],
+  ['costoFijoMax', ['costo fijo max', 'coste fijo max']],
+  ['costoPorDiaMin', ['costo por dia min', 'coste por dia min', 'costo diario min', 'coste diario min']],
+  ['costoPorDiaMax', ['costo por dia max', 'coste por dia max', 'costo diario max', 'coste diario max']],
   ['costoPorDia', ['costo por dia', 'coste por dia', 'costo diario', 'coste diario']],
   ['costoFijo', ['costo fijo', 'coste fijo']],
   ['inicioNoAntesDe', ['inicio no antes']],
@@ -200,6 +206,35 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
         break;
       }
       act[campo] = v;
+    }
+    if (costoMal) continue;
+    // V4: mínimo y máximo de cada costo; el más probable es el costo de su columna.
+    for (const [campo, rango, cmin, cmax, texto] of [
+      ['costoFijo', 'costoFijoRango', 'costoFijoMin', 'costoFijoMax', 'costo fijo'],
+      ['costoPorDia', 'costoPorDiaRango', 'costoPorDiaMin', 'costoPorDiaMax', 'costo por día'],
+    ] as const) {
+      const crudoMin = col(fila, cmin);
+      const crudoMax = col(fila, cmax);
+      if (vacia(crudoMin) && vacia(crudoMax)) continue;
+      const a = numeroDe(crudoMin);
+      const b = numeroDe(crudoMax);
+      const m = act[campo];
+      if (a === undefined || b === undefined) {
+        error(`para la incertidumbre del ${texto} hacen falta su mínimo y su máximo, como números`);
+        costoMal = true;
+        break;
+      }
+      if (m === undefined) {
+        error(`hay mínimo y máximo del ${texto}, pero falta el ${texto} (el valor más probable)`);
+        costoMal = true;
+        break;
+      }
+      if (!(a <= m && m <= b)) {
+        error(`el ${texto} debe cumplir mínimo ≤ ${texto} ≤ máximo (${a}; ${m}; ${b})`);
+        costoMal = true;
+        break;
+      }
+      if (b > a) act[rango] = { min: a, max: b };
     }
     if (costoMal) continue;
     let fallo = false;

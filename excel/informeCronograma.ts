@@ -42,6 +42,7 @@ export interface DatosInformeCronograma {
     costos?: {
       determinista: number; media: number; p10: number; p50: number; p80: number; p90: number;
       jclP80: number; jclPlan: number; conjunto80: { q: number; fecha: number; dias: number; costo: number } | null;
+      rangos?: { n: number; p80SinRangos: number; aporteP80: number };
       /** [días laborables, costo] de una muestra de iteraciones, y las fechas de sus extremos. */
       nube: Array<[number, number]>;
       nubeDesde: number;
@@ -135,6 +136,7 @@ export function datosInformeCronograma(e: {
             costos: {
               determinista: r.costos.determinista, media: r.costos.media, p10: r.costos.p10, p50: r.costos.p50, p80: r.costos.p80, p90: r.costos.p90,
               jclP80: r.costos.jclP80, jclPlan: r.costos.jclPlan, conjunto80: r.costos.conjunto80,
+              ...(r.costos.rangos ? { rangos: r.costos.rangos } : {}),
               nube, nubeDesde: nube.length ? r.cal(min) : r.fechas.p10, nubeHasta: nube.length ? r.cal(max) : r.fechas.p90,
             },
           }

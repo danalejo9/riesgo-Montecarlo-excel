@@ -117,6 +117,7 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
             <dt>{T.costoMedio}</dt><dd>{textoMoneda(s.costos.media)}</dd>
             <dt>{T.costoP50}</dt><dd>{textoMoneda(s.costos.p50)}</dd>
             <dt>{T.costoP80}</dt><dd>{textoMoneda(s.costos.p80)}</dd>
+            {s.costos.rangos && (<><dt>{T.p80SinRangos}</dt><dd>{textoMoneda(s.costos.rangos.p80SinRangos)}</dd></>)}
             <dt>{T.jclP80}</dt><dd>{pct(s.costos.jclP80)}</dd>
             <dt>{T.jclPlan}</dt><dd>{pct(s.costos.jclPlan)}</dd>
             {s.costos.conjunto80 && (<><dt>{T.conjunto80}</dt><dd>{textoFecha(s.costos.conjunto80.fecha)} · {textoMoneda(s.costos.conjunto80.costo)}</dd></>)}

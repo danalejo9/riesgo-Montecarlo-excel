@@ -18,6 +18,12 @@ export interface Relacion {
   retardo: number;
 }
 
+/** Mínimo y máximo de un costo (V4); el más probable es el valor del costo. */
+export interface RangoCosto {
+  min: number;
+  max: number;
+}
+
 export interface TresPuntos {
   min: number;
   masProbable: number;
@@ -38,6 +44,13 @@ export interface Actividad {
   costoPorDia?: number;
   /** Costo que no depende de la duración (materiales, equipos comprados) (P5). */
   costoFijo?: number;
+  /**
+   * V4: incertidumbre del costo fijo y del costo por día. El valor de
+   * `costoFijo` / `costoPorDia` es el más probable; en la simulación se
+   * sortea entre mínimo y máximo con la misma forma que las duraciones.
+   */
+  costoFijoRango?: RangoCosto;
+  costoPorDiaRango?: RangoCosto;
   /** «Inicio no antes de» (fecha de serie de Excel). */
   inicioNoAntesDe?: number;
   /** «Inicio no después de»: no mueve la actividad, pero reduce su holgura (y puede volverla negativa). */

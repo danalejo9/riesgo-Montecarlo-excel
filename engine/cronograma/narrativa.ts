@@ -53,6 +53,12 @@ export function narrativaPlazo(
     frase += `; pero cumplir a la vez el P80 de plazo y el P80 de costo solo ocurre en el ${pct(c.jclP80)} de los casos`;
     if (c.conjunto80 && c.jclP80 < 0.8) frase += `: para un 80 % conjunto hacen falta el ${textoFecha(c.conjunto80.fecha)} y ${dinero(c.conjunto80.costo)}`;
     out.push(`${frase}.`);
+    if (c.rangos) {
+      const partidas = c.rangos.n === 1 ? 'un costo con mínimo y máximo' : `${c.rangos.n} costos con mínimo y máximo`;
+      out.push(c.rangos.aporteP80 >= 0
+        ? `La incertidumbre de los propios costos (${partidas}) añade ${dinero(c.rangos.aporteP80)} al P80 del costo; con los valores más probables sería ${dinero(c.rangos.p80SinRangos)}.`
+        : `La incertidumbre de los propios costos (${partidas}) baja el P80 del costo en ${dinero(-c.rangos.aporteP80)}: los mínimos pesan más que los máximos.`);
+    }
   }
   return out;
 }

@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V4: incertidumbre en los costos de cada actividad (2026-09-30)
+
+**Añadido**
+- «Actividades» admite **mínimo y máximo del costo fijo y del costo por
+  día** (columnas nuevas); el costo de su columna es el más probable. En la
+  simulación se sortean con la misma forma que las duraciones (PERT o
+  triangular), con números aleatorios propios: el plazo sale idéntico.
+- La hoja, el resumen en palabras y el informe PDF dicen **cuánto añade al
+  P80 del costo** la incertidumbre de los propios costos.
+- La plantilla «Actividades» incluye ahora la columna «Costo fijo».
+- Libro de pruebas: «Costos inciertos (prueba)» y «Esperado (costos
+  inciertos)» (Monte Carlo en Python); guía Q49–Q50.
+
 ### V3: informe PDF configurable, costos y cronograma (2026-09-30)
 
 **Añadido**
