@@ -28,6 +28,7 @@ import { streamOf, uniformAt } from '../random/philox.ts';
 import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
 import { muestreadorDuracion, type Muestreador } from './muestreo.ts';
+import { parametrosRed, type ParametrosRed } from './red.ts';
 import type { RiesgoPlazo } from './riesgos.ts';
 import type { Cronograma } from './tipos.ts';
 
@@ -174,6 +175,10 @@ export interface PlazoPreparado {
   entrantes: Rel[][];
   salientes: RelSal[][];
   minInicio: number[];
+  /** Avance y restricciones (`red.ts`). */
+  red: ParametrosRed;
+  /** Hay avance o restricciones que tocar en el bucle (si no, se salta ese trabajo). */
+  conAvance: boolean;
   dists: Array<Muestreador | null>;
   fijas: number[];
   duraciones: number[];
@@ -190,11 +195,12 @@ export interface PlazoPreparado {
 export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op: { semilla: number; forma: FormaDuracion }): PlazoPreparado {
   const acts = c.actividades;
   const n = acts.length;
-  const red = resolverRed(acts);
-  if (!red.ok) throw new Error(red.problemas.map((p) => p.mensaje).join('; '));
-  const { orden, enCiclo } = ordenTopologico(n, red.preds);
+  const resuelta = resolverRed(acts);
+  if (!resuelta.ok) throw new Error(resuelta.problemas.map((x) => x.mensaje).join('; '));
+  const { orden, enCiclo } = ordenTopologico(n, resuelta.preds);
   if (enCiclo.length > 0) throw new Error('El cronograma tiene una dependencia circular');
   const cal = new IndiceLaborable(c.calendario, c.inicio);
+  const red = parametrosRed(c, cal);
   const indice = new Map(acts.map((a, i) => [a.id, i]));
   const entrantes = acts.map((a) => a.predecesoras.map((r) => ({ p: indice.get(r.predecesora) as number, t: TIPO[r.tipo], r: r.retardo })));
   const salientes: RelSal[][] = acts.map(() => []);
@@ -204,7 +210,9 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     orden,
     entrantes,
     salientes,
-    minInicio: acts.map((a) => (a.inicioNoAntesDe === undefined ? 0 : cal.indiceDesde(a.inicioNoAntesDe))),
+    minInicio: red.minInicio,
+    red,
+    conAvance: red.sinLogica.some(Boolean) || red.minFin.some(Number.isFinite) || red.maxFin.some(Number.isFinite) || red.maxInicio.some(Number.isFinite),
     dists: acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null)),
     fijas: acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion)),
     duraciones: acts.map((a) => a.duracion),
@@ -299,13 +307,24 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
         for (const a of x.afectadas) dur[a * B + k] = (dur[a * B + k] as number) * f;
       }
     });
+    // 2b. Avance: solo lo que queda tiene incertidumbre y sufre los riesgos.
+    if (p.conAvance) {
+      for (let a = 0; a < n; a++) {
+        const t0 = p.red.transcurrido[a] as number;
+        const e = p.red.escala[a] as number;
+        if (t0 === 0 && e === 1) continue;
+        const base = a * B;
+        for (let k = 0; k < b; k++) dur[base + k] = t0 + (dur[base + k] as number) * e;
+      }
+    }
     // 3. Adelante. El tipo de relación, fuera del bucle interno: cuatro bucles planos.
     fin.fill(0);
     for (const s2 of orden) {
       const bs = s2 * B;
       const m0 = minInicio[s2] as number;
       for (let k = 0; k < b; k++) es[bs + k] = m0;
-      for (const { p: pr, t, r } of entrantes[s2] as Rel[]) {
+      const entra = p.red.sinLogica[s2] ? [] : (entrantes[s2] as Rel[]);
+      for (const { p: pr, t, r } of entra) {
         const bp = pr * B;
         if (t === 0) {
           for (let k = 0; k < b; k++) {
@@ -327,6 +346,13 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
             const v = (es[bp + k] as number) + r - (dur[bs + k] as number);
             if (v > (es[bs + k] as number)) es[bs + k] = v;
           }
+        }
+      }
+      const minFin = p.red.minFin[s2] as number;
+      if (minFin > -Infinity && !p.red.sinLogica[s2]) {
+        for (let k = 0; k < b; k++) {
+          const v = minFin - (dur[bs + k] as number);
+          if (v > (es[bs + k] as number)) es[bs + k] = v;
         }
       }
       for (let k = 0; k < b; k++) {
@@ -364,6 +390,19 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
         }
       }
     }
+    // 4b. Restricciones que limitan las fechas tardías.
+    if (p.conAvance) {
+      for (let a = 0; a < n; a++) {
+        const mf = p.red.maxFin[a] as number;
+        const mi = p.red.maxInicio[a] as number;
+        if (mf === Infinity && mi === Infinity) continue;
+        const ba = a * B;
+        for (let k = 0; k < b; k++) {
+          const tope = Math.min(mf, mi + (dur[ba + k] as number));
+          if (tope < (lf[ba + k] as number)) lf[ba + k] = tope;
+        }
+      }
+    }
     // 5. Estadísticas.
     let sy = 0;
     let syy = 0;
@@ -381,6 +420,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       const ba = a * B;
       const ini = acc.inicios[a] as ContadorDias;
       const fi = acc.fines[a] as ContadorDias;
+      const terminada = p.red.estado[a] === 'terminada';
       let crit = 0;
       let x1 = 0;
       let x2 = 0;
@@ -388,7 +428,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       for (let k = 0; k < b; k++) {
         const d = dur[ba + k] as number;
         const e = es[ba + k] as number;
-        if ((lf[ba + k] as number) - d - e < 1e-9) crit++;
+        if (!terminada && (lf[ba + k] as number) - d - e < 1e-9) crit++;
         contar(ini, diaInicio(e, d));
         contar(fi, diaFin(e + d));
         x1 += d;
@@ -447,7 +487,7 @@ export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelad
   const cuantiles = (c: ContadorDias): FechasPercentil => ({
     p10: fechaDia(cuantilDias(c, 0.1)), p50: fechaDia(cuantilDias(c, 0.5)), p80: fechaDia(cuantilDias(c, 0.8)), p90: fechaDia(cuantilDias(c, 0.9)),
   });
-  const det = cpmDeterminista(p.duraciones, p.orden, p.entrantes, p.minInicio);
+  const det = cpmDeterminista(p.duraciones.map((d, i) => (p.red.transcurrido[i] as number) + d * (p.red.escala[i] as number)), p.orden, p.entrantes, p.red);
 
   const finProyecto = new Float64Array(acc.hechas);
   let k = 0;
@@ -563,6 +603,9 @@ export async function simularPlazoEnParalelo(
     }
   };
   await Promise.all(Array.from({ length: Math.min(h, pendientes.length) }, trabajador));
+  // En el orden de las iteraciones, no en el que terminaron los hilos: así las
+  // sumas (y sus redondeos) salen siempre iguales.
+  hechos.sort((a, b) => (a.tramos[0]?.desde ?? 0) - (b.tramos[0]?.desde ?? 0));
   return resultadoPlazo(p, combinarAcumuladores(p, hechos), cancelada || hechas < N);
 }
 
@@ -570,17 +613,20 @@ function cpmDeterminista(
   dur: readonly number[],
   orden: readonly number[],
   entrantes: ReadonlyArray<ReadonlyArray<{ p: number; t: number; r: number }>>,
-  minInicio: readonly number[],
+  red: ParametrosRed,
 ): number {
   const es = new Float64Array(dur.length);
   let fin = 0;
   for (const s of orden) {
-    let v0 = minInicio[s] as number;
+    let v0 = red.minInicio[s] as number;
     const d = dur[s] as number;
-    for (const { p, t, r } of entrantes[s] as Array<{ p: number; t: number; r: number }>) {
-      const dp = dur[p] as number;
-      const v = t === 0 ? (es[p] as number) + dp + r : t === 1 ? (es[p] as number) + r : t === 2 ? (es[p] as number) + dp + r - d : (es[p] as number) + r - d;
-      if (v > v0) v0 = v;
+    if (!red.sinLogica[s]) {
+      for (const { p, t, r } of entrantes[s] as Array<{ p: number; t: number; r: number }>) {
+        const dp = dur[p] as number;
+        const v = t === 0 ? (es[p] as number) + dp + r : t === 1 ? (es[p] as number) + r : t === 2 ? (es[p] as number) + dp + r - d : (es[p] as number) + r - d;
+        if (v > v0) v0 = v;
+      }
+      v0 = Math.max(v0, (red.minFin[s] as number) - d);
     }
     es[s] = v0;
     if (v0 + d > fin) fin = v0 + d;

@@ -38,6 +38,19 @@ export interface Actividad {
   costoPorDia?: number;
   /** «Inicio no antes de» (fecha de serie de Excel). */
   inicioNoAntesDe?: number;
+  /** «Inicio no después de»: no mueve la actividad, pero reduce su holgura (y puede volverla negativa). */
+  inicioNoDespuesDe?: number;
+  /** «Terminar no antes de»: la actividad no puede terminar antes de esa fecha. */
+  terminarNoAntesDe?: number;
+  /** «Terminar no después de» (o fecha límite): reduce la holgura, como `inicioNoDespuesDe`. */
+  terminarNoDespuesDe?: number;
+  /** Avance: fechas reales y trabajo que queda (con la fecha de corte del cronograma). */
+  inicioReal?: number;
+  finReal?: number;
+  /** Fracción completada (0–1). */
+  completado?: number;
+  /** Días laborables que quedan; si falta, `duracion × (1 − completado)`. */
+  restante?: number;
   /** Fila de la hoja de la que salió, para los mensajes. */
   fila?: number;
 }
@@ -54,6 +67,8 @@ export interface Cronograma {
   inicio: number;
   calendario: Calendario;
   actividades: Actividad[];
+  /** Fecha de corte (*data date*): el trabajo que queda empieza ese día o después. */
+  fechaCorte?: number;
 }
 
 /** Un problema al leer o al calcular, con dónde está, para enseñarlo tal cual. */

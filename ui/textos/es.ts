@@ -69,6 +69,8 @@ export const textosGantt = {
   leyendaNormal: 'Con holgura',
   leyendaFranja: 'Rango P10–P90',
   leyendaHito: 'Hito',
+  leyendaTerminada: 'Terminada',
+  fechaCorte: 'Fecha de corte',
   finCronograma: 'Fin del cronograma',
   p80: 'P80',
   pulsa: 'Pulsa una actividad para ver sus predecesoras y sucesoras.',

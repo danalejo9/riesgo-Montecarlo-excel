@@ -41,6 +41,8 @@ export interface HojaAEscribir {
 export const ENCABEZADO_ACTIVIDADES = [
   'ID', 'Actividad', 'Duración (días)', 'Predecesoras', 'Mínimo', 'Más probable', 'Máximo',
   'Categoría', 'Costo por día', 'Inicio no antes de',
+  // Avance y más restricciones: opcionales, se dejan vacías si no se usan.
+  'Inicio real', 'Fin real', '% completado', 'Duración restante', 'Inicio no después de', 'Terminar no antes de', 'Terminar no después de',
 ];
 
 /** La plantilla: tres actividades de ejemplo que el usuario sobrescribe. */
@@ -55,10 +57,13 @@ export function plantillaActividades(codigoMoneda = MONEDA_POR_DEFECTO): HojaAEs
       ['2', 'Construcción', 30, '1', 25, 30, 45, 'Obra', 2000, ''],
       ['3', 'Entrega', 0, '2', '', '', '', 'Hitos', '', ''],
     ],
-    formatos: { 0: '@', 8: formatoMoneda(codigoMoneda), 9: FORMATO_FECHA },
+    formatos: {
+      0: '@', 8: formatoMoneda(codigoMoneda), 9: FORMATO_FECHA,
+      10: FORMATO_FECHA, 11: FORMATO_FECHA, 12: '0%', 14: FORMATO_FECHA, 15: FORMATO_FECHA, 16: FORMATO_FECHA,
+    },
     filaEncabezado: 2,
     primeraFilaDatos: 3,
-    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18],
+    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21],
   };
 }
 
@@ -68,7 +73,7 @@ export function plantillaCalendario(hoy: number): HojaAEscribir {
     nombre: HOJA_CALENDARIO,
     valores: [
       ['Inicio del proyecto', hoy],
-      [''],
+      ['Fecha de corte', '', 'Solo si registras avance (inicio o fin real): el día desde el que se cuenta lo que queda'],
       ['Días laborables', ''],
       ['Lunes', 'Sí'], ['Martes', 'Sí'], ['Miércoles', 'Sí'], ['Jueves', 'Sí'], ['Viernes', 'Sí'],
       ['Sábado', 'No'], ['Domingo', 'No'],
@@ -84,8 +89,10 @@ export function plantillaCalendario(hoy: number): HojaAEscribir {
 }
 
 export const ENCABEZADO_RESULTADO = [
-  'ID', 'Actividad', 'Duración', 'Inicio', 'Fin', 'Inicio tardío', 'Fin tardío', 'Holgura total', 'Crítica',
+  'ID', 'Actividad', 'Duración', 'Inicio', 'Fin', 'Inicio tardío', 'Fin tardío', 'Holgura total', 'Crítica', 'Estado',
 ];
+
+const ESTADO_TEXTO = { pendiente: 'Pendiente', 'en curso': 'En curso', terminada: 'Terminada' } as const;
 
 export function hojaResultadoCPM(r: Extract<ResultadoCPM, { ok: true }>): HojaAEscribir {
   const criticas = r.filas.filter((f) => f.critica).length;
@@ -99,14 +106,14 @@ export function hojaResultadoCPM(r: Extract<ResultadoCPM, { ok: true }>): HojaAE
       ENCABEZADO_RESULTADO,
       ...r.filas.map((f) => [
         f.id, f.nombre, f.duracion, f.fechaInicio, f.fechaFin, f.fechaInicioTardio, f.fechaFinTardio,
-        redondear(f.holguraTotal), f.critica ? 'Sí' : 'No',
+        redondear(f.holguraTotal), f.critica ? 'Sí' : 'No', ESTADO_TEXTO[f.estado],
       ]),
     ],
     // El ID como texto (igual que en «Actividades» y en «Esperado»).
     formatos: { 0: '@', 3: FORMATO_FECHA, 4: FORMATO_FECHA, 5: FORMATO_FECHA, 6: FORMATO_FECHA },
     filaEncabezado: 4,
     primeraFilaDatos: 5,
-    anchos: [6, 32, 10, 12, 12, 13, 12, 13, 8],
+    anchos: [6, 32, 10, 12, 12, 13, 12, 13, 8, 11],
   };
 }
 

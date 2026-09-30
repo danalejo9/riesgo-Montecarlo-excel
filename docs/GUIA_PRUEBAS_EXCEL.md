@@ -558,7 +558,7 @@ entre Resultados y Diagnóstico. Dentro: un texto corto y dos botones,
 **Q3. Igual que «Esperado».** Las dos hojas tienen el encabezado en la fila 5
 y las actividades en la 6 a la 25, en las mismas columnas. En cualquier celda
 vacía de «Esperado» escribe
-`=SUMAPRODUCTO(--('Cronograma (resultado)'!A6:I25<>A6:I25))`.
+`=SUMAPRODUCTO(--('Cronograma (resultado)'!A6:J25<>A6:J25))`.
 Esperado: **0** (ninguna celda distinta). Si no da 0, apunta cuál difiere.
 
 **Q4. Recalcular no duplica.** Pulsa **Calcular cronograma** otra vez: la hoja
@@ -702,6 +702,47 @@ con la ventana abierta, se actualiza sola.
 **Q25. Web y Mac.** Repite Q21–Q24 en Excel para la Web (y en Mac si puedes).
 Recuerda: Excel solo deja una ventana del complemento abierta a la vez; abrir
 el cronograma cierra el explorador de distribución y al revés.
+
+**Q26. Avance: las columnas nuevas.** «Actividades» tiene ahora siete
+columnas más (K a Q): Inicio real, Fin real, % completado, Duración
+restante, Inicio no después de, Terminar no antes de y Terminar no después
+de; y «Calendario» una fila 2, **Fecha de corte**. Vacías, todo da lo mismo
+que en Q2 (fin 16/07/2027): compruébalo.
+
+**Q27. El escenario con avance.** Copia los valores de la hoja **«Avance
+(prueba)»** a sus mismas columnas de «Actividades» (fila de cada ID) y su
+fecha de corte, **15/03/2027**, en Calendario!**B2**. Calcula. Esperado:
+- Fin **27/07/2027**, **124** días laborables.
+- En «Cronograma (resultado)», la columna nueva **Estado**: 1–4
+  **Terminada** (ni críticas ni holgura), 5 y 8 **En curso**, el resto
+  **Pendiente**. Toda la tabla igual a **«Esperado (con avance)»** (la fórmula
+  de Q3, pero contra esa hoja y con A6:J25).
+- Salud en **rojo**: **Sin holgura negativa** (actividades 5, 6, 7, 9 y
+  15): la fecha límite de la fachada (30/06/2027) ya no se cumple. Y
+  **Restricciones** en amarillo («1 “no antes de” y 1 “no después de”»).
+  **Simular** desactivado.
+
+**Q28. Sin la fecha límite.** Borra la celda «Terminar no después de» de la
+fachada (fila 18, columna Q). Calcula: salud en **amarillo**, fin
+**27/07/2027** igual, críticas 5, 6, 7, 12, 14, 18, 19 y 20. **Simular el
+plazo** (10.000, PERT): **P50 10/08/2027, P80 20/08/2027, P90 25/08/2027** y
+el 5 % de cumplir la fecha del cronograma. Menos incertidumbre que en Q13
+(P80 24/08/2027), aunque el fin del cronograma sea más tarde: una parte del
+trabajo ya está hecha.
+
+**Q29. Avance en el Gantt.** Con el escenario de Q28 simulado, en «Cronograma
+(Gantt)» y en **Ver cronograma**: las actividades 1–4 en **gris**
+(terminadas), sin franja P10–P90, y una **línea gris** con «Fecha de corte»
+antes de la semana del 15/03/2027.
+
+**Q30. Errores de avance.** (a) Borra la fecha de corte (Calendario!B2):
+«Hay fechas reales en “Actividades” pero falta la “Fecha de corte”…». (b)
+Pon la fecha de corte en 01/03/2027: «…el inicio real es posterior a la fecha
+de corte» (la excavación) y «el fin real debe ser anterior a la fecha de
+corte» (la movilización). Devuélvela a 15/03/2027. (c) Escribe `40 %` o
+`0,4` en «% completado» de la excavación: los dos valen.
+
+Para volver al escenario base, vacía las columnas K–Q y Calendario!B2.
 
 ---
 

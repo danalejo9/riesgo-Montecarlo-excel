@@ -204,6 +204,9 @@ describe('hoja de la simulación y resumen en palabras', () => {
   });
 });
 
+/** 12 decimales; NaN se queda en NaN (actividades sin variación). */
+const redondeo = (x: number) => (Number.isNaN(x) ? 'NaN' : x.toFixed(12));
+
 describe('simulación en varios hilos (P3b)', () => {
   const riesgos = leerRiesgosPlazo(hoja('Riesgos de plazo'), cron.actividades).riesgos;
   const op = { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: 7_777 };
@@ -218,7 +221,9 @@ describe('simulación en varios hilos (P3b)', () => {
     };
     const varios = await simularPlazoEnParalelo(cron, riesgos, op, ejecutar, 3);
     expect(Array.from(varios.finProyecto)).toEqual(Array.from(uno.finProyecto));
-    expect(varios.actividades).toEqual(uno.actividades);
+    const sinCorr = (x: typeof uno) => x.actividades.map((a) => ({ ...a, correlacion: 0 }));
+    expect(sinCorr(varios)).toEqual(sinCorr(uno));
+    varios.actividades.forEach((a, i) => expect(redondeo(a.correlacion)).toBe(redondeo(uno.actividades[i]!.correlacion)));
     expect(varios.riesgos).toEqual(uno.riesgos);
     expect(varios.fechas).toEqual(uno.fechas);
     expect(varios.cancelada).toBe(false);
@@ -231,7 +236,10 @@ describe('simulación en varios hilos (P3b)', () => {
       const par = await simular(cron, riesgos, op);
       const uno = await simularPlazo(cron, riesgos, op);
       expect(Array.from(par.finProyecto)).toEqual(Array.from(uno.finProyecto));
-      expect(par.actividades).toEqual(uno.actividades);
+      // Idénticas salvo el redondeo de las sumas de la correlación (otro orden de suma).
+      const sinCorr = (x: typeof par) => x.actividades.map((a) => ({ ...a, correlacion: 0 }));
+      expect(sinCorr(par)).toEqual(sinCorr(uno));
+      par.actividades.forEach((a, i) => expect(redondeo(a.correlacion)).toBe(redondeo(uno.actividades[i]!.correlacion)));
       const impPar = await impactoDeRiesgos(cron, riesgos, par, op, simular);
       const impUno = await impactoDeRiesgos(cron, riesgos, uno, op);
       expect(impPar).toEqual(impUno);

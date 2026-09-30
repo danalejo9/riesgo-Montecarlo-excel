@@ -14,6 +14,7 @@ import { diaSemana } from './calendario.ts';
 import type { FilaCPM } from './cpm.ts';
 import { textoRelacion } from './predecesoras.ts';
 import type { ResultadoSimulacionPlazo } from './simulacion.ts';
+import type { EstadoAvance } from './red.ts';
 import type { Actividad, TipoRelacion } from './tipos.ts';
 
 export const VERSION_GANTT = 1;
@@ -30,6 +31,7 @@ export interface BarraGantt {
   holgura: number;
   /** Las predecesoras como se escriben: `3FC+5; 7CC`. */
   predecesoras: string;
+  estado: EstadoAvance;
   /** Tras simular. */
   criticidad?: number;
   franja?: { desde: number; hasta: number };
@@ -51,6 +53,8 @@ export interface VistaGantt {
   hasta: number;
   fechaCronograma: number;
   fechaP80?: number;
+  /** Fecha de corte, si hay avance registrado. */
+  fechaCorte?: number;
   barras: BarraGantt[];
   enlaces: EnlaceGantt[];
   simulado: boolean;
@@ -61,6 +65,7 @@ export function vistaGantt(
   filas: readonly FilaCPM[],
   fechaFinProyecto: number,
   sim?: ResultadoSimulacionPlazo,
+  fechaCorte?: number,
 ): VistaGantt {
   const porId = new Map(filas.map((f) => [f.id, f]));
   const simPorId = new Map(sim?.actividades.map((a) => [a.id, a]) ?? []);
@@ -76,8 +81,9 @@ export function vistaGantt(
       critica: f.critica,
       holgura: f.holguraTotal,
       predecesoras: a.predecesoras.map(textoRelacion).join('; '),
+      estado: f.estado,
     };
-    if (s) {
+    if (s && f.estado !== 'terminada') {
       b.criticidad = s.criticidad;
       b.franja = { desde: Math.min(s.inicio.p10, f.fechaInicio), hasta: Math.max(s.fin.p90, f.fechaFin) };
       b.p80Fin = s.fin.p80;
@@ -99,6 +105,7 @@ export function vistaGantt(
     hasta,
     fechaCronograma: fechaFinProyecto,
     ...(sim ? { fechaP80: sim.fechas.p80 } : {}),
+    ...(fechaCorte !== undefined ? { fechaCorte } : {}),
     barras,
     enlaces,
     simulado: sim !== undefined,
@@ -162,6 +169,8 @@ export const COLORES_GANTT = {
   normal: '#2A78D6',
   franjaCritica: '#F6C9C9',
   franjaNormal: '#C9DDF5',
+  terminada: '#8A8F98',
+  corte: '#6B7280',
   cronograma: '#1B1B1B',
   p80: '#D9A400',
 };
@@ -191,8 +200,8 @@ export function hojaGantt(v: VistaGantt, escala?: Escala): HojaGantt {
   const valores: (string | number)[][] = [
     [`Cronograma (Gantt) — lo escribe el complemento; se rehace en cada cálculo. Escala: ${e === 'dia' ? 'días' : e === 'semana' ? 'semanas (desde el lunes)' : 'meses'}`],
     [v.simulado
-      ? 'Rojo: crítica en el cronograma. Franja clara: de P10 a P90 tras la simulación. Línea negra: fin del cronograma; amarilla: P80.'
-      : 'Rojo: crítica. Azul: con holgura. ◆: hito. Línea negra: fin del cronograma.'],
+      ? 'Rojo: crítica en el cronograma. Gris: terminada. Franja clara: de P10 a P90 tras la simulación. Línea negra: fin del cronograma; amarilla: P80; gris: fecha de corte.'
+      : 'Rojo: crítica. Azul: con holgura. Gris: terminada. ◆: hito. Línea negra: fin del cronograma; gris: fecha de corte.'],
     [''],
     [...fijas, ...inicios],
   ];
@@ -209,7 +218,10 @@ export function hojaGantt(v: VistaGantt, escala?: Escala): HojaGantt {
     const c = colsDe(inicios, b.inicio, b.fin);
     if (!c) return;
     if (b.hito) hitos.push({ fila, col: primeraColTiempo + c[0] });
-    else tramos.push({ fila, col: primeraColTiempo + c[0], cols: c[1] - c[0] + 1, color: b.critica ? COLORES_GANTT.critica : COLORES_GANTT.normal });
+    else {
+      const color = b.estado === 'terminada' ? COLORES_GANTT.terminada : b.critica ? COLORES_GANTT.critica : COLORES_GANTT.normal;
+      tramos.push({ fila, col: primeraColTiempo + c[0], cols: c[1] - c[0] + 1, color });
+    }
   });
   // El rombo de los hitos, como valor de la celda (se ve aunque no haya color).
   const anchoTotal = primeraColTiempo + inicios.length;
@@ -221,6 +233,10 @@ export function hojaGantt(v: VistaGantt, escala?: Escala): HojaGantt {
   const marcas: HojaGantt['marcas'] = [];
   const cCron = colsDe(inicios, v.fechaCronograma, v.fechaCronograma);
   if (cCron) marcas.push({ col: primeraColTiempo + cCron[0], color: COLORES_GANTT.cronograma, texto: 'Fin del cronograma' });
+  if (v.fechaCorte !== undefined) {
+    const cc = colsDe(inicios, v.fechaCorte, v.fechaCorte);
+    if (cc) marcas.unshift({ col: primeraColTiempo + cc[0] - 1, color: COLORES_GANTT.corte, texto: 'Fecha de corte' });
+  }
   if (v.fechaP80 !== undefined) {
     const c80 = colsDe(inicios, v.fechaP80, v.fechaP80);
     if (c80) marcas.push({ col: primeraColTiempo + c80[0], color: COLORES_GANTT.p80, texto: 'P80' });

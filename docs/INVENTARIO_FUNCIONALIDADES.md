@@ -194,7 +194,7 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | # | Código | Funcionalidad | Origen | Estado |
 |---|---|---|---|---|
 | P0 | P0 | Plantilla «Actividades», predecesoras `3FS+2d`, capa de capacidades por licencia, catálogo de textos, moneda configurable | Estudios QSRA + **Tú** | ✅ 30/09 (falta Excel: Q1–Q11) |
-| P1 | P1 | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance | Estudios QSRA | 🟡 núcleo 30/09 (falta avance, más restricciones, calendario por actividad) |
+| P1 | P1 | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance | Estudios QSRA | ✅ 30/09 avance y restricciones (falta Excel: Q26–Q30); ⬜ calendarios por actividad |
 | P2 | P2 | Chequeo de salud del cronograma (DCMA‑14) con semáforo | Estudios QSRA | ✅ 30/09 (falta Excel: Q11–Q12) |
 | P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ✅ 30/09 (falta Excel: Q13–Q20) |
 | P3b | P3b | Simulación del plazo repartida en varios núcleos (Web Workers) | Plan | ✅ 30/09 (6,3 s para 5.000 × 10.000 en 4 hilos) |

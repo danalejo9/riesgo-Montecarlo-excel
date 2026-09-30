@@ -103,7 +103,7 @@ export async function escribirResultadoCPM(r: Extract<ResultadoCPM, { ok: true }
     hoja.getRange('B2').numberFormat = [[FORMATO_FECHA]];
     // Las críticas, en amarillo, como en «Esperado».
     r.filas.forEach((f, i) => {
-      if (f.critica) hoja.getRangeByIndexes(h.primeraFilaDatos + i, 0, 1, 9).format.fill.color = '#FFF2CC';
+      if (f.critica) hoja.getRangeByIndexes(h.primeraFilaDatos + i, 0, 1, 10).format.fill.color = '#FFF2CC';
     });
     await context.sync();
     return h.nombre;

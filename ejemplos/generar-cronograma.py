@@ -104,10 +104,55 @@ def leer_preds(texto):
     return rel
 
 
-def cpm():
+def indice_hasta(fecha):
+    return indice_desde(fecha + dt.timedelta(days=1)) - 1
+
+
+# Escenario con avance (prueba del resto de P1): fecha de corte, fechas reales,
+# % completado, duración restante y restricciones de fin. Por actividad:
+# (inicio real, fin real, % completado, duración restante,
+#  terminar no antes de, terminar no después de)
+CORTE = dt.date(2027, 3, 15)
+AVANCE = {
+    "1": (dt.date(2027, 2, 1), dt.date(2027, 2, 1), None, None, None, None),
+    "2": (dt.date(2027, 2, 1), dt.date(2027, 2, 26), None, None, None, None),
+    "3": (dt.date(2027, 2, 1), dt.date(2027, 2, 26), None, None, None, None),
+    "4": (dt.date(2027, 3, 1), dt.date(2027, 3, 5), None, None, None, None),
+    "5": (dt.date(2027, 3, 8), None, 0.4, None, None, None),
+    "8": (dt.date(2027, 3, 8), None, None, 42, None, None),
+    "15": (None, None, None, None, None, dt.date(2027, 6, 30)),
+    "17": (None, None, None, None, dt.date(2027, 7, 21), None),
+}
+
+
+def cpm(avance=None, corte=None):
+    """CPM de referencia. Con `avance`, las reglas de engine/cronograma/red.ts."""
+    avance = avance or {}
     acts = {a[0]: a for a in ACTIVIDADES}
     preds = {a[0]: leer_preds(a[3]) for a in ACTIVIDADES}
-    dur = {a[0]: a[2] for a in ACTIVIDADES}
+    C = indice_desde(corte) if corte else 0
+    dur, min_ini, min_fin, max_fin, sin_logica, estado = {}, {}, {}, {}, {}, {}
+    for a in ACTIVIDADES:
+        k, d = a[0], a[2]
+        ir, fr, comp, rest, fnet, fnlt = avance.get(k, (None,) * 6)
+        max_fin[k] = indice_hasta(fnlt) + 1 if fnlt else math.inf
+        min_fin[k] = -math.inf
+        if fr:
+            fin = indice_hasta(fr) + 1
+            # Un hito terminado ocupa cero días: empieza donde termina.
+            ini = fin if d == 0 else max(0, min(indice_desde(ir) if ir else fin - d, fin))
+            estado[k], min_ini[k], sin_logica[k], dur[k] = "Terminada", ini, True, fin - ini
+        elif ir:
+            ini = indice_desde(ir)
+            r = rest if rest is not None else d * (1 - (comp or 0))
+            estado[k], min_ini[k], sin_logica[k], dur[k] = "En curso", ini, True, max(C, ini) - ini + r
+        else:
+            v = C
+            if acts[k][9] is not None:
+                v = max(v, indice_desde(acts[k][9]))
+            estado[k], min_ini[k], sin_logica[k], dur[k] = "Pendiente", v, False, d
+            if fnet:
+                min_fin[k] = indice_desde(fnet) + 1
     orden, hecho = [], set()
     while len(orden) < len(ACTIVIDADES):  # los IDs no están necesariamente en orden
         for a in ACTIVIDADES:
@@ -116,12 +161,12 @@ def cpm():
                 hecho.add(a[0])
     es, ef = {}, {}
     for s in orden:
-        v = 0.0
-        if acts[s][9] is not None:
-            v = max(v, indice_desde(acts[s][9]))
-        for p, t, r in preds[s]:
-            v = max(v, {"FS": ef.get(p, 0) + r, "SS": es.get(p, 0) + r,
-                        "FF": ef.get(p, 0) + r - dur[s], "SF": es.get(p, 0) + r - dur[s]}[t])
+        v = min_ini[s]
+        if not sin_logica[s]:
+            for p, t, r in preds[s]:
+                v = max(v, {"FS": ef[p] + r, "SS": es[p] + r,
+                            "FF": ef[p] + r - dur[s], "SF": es[p] + r - dur[s]}[t])
+            v = max(v, min_fin[s] - dur[s])
         es[s], ef[s] = v, v + dur[s]
     fin = max(ef.values())
     sucs = {a[0]: [] for a in ACTIVIDADES}
@@ -134,8 +179,12 @@ def cpm():
         for s, t, r in sucs[p]:
             v = min(v, {"FS": ls[s] - r, "SS": ls[s] - r + dur[p],
                         "FF": lf[s] - r, "SF": lf[s] - r + dur[p]}[t])
+        v = min(v, max_fin[p])
         lf[p], ls[p] = v, v - dur[p]
-    return es, ef, ls, lf, fin
+    for k in estado:
+        if estado[k] == "Terminada":
+            ls[k], lf[k] = es[k], ef[k]
+    return es, ef, ls, lf, fin, dur, estado
 
 
 def fecha_fin(f, d):
@@ -146,7 +195,8 @@ def fecha_inicio(i, d):
     return fecha_fin(i, 0) if d == 0 else DIAS[int(math.floor(i))]
 
 
-ES, EF, LS, LF, FIN = cpm()
+ES, EF, LS, LF, FIN, _, ESTADO = cpm()
+ES2, EF2, LS2, LF2, FIN2, DUR2, ESTADO2 = cpm(AVANCE, CORTE)
 
 # ---------------------------------------------------------------------------
 # Riesgos de plazo (risk drivers, AACE 57R-09): probabilidad, impacto en % de
@@ -285,6 +335,8 @@ LINEAS = [
     ("p", "«Riesgos de plazo»: cinco riesgos (uno es una oportunidad) que alargan a la vez sus actividades."),
     ("p", "«Esperado»: las fechas que debe dar el complemento, calculadas aparte por el script."),
     ("p", "«Esperado (salud)» y «Esperado (simulación)»: el semáforo y el Monte Carlo de referencia."),
+    ("p", "«Avance (prueba)» y «Esperado (con avance)»: un escenario con fecha de corte, fechas reales,"),
+    ("p", "% completado, duración restante y restricciones de fin, con su resultado esperado."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -309,7 +361,10 @@ act = wb.create_sheet("Actividades")
 act["A1"] = "Cronograma — Centro comunitario"
 act["A1"].font = TITULO
 CABECERA = ["ID", "Actividad", "Duración (días)", "Predecesoras", "Mínimo", "Más probable",
-            "Máximo", "Categoría", "Costo por día", "Inicio no antes de"]
+            "Máximo", "Categoría", "Costo por día", "Inicio no antes de",
+            # Avance y más restricciones (vacías en el escenario base; ver «Avance (prueba)»).
+            "Inicio real", "Fin real", "% completado", "Duración restante",
+            "Inicio no después de", "Terminar no antes de", "Terminar no después de"]
 for j, t in enumerate(CABECERA, start=1):
     c = act.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -321,14 +376,21 @@ for i, a in enumerate(ACTIVIDADES, start=4):
         if j == 10 and v is not None:
             c.number_format = FECHA
     act.cell(row=i, column=4).alignment = Alignment(horizontal="left")
-for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18], start=1):
+for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21], start=1):
     act.column_dimensions[get_column_letter(j)].width = w
+for i in range(4, 4 + len(ACTIVIDADES)):
+    for j in (11, 12, 15, 16, 17):
+        act.cell(row=i, column=j).number_format = FECHA
+    act.cell(row=i, column=13).number_format = "0%"
 act.freeze_panes = "C4"
 
 cal = wb.create_sheet("Calendario")
 cal["A1"], cal["B1"] = "Inicio del proyecto", INICIO
 cal["B1"].number_format = FECHA
 cal["A1"].font = H
+cal["A2"] = "Fecha de corte"
+cal["B2"].number_format = FECHA
+cal["C2"] = "(vacía: sin avance; ver «Avance (prueba)»)"
 cal["A3"] = "Días laborables"
 cal["A3"].font = H
 for k, (dia, lab) in enumerate([("Lunes", 1), ("Martes", 1), ("Miércoles", 1), ("Jueves", 1),
@@ -343,31 +405,37 @@ for k, (f, nombre) in enumerate(FESTIVOS, start=13):
 cal.column_dimensions["A"].width = 20
 cal.column_dimensions["B"].width = 34
 
-esp = wb.create_sheet("Esperado")
-esp["A1"] = "Resultado esperado del CPM determinista (calculado por el script, no por el complemento)"
-esp["A1"].font = H
-esp["A2"], esp["B2"] = "Fin del proyecto", fecha_fin(FIN, 1)
-esp["B2"].number_format = FECHA
-esp["A3"], esp["B3"] = "Duración (días laborables)", FIN
-CAB_ESP = ["ID", "Actividad", "Duración", "Inicio", "Fin", "Inicio tardío", "Fin tardío",
-           "Holgura total", "Crítica"]
-for j, t in enumerate(CAB_ESP, start=1):
-    c = esp.cell(row=5, column=j, value=t)
-    c.font, c.fill = CAB, FONDO
-for i, a in enumerate(ACTIVIDADES, start=6):
-    k, d = a[0], a[2]
-    holgura = LS[k] - ES[k]
-    fila = [k, a[1], d, fecha_inicio(ES[k], d), fecha_fin(EF[k], d),
-            fecha_inicio(max(0, LS[k]), d), fecha_fin(LF[k], d),
-            0 if abs(holgura) < 1e-9 else holgura, "Sí" if holgura < 1e-9 else "No"]
-    for j, v in enumerate(fila, start=1):
-        c = esp.cell(row=i, column=j, value=v)
-        if 4 <= j <= 7:
-            c.number_format = FECHA
-        if j == 9 and v == "Sí":
-            c.fill = AMARILLO
-for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8], start=1):
-    esp.column_dimensions[get_column_letter(j)].width = w
+def hoja_esperado(nombre, titulo, es, ef, ls, lf, fin, dur, estado):
+    h = wb.create_sheet(nombre)
+    h["A1"] = titulo
+    h["A1"].font = H
+    h["A2"], h["B2"] = "Fin del proyecto", fecha_fin(fin, 1)
+    h["B2"].number_format = FECHA
+    h["A3"], h["B3"] = "Duración (días laborables)", fin
+    cab = ["ID", "Actividad", "Duración", "Inicio", "Fin", "Inicio tardío", "Fin tardío",
+           "Holgura total", "Crítica", "Estado"]
+    for j, t in enumerate(cab, start=1):
+        c = h.cell(row=5, column=j, value=t)
+        c.font, c.fill = CAB, FONDO
+    for i, a in enumerate(ACTIVIDADES, start=6):
+        k, d = a[0], dur[a[0]]
+        holgura = 0 if estado[k] == "Terminada" else ls[k] - es[k]
+        critica = estado[k] != "Terminada" and holgura < 1e-9
+        fila = [k, a[1], a[2], fecha_inicio(es[k], d), fecha_fin(ef[k], d),
+                fecha_inicio(max(0, ls[k]), d), fecha_fin(lf[k], d),
+                0 if abs(holgura) < 1e-9 else holgura, "Sí" if critica else "No", estado[k]]
+        for j, v in enumerate(fila, start=1):
+            c = h.cell(row=i, column=j, value=v)
+            if 4 <= j <= 7:
+                c.number_format = FECHA
+            if j == 9 and v == "Sí":
+                c.fill = AMARILLO
+    for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8, 11], start=1):
+        h.column_dimensions[get_column_letter(j)].width = w
+
+
+hoja_esperado("Esperado", "Resultado esperado del CPM determinista (calculado por el script, no por el complemento)",
+              ES, EF, LS, LF, FIN, {a[0]: a[2] for a in ACTIVIDADES}, ESTADO)
 
 rie = wb.create_sheet("Riesgos de plazo")
 rie["A1"] = "Riesgos de plazo — cada uno alarga a la vez todas sus actividades (AACE 57R-09)"
@@ -418,6 +486,30 @@ sim.column_dimensions["A"].width = 12
 sim.column_dimensions["B"].width = 32
 sim.column_dimensions["C"].width = 18
 
+av = wb.create_sheet("Avance (prueba)")
+av["A1"] = "Escenario con avance: copia estos valores en «Actividades» (mismas columnas) y la fecha de corte en «Calendario»!B2"
+av["A1"].font = H
+av["A2"], av["B2"] = "Fecha de corte", CORTE
+av["B2"].number_format = FECHA
+CAB_AV = ["ID", "Inicio real", "Fin real", "% completado", "Duración restante", "Terminar no antes de",
+          "Terminar no después de"]
+for j, t in enumerate(CAB_AV, start=1):
+    c = av.cell(row=4, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, (k, (ir, fr, comp, rest, fnet, fnlt)) in enumerate(AVANCE.items(), start=5):
+    for j, v in enumerate([k, ir, fr, comp, rest, fnet, fnlt], start=1):
+        c = av.cell(row=i, column=j, value=v)
+        if j in (2, 3, 6, 7):
+            c.number_format = FECHA
+        if j == 4:
+            c.number_format = "0%"
+for j, w in enumerate([6, 12, 12, 13, 17, 20, 22], start=1):
+    av.column_dimensions[get_column_letter(j)].width = w
+
+hoja_esperado("Esperado (con avance)",
+              "CPM esperado con el escenario de «Avance (prueba)» (fecha de corte 15/03/2027), calculado por el script",
+              ES2, EF2, LS2, LF2, FIN2, DUR2, ESTADO2)
+
 wb.save("ejemplos/demo-cronograma.xlsx")
-print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días; "
+print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días; con avance {fecha_fin(FIN2, 1)} ({FIN2:g}); "
       f"P50 {PCT[0.5] + 1} · P80 {PCT[0.8] + 1} · P90 {PCT[0.9] + 1} días; salud {SALUD}")

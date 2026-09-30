@@ -117,14 +117,20 @@ export function revisarSalud(actividades: readonly Actividad[], filas: readonly 
     actividades: primeras([...new Set(cf.length > 0 ? cf : noFC.map(({ a }) => a.id))]),
   });
 
-  // 5. Restricciones.
-  const restr = actividades.filter((a) => a.inicioNoAntesDe !== undefined).map((a) => a.id);
+  // 5. Restricciones. Las que limitan las fechas tardías («no después de»)
+  // son «duras» para la DCMA: no mueven la actividad, pero fijan un tope que
+  // la lógica no justifica.
+  const blandas = actividades.filter((a) => a.inicioNoAntesDe !== undefined || a.terminarNoAntesDe !== undefined).map((a) => a.id);
+  const duras = actividades.filter((a) => a.inicioNoDespuesDe !== undefined || a.terminarNoDespuesDe !== undefined).map((a) => a.id);
+  const restr = [...new Set([...duras, ...blandas])];
   comps.push({
     codigo: 'restricciones',
     titulo: 'Restricciones de fecha',
-    estado: pct(restr.length, actividades.length) > 0.05 ? 'amarillo' : restr.length > 0 ? 'info' : 'verde',
-    detalle: restr.length === 0 ? 'Ninguna.' : `${textoPct(restr.length, actividades.length)} con «inicio no antes de».`,
-    porque: 'Una restricción fija una fecha que no sale de la lógica: si la actividad podría empezar antes, la simulación no lo verá. Úsalas solo para fechas externas reales.',
+    estado: duras.length > 0 || pct(restr.length, actividades.length) > 0.05 ? 'amarillo' : restr.length > 0 ? 'info' : 'verde',
+    detalle: restr.length === 0
+      ? 'Ninguna.'
+      : `${textoPct(restr.length, actividades.length)}: ${blandas.length} «no antes de» y ${duras.length} «no después de» (fechas límite).`,
+    porque: 'Una restricción fija una fecha que no sale de la lógica: si la actividad podría empezar antes, la simulación no lo verá. Úsalas solo para fechas externas reales; una fecha límite que no se cumple deja holgura negativa.',
     actividades: primeras(restr),
   });
 

@@ -26,6 +26,7 @@
  */
 
 import { IndiceLaborable } from './calendario.ts';
+import { duracionEfectiva, parametrosRed, type EstadoAvance } from './red.ts';
 import type { Actividad, Cronograma, ProblemaCronograma } from './tipos.ts';
 
 export interface FilaCPM {
@@ -44,6 +45,7 @@ export interface FilaCPM {
   fechaFin: number;
   fechaInicioTardio: number;
   fechaFinTardio: number;
+  estado: EstadoAvance;
 }
 
 export type ResultadoCPM =
@@ -158,7 +160,8 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
 
   const cal = new IndiceLaborable(c.calendario, c.inicio);
   const indice = new Map(acts.map((a, i) => [a.id, i]));
-  const dur = acts.map((a) => a.duracion);
+  const red2 = parametrosRed(c, cal);
+  const dur = acts.map((a, i) => duracionEfectiva(red2, i, a.duracion));
   const it = new Float64Array(n);
   const ft = new Float64Array(n);
 
@@ -166,18 +169,20 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
   for (const s of orden) {
     const a = acts[s] as Actividad;
     const d = dur[s] as number;
-    let inicio = 0;
-    if (a.inicioNoAntesDe !== undefined) inicio = Math.max(inicio, cal.indiceDesde(a.inicioNoAntesDe));
-    for (const r of a.predecesoras) {
-      const p = indice.get(r.predecesora) as number;
-      let v: number;
-      switch (r.tipo) {
-        case 'FS': v = (ft[p] as number) + r.retardo; break;
-        case 'SS': v = (it[p] as number) + r.retardo; break;
-        case 'FF': v = (ft[p] as number) + r.retardo - d; break;
-        case 'SF': v = (it[p] as number) + r.retardo - d; break;
+    let inicio = red2.minInicio[s] as number;
+    if (!red2.sinLogica[s]) {
+      for (const r of a.predecesoras) {
+        const p = indice.get(r.predecesora) as number;
+        let v: number;
+        switch (r.tipo) {
+          case 'FS': v = (ft[p] as number) + r.retardo; break;
+          case 'SS': v = (it[p] as number) + r.retardo; break;
+          case 'FF': v = (ft[p] as number) + r.retardo - d; break;
+          case 'SF': v = (it[p] as number) + r.retardo - d; break;
+        }
+        if (v > inicio) inicio = v;
       }
-      if (v > inicio) inicio = v;
+      inicio = Math.max(inicio, (red2.minFin[s] as number) - d);
     }
     it[s] = inicio;
     ft[s] = inicio + d;
@@ -207,6 +212,7 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
       }
       if (v < fin) fin = v;
     }
+    fin = Math.min(fin, red2.maxFin[p] as number, (red2.maxInicio[p] as number) + d);
     ftT[p] = fin;
     itT[p] = fin - d;
   }
@@ -214,24 +220,28 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
   const avisos: ProblemaCronograma[] = [];
   const filas: FilaCPM[] = acts.map((a, i) => {
     const d = dur[i] as number;
+    const estado = red2.estado[i] as EstadoAvance;
     const holgura = (itT[i] as number) - (it[i] as number);
-    if (holgura < -EPS) {
+    if (holgura < -EPS && estado !== 'terminada') {
       avisos.push({ gravedad: 'aviso', actividad: a.id, fila: a.fila, mensaje: `«${a.id}» tiene holgura negativa (${redondear(holgura)} días)` });
     }
+    // Una actividad terminada ni es crítica ni tiene holgura: ya no se puede mover.
+    const hecha = estado === 'terminada';
     return {
       id: a.id,
       nombre: a.nombre,
-      duracion: d,
+      duracion: a.duracion,
       inicioTemprano: it[i] as number,
       finTemprano: ft[i] as number,
-      inicioTardio: itT[i] as number,
-      finTardio: ftT[i] as number,
-      holguraTotal: Math.abs(holgura) < EPS ? 0 : holgura,
-      critica: holgura < EPS,
+      inicioTardio: hecha ? (it[i] as number) : (itT[i] as number),
+      finTardio: hecha ? (ft[i] as number) : (ftT[i] as number),
+      holguraTotal: hecha || Math.abs(holgura) < EPS ? 0 : holgura,
+      critica: !hecha && holgura < EPS,
       fechaInicio: cal.fechaInicio(it[i] as number, d),
       fechaFin: cal.fechaFin(ft[i] as number, d),
-      fechaInicioTardio: cal.fechaInicio(Math.max(0, itT[i] as number), d),
-      fechaFinTardio: cal.fechaFin(ftT[i] as number, d),
+      fechaInicioTardio: cal.fechaInicio(Math.max(0, hecha ? (it[i] as number) : (itT[i] as number)), d),
+      fechaFinTardio: cal.fechaFin(hecha ? (ft[i] as number) : (ftT[i] as number), d),
+      estado,
     };
   });
 

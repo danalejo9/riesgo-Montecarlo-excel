@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Resto de P1: avance real y más restricciones (2026-09-30)
+
+**Añadido**
+- **Avance**: columnas Inicio real, Fin real, % completado y Duración
+  restante en «Actividades», y **Fecha de corte** en «Calendario». Las
+  terminadas no se mueven ni son críticas; las en curso siguen desde la
+  fecha de corte con lo que les queda (solo eso tiene incertidumbre y sufre
+  los riesgos); las pendientes no empiezan antes del corte. Columna
+  **Estado** en «Cronograma (resultado)»; en el Gantt, terminadas en gris y
+  la línea de la fecha de corte.
+- **Restricciones**: «Inicio no después de», «Terminar no antes de» y
+  «Terminar no después de» (o «Fecha límite»). Las «no después de» pueden
+  dejar holgura negativa (salud en rojo) y cuentan como restricciones duras.
+- Errores claros: avance sin fecha de corte, fechas reales después del
+  corte, fin antes que inicio, % fuera de 0–100 %.
+- Libro de pruebas: hojas «Avance (prueba)» y «Esperado (con avance)»
+  (calculado aparte en Python). Guía: Q26–Q30.
+
+**Pendiente**: calendarios distintos por actividad.
+
 ### P3b: la simulación del plazo en varios hilos (2026-09-30)
 
 **Cambiado**

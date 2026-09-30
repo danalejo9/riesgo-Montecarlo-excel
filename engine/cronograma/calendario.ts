@@ -71,6 +71,11 @@ export class IndiceLaborable {
     return lo;
   }
 
+  /** El índice del último día laborable en o antes de `serie` (−1 si es antes del inicio). */
+  indiceHasta(serie: number): number {
+    return this.indiceDesde(Math.floor(serie) + 1) - 1;
+  }
+
   /**
    * Fecha de inicio que se enseña para un inicio en el índice `i`. Un hito
    * se enseña en la misma fecha que su fin (ver `fechaFin`).

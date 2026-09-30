@@ -110,6 +110,7 @@ function Leyenda({ simulado, color }: { simulado: boolean; color: 'critica' | 'c
         <><span className="gantt-caja gantt-gradiente" />{T.colores.criticidad} (0 → 100 %)</>
       )}
       {simulado && <> {caja(COLORES_GANTT.franjaNormal)}{T.leyendaFranja}</>}
+      {caja(COLORES_GANTT.terminada)}{T.leyendaTerminada}
       {' '}◆ {T.leyendaHito} <span className="gantt-linea" style={{ borderColor: COLORES_GANTT.cronograma }} />{T.finCronograma}
       {simulado && <> <span className="gantt-linea" style={{ borderColor: COLORES_GANTT.p80 }} />{T.p80}</>}
     </p>
@@ -172,7 +173,7 @@ function Diagrama({ vista, escala, flechas, color, sel, alElegir }: {
     }
   }
 
-  const colorDe = (b: BarraGantt) => (color === 'criticidad' && b.criticidad !== undefined
+  const colorDe = (b: BarraGantt) => (b.estado === 'terminada' ? COLORES_GANTT.terminada : color === 'criticidad' && b.criticidad !== undefined
     ? colorCriticidad(b.criticidad)
     : b.critica ? COLORES_GANTT.critica : COLORES_GANTT.normal);
   const opacidad = (id: string) => (vecinos && !vecinos.has(id) ? 0.2 : 1);
@@ -235,6 +236,12 @@ function Diagrama({ vista, escala, flechas, color, sel, alElegir }: {
           ))}
           {enlaces}
           <line x1={x(vista.fechaCronograma + 1)} x2={x(vista.fechaCronograma + 1)} y1={16} y2={alto} stroke={COLORES_GANTT.cronograma} strokeDasharray="4 3" />
+          {vista.fechaCorte !== undefined && (
+            <g>
+              <line x1={x(vista.fechaCorte)} x2={x(vista.fechaCorte)} y1={16} y2={alto} stroke={COLORES_GANTT.corte} strokeWidth={1.5} strokeDasharray="1 3" />
+              <text x={x(vista.fechaCorte) + 3} y={alto - 4} className="gantt-eje">{T.fechaCorte}</text>
+            </g>
+          )}
           {vista.fechaP80 !== undefined && (
             <line x1={x(vista.fechaP80 + 1)} x2={x(vista.fechaP80 + 1)} y1={16} y2={alto} stroke={COLORES_GANTT.p80} strokeWidth={2} strokeDasharray="4 3" />
           )}

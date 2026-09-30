@@ -79,7 +79,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       }
       const riesgos = leerRiesgosPlazo(hojas.riesgos, cron.actividades);
       const hoja = await escribirResultadoCPM(r);
-      const vista = vistaGantt(cron.actividades, r.filas, r.fechaFinProyecto);
+      const vista = vistaGantt(cron.actividades, r.filas, r.fechaFinProyecto, undefined, cron.fechaCorte);
       await escribirHojaGantt(hojaGantt(vista));
       ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       setProblemas([...lectura.problemas, ...r.avisos, ...riesgos.problemas]);
@@ -119,7 +119,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       const narrativa = narrativaPlazo(r, impacto, salud ?? undefined);
       const hoja = await escribirHojaSimulacion(hojaSimulacionPlazo(r, impacto, narrativa));
       if (resultado) {
-        const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r);
+        const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r, datos.cron.fechaCorte);
         await escribirHojaGantt(hojaGantt(vista));
         ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       }
@@ -135,7 +135,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const verCronograma = async () => {
     if (!resultado || !datos) return;
     try {
-      const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, simulado?.r);
+      const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, simulado?.r, datos.cron.fechaCorte);
       const codigo = await codificarJson(vista);
       // Si no cabe en la dirección, la ventana la pide por mensaje al abrirse.
       const ventana = await abrirVentana(PAGINA_GANTT, codigo.length <= LIMITE_URL ? codigo : '', {

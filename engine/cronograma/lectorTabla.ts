@@ -23,12 +23,15 @@ export function normalizar(s: unknown): string {
   return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'inicioNoAntesDe';
+type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'inicioNoAntesDe'
+  | 'inicioNoDespuesDe' | 'terminarNoAntesDe' | 'terminarNoDespuesDe' | 'inicioReal' | 'finReal' | 'completado' | 'restante';
 
 /** Cada campo con los encabezados que lo identifican (normalizados, por prefijo). */
 const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['id', ['id']],
   ['nombre', ['actividad', 'nombre', 'tarea']],
+  // Antes que «duracion»: «Duración restante» empieza igual.
+  ['restante', ['duracion restante', 'restante']],
   ['duracion', ['duracion']],
   ['predecesoras', ['predecesora']],
   ['masProbable', ['mas probable', 'probable']],
@@ -36,7 +39,13 @@ const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['max', ['maxim', 'max ', 'max', 'pesimista']],
   ['categoria', ['categoria', 'frente']],
   ['costoPorDia', ['costo por dia', 'coste por dia', 'costo diario', 'coste diario']],
-  ['inicioNoAntesDe', ['inicio no antes', 'no antes de']],
+  ['inicioNoAntesDe', ['inicio no antes']],
+  ['inicioNoDespuesDe', ['inicio no despues']],
+  ['terminarNoAntesDe', ['terminar no antes', 'fin no antes']],
+  ['terminarNoDespuesDe', ['terminar no despues', 'fin no despues', 'fecha limite']],
+  ['inicioReal', ['inicio real', 'comienzo real']],
+  ['finReal', ['fin real']],
+  ['completado', ['% completado', 'completado', '% avance', 'avance']],
 ];
 
 function campoDe(encabezado: unknown): Campo | undefined {
@@ -188,13 +197,44 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
       }
       act.costoPorDia = v;
     }
-    const ina = col(fila, 'inicioNoAntesDe');
-    if (!vacia(ina)) {
-      if (typeof ina !== 'number') {
-        error('«Inicio no antes de» debe ser una fecha');
+    let fallo = false;
+    for (const campo of ['inicioNoAntesDe', 'inicioNoDespuesDe', 'terminarNoAntesDe', 'terminarNoDespuesDe', 'inicioReal', 'finReal'] as const) {
+      const v = col(fila, campo);
+      if (vacia(v)) continue;
+      if (typeof v !== 'number') {
+        error(`«${NOMBRE_CAMPO[campo]}» debe ser una fecha`);
+        fallo = true;
+        break;
+      }
+      act[campo] = v;
+    }
+    if (fallo) continue;
+    const comp = col(fila, 'completado');
+    if (!vacia(comp)) {
+      const v = typeof comp === 'string' && /%\s*$/.test(comp) ? (numeroDe(comp.replace('%', '')) ?? NaN) / 100 : numeroDe(comp);
+      const f = v !== undefined && v > 1 ? v / 100 : v;
+      if (f === undefined || Number.isNaN(f) || f < 0 || f > 1) {
+        error('«% completado» debe estar entre 0 % y 100 %');
         continue;
       }
-      act.inicioNoAntesDe = ina;
+      act.completado = f;
+    }
+    const rest = col(fila, 'restante');
+    if (!vacia(rest)) {
+      const v = numeroDe(rest);
+      if (v === undefined || v < 0) {
+        error('«Duración restante» debe ser un número de días');
+        continue;
+      }
+      act.restante = v;
+    }
+    if (act.finReal !== undefined && act.inicioReal !== undefined && act.finReal < act.inicioReal) {
+      error('el fin real es anterior al inicio real');
+      continue;
+    }
+    if ((act.completado !== undefined || act.restante !== undefined) && act.inicioReal === undefined && act.finReal === undefined) {
+      error('tiene avance pero no tiene inicio real');
+      continue;
     }
     actividades.push(act);
   }
@@ -203,6 +243,15 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
   }
   return { actividades, problemas };
 }
+
+const NOMBRE_CAMPO = {
+  inicioNoAntesDe: 'Inicio no antes de',
+  inicioNoDespuesDe: 'Inicio no después de',
+  terminarNoAntesDe: 'Terminar no antes de',
+  terminarNoDespuesDe: 'Terminar no después de',
+  inicioReal: 'Inicio real',
+  finReal: 'Fin real',
+} as const;
 
 const DIAS: Array<[string, number]> = [
   ['domingo', 0], ['lunes', 1], ['martes', 2], ['miercoles', 3], ['jueves', 4], ['viernes', 5], ['sabado', 6],
@@ -219,6 +268,7 @@ function siNo(v: Celda): boolean | undefined {
 
 export interface LecturaCalendario {
   inicio?: number;
+  fechaCorte?: number;
   calendario: Calendario;
   problemas: ProblemaCronograma[];
 }
@@ -240,6 +290,7 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
     };
   }
   let inicio: number | undefined;
+  let fechaCorte: number | undefined;
   const laborables = [...CALENDARIO_ESTANDAR.laborables];
   const festivos = new Set<number>();
   for (let f = 0; f < valores.length; f++) {
@@ -248,6 +299,11 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
     if (etiqueta.startsWith('inicio del proyecto') || etiqueta === 'inicio') {
       if (typeof fila[1] === 'number') inicio = fila[1];
       else problemas.push({ gravedad: 'error', hoja, fila: primeraFila + f, mensaje: `Fila ${primeraFila + f}: el inicio del proyecto debe ser una fecha` });
+      continue;
+    }
+    if (etiqueta.startsWith('fecha de corte') || etiqueta.startsWith('fecha de estado') || etiqueta.startsWith('fecha de datos')) {
+      if (typeof fila[1] === 'number') fechaCorte = fila[1];
+      else if (!vacia(fila[1])) problemas.push({ gravedad: 'error', hoja, fila: primeraFila + f, mensaje: `Fila ${primeraFila + f}: la fecha de corte debe ser una fecha` });
       continue;
     }
     const dia = DIAS.find(([n]) => etiqueta === n);
@@ -271,7 +327,7 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
     problemas.push({ gravedad: 'error', hoja, mensaje: 'Falta «Inicio del proyecto» (columna A) con su fecha (columna B)' });
   }
   if (!laborables.some(Boolean)) problemas.push({ gravedad: 'error', hoja, mensaje: 'Ningún día de la semana es laborable' });
-  return { inicio, calendario: { laborables, festivos }, problemas };
+  return { inicio, ...(fechaCorte !== undefined ? { fechaCorte } : {}), calendario: { laborables, festivos }, problemas };
 }
 
 /** Las dos hojas juntas. `cronograma` solo si no hay errores. */
@@ -285,6 +341,23 @@ export function leerCronograma(
   const a = leerActividades(actividades);
   const c = leerCalendario(calendario);
   const problemas = [...c.problemas, ...a.problemas];
+  const conAvance = a.actividades.filter((x) => x.inicioReal !== undefined || x.finReal !== undefined);
+  if (conAvance.length > 0 && c.fechaCorte === undefined) {
+    problemas.push({ gravedad: 'error', hoja: HOJA_CALENDARIO, mensaje: 'Hay fechas reales en «Actividades» pero falta la «Fecha de corte» en «Calendario» (el día desde el que se cuenta lo que queda)' });
+  }
+  if (c.fechaCorte !== undefined) {
+    for (const x of conAvance) {
+      if (x.inicioReal !== undefined && x.inicioReal > c.fechaCorte) {
+        problemas.push({ gravedad: 'error', hoja: HOJA_ACTIVIDADES, fila: x.fila, actividad: x.id, mensaje: `Fila ${x.fila} («${x.id}»): el inicio real es posterior a la fecha de corte` });
+      }
+      if (x.finReal !== undefined && x.finReal >= c.fechaCorte) {
+        problemas.push({ gravedad: 'error', hoja: HOJA_ACTIVIDADES, fila: x.fila, actividad: x.id, mensaje: `Fila ${x.fila} («${x.id}»): el fin real debe ser anterior a la fecha de corte` });
+      }
+    }
+  }
   if (problemas.some((p) => p.gravedad === 'error') || c.inicio === undefined) return { problemas };
-  return { cronograma: { inicio: c.inicio, calendario: c.calendario, actividades: a.actividades }, problemas };
+  return {
+    cronograma: { inicio: c.inicio, calendario: c.calendario, actividades: a.actividades, ...(c.fechaCorte !== undefined ? { fechaCorte: c.fechaCorte } : {}) },
+    problemas,
+  };
 }

@@ -1330,6 +1330,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     paralelo (también con `worker_threads`) da exactamente lo mismo.
     **Siguiente**: resto de P1.
 
+76. [x] **Resto de P1 (2026-09-30)**. `red.ts` (`parametrosRed`: estado,
+    minInicio, minFin, maxFin, maxInicio, sinLogica, transcurrido, escala;
+    *progress override*), aplicado igual en `cpm.ts` y `simulacion.ts`
+    (duración efectiva `transcurrido + d × escala`, restricciones tardías en
+    la pasada atrás). `IndiceLaborable.indiceHasta`. Lector con 7 columnas
+    nuevas y «Fecha de corte». `FilaCPM.estado`, columna Estado. Salud:
+    restricciones duras. Gantt: gris y línea de corte. Falta: calendarios
+    por actividad (aplazado tras P4/P5). **Siguiente**: P4.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
