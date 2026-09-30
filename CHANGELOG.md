@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W2: reserva de contingencia y su reparto (2026-09-30)
+
+**Añadido**
+- **Reserva de contingencia** al P50, P80 o P90: cuánto tiempo y dinero
+  reservar sobre el cronograma y su costo, repartido entre la
+  incertidumbre (lo que haría falta sin riesgos) y cada riesgo; las
+  oportunidades restan y las partes suman el total. En el panel (con
+  selector de nivel), en la hoja de la simulación y en el informe PDF.
+- Guía Q68.
+
 ### W1: hitos contractuales y multas por retraso (2026-09-30)
 
 **Añadido**

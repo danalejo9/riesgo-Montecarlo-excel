@@ -14,6 +14,7 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
+  reservaContingencia, type NivelReserva, type SinRiesgos,
   riesgosActivos, evaluarRegistro, hojaRegistro, colorDe, type Registro,
   leerRangosTipo, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
@@ -41,7 +42,7 @@ import { textosCronograma as T } from './textos/es.ts';
 type Calculado = Extract<ResultadoCPM, { ok: true }> & { hoja: string };
 interface Simulado {
   r: ResultadoSimulacionPlazo;
-  impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number; diasP80: number } };
+  impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: SinRiesgos };
   narrativa: string[];
   hoja: string;
   hilos: number;
@@ -512,6 +513,7 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
       )}
       {s.narrativa.map((l) => <p key={l}>{l}</p>)}
       {r.hitos && r.hitos.length > 0 && <Hitos r={r} />}
+      {!r.cancelada && <ReservaContingencia r={r} impacto={impacto} />}
       {s.comparacion && <Comparacion c={s.comparacion} />}
       <Histograma r={r} />
       {r.costos && <Nube r={r} />}
@@ -601,6 +603,36 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
     max = Math.max(max, f);
   }
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
+}
+
+/** W2: la reserva de contingencia al nivel elegido y de dónde sale. */
+function ReservaContingencia({ r, impacto }: { r: ResultadoSimulacionPlazo; impacto?: Simulado['impacto'] }) {
+  const [nivel, setNivel] = useState<NivelReserva>('p80');
+  const res = reservaContingencia(r, impacto, nivel);
+  const dias = (n: number) => `${n >= 0 ? '' : '−'}${Math.abs(Math.round(n * 10) / 10).toLocaleString('es')}`;
+  const unidad = r.unidad === 'naturales' ? T.diasNaturalesCorto : T.diasLaborablesCorto;
+  return (
+    <Plegable id="cronograma-reserva" abierta titulo={T.reserva} resumen={T.reservaResumen(nivel.toUpperCase(), dias(res.dias), unidad, res.costo !== undefined ? textoMoneda(res.costo) : undefined)}>
+      <p role="group" aria-label={T.reservaNivel} style={{ margin: '4px 0' }}>
+        {(['p50', 'p80', 'p90'] as const).map((n) => (
+          <button key={n} type="button" className={nivel === n ? '' : 'secundario'} aria-pressed={nivel === n} onClick={() => setNivel(n)} style={{ marginRight: 4 }}>{n.toUpperCase()}</button>
+        ))}
+      </p>
+      <p>{T.reservaTexto(nivel.toUpperCase(), textoFecha(res.plan.fecha), textoFecha(res.objetivo.fecha), dias(res.dias), unidad, res.costo !== undefined ? textoMoneda(res.costo) : undefined)}</p>
+      <table>
+        <thead><tr><th>{T.reservaParte}</th><th>{unidad}</th>{res.costo !== undefined && <th>{T.costoCol}</th>}</tr></thead>
+        <tbody>
+          {res.partes.map((x) => (
+            <tr key={x.id} style={x.tipo === 'oportunidad' ? { color: 'var(--sube, #2a78d6)' } : undefined}>
+              <td>{x.nombre}</td><td>{dias(x.dias)}</td>{res.costo !== undefined && <td>{textoMoneda(x.costo ?? 0)}</td>}
+            </tr>
+          ))}
+          <tr><th scope="row">{T.reservaTotal}</th><th>{dias(res.dias)}</th>{res.costo !== undefined && <th>{textoMoneda(res.costo)}</th>}</tr>
+        </tbody>
+      </table>
+      <p className="tenue">{impacto ? T.reservaNota : T.reservaSinRiesgos}</p>
+    </Plegable>
+  );
 }
 
 /** W1: los hitos contractuales: si se cumplen, cuándo y cuánto cuestan en multas. */

@@ -12,7 +12,8 @@ import type { ResultadoCPM } from './cpm.ts';
 import { textoRelacion } from './predecesoras.ts';
 import type { Cronograma } from './tipos.ts';
 import { HOJA_RIESGOS } from './riesgos.ts';
-import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
+import type { ImpactoRiesgo, ResultadoSimulacionPlazo, SinRiesgos } from './simulacion.ts';
+import { reservaContingencia } from './reserva.ts';
 import type { ComparacionMitigacion } from './mitigacion.ts';
 import { HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS } from './lectorTabla.ts';
 import type { Calendario } from './tipos.ts';
@@ -172,7 +173,7 @@ export const HOJA_SIMULACION = 'Cronograma (simulación)';
  */
 export function hojaSimulacionPlazo(
   r: ResultadoSimulacionPlazo,
-  impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number; diasP80: number } },
+  impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: SinRiesgos },
   narrativa: string[] = [],
   codigoMoneda = MONEDA_POR_DEFECTO,
 ): HojaAEscribir {
@@ -233,6 +234,23 @@ export function hojaSimulacionPlazo(
       v.push(['Multas: P80', r.multas.p80]);
       fechas.push({ fila: v.length - 2, col: 1, filas: 2, cols: 1, formato: formatoMoneda(codigoMoneda) });
     }
+    v.push(['']);
+  }
+
+  // W2: la reserva de contingencia al P80 y su reparto; los totales al P50 y al P90.
+  if (!r.cancelada) {
+    const res = reservaContingencia(r, impacto, 'p80');
+    const hayCosto = res.costo !== undefined;
+    encabezados.push(v.length);
+    v.push([`Reserva de contingencia al P80 (sobre el cronograma)`, `Días ${r.unidad}`, ...(hayCosto ? ['Costo'] : [])]);
+    const r0 = v.length;
+    for (const x of res.partes) v.push([x.nombre, Math.round(x.dias * 100) / 100, ...(hayCosto ? [x.costo ?? 0] : [])]);
+    v.push(['Reserva total al P80', Math.round(res.dias * 100) / 100, ...(hayCosto ? [res.costo as number] : [])]);
+    for (const n of ['p50', 'p90'] as const) {
+      const o = reservaContingencia(r, impacto, n);
+      v.push([`Reserva total al ${n.toUpperCase()}`, Math.round(o.dias * 100) / 100, ...(hayCosto ? [o.costo as number] : [])]);
+    }
+    if (hayCosto) fechas.push({ fila: r0, col: 2, filas: v.length - r0, cols: 1, formato: formatoMoneda(codigoMoneda) });
     v.push(['']);
   }
 

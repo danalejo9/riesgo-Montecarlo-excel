@@ -7,7 +7,7 @@
  */
 
 export type IdSeccionCostos = 'ajustes' | 'entradas' | 'registro' | 'salidas' | 'comparar';
-export type IdSeccionCronograma = 'resumen' | 'hitos' | 'salud' | 'fechas' | 'gantt' | 'riesgos' | 'registro' | 'mitigacion' | 'seguimiento' | 'costos' | 'actividades' | 'ajustes';
+export type IdSeccionCronograma = 'resumen' | 'hitos' | 'reserva' | 'salud' | 'fechas' | 'gantt' | 'riesgos' | 'registro' | 'mitigacion' | 'seguimiento' | 'costos' | 'actividades' | 'ajustes';
 
 export const SECCIONES_COSTOS: ReadonlyArray<{ id: IdSeccionCostos; nombre: string }> = [
   { id: 'ajustes', nombre: 'Cómo se calculó' },
@@ -20,6 +20,7 @@ export const SECCIONES_COSTOS: ReadonlyArray<{ id: IdSeccionCostos; nombre: stri
 export const SECCIONES_CRONOGRAMA: ReadonlyArray<{ id: IdSeccionCronograma; nombre: string }> = [
   { id: 'resumen', nombre: 'Resumen ejecutivo' },
   { id: 'hitos', nombre: 'Hitos contractuales y multas' },
+  { id: 'reserva', nombre: 'Reserva de contingencia' },
   { id: 'fechas', nombre: 'Fechas: curva S e histograma' },
   { id: 'gantt', nombre: 'Gantt probabilístico' },
   { id: 'riesgos', nombre: 'Riesgos de plazo' },

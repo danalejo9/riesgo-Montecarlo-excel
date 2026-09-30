@@ -1170,6 +1170,19 @@ de mitigar», 10.000, PERT). Esperado:
 - Errores: un ID que no existe, una fecha escrita como texto, una multa
   negativa o un hito repetido dan su mensaje.
 
+**Q68. Reserva de contingencia (W2).** Con el libro de pruebas (sin hitos),
+simula (10.000, PERT). Aparece **Reserva de contingencia** con los botones
+P50 / P80 / P90 (P80 marcado). Esperado al **P80**: «la fecha pasa del
+16/07/2027 al 24/08/2027: una reserva de **25 días laborables** y de
+**US$ 117.853**», repartida así: incertidumbre 15 días / US$ 58.533; R1
+(lluvias) 6,6 / US$ 35.798; R2 (licencia) 3,3 / US$ 10.203; R4 (acabados)
+1,1 / US$ 6.918; R3 (ascensor) 0 / US$ 9.872; **R5** (oportunidad, en
+azul) −1 / −US$ 3.472. Las partes **suman** el total. Al P50: 17 días y
+US$ 80.185; al P90: 30 días y US$ 138.266. En «Cronograma (simulación)», el
+bloque «Reserva de contingencia al P80» con los totales al P50 y al P90; en
+el PDF, la sección «Reserva de contingencia». (Las cifras de las partes son
+de 10.000 iteraciones y la semilla por defecto.)
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

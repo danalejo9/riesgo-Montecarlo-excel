@@ -1524,6 +1524,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Oráculo Python: «Hitos (prueba)» y «Esperado (hitos)». Guía Q67.
     **Siguiente**: W2 (reserva de contingencia).
 
+95. [x] **W2 (2026-09-30)**. `reserva.ts` (`reservaContingencia`: reserva
+    = percentil − plan; incertidumbre = sin riesgos − plan; riesgos = el
+    resto, repartido: oportunidades con su efecto medido, amenazas en
+    proporción; «efecto conjunto» si no hay amenazas que sumen; las partes
+    cuadran exactas). `impactoDeRiesgos` mide ahora P50/P80/P90 de plazo y
+    costo (`SinRiesgos`). Panel con selector de nivel, bloque en la hoja,
+    sección en el PDF. Guía Q68. **Siguiente**: W3 (casos de validación).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

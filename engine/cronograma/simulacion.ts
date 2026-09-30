@@ -1145,6 +1145,21 @@ function cpmDeterminista(
   return fin;
 }
 
+/** La simulación sin ningún riesgo (ni clima): fechas, días y, si hay, costos en P50/P80/P90. */
+export type SinRiesgos = FechasPercentil & { diasP50: number; diasP80: number; diasP90: number; costoP50?: number; costoP80?: number; costoP90?: number };
+
+/** Lo que cambia de una simulación a otra, en los tres niveles (W2). */
+function diferencias(base: ResultadoSimulacionPlazo, sin: ResultadoSimulacionPlazo) {
+  return {
+    diasP80: base.dias.p80 - sin.dias.p80,
+    diasP50: base.dias.p50 - sin.dias.p50,
+    diasP90: base.dias.p90 - sin.dias.p90,
+    ...(base.costos && sin.costos
+      ? { costoP80: base.costos.p80 - sin.costos.p80, costoP50: base.costos.p50 - sin.costos.p50, costoP90: base.costos.p90 - sin.costos.p90 }
+      : {}),
+  };
+}
+
 export interface ImpactoRiesgo {
   id: string;
   nombre: string;
@@ -1154,6 +1169,10 @@ export interface ImpactoRiesgo {
   diasP50: number;
   /** Lo que el riesgo aporta al P80 del costo (si hay costos). */
   costoP80?: number;
+  /** W2: lo mismo en el P90 del plazo y en el P50/P90 del costo (para la reserva a otros niveles). */
+  diasP90?: number;
+  costoP50?: number;
+  costoP90?: number;
 }
 
 /**
@@ -1176,18 +1195,13 @@ export async function impactoDeRiesgos(
   op: OpcionesSimulacionPlazo,
   /** Cómo simular cada variante: por defecto en este hilo; el panel pasa la versión en paralelo. */
   simular: (c: Cronograma, r: readonly RiesgoPlazo[], o: OpcionesSimulacionPlazo) => Promise<ResultadoSimulacionPlazo> = simularPlazo,
-): Promise<{ porRiesgo: ImpactoRiesgo[]; sinRiesgos: FechasPercentil & { diasP80: number; costoP80?: number } }> {
+): Promise<{ porRiesgo: ImpactoRiesgo[]; sinRiesgos: SinRiesgos }> {
   const opciones = { ...op, iteraciones: base.iteraciones, alAvanzar: undefined };
   const porRiesgo: ImpactoRiesgo[] = [];
   for (const r of riesgos) {
     if (op.debeCancelar?.()) break;
     const sin = await simular(c, riesgos.filter((x) => x !== r), opciones);
-    porRiesgo.push({
-      id: r.id, nombre: r.nombre, probabilidad: r.probabilidad,
-      diasP80: base.dias.p80 - sin.dias.p80,
-      diasP50: base.dias.p50 - sin.dias.p50,
-      ...(base.costos && sin.costos ? { costoP80: base.costos.p80 - sin.costos.p80 } : {}),
-    });
+    porRiesgo.push({ id: r.id, nombre: r.nombre, probabilidad: r.probabilidad, ...diferencias(base, sin) });
     op.alAvanzar?.(porRiesgo.length, riesgos.length + 1 + (c.clima ? 1 : 0));
   }
   // V8: el clima, como un riesgo más: lo que el P80 se adelantaría sin él.
@@ -1195,18 +1209,16 @@ export async function impactoDeRiesgos(
   delete sinClima.clima;
   if (c.clima && !op.debeCancelar?.()) {
     const sin = await simular(sinClima, riesgos, opciones);
-    porRiesgo.push({
-      id: ID_CLIMA, nombre: 'Clima (días perdidos por mes)', probabilidad: 1,
-      diasP80: base.dias.p80 - sin.dias.p80,
-      diasP50: base.dias.p50 - sin.dias.p50,
-      ...(base.costos && sin.costos ? { costoP80: base.costos.p80 - sin.costos.p80 } : {}),
-    });
+    porRiesgo.push({ id: ID_CLIMA, nombre: 'Clima (días perdidos por mes)', probabilidad: 1, ...diferencias(base, sin) });
     op.alAvanzar?.(porRiesgo.length, riesgos.length + 2);
   }
   const ninguno = await simular(sinClima, [], opciones);
   porRiesgo.sort((a, b) => b.diasP80 - a.diasP80 || b.diasP50 - a.diasP50);
   return {
     porRiesgo,
-    sinRiesgos: { ...ninguno.fechas, diasP80: ninguno.dias.p80, ...(ninguno.costos ? { costoP80: ninguno.costos.p80 } : {}) },
+    sinRiesgos: {
+      ...ninguno.fechas, diasP50: ninguno.dias.p50, diasP80: ninguno.dias.p80, diasP90: ninguno.dias.p90,
+      ...(ninguno.costos ? { costoP50: ninguno.costos.p50, costoP80: ninguno.costos.p80, costoP90: ninguno.costos.p90 } : {}),
+    },
   };
 }

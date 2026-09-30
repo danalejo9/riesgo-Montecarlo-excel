@@ -62,6 +62,21 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
         {s.multas && <p className="lectura">{T.multas(pct(s.multas.probAlguna), textoMoneda(s.multas.media), textoMoneda(s.multas.p80))}</p>}
       </section>
     ),
+    reserva: s?.reserva && (
+      <section>
+        <h2>Reserva de contingencia</h2>
+        <p className="lectura">{T.reservaTexto(textoFecha(s.reserva.plan.fecha), textoFecha(s.reserva.objetivo.fecha), `${Math.round(s.reserva.dias * 10) / 10}`, s.reserva.costo !== undefined ? textoMoneda(s.reserva.costo) : undefined)}</p>
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>{T.reservaParte}</th><th>{T.reservaDias}</th>{s.reserva.costo !== undefined && <th>{T.costoCol}</th>}</tr></thead>
+          <tbody>
+            {s.reserva.partes.map((x) => (
+              <tr key={x.id}><th scope="row">{x.nombre}</th><td>{Math.round(x.dias * 10) / 10}</td>{s.reserva!.costo !== undefined && <td>{textoMoneda(x.costo ?? 0)}</td>}</tr>
+            ))}
+            <tr><th scope="row">{T.reservaTotal}</th><th>{Math.round(s.reserva.dias * 10) / 10}</th>{s.reserva.costo !== undefined && <th>{textoMoneda(s.reserva.costo)}</th>}</tr>
+          </tbody>
+        </table>
+      </section>
+    ),
     fechas: s && (
       <section className="grafico-informe">
         <h2>Fechas de fin</h2>

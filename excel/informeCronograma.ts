@@ -5,7 +5,7 @@
  */
 
 import {
-  tendencia, vistaGantt, type ComparacionMitigacion, type Instantanea, type Registro, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
+  reservaContingencia, tendencia, vistaGantt, type Reserva, type SinRiesgos, type ComparacionMitigacion, type Instantanea, type Registro, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
   type ResultadoSimulacionPlazo, type VistaGantt,
 } from '../engine/cronograma/index.ts';
 import type { PlantillaInforme } from './plantillaInforme.ts';
@@ -41,6 +41,8 @@ export interface DatosInformeCronograma {
     diaCronograma: number;
     riesgos: Array<ImpactoRiesgo & { ocurrio: number }>;
     hitos?: ResultadoSimulacionPlazo['hitos'];
+    /** W2: la reserva de contingencia al P80. */
+    reserva?: Reserva;
     multas?: ResultadoSimulacionPlazo['multas'];
     sinRiesgosP80?: number;
     costos?: {
@@ -75,7 +77,7 @@ export function datosInformeCronograma(e: {
   duracionProyecto: number;
   unidad?: 'laborables' | 'naturales';
   salud?: InformeSalud | null;
-  simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number } }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
+  simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: SinRiesgos }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
   seguimiento?: readonly Instantanea[];
   registro?: Registro;
@@ -144,6 +146,7 @@ export function datosInformeCronograma(e: {
       riesgos: (s.impacto?.porRiesgo ?? []).map((x) => ({ ...x, ocurrio: r.riesgos.find((y) => y.id === x.id)?.ocurrio ?? NaN })),
       ...(s.impacto ? { sinRiesgosP80: s.impacto.sinRiesgos.p80 } : {}),
       ...(r.hitos ? { hitos: r.hitos } : {}),
+      ...(!r.cancelada ? { reserva: reservaContingencia(r, s.impacto, 'p80') } : {}),
       ...(r.multas ? { multas: r.multas } : {}),
       ...(r.costos
         ? {

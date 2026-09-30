@@ -213,8 +213,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | V10 | P6 | Registro de riesgos completo (matriz, responsables, estado) | **Tú** | ✅ 30/09 (falta Excel: Q63–Q64) |
 | V11 | P6 | Simulación rápida mientras se edita, configurable | **Tú** | ✅ 30/09 (falta Excel: Q65–Q66) |
 | W1 | P7 | Hitos contractuales y multas por retraso | **Tú** (30/09) | ✅ 30/09 (falta Excel: Q67) |
-| W2 | P7 | Reserva de contingencia y su reparto por riesgo | **Tú** | ⬜ siguiente |
-| W3 | P7 | Casos de validación publicables (GAO, AACE, merge bias) | **Tú** | ⬜ |
+| W2 | P7 | Reserva de contingencia y su reparto por riesgo | **Tú** | ✅ 30/09 (falta Excel: Q68) |
+| W3 | P7 | Casos de validación publicables (GAO, AACE, merge bias) | **Tú** | ⬜ siguiente |
 | W4 | P7 | Merge bias explicado con un gráfico | **Tú** | ⬜ |
 | W5 | P7 | `RIESGO.CRONOGRAMA("Hito")` en el modelo de costos | **Tú** | ⬜ |
 | W6 | P7 | Plantillas por sector y guía de primer uso | **Tú** | ⬜ |
