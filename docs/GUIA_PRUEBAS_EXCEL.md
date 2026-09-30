@@ -661,6 +661,46 @@ categoría», y **Simular el plazo** desactivado. Devuélvelo.
 **Q20. Excel para la Web (y Mac, si tienes).** Repite Q1–Q4, Q11 y Q13 con el
 libro subido a OneDrive. Q13 debe dar las mismas fechas.
 
+**Q21. Hoja «Cronograma (Gantt)» (P3c).** Con el libro como venía,
+**Calcular cronograma**. Además de «Cronograma (resultado)» aparece la hoja
+**«Cronograma (Gantt)»**: columnas ID, Actividad, Predecesoras (`3FC+5`,
+`7CC+10`, `19CF`…), Inicio, Fin, Holgura y Crítica; a la derecha, una columna
+por **semana** (encabezado dd/mm, desde el lunes 01/02/2027) con las barras
+pintadas: **rojo** las críticas (inicio, permisos, diseño, movilización,
+excavación, cimentación, estructura, mampostería, acabados, limpieza,
+vigilancia) y **azul** las demás; los hitos (1 y 19) como **◆**. Una línea
+gruesa negra a la derecha de la semana del 12/07/2027 con el texto «Fin del
+cronograma» encima. ID y Actividad quedan fijos al desplazarte a la derecha.
+
+**Q22. El Gantt tras simular.** **Simular el plazo**. La hoja se rehace: la
+columna G pasa a «Crítica en» (porcentaje), detrás de cada barra aparece una
+**franja clara** (rosa en las críticas, azul claro en las demás) que llega
+hasta su P90, y hay una segunda línea, **amarilla**, en la semana que empieza el
+**23/08/2027** (el P80 es el martes 24/08/2027) con el texto «P80».
+
+**Q23. Ver cronograma (ventana).** En el panel, **Ver cronograma**. Se abre
+una ventana con el Gantt: nombres a la izquierda, barras a la derecha en
+**Semanas**, con **flechas** de cada relación (las CC de la estructura a las
+instalaciones salen del **comienzo** de la estructura; la CF de la entrega a
+la vigilancia llega al **fin** de la vigilancia), la franja P10–P90, la
+leyenda y dos líneas discontinuas: fin del cronograma (negra) y P80
+(amarilla, desplázate a la derecha). Color por «Índice de criticidad» (azul
+→ rojo); cámbialo a «Crítica / con holgura». Prueba **Días** y **Meses**, y
+quita las flechas. Al pasar el ratón por una barra: sus fechas, holgura,
+criticidad y P10–P90.
+
+**Q24. Predecesoras y sucesoras.** En la ventana, pulsa **Acabados
+interiores**. Esperado: se atenúa todo salvo ella, sus tres predecesoras
+(instalaciones eléctricas, hidráulicas y mampostería) y su sucesora
+(limpieza final); abajo: «Predecesoras: 10 Instalaciones eléctricas
+(fin‑comienzo) · 11 … · 12 Mampostería (fin‑comienzo)» y «Sucesoras: 18
+Limpieza final (fin‑comienzo)». «Quitar la selección» lo deshace. Si simulas
+con la ventana abierta, se actualiza sola.
+
+**Q25. Web y Mac.** Repite Q21–Q24 en Excel para la Web (y en Mac si puedes).
+Recuerda: Excel solo deja una ventana del complemento abierta a la vez; abrir
+el cronograma cierra el explorador de distribución y al revés.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

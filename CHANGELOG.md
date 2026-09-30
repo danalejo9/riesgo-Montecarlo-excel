@@ -5,6 +5,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P3c: ver el cronograma (2026-09-30)
+
+**Añadido**
+- **Ver cronograma**: ventana flotante con el Gantt interactivo (barras,
+  flechas de cada relación FC/CC/FF/CF desde y hacia el extremo que toca,
+  zoom en días/semanas/meses, críticas o índice de criticidad en color,
+  franja P10–P90 tras simular, líneas del fin del cronograma y del P80,
+  ficha de cada barra al pasar el ratón y, al pulsar una actividad, sus
+  predecesoras y sucesoras). Se actualiza sola al recalcular o simular.
+  Un cronograma grande no cabe en la dirección: la ventana lo pide por
+  mensaje.
+- Hoja **«Cronograma (Gantt)»**: celdas coloreadas por semana (o día o mes,
+  según la duración), predecesoras escritas al lado, hitos ◆, franjas
+  P10–P90 y líneas del fin y del P80. Se ve sin el complemento.
+- Guía: Q21–Q25.
+
 ### P2 y P3: salud del cronograma y Monte Carlo del plazo (2026-09-30)
 
 **Añadido**

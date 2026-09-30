@@ -360,7 +360,7 @@ const ajustes = new Map<string, string>();
  * colores y gráficos se aceptan y se cuentan, no se dibujan.
  */
 export const hojasMatriz = new Map<string, { valores: unknown[][]; graficos: number }>();
-const NOMBRES_MATRIZ = ['Actividades', 'Calendario', 'Riesgos de plazo', 'Cronograma (resultado)', 'Cronograma (simulación)'];
+const NOMBRES_MATRIZ = ['Actividades', 'Calendario', 'Riesgos de plazo', 'Cronograma (resultado)', 'Cronograma (simulación)', 'Cronograma (Gantt)'];
 
 function columnaDe(letras: string): number {
   let n = 0;
@@ -387,7 +387,7 @@ function hojaMatriz(nombre: string) {
       escribir(f0, c0, v);
     },
     set numberFormat(_v: unknown[][]) {},
-    format: { font: {}, fill: {}, columnWidth: 0 },
+    format: { font: {}, fill: {}, columnWidth: 0, horizontalAlignment: '', borders: { getItem: () => ({}) } },
     clear: () => {
       hoja.valores = [];
     },
@@ -409,7 +409,7 @@ function hojaMatriz(nombre: string) {
       const cols = Math.max(0, ...hoja.valores.map((f) => f.length));
       return { isNullObject: filas === 0, rowIndex: 0, columnIndex: 0, rowCount: filas, columnCount: cols, load: () => {} };
     },
-    freezePanes: { freezeRows: () => {} },
+    freezePanes: { freezeRows: () => {}, freezeAt: () => {} },
     charts: {
       items: graficos,
       load: () => {},

@@ -8,14 +8,16 @@
 import { useRef, useState } from 'react';
 
 import {
-  calcularCPM, hojaSimulacionPlazo, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
+  calcularCPM, hojaGantt, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
   simularPlazo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
-import { escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
+import { escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
+import { codificarJson } from '../excel/codificacion.ts';
+import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
 import { textosCronograma as T } from './textos/es.ts';
 
@@ -28,6 +30,9 @@ interface Simulado {
 }
 
 const ITERACIONES = [1000, 5000, 10_000, 50_000];
+const PAGINA_GANTT = 'gantt.html';
+/** Caracteres de la vista codificada que se meten en la URL de la ventana; más, por mensaje. */
+const LIMITE_URL = 24_000;
 const ceder = () => new Promise<void>((r) => setTimeout(r, 0));
 
 export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
@@ -71,6 +76,9 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       }
       const riesgos = leerRiesgosPlazo(hojas.riesgos, cron.actividades);
       const hoja = await escribirResultadoCPM(r);
+      const vista = vistaGantt(cron.actividades, r.filas, r.fechaFinProyecto);
+      await escribirHojaGantt(hojaGantt(vista));
+      ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       setProblemas([...lectura.problemas, ...r.avisos, ...riesgos.problemas]);
       setResultado({ ...r, hoja });
       setSalud(revisarSalud(cron.actividades, r.filas));
@@ -103,11 +111,34 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       }
       const narrativa = narrativaPlazo(r, impacto, salud ?? undefined);
       const hoja = await escribirHojaSimulacion(hojaSimulacionPlazo(r, impacto, narrativa));
+      if (resultado) {
+        const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r);
+        await escribirHojaGantt(hojaGantt(vista));
+        ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
+      }
       setSimulado({ r, impacto, narrativa, hoja });
     } catch (e) {
       alFallar(e);
     } finally {
       setOcupado(null);
+    }
+  };
+
+  const verCronograma = async () => {
+    if (!resultado || !datos) return;
+    try {
+      const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, simulado?.r);
+      const codigo = await codificarJson(vista);
+      // Si no cabe en la dirección, la ventana la pide por mensaje al abrirse.
+      const ventana = await abrirVentana(PAGINA_GANTT, codigo.length <= LIMITE_URL ? codigo : '', {
+        alto: 85,
+        ancho: 85,
+        alRecibir: (texto) => {
+          if (texto.includes('"listo"')) ventana.enviar(vista);
+        },
+      });
+    } catch (e) {
+      alFallar(e);
     }
   };
 
@@ -156,6 +187,10 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
           </div>
           <p className="tenue">{T.rutaCritica}: {criticas.map((f) => f.nombre).join(' → ')}</p>
           <p className="tenue">{T.escritoEn(resultado.hoja)}</p>
+          <p>
+            <button type="button" onClick={verCronograma} disabled={ocupado !== null || !datos}>{T.verCronograma}</button>{' '}
+            <span className="tenue">{T.verCronogramaAyuda}</span>
+          </p>
         </>
       )}
 

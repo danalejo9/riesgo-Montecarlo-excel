@@ -9,3 +9,4 @@ export * from './riesgos.ts';
 export * from './simulacion.ts';
 export * from './muestreo.ts';
 export * from './narrativa.ts';
+export * from './gantt.ts';

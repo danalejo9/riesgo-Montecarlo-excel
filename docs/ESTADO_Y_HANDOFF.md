@@ -1313,6 +1313,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (workers), P1 pendiente (avance, restricciones, calendarios por
     actividad), P4 (importadores), P5 (JCL); y la ronda N y Q del usuario.
 
+74. [x] **P3c (2026-09-30)**. `engine/cronograma/gantt.ts` (`vistaGantt`,
+    `columnasTiempo`, `hojaGantt`: tramos de color por barra y franja, ◆ y
+    marcas), `ui/gantt.html` + `ui/gantt.tsx` + `ui/gantt.css` (ventana; la
+    vista en `#d=` si cabe en 24.000 caracteres, si no la pide con
+    `{accion:'listo'}`), `escribirHojaGantt` en `excel/cronograma.ts`,
+    botón «Ver cronograma» en `ui/Cronograma.tsx`. Visto en el banco con el
+    libro de pruebas cargado en `__hojasMatriz`. **Siguiente**: P3b.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

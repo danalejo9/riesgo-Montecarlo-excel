@@ -7,7 +7,7 @@
 
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
-  plantillaRiesgos, type HojaAEscribir, type ResultadoCPM,
+  plantillaRiesgos, HOJA_GANTT, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
 
@@ -115,5 +115,61 @@ export async function escribirHojaSimulacion(h: HojaAEscribir): Promise<string> 
   return Excel.run(async (context) => {
     await escribirHoja(context, h, true);
     return h.nombre;
+  });
+}
+
+/**
+ * La hoja «Cronograma (Gantt)» (P3c): las columnas fijas, la línea de tiempo
+ * con una columna por día, semana o mes, y cada barra como un tramo de
+ * celdas coloreadas. Un tramo por barra y otro por franja: pocas llamadas
+ * aunque el cronograma sea grande.
+ */
+export async function escribirHojaGantt(h: HojaGantt): Promise<string> {
+  return Excel.run(async (context) => {
+    let hoja = context.workbook.worksheets.getItemOrNullObject(HOJA_GANTT);
+    await context.sync();
+    if (hoja.isNullObject) hoja = context.workbook.worksheets.add(HOJA_GANTT);
+    else hoja.getRange().clear();
+
+    const ancho = Math.max(...h.valores.map((f) => f.length));
+    const valores = h.valores.map((f) => [...f, ...new Array<string>(ancho - f.length).fill('')]);
+    const nDatos = valores.length - h.filaEncabezado - 1;
+    const nTiempo = ancho - h.primeraColTiempo;
+    // Formatos antes que valores: el ID como texto (ver `escribirHoja`).
+    if (nDatos > 0) {
+      hoja.getRangeByIndexes(h.filaEncabezado + 1, 0, nDatos, 1).numberFormat = new Array(nDatos).fill(['@']);
+      hoja.getRangeByIndexes(h.filaEncabezado + 1, 3, nDatos, 2).numberFormat = new Array(nDatos).fill([FORMATO_FECHA, FORMATO_FECHA]);
+      if (h.valores[h.filaEncabezado]?.[6] === 'Crítica en') hoja.getRangeByIndexes(h.filaEncabezado + 1, 6, nDatos, 1).numberFormat = new Array(nDatos).fill(['0%']);
+    }
+    const formatoEje = h.escala === 'dia' ? 'd' : h.escala === 'semana' ? 'dd/mm' : 'mmm yy';
+    if (nTiempo > 0) hoja.getRangeByIndexes(h.filaEncabezado, h.primeraColTiempo, 1, nTiempo).numberFormat = [new Array<string>(nTiempo).fill(formatoEje)];
+    hoja.getRangeByIndexes(0, 0, valores.length, ancho).values = valores;
+
+    const enc = hoja.getRangeByIndexes(h.filaEncabezado, 0, 1, ancho);
+    enc.format.font.bold = true;
+    enc.format.font.color = '#FFFFFF';
+    enc.format.fill.color = '#1F4E79';
+    hoja.getRange('A1').format.font.bold = true;
+    for (const t of h.tramos) hoja.getRangeByIndexes(t.fila, t.col, 1, t.cols).format.fill.color = t.color;
+    if (nTiempo > 0 && nDatos > 0) {
+      const tiempo = hoja.getRangeByIndexes(h.filaEncabezado + 1, h.primeraColTiempo, nDatos, nTiempo);
+      tiempo.format.horizontalAlignment = 'Center';
+    }
+    for (const m of h.marcas) {
+      const col = hoja.getRangeByIndexes(h.filaEncabezado, m.col, nDatos + 1, 1);
+      const borde = col.format.borders.getItem('EdgeRight');
+      borde.style = 'Continuous';
+      borde.color = m.color;
+      borde.weight = 'Thick';
+      hoja.getRangeByIndexes(h.filaEncabezado - 1, m.col, 1, 1).values = [[m.texto]];
+    }
+    const anchos = [6, 30, 16, 11, 11, 8, 10];
+    anchos.forEach((w, i) => (hoja.getRangeByIndexes(0, i, 1, 1).format.columnWidth = w * 7));
+    const anchoTiempo = h.escala === 'dia' ? 3 : h.escala === 'semana' ? 5.5 : 6.5;
+    if (nTiempo > 0) hoja.getRangeByIndexes(0, h.primeraColTiempo, 1, nTiempo).format.columnWidth = anchoTiempo * 7;
+    hoja.freezePanes.freezeAt(hoja.getRangeByIndexes(0, 0, h.filaEncabezado + 1, 2));
+    hoja.activate();
+    await context.sync();
+    return HOJA_GANTT;
   });
 }
