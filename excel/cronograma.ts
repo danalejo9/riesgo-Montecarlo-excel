@@ -8,7 +8,7 @@
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
   plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO, HOJA_RANGOS_TIPO, plantillaRangosTipo,
-  HOJA_CALENDARIOS, hojaCalendarios,
+  HOJA_CALENDARIOS, hojaCalendarios, HOJA_CLIMA, plantillaClima,
   type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
@@ -29,7 +29,7 @@ async function valoresDeHoja(context: Excel.RequestContext, nombre: string): Pro
 }
 
 export async function leerHojasCronograma(): Promise<{
-  actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][]; calendarios?: unknown[][];
+  actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][]; calendarios?: unknown[][]; clima?: unknown[][];
 }> {
   return Excel.run(async (context) => ({
     actividades: await valoresDeHoja(context, HOJA_ACTIVIDADES),
@@ -38,6 +38,7 @@ export async function leerHojasCronograma(): Promise<{
     seguimiento: await valoresDeHoja(context, HOJA_SEGUIMIENTO),
     rangosTipo: await valoresDeHoja(context, HOJA_RANGOS_TIPO),
     calendarios: await valoresDeHoja(context, HOJA_CALENDARIOS),
+    clima: await valoresDeHoja(context, HOJA_CLIMA),
   }));
 }
 
@@ -123,6 +124,7 @@ export async function escribirPlantillaCronograma(codigoMoneda?: string): Promis
     if (await escribirHoja(context, plantillaCalendario(serieDeDate(new Date())), false)) creadas.push(HOJA_CALENDARIO);
     if (await escribirHoja(context, plantillaRiesgos(), false)) creadas.push(HOJA_RIESGOS);
     if (await escribirHoja(context, hojaCalendarios(), false)) creadas.push(HOJA_CALENDARIOS);
+    if (await escribirHoja(context, plantillaClima(), false)) creadas.push(HOJA_CLIMA);
     if (await escribirHoja(context, plantillaActividades(codigoMoneda), false)) creadas.push(HOJA_ACTIVIDADES);
     await context.sync();
     return creadas;

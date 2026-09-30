@@ -28,6 +28,7 @@ import { streamOf, uniformAt } from '../random/philox.ts';
 import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
 import { extremosDePercentiles, muestreadorDuracion, type Muestreador } from './muestreo.ts';
+import { ClimaSimulado } from './clima.ts';
 import { ejeNatural, finPorRelacion, inicioPorRelacion } from './cpmCalendarios.ts';
 import { parametrosRed, parametrosRedEje, type ParametrosRed } from './red.ts';
 import { relojesDe, type Reloj } from './relojes.ts';
@@ -248,6 +249,8 @@ export interface PlazoPreparado {
    */
   relojes?: Reloj[];
   relojProyecto?: Reloj;
+  /** V8: el clima, si el cronograma lo tiene. */
+  clima?: ClimaSimulado;
   /** Memoria de trabajo de un bloque, reservada una vez y reutilizada (`ef` y `ls`, solo con relojes). */
   trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array; costo: Float64Array; ocurre: Uint8Array[]; ef?: Float64Array; ls?: Float64Array };
 }
@@ -326,6 +329,16 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     actividades: nombres,
     forma: op.forma,
     ...(conRelojes ? { relojes: [...conRelojes.relojes, ...ramas.map(() => conRelojes.proyecto)], relojProyecto: conRelojes.proyecto } : {}),
+    ...(c.clima && c.clima.afecta.length > 0
+      ? {
+          clima: new ClimaSimulado(
+            c.clima, indice, n, c.inicio,
+            conRelojes ? (serie) => serie - c.inicio : (serie) => cal.indiceDesde(serie),
+            conRelojes ? (a, b2) => conRelojes.proyecto.W(b2) - conRelojes.proyecto.W(a) : (a, b2) => b2 - a,
+            (k) => streamOf(`clima:${k}`),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -470,7 +483,7 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
       }
     }
     // 3. Adelante (V7: con relojes, `adelanteConRelojes`).
-    if (R) adelanteConRelojes(p, R, b);
+    if (R) adelanteConRelojes(p, R, b, i0);
     else {
       // 3. Adelante. El tipo de relación, fuera del bucle interno: cuatro bucles planos.
       fin.fill(0);
@@ -516,6 +529,15 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
           for (let k = 0; k < b; k++) {
             const v = minFin - (dur[bs + k] as number);
             if (v > (es[bs + k] as number)) es[bs + k] = v;
+          }
+        }
+        // V8: una actividad expuesta al clima tarda más en los meses que pierden días (lo que queda de ella).
+        if (p.clima?.expuesta[s2]) {
+          const tr = p.red.transcurrido[s2] as number;
+          for (let k = 0; k < b; k++) {
+            const e = es[bs + k] as number;
+            const resta = (dur[bs + k] as number) - tr;
+            if (resta > 0) dur[bs + k] = p.clima.avanzar(e + tr, resta, IDENTIDAD, SUMAR, semilla, i0 + k) - e;
           }
         }
         for (let k = 0; k < b; k++) {
@@ -652,13 +674,15 @@ export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: num
 }
 
 const TIPO_TEXTO = ['FS', 'SS', 'FF', 'SF'] as const;
+const IDENTIDAD = (t: number) => t;
+const SUMAR = (t: number, x: number) => t + x;
 
 /**
  * V7: la pasada adelante con el reloj de cada actividad (las mismas reglas
  * que `cpmConRelojes`), para las `b` iteraciones del bloque. Deja el inicio
  * en `es`, el fin en `ef` y el fin del proyecto en `fin`.
  */
-function adelanteConRelojes(p: PlazoPreparado, R: readonly Reloj[], b: number): void {
+function adelanteConRelojes(p: PlazoPreparado, R: readonly Reloj[], b: number, i0: number): void {
   const B = bloquePlazo(p.n);
   const { dur, es, fin, ocurre } = p.trabajo!;
   const ef = p.trabajo!.ef!;
@@ -689,7 +713,13 @@ function adelanteConRelojes(p: PlazoPreparado, R: readonly Reloj[], b: number): 
       if (conMinFin) e = Math.max(e, rs.inicioParaFin(minFin, d));
       if (d > 0) e = rs.alinearInicio(e);
       es[bs + k] = e;
-      const f = rs.avanzar(e, d);
+      let f = rs.avanzar(e, d);
+      // V8: con clima, lo que queda avanza al ritmo de cada mes; `dur` pasa a ser lo que tardó (en días del reloj).
+      const tr = p.red.transcurrido[s2] as number;
+      if (p.clima?.expuesta[s2] && d - tr > 0) {
+        f = p.clima.avanzar(rs.avanzar(e, tr), d - tr, (t) => rs.W(t), (t, x) => rs.avanzar(t, x), p.semilla, i0 + k);
+        dur[bs + k] = rs.W(f) - rs.W(e);
+      }
       ef[bs + k] = f;
       if (f > (fin[k] as number)) fin[k] = f;
     }
@@ -1041,6 +1071,9 @@ export interface ImpactoRiesgo {
  * También devuelve la simulación sin ningún riesgo: cuánto del plazo es
  * incertidumbre de las duraciones y cuánto son los riesgos.
  */
+/** El «riesgo» del clima en `impactoDeRiesgos` (V8). */
+export const ID_CLIMA = 'Clima';
+
 export async function impactoDeRiesgos(
   c: Cronograma,
   riesgos: readonly RiesgoPlazo[],
@@ -1060,9 +1093,22 @@ export async function impactoDeRiesgos(
       diasP50: base.dias.p50 - sin.dias.p50,
       ...(base.costos && sin.costos ? { costoP80: base.costos.p80 - sin.costos.p80 } : {}),
     });
-    op.alAvanzar?.(porRiesgo.length, riesgos.length + 1);
+    op.alAvanzar?.(porRiesgo.length, riesgos.length + 1 + (c.clima ? 1 : 0));
   }
-  const ninguno = await simular(c, [], opciones);
+  // V8: el clima, como un riesgo más: lo que el P80 se adelantaría sin él.
+  const sinClima: Cronograma = { ...c };
+  delete sinClima.clima;
+  if (c.clima && !op.debeCancelar?.()) {
+    const sin = await simular(sinClima, riesgos, opciones);
+    porRiesgo.push({
+      id: ID_CLIMA, nombre: 'Clima (días perdidos por mes)', probabilidad: 1,
+      diasP80: base.dias.p80 - sin.dias.p80,
+      diasP50: base.dias.p50 - sin.dias.p50,
+      ...(base.costos && sin.costos ? { costoP80: base.costos.p80 - sin.costos.p80 } : {}),
+    });
+    op.alAvanzar?.(porRiesgo.length, riesgos.length + 2);
+  }
+  const ninguno = await simular(sinClima, [], opciones);
   porRiesgo.sort((a, b) => b.diasP80 - a.diasP80 || b.diasP50 - a.diasP50);
   return {
     porRiesgo,

@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V8: clima probabilístico (2026-09-30)
+
+**Añadido**
+- Hoja **«Clima»**: días laborables perdidos por mes (mínimo, más probable,
+  máximo) y a qué actividades o categorías afecta. En cada iteración se
+  sortean los días perdidos de cada mes del horizonte y las actividades
+  expuestas avanzan a ese ritmo: la temporada de lluvias pesa más que un
+  colchón fijo. El cronograma determinista no cambia.
+- El clima aparece como un riesgo más en «Riesgos de plazo» del panel
+  (cuántos días de P80 aporta) y en el resumen en palabras.
+- Libro de pruebas: «Clima (prueba)» y «Esperado (clima)»; guía Q59–Q60.
+
 ### V7: calendarios por actividad (2026-09-30)
 
 **Añadido**

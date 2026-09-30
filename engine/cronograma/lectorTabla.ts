@@ -9,6 +9,7 @@
  * suyas o borrar las opcionales. Lo que no se entiende se dice con la fila.
  */
 
+import { leerClima } from './clima.ts';
 import { extremosDePercentiles } from './muestreo.ts';
 import { leerPredecesoras } from './predecesoras.ts';
 import { CALENDARIO_ESTANDAR } from './calendario.ts';
@@ -423,6 +424,7 @@ export function leerCronograma(
   actividades: readonly (readonly Celda[])[] | undefined,
   calendario: readonly (readonly Celda[])[] | undefined,
   calendarios?: readonly (readonly Celda[])[],
+  clima?: readonly (readonly Celda[])[],
 ): { cronograma?: Cronograma; problemas: ProblemaCronograma[] } {
   if (!actividades) {
     return { problemas: [{ gravedad: 'error', hoja: HOJA_ACTIVIDADES, mensaje: 'Falta la hoja «Actividades». Crea una con «Plantilla de cronograma»' }] };
@@ -446,6 +448,9 @@ export function leerCronograma(
       });
     }
   }
+  // V8: el clima, sobre las actividades ya leídas.
+  const cl = leerClima(clima, a.actividades);
+  problemas.push(...cl.problemas);
   const conAvance = a.actividades.filter((x) => x.inicioReal !== undefined || x.finReal !== undefined);
   if (conAvance.length > 0 && c.fechaCorte === undefined) {
     problemas.push({ gravedad: 'error', hoja: HOJA_CALENDARIO, mensaje: 'Hay fechas reales en «Actividades» pero falta la «Fecha de corte» en «Calendario» (el día desde el que se cuenta lo que queda)' });
@@ -466,6 +471,7 @@ export function leerCronograma(
       inicio: c.inicio,
       calendario: c.calendario,
       ...(Object.keys(cs.calendarios).length > 0 ? { calendarios: cs.calendarios } : {}),
+      ...(cl.clima ? { clima: cl.clima } : {}),
       actividades: a.actividades,
       ...(c.fechaCorte !== undefined ? { fechaCorte: c.fechaCorte } : {}),
       ...(c.costoIndirectoDia !== undefined ? { costoIndirectoDia: c.costoIndirectoDia } : {}),

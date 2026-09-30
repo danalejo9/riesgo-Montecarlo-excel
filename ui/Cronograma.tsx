@@ -81,7 +81,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     try {
       const hojas = await leerHojasCronograma();
       setSeguimiento(leerSeguimiento(hojas.seguimiento));
-      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios);
+      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios, hojas.clima);
       const cron = lectura.cronograma;
       if (!cron) {
         setProblemas(lectura.problemas);
@@ -132,7 +132,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       const usado = escenario === 'despues' ? escenarioDespues(datos.cron, datos.riesgos) : { cronograma: datos.cron, riesgos: datos.riesgos };
       const r = await simular(usado.cronograma, usado.riesgos, op);
       let impacto: Simulado['impacto'];
-      if (!r.cancelada && usado.riesgos.length > 0) {
+      if (!r.cancelada && (usado.riesgos.length > 0 || usado.cronograma.clima)) {
         setOcupado(T.midiendoRiesgos(0, usado.riesgos.length + 1));
         const imp = await impactoDeRiesgos(usado.cronograma, usado.riesgos, r, {
           ...op, alAvanzar: (h, t) => setOcupado(T.midiendoRiesgos(h, t)),

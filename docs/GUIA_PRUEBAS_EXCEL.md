@@ -1048,6 +1048,28 @@ la hoja «Calendarios» con él (por su nombre en el programa) y la columna
 debería coincidir mejor que antes. Al terminar, vacía la columna
 «Calendario» para volver a las cifras de las demás pruebas.
 
+**Q59. Clima probabilístico (V8).** «Plantilla de cronograma» crea también la
+hoja **«Clima»** (doce meses en cero y sin actividades afectadas: no hace
+nada). En el libro de pruebas, crea una hoja «Clima» copiando **«Clima
+(prueba)»** (afecta a «Obra gris; Exteriores»; lluvias en abril-mayo y
+octubre-noviembre). Calcula: el cronograma **no cambia** (16/07/2027). Simula
+(«Antes de mitigar», 10.000, PERT). Esperado:
+- P50 **01/09/2027**, P80 **14/09/2027** (158 días laborables; sin clima,
+  24/08/2027 y 143), P90 21/09/2027; costo P80 US$ 1.415.386; JCL 76 %.
+- En «Riesgos de plazo» del panel, una fila **«Clima (días perdidos por
+  mes)»** con **+15** días de P80, la primera; el texto dice «El riesgo que
+  más pesa es “Clima (días perdidos por mes)”: sin él, el P80 se adelantaría
+  15 días laborables».
+- Compara con **«Esperado (clima)»** (Monte Carlo en Python): días ±1,
+  costos ±1 %, JCL ±3 puntos, criticidades ±3 puntos.
+
+**Q60. Errores del clima.** En «Clima»: un mes «Primavera» → «no es un mes»
+(«Ene», «Feb»… sí valen); en febrero mínimo 5 y máximo 2 → «los días
+perdidos deben cumplir…»; en «Actividades afectadas», «Jardinería» → «no es
+el ID de una actividad ni una categoría». Pon todos los meses en 0: la
+simulación vuelve a las cifras sin clima. Al terminar, borra la hoja «Clima»
+(o déjala en cero) para las demás pruebas.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

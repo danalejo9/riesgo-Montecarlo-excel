@@ -96,9 +96,13 @@ export interface Cronograma {
   fechaCorte?: number;
   /** Costo indirecto del proyecto por día laborable que dura (administración, vigilancia, alquileres) (P5). */
   costoIndirectoDia?: number;
+  /** V8: clima probabilístico (hoja «Clima»). */
+  clima?: Clima;
   /** Costo fijo que no es de ninguna actividad, p. ej. el de las respuestas a los riesgos (V1). */
   costoAdicional?: number;
 }
+
+import type { Clima } from './clima.ts';
 
 /** Un problema al leer o al calcular, con dónde está, para enseñarlo tal cual. */
 export interface ProblemaCronograma {

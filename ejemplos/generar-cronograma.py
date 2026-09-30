@@ -517,6 +517,94 @@ def monte_carlo_cal():
             {k: v / ITERACIONES_MC for k, v in crit.items()}, {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, jcl)
 
 
+# V8: clima probabilístico. Días laborables perdidos por mes (mín, más probable, máx),
+# temporadas de lluvia de la zona andina (abril-mayo, octubre-noviembre).
+CLIMA_AFECTA = "Obra gris; Exteriores"
+CLIMA_MESES = [(0, 1, 2), (0, 1, 3), (1, 2, 4), (2, 4, 7), (2, 4, 8), (1, 2, 4),
+               (0, 1, 3), (0, 1, 3), (1, 2, 4), (2, 4, 7), (2, 4, 7), (1, 2, 4)]
+MESES_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre",
+            "Octubre", "Noviembre", "Diciembre"]
+
+
+def limites_mes(n=60):
+    """Índice laborable del primer día laborable de cada mes, desde el mes de inicio."""
+    out = []
+    for k in range(n):
+        y, m = INICIO.year + (INICIO.month - 1 + k) // 12, (INICIO.month - 1 + k) % 12 + 1
+        out.append(0 if k == 0 else indice_desde(dt.date(y, m, 1)))
+    return out
+
+
+def monte_carlo_clima():
+    """El Monte Carlo de siempre (un calendario) con el clima: cada mes del horizonte sortea
+    sus días perdidos y las actividades expuestas avanzan a ritmo 1 − perdidos/laborables."""
+    import random
+    rng = random.Random(20270808)
+    acts = {a[0]: a for a in ACTIVIDADES}
+    preds, orden, sucs = orden_y_sucesoras()
+    ina = {a[0]: (indice_desde(a[9]) if a[9] else 0) for a in ACTIVIDADES}
+    riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
+    expuestas = set(afectadas(CLIMA_AFECTA))
+    L = limites_mes()
+    mes_anio = [((INICIO.month - 1 + k) % 12) for k in range(len(L))]
+    fines, crit, costos = [], {a[0]: 0 for a in ACTIVIDADES}, []
+    fijo = sum(COSTO_FIJO.values())
+    for _ in range(ITERACIONES_MC):
+        d = {a[0]: (pert_muestra(rng, a[4], a[5], a[6]) if a[4] is not None else a[2]) for a in ACTIVIDADES}
+        costo = fijo
+        for (rid, _, p, lo, mp, hi, _), ids in riesgos:
+            if rng.random() < p:
+                f = 1 + pert_muestra(rng, lo, mp, hi)
+                for i in ids:
+                    d[i] *= f
+                costo += COSTO_RIESGO.get(rid, 0)
+        perdidas = {}
+
+        def q(k):
+            if k not in perdidas:
+                lo, mp, hi = CLIMA_MESES[mes_anio[k]]
+                perdidas[k] = pert_muestra(rng, lo, mp, hi) if hi > lo else mp
+            return 1 - min(0.9, perdidas[k] / max(1, L[k + 1] - L[k]))
+
+        def andar(t, x):
+            while x > 1e-12:
+                k = max(i for i in range(len(L) - 1) if L[i] <= t)
+                ef = (L[k + 1] - t) * q(k)
+                if ef >= x:
+                    return t + x / q(k)
+                x -= ef
+                t = L[k + 1]
+            return t
+
+        es, ef = {}, {}
+        for s_ in orden:
+            v = ina[s_]
+            for p, t, r in preds[s_]:
+                v = max(v, {"FS": ef[p] + r, "SS": es[p] + r, "FF": ef[p] + r - d[s_], "SF": es[p] + r - d[s_]}[t])
+            if s_ in expuestas and d[s_] > 0:
+                d[s_] = andar(v, d[s_]) - v
+            es[s_], ef[s_] = v, v + d[s_]
+        fin = max(ef.values())
+        lf = {}
+        for p in reversed(orden):
+            v = fin
+            for s_, t, r in sucs[p]:
+                v = min(v, {"FS": lf[s_] - d[s_] - r, "SS": lf[s_] - d[s_] - r + d[p],
+                            "FF": lf[s_] - r, "SF": lf[s_] - r + d[p]}[t])
+            lf[p] = v
+            if v - d[p] - es[p] < 1e-9:
+                crit[p] += 1
+        fines.append(max(0, math.ceil(fin - 1e-9) - 1))
+        costos.append(costo + sum(acts[k][8] * d[k] for k in d) + COSTO_INDIRECTO_DIA * fin)
+    fines_ord, costos_ord = sorted(fines), sorted(costos)
+    def cuantil(lista, p):
+        return lista[max(1, math.ceil(p * len(lista) - 1e-9)) - 1]
+    d80, c80 = cuantil(fines_ord, 0.8), cuantil(costos_ord, 0.8)
+    jcl = sum(1 for f, c in zip(fines, costos) if f <= d80 and c <= c80) / len(fines)
+    return ({p: cuantil(fines_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()},
+            {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, jcl)
+
+
 def optimismo(tareas):
     """V6: rangos estrechos (ancho < 15 % del más probable), sesgados a acortar
     (más margen por debajo que por encima) o todos con el mismo porcentaje."""
@@ -572,6 +660,7 @@ COSTO_RANGOS = {
 }
 COSTO_PCT_V4, JCL_V4, P80_SIN_RANGOS_V4, MEDIA_V4 = monte_carlo(COSTO_RANGOS)
 PCT7, CRIT7, COSTO_PCT7, JCL7 = monte_carlo_cal()
+PCT8, CRIT8, COSTO_PCT8, JCL8 = monte_carlo_clima()
 COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
 
@@ -610,6 +699,8 @@ LINEAS = [
     ("p", "y el Monte Carlo de referencia con ellos."),
     ("p", "«Calendarios (prueba)» y «Esperado (calendarios)»: tres calendarios (6 días, continuo, proveedor"),
     ("p", "extranjero) para cuatro actividades, con su CPM y su Monte Carlo de referencia (V7)."),
+    ("p", "«Clima (prueba)» y «Esperado (clima)»: días perdidos por mes para la obra a la intemperie y el"),
+    ("p", "Monte Carlo de referencia con ellos (V8)."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -921,6 +1012,45 @@ for i, a in enumerate(ACTIVIDADES, start=13):
     ec.cell(row=i, column=13, value=round(CRIT7[a[0]], 3)).number_format = "0%"
 for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8, 11, 3, 20, 12, 14], start=1):
     ec.column_dimensions[get_column_letter(j)].width = w
+
+# V8: clima.
+cl = wb.create_sheet("Clima (prueba)")
+cl["A1"] = "V8: copia esta hoja entera como una hoja «Clima» (o pega sus valores en la que crea «Plantilla de cronograma»)."
+cl["A1"].font = H
+cl["A3"], cl["B3"] = "Actividades afectadas (IDs o categorías, separadas por «;»)", CLIMA_AFECTA
+for j, t in enumerate(["Mes", "Días perdidos mínimo", "Días perdidos más probable", "Días perdidos máximo"], start=1):
+    c = cl.cell(row=5, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, (m, (lo, mp, hi)) in enumerate(zip(MESES_ES, CLIMA_MESES), start=6):
+    for j, v in enumerate([m, lo, mp, hi], start=1):
+        cl.cell(row=i, column=j, value=v)
+for j, w in enumerate([52, 20, 26, 22], start=1):
+    cl.column_dimensions[get_column_letter(j)].width = w
+
+eclima = wb.create_sheet("Esperado (clima)")
+eclima["A1"] = (f"Monte Carlo de referencia con «Clima (prueba)»: {ITERACIONES_MC} iteraciones en Python. "
+                "Debe coincidir en ±1 día, ±3 puntos de criticidad, ±1 % de costo y ±3 puntos de JCL.")
+eclima["A1"].font = H
+for j, t in enumerate(["Percentil", "Días laborables", "Fecha de fin", "Costo"], start=1):
+    c = eclima.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, p in enumerate((0.1, 0.5, 0.8, 0.9), start=4):
+    eclima.cell(row=i, column=1, value=f"P{int(p * 100)}")
+    eclima.cell(row=i, column=2, value=PCT8[p] + 1)
+    eclima.cell(row=i, column=3, value=DIAS[PCT8[p]]).number_format = FECHA
+    eclima.cell(row=i, column=4, value=round(COSTO_PCT8[p], 2)).number_format = DINERO
+eclima["A8"], eclima["B8"] = "JCL", round(JCL8, 4)
+eclima["B8"].number_format = "0%"
+eclima["A9"], eclima["B9"] = "P80 sin clima (de «Esperado (simulación)»)", PCT[0.8] + 1
+for j, t in enumerate(["ID", "Actividad", "Índice de criticidad"], start=1):
+    c = eclima.cell(row=11, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=12):
+    eclima.cell(row=i, column=1, value=a[0])
+    eclima.cell(row=i, column=2, value=a[1])
+    eclima.cell(row=i, column=3, value=round(CRIT8[a[0]], 3)).number_format = "0%"
+for j, w in enumerate([40, 16, 14, 16], start=1):
+    eclima.column_dimensions[get_column_letter(j)].width = w
 
 
 # ---------------------------------------------------------------------------

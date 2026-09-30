@@ -1452,6 +1452,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     calendarios, 19,2 s en 1 hilo (13,3 sin), 7,2 s en 4. Guía Q56–Q58.
     **Siguiente**: V8 (clima probabilístico, sobre V7).
 
+88. [x] **V8 (2026-09-30)**. `clima.ts`: hoja «Clima» (`leerClima`,
+    `plantillaClima`), `ClimaSimulado` (límites de mes en el eje de la
+    simulación, un sorteo PERT por mes del horizonte y por iteración con su
+    flujo `clima:k`, ritmo `1 − perdidos/laborables` con tope del 90 %). En
+    las dos pasadas adelante, las expuestas avanzan con `ClimaSimulado.avanzar`
+    y `dur` pasa a ser lo que tardaron (la pasada atrás, el costo por día y la
+    sensibilidad lo usan). El determinista no cambia. `impactoDeRiesgos`
+    añade el clima (`ID_CLIMA`) como un riesgo más. Oráculo Python: «Clima
+    (prueba)» y «Esperado (clima)». Pruebas: dos casos analíticos, Python,
+    sin expuestas = sin clima exacto, relojes = sin relojes, hilos. Guía
+    Q59–Q60. **Siguiente**: V9 (exportar a MS Project y P6).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
