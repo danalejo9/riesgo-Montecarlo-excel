@@ -975,6 +975,42 @@ instantánea: el panel avisa «Sin fecha de corte…, se guarda con la fecha de
 hoy», y cada vez que guardes se añade una fila nueva. Al terminar, borra la
 hoja «Cronograma (seguimiento)» y deshaz el avance.
 
+**Q53. Rangos por tipo (V6).** En «Actividades», borra Mínimo, Más probable
+y Máximo de todas las actividades. Calcula: la salud pone «Incertidumbre en
+las duraciones» en amarillo y aparece la fila de «Rellenar». Pulsa **Rangos
+por tipo…** → se crea la hoja «Rangos por tipo» (nueve tipos con palabras
+clave, % de menos y de más y una nota; el título avisa de que son valores de
+partida). Pulsa **Rellenar los rangos vacíos** → «Rangos añadidos a 18
+actividades… 17 según “Rangos por tipo” y 1 con los % de aquí». Esperado:
+Permisos y licencias 13,5 / 15 / 24 (trámites, +60 %); Excavación 9 / 10 /
+14 (tierras, +40 %); Movilización de obra 4,5 / 5 / 6,5 (obra gris,
++30 %); Paisajismo 9 / 10 / 12,5 (sin tipo: los % del panel). Cambia un %
+en la hoja (p. ej. Trámites, Más 100 %), vuelve a borrar los rangos y
+rellena: Permisos queda 13,5 / 15 / 30. Un % imposible (Menos 150 %) da un
+mensaje con el nombre del tipo. Al terminar, deshaz (o vuelve a copiar la
+hoja del libro de pruebas).
+
+**Q54. P10 y P90 en vez de mínimo y máximo.** En «Actividades», cambia los
+encabezados «Mínimo» y «Máximo» por **P10** y **P90** (los valores se
+quedan: 18 y 28 para el Diseño, etc.). Calcula y simula (10.000, PERT):
+ahora esos números son percentiles, no extremos, así que la incertidumbre
+**crece**: P50 **02/09/2027**, P80 **22/09/2027** (164 días laborables;
+antes 143), P90 04/10/2027. Con «Triangular», **casi lo mismo** (P80 también
+el 22/09/2027): con percentiles, la forma apenas importa porque el P10 y el
+P90 de cada actividad quedan fijados; con mínimo y máximo, en cambio,
+triangular da 153 días frente a 143. Si en una fila escribes a la vez P10/P90
+y Mínimo/Máximo (añadiendo las columnas), error «usa mínimo y máximo, o P10
+y P90, pero no los dos». Un P10 muy bajo (p. ej. 1 con más probable 20 y P90
+40) da el aviso «el mínimo sería negativo…». Deshaz los encabezados.
+
+**Q55. Rangos realistas (salud).** Con el libro de pruebas, la comprobación
+nueva **Rangos realistas** sale en verde. Pon en cuatro actividades rangos
+estrechos (p. ej. Cimentación 14 / 15 / 16, Estructura 29 / 30 / 31,
+Cubierta 11,5 / 12 / 12,5, Fachada 14,5 / 15 / 15,5) → amarillo, «… con un
+rango de menos del 15 %», con sus IDs. Si todas las actividades tienen el
+mismo % (como tras Q53 sin la hoja «Rangos por tipo»), sale en **info**:
+«todas con el mismo porcentaje (10 % por debajo, 25 % por encima)».
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

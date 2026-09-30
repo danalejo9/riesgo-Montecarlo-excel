@@ -1423,6 +1423,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     PDF (sección nueva «Seguimiento en el tiempo»). `graficos` admite varias
     series. Guía Q51–Q52. **Siguiente**: V6 (rangos por sector y ayudas).
 
+86. [x] **V6 (2026-09-30)**. `extremosDePercentiles` (P10/P90 → mínimo y
+    máximo de la PERT o triangular, bisección/secante alternada, ~1 ms por
+    actividad); columnas «P10»/«P90» en «Actividades» (`Actividad.percentiles`;
+    con triangular se recalculan en `prepararPlazo`). Comprobación de salud
+    `optimismo` («Rangos realistas»: estrechos, sesgados a acortar, todos
+    iguales), también en el oráculo Python. Biblioteca editable «Rangos por
+    tipo» (`BIBLIOTECA_RANGOS`, valores de partida declarados como tales;
+    `leerRangosTipo`, `tipoDe`), que usa «Rellenar los rangos vacíos».
+    Guía Q53–Q55. **Siguiente**: V7 (calendarios por actividad).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

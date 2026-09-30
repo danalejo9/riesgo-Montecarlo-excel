@@ -7,7 +7,7 @@
 
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
-  plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO,
+  plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO, HOJA_RANGOS_TIPO, plantillaRangosTipo,
   type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
@@ -27,13 +27,21 @@ async function valoresDeHoja(context: Excel.RequestContext, nombre: string): Pro
   return rango.values as unknown[][];
 }
 
-export async function leerHojasCronograma(): Promise<{ actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][] }> {
+export async function leerHojasCronograma(): Promise<{
+  actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][];
+}> {
   return Excel.run(async (context) => ({
     actividades: await valoresDeHoja(context, HOJA_ACTIVIDADES),
     calendario: await valoresDeHoja(context, HOJA_CALENDARIO),
     riesgos: await valoresDeHoja(context, HOJA_RIESGOS),
     seguimiento: await valoresDeHoja(context, HOJA_SEGUIMIENTO),
+    rangosTipo: await valoresDeHoja(context, HOJA_RANGOS_TIPO),
   }));
+}
+
+/** V6: crea la hoja «Rangos por tipo» con la biblioteca de partida. `false` si ya existía (no se toca). */
+export async function escribirPlantillaRangosTipo(): Promise<boolean> {
+  return Excel.run(async (context) => escribirHoja(context, plantillaRangosTipo(), false));
 }
 
 /** V5: la hoja «Cronograma (seguimiento)» tal como está (para añadirle una instantánea). */

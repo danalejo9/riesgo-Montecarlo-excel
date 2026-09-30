@@ -38,6 +38,12 @@ export interface Actividad {
   predecesoras: Relacion[];
   /** Incertidumbre de la duración (P3). `undefined` = duración fija. */
   tresPuntos?: TresPuntos;
+  /**
+   * V6: si la incertidumbre se dio con P10 y P90 (no con mínimo y máximo).
+   * `tresPuntos` lleva los extremos de la PERT equivalente; con la forma
+   * triangular se recalculan.
+   */
+  percentiles?: { p10: number; p90: number };
   /** Categoría o frente, para asignar incertidumbre en bloque (P3). */
   categoria?: string;
   /** Costo que se paga por cada día que dura la actividad (P5): crece si se alarga. */

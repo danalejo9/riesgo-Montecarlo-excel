@@ -206,8 +206,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | V3 | P6 | Informe ejecutivo PDF configurable, costos y cronograma (título, logo, pie, secciones) | **Tú** | ✅ 30/09 (falta Excel: Q46–Q48) |
 | V4 | P6 | Incertidumbre en los costos de cada actividad | **Tú** | ✅ 30/09 (falta Excel: Q49–Q50) |
 | V5 | P6 | Seguimiento en el tiempo (instantáneas y tendencia del P80) | **Tú** | ✅ 30/09 (falta Excel: Q51–Q52) |
-| V6 | P6 | Rangos por sector y ayudas para estimar (P10/P90, avisos de optimismo) | **Tú** | ⬜ siguiente |
-| V7 | P6 | Calendarios por actividad | **Tú** | ⬜ |
+| V6 | P6 | Rangos por sector y ayudas para estimar (P10/P90, avisos de optimismo) | **Tú** | ✅ 30/09 (falta Excel: Q53–Q55) |
+| V7 | P6 | Calendarios por actividad | **Tú** | ⬜ siguiente |
 | V8 | P6 | Clima probabilístico | **Tú** | ⬜ |
 | V9 | P6 | Devolver resultados a MS Project y P6 | **Tú** | ⬜ |
 | V10 | P6 | Registro de riesgos completo (matriz, responsables, estado) | **Tú** | ⬜ |

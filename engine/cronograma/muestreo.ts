@@ -64,3 +64,52 @@ export function muestreadorDuracion(min: number, mp: number, max: number, forma:
   const beta = 1 + (4 * (max - mp)) / rango;
   return betaCheng(alpha, beta, min, max, pert(min, mp, max));
 }
+
+/**
+ * V6: mínimo y máximo de la PERT (o triangular) cuyo más probable es `mp` y
+ * cuyos percentiles 10 y 90 son `p10` y `p90` (la idea de la Trigen: se
+ * estima mejor «en 1 de cada 10 casos baja de…» que un mínimo absoluto).
+ * Se resuelve por bisección alternada: el mínimo ajusta el P10 y el máximo
+ * el P90 (cada uno depende casi solo de su extremo); en pocas vueltas los
+ * dos casan al milésimo. Requiere p10 ≤ mp ≤ p90 y p10 < p90.
+ */
+export function extremosDePercentiles(p10: number, mp: number, p90: number, forma: 'pert' | 'triangular'): { min: number; max: number } {
+  if (!(p10 <= mp && mp <= p90 && p10 < p90)) throw new Error(`se requiere P10 ≤ más probable ≤ P90 (${p10}; ${mp}; ${p90})`);
+  const w = p90 - p10;
+  let min = p10 - 0.5 * w;
+  let max = p90 + 0.5 * w;
+  const q = (a: number, b: number, p: number) => (forma === 'pert' ? pert(a, mp, b) : triangular(a, mp, b)).quantile(p);
+  const tol = w * 1e-7;
+  // f decreciente en t con f(0) > 0: el t donde cruza cero, por la secante con respaldo de bisección.
+  const raiz = (f: (t: number) => number, t0: number) => {
+    let lo = 0;
+    let hi = 40;
+    let t = Math.min(hi, Math.max(lo, t0));
+    for (let k = 0; k < 60; k++) {
+      const v = f(t);
+      if (Math.abs(v) < tol) return t;
+      if (v > 0) lo = t;
+      else hi = t;
+      const h = 1e-4;
+      const d = (f(t + h) - v) / h;
+      const n = d < 0 ? t - v / d : NaN;
+      t = n > lo && n < hi ? n : (lo + hi) / 2;
+    }
+    return t;
+  };
+  let t1 = 0.5;
+  let t2 = 0.5;
+  for (let vuelta = 0; vuelta < 40; vuelta++) {
+    const b = max;
+    t1 = raiz((t) => q(p10 - w * t, b, 0.1) - p10, t1);
+    const a = p10 - w * t1;
+    t2 = raiz((t) => p90 - q(a, p90 + w * t, 0.9), t2);
+    const nMin = a;
+    const nMax = p90 + w * t2;
+    const quieto = Math.abs(nMin - min) < tol && Math.abs(nMax - max) < tol;
+    min = nMin;
+    max = nMax;
+    if (quieto) break;
+  }
+  return { min, max };
+}

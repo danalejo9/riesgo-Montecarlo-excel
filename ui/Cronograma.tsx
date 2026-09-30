@@ -14,14 +14,14 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
-  agregarInstantanea, hojaSeguimiento, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
+  leerRangosTipo, agregarInstantanea, hojaSeguimiento, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import {
   escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
-  escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma,
+  escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma, escribirPlantillaRangosTipo,
 } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
@@ -260,14 +260,29 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const rellenar = async () => {
     try {
       const hojas = await leerHojasCronograma();
-      const r = completarRangos(hojas.actividades ?? [], pctMenos / 100, pctMas / 100);
+      // V6: con la hoja «Rangos por tipo», cada actividad toma los % de su tipo; las demás, los del panel.
+      const biblioteca = leerRangosTipo(hojas.rangosTipo);
+      if (biblioteca.problemas.length > 0) {
+        setNota(biblioteca.problemas.join(' '));
+        return;
+      }
+      const r = completarRangos(hojas.actividades ?? [], pctMenos / 100, pctMas / 100, biblioteca.tipos);
       if ('error' in r) {
         setNota(r.error);
         return;
       }
       await escribirCeldasActividades(r.cambios);
       await calcular();
-      setNota(T.rellenados(r.actividades));
+      const porTipo = Object.values(r.porTipo).reduce((a, b) => a + b, 0);
+      setNota(`${T.rellenados(r.actividades)}${hojas.rangosTipo ? ` ${T.rellenadosPorTipo(porTipo, r.actividades - porTipo)}` : ''}`);
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
+  const crearBiblioteca = async () => {
+    try {
+      setNota(await escribirPlantillaRangosTipo() ? T.bibliotecaCreada : T.bibliotecaYaExiste);
     } catch (e) {
       alFallar(e);
     }
@@ -331,11 +346,12 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       )}
 
       {salud && <Salud informe={salud} />}
-      {salud && salud.comprobaciones.some((c) => c.codigo === 'incertidumbre' && c.estado !== 'verde') && (
+      {salud && salud.comprobaciones.some((c) => (c.codigo === 'incertidumbre' || c.codigo === 'optimismo') && c.estado !== 'verde') && (
         <p title={T.rellenarAyuda}>
           <button type="button" onClick={rellenar} disabled={ocupado !== null}>{T.rellenarRangos}</button>{' '}
           <label>{T.menos}<input type="number" min={0} max={90} value={pctMenos} onChange={(e) => setPctMenos(Number(e.target.value))} style={{ width: 48 }} /> %</label>{' '}
-          <label>{T.mas}<input type="number" min={0} max={500} value={pctMas} onChange={(e) => setPctMas(Number(e.target.value))} style={{ width: 48 }} /> %</label>
+          <label>{T.mas}<input type="number" min={0} max={500} value={pctMas} onChange={(e) => setPctMas(Number(e.target.value))} style={{ width: 48 }} /> %</label>{' '}
+          <button type="button" onClick={crearBiblioteca} disabled={ocupado !== null} title={T.bibliotecaAyuda}>{T.biblioteca}</button>
         </p>
       )}
 

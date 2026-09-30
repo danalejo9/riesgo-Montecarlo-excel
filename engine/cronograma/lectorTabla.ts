@@ -9,6 +9,7 @@
  * suyas o borrar las opcionales. Lo que no se entiende se dice con la fila.
  */
 
+import { extremosDePercentiles } from './muestreo.ts';
 import { leerPredecesoras } from './predecesoras.ts';
 import { CALENDARIO_ESTANDAR } from './calendario.ts';
 import type { Actividad, Calendario, Cronograma, ProblemaCronograma } from './tipos.ts';
@@ -24,7 +25,7 @@ export function normalizar(s: unknown): string {
 }
 
 type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'costoFijo' | 'inicioNoAntesDe'
-  | 'costoFijoMin' | 'costoFijoMax' | 'costoPorDiaMin' | 'costoPorDiaMax'
+  | 'costoFijoMin' | 'costoFijoMax' | 'costoPorDiaMin' | 'costoPorDiaMax' | 'p10' | 'p90'
   | 'inicioNoDespuesDe' | 'terminarNoAntesDe' | 'terminarNoDespuesDe' | 'inicioReal' | 'finReal' | 'completado' | 'restante';
 
 /** Cada campo con los encabezados que lo identifican (normalizados, por prefijo). */
@@ -39,6 +40,9 @@ const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['min', ['minim', 'min ', 'min', 'optimista']],
   ['max', ['maxim', 'max ', 'max', 'pesimista']],
   ['categoria', ['categoria', 'frente']],
+  // V6: estimar con P10 y P90 en vez de mínimo y máximo.
+  ['p10', ['p10', 'percentil 10']],
+  ['p90', ['p90', 'percentil 90']],
   // V4: antes que los costos: «Costo fijo mínimo» empieza como «Costo fijo».
   ['costoFijoMin', ['costo fijo min', 'coste fijo min']],
   ['costoFijoMax', ['costo fijo max', 'coste fijo max']],
@@ -179,7 +183,32 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
     const min = col(fila, 'min');
     const mp = col(fila, 'masProbable');
     const max = col(fila, 'max');
-    if (!vacia(min) || !vacia(max) || !vacia(mp)) {
+    const p10 = col(fila, 'p10');
+    const p90 = col(fila, 'p90');
+    if (!vacia(p10) || !vacia(p90)) {
+      // V6: P10 y P90; el mínimo y el máximo de la PERT salen de ellos.
+      if (!vacia(min) || !vacia(max)) {
+        error('usa mínimo y máximo, o P10 y P90, pero no los dos');
+        continue;
+      }
+      const a = numeroDe(p10);
+      const b = numeroDe(p90);
+      const m = vacia(mp) ? duracion : numeroDe(mp);
+      if (a === undefined || b === undefined || m === undefined) {
+        error('para la incertidumbre con percentiles hacen falta P10 y P90 (y más probable, o se usa la duración)');
+        continue;
+      }
+      if (!(a <= m && m <= b) || !(a < b) || a < 0) {
+        error(`los percentiles deben cumplir 0 ≤ P10 ≤ más probable ≤ P90 y P10 < P90 (${a}; ${m}; ${b})`);
+        continue;
+      }
+      const e = extremosDePercentiles(a, m, b, 'pert');
+      if (e.min < 0) {
+        problemas.push({ gravedad: 'aviso', hoja, fila: numFila, actividad: id, mensaje: `Fila ${numFila} («${id}»): con ese P10 el mínimo sería negativo; la duración no baja de 0 y el P10 simulado queda algo más alto` });
+      }
+      act.tresPuntos = { min: Math.max(0, e.min), masProbable: m, max: e.max };
+      act.percentiles = { p10: a, p90: b };
+    } else if (!vacia(min) || !vacia(max) || !vacia(mp)) {
       const a = numeroDe(min);
       const m = vacia(mp) ? duracion : numeroDe(mp);
       const b = numeroDe(max);

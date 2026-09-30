@@ -5,6 +5,20 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V6: rangos por tipo y ayudas para estimar (2026-09-30)
+
+**Añadido**
+- **P10 y P90** como alternativa a mínimo y máximo en «Actividades»
+  (encabezados «P10» y «P90»): el complemento calcula los extremos de la
+  PERT (o de la triangular) que dan esos percentiles.
+- Chequeo de salud **Rangos realistas**: avisa de rangos estrechos (menos
+  del 15 %), de rangos con más margen para acortarse que para alargarse y,
+  como información, de rangos todos iguales (puestos en bloque).
+- Hoja editable **«Rangos por tipo»** (botón «Rangos por tipo…»): nueve
+  tipos de trabajo con palabras clave y porcentajes de partida. «Rellenar
+  los rangos vacíos» usa el de cada actividad según su categoría o nombre.
+- Guía Q53–Q55; «Esperado (salud)» incluye la comprobación nueva.
+
 ### V5: seguimiento en el tiempo (2026-09-30)
 
 **Añadido**

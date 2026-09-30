@@ -48,6 +48,38 @@ const pct = (a: number, b: number) => (b === 0 ? 0 : a / b);
 const textoPct = (a: number, b: number) => `${a} de ${b} (${Math.round(pct(a, b) * 100)} %)`;
 const primeras = (ids: string[]) => ids.slice(0, 50);
 
+/**
+ * V6: los rangos que se estimaron con optimismo. Tres señales, sobre las
+ * actividades con rango: estrechos (el ancho no llega al 15 % del más
+ * probable), sesgados a acortar (más margen por debajo que por encima: en
+ * la práctica las duraciones se alargan más de lo que se acortan) y todos
+ * con el mismo porcentaje (se pusieron en bloque, no uno a uno: solo info).
+ */
+export const ANCHO_ESTRECHO = 0.15;
+
+function optimismo(tareas: readonly Actividad[]): Comprobacion {
+  const con = tareas.filter((a) => a.tresPuntos && a.tresPuntos.min < a.tresPuntos.max);
+  const t = (a: Actividad) => a.tresPuntos as NonNullable<Actividad['tresPuntos']>;
+  const estrechas = con.filter((a) => (t(a).max - t(a).min) / t(a).masProbable < ANCHO_ESTRECHO).map((a) => a.id);
+  const optimistas = con.filter((a) => t(a).masProbable - t(a).min > t(a).max - t(a).masProbable + 1e-9).map((a) => a.id);
+  const pcts = new Set(con.map((a) => `${Math.round(((t(a).masProbable - t(a).min) / t(a).masProbable) * 100)}/${Math.round(((t(a).max - t(a).masProbable) / t(a).masProbable) * 100)}`));
+  const n = con.length;
+  const malas = pct(estrechas.length, n) > 0.25 || pct(optimistas.length, n) > 0.25;
+  const iguales = n >= 5 && pcts.size === 1;
+  const partes: string[] = [];
+  if (estrechas.length > 0) partes.push(`${textoPct(estrechas.length, n)} con un rango de menos del ${Math.round(ANCHO_ESTRECHO * 100)} %`);
+  if (optimistas.length > 0) partes.push(`${textoPct(optimistas.length, n)} con más margen para acortarse que para alargarse`);
+  if (iguales) partes.push(`todas con el mismo porcentaje (${[...pcts][0]?.replace('/', ' % por debajo, ')} % por encima)`);
+  return {
+    codigo: 'optimismo',
+    titulo: 'Rangos realistas',
+    estado: n === 0 ? 'verde' : malas ? 'amarillo' : iguales ? 'info' : 'verde',
+    detalle: n === 0 ? 'No hay rangos que revisar.' : partes.length === 0 ? 'Sin señales de optimismo en los rangos.' : `${partes.join('; ')}.`,
+    porque: 'Los rangos estimados suelen quedarse cortos y cargados hacia lo bueno (sesgo optimista): el P80 sale antes de lo que será. Un mismo porcentaje para todo indica que no se pensó cada actividad; úsalo como punto de partida y afínalo, o usa la biblioteca «Rangos por tipo».',
+    actividades: primeras(malas ? [...new Set([...estrechas, ...optimistas])] : iguales ? con.map((a) => a.id) : []),
+  };
+}
+
 export function revisarSalud(actividades: readonly Actividad[], filas: readonly FilaCPM[]): InformeSalud {
   const comps: Comprobacion[] = [];
   const tareas = actividades.filter((a) => a.duracion > 0);
@@ -179,6 +211,9 @@ export function revisarSalud(actividades: readonly Actividad[], filas: readonly 
     porque: 'Sin rango, una actividad no aporta incertidumbre: si son muchas, el resultado sale más seguro de lo que es.',
     actividades: primeras(sinRango),
   });
+
+  // 9b. V6: rangos que delatan optimismo (o que no se estimaron uno a uno).
+  comps.push(optimismo(tareas));
 
   // 10. Convergencias (merge bias).
   const conv = actividades.filter((a) => a.predecesoras.length >= 3).map((a) => a.id);

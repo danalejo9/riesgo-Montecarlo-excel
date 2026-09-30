@@ -311,6 +311,20 @@ def monte_carlo(rangos=None):
             costo_pct, jcl)
 
 
+def optimismo(tareas):
+    """V6: rangos estrechos (ancho < 15 % del más probable), sesgados a acortar
+    (más margen por debajo que por encima) o todos con el mismo porcentaje."""
+    con = [a for a in tareas if a[4] is not None and a[4] < a[6]]
+    if not con:
+        return "verde"
+    estrechas = [a for a in con if (a[6] - a[4]) / a[5] < 0.15]
+    optimistas = [a for a in con if a[5] - a[4] > a[6] - a[5] + 1e-9]
+    pcts = {(round((a[5] - a[4]) / a[5] * 100), round((a[6] - a[5]) / a[5] * 100)) for a in con}
+    if len(estrechas) / len(con) > 0.25 or len(optimistas) / len(con) > 0.25:
+        return "amarillo"
+    return "info" if len(con) >= 5 and len(pcts) == 1 else "verde"
+
+
 def salud():
     """El chequeo de salud, calculado aparte (umbrales DCMA)."""
     tareas = [a for a in ACTIVIDADES if a[2] > 0]
@@ -333,6 +347,7 @@ def salud():
         ("holgura-alta", "amarillo" if sum(1 for a in tareas if hol[a[0]] > 44) / nT > 0.05 else "verde"),
         ("duracion-larga", "amarillo" if sum(1 for a in tareas if a[2] > 44) / nT > 0.05 else "verde"),
         ("incertidumbre", (lambda k: "verde" if k == 0 else ("amarillo" if k / nT > 0.5 else "info"))(sum(1 for a in tareas if a[4] is None or a[4] == a[6]))),
+        ("optimismo", optimismo(tareas)),
         ("convergencias", "info" if any(len(leer_preds(a[3])) >= 3 for a in ACTIVIDADES) else "verde"),
     ]
 

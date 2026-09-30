@@ -27,7 +27,7 @@
 import { streamOf, uniformAt } from '../random/philox.ts';
 import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
-import { muestreadorDuracion, type Muestreador } from './muestreo.ts';
+import { extremosDePercentiles, muestreadorDuracion, type Muestreador } from './muestreo.ts';
 import { parametrosRed, type ParametrosRed } from './red.ts';
 import { idRama, type RiesgoPlazo } from './riesgos.ts';
 import type { Actividad, Cronograma } from './tipos.ts';
@@ -290,7 +290,7 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     minInicio: red.minInicio,
     red,
     conAvance: red.sinLogica.some(Boolean) || red.minFin.some(Number.isFinite) || red.maxFin.some(Number.isFinite) || red.maxInicio.some(Number.isFinite),
-    dists: [...acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null)), ...extra.dists],
+    dists: [...acts.map((a) => distribucionDe(a, op.forma)), ...extra.dists],
     fijas: [...acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion)), ...extra.fijas],
     // Sin incertidumbre, las ramas no ocurren: duran 0 en el cronograma determinista.
     duraciones: [...acts.map((a) => a.duracion), ...ramas.map(() => 0)],
@@ -313,6 +313,17 @@ export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op
     actividades: nombres,
     forma: op.forma,
   };
+}
+
+/** La duración de una actividad; con P10/P90 (V6) y forma triangular, los extremos de la triangular equivalente. */
+function distribucionDe(a: Actividad, forma: FormaDuracion): Muestreador | null {
+  const t = a.tresPuntos;
+  if (!t) return null;
+  if (a.percentiles && forma === 'triangular') {
+    const e = extremosDePercentiles(a.percentiles.p10, t.masProbable, a.percentiles.p90, 'triangular');
+    return muestreadorDuracion(Math.max(0, e.min), t.masProbable, e.max, forma);
+  }
+  return muestreadorDuracion(t.min, t.masProbable, t.max, forma);
 }
 
 /**
