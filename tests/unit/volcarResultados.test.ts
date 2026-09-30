@@ -115,9 +115,12 @@ describe('construirInforme', () => {
     // La cabecera más los tres puntos.
     expect(curva?.puntos).toBe(4);
 
-    const cabecera = informe.filas[curva?.filaInicio as number];
+    // Los datos del gráfico van en su zona, a la derecha del cuerpo (C8).
+    const grafico = informe.graficos.find((g) => g.tipo === 'linea');
+    const col = grafico?.datos.col as number;
+    const cabecera = informe.filas[curva?.filaInicio as number]?.slice(col, col + 2);
     expect(cabecera).toEqual(['Valor', 'Probabilidad acumulada']);
-    expect(informe.filas[(curva?.filaInicio as number) + 1]).toEqual([-1178777, 0.005]);
+    expect(informe.filas[(curva?.filaInicio as number) + 1]?.slice(col, col + 2)).toEqual([-1178777, 0.005]);
   });
 
   it('las filas de título apuntan a filas que existen y tienen texto', () => {
@@ -137,5 +140,119 @@ describe('construirInforme', () => {
   it('con el motor compatible lo nombra, para que nadie compare peras con manzanas', () => {
     const informe = construirInforme(MODELO, { ...RESULTADO, motor: 'compatible' });
     expect(informe.filas.map((f) => f.join(' ')).join('\n')).toContain('Excel en el bucle');
+  });
+
+  it('la sensibilidad de cada salida va a la hoja, con la muestra usada', () => {
+    const conSensibilidad: SimulacionCompletada = {
+      ...RESULTADO,
+      muestraSensibilidad: 10_000,
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        sensibilidad: [
+          { id: 'in_precio', nombre: 'Precio', ref: 'Modelo!C5', spearman: 0.81, peso: 0.7 },
+          { id: 'in_coste', nombre: 'Coste', ref: 'Modelo!C6', spearman: -0.52, peso: 0.3 },
+        ],
+      })),
+    };
+    const texto = construirInforme(MODELO, conSensibilidad).filas.map((f) => f.join('\t')).join('\n');
+    expect(texto).toContain('Qué la mueve: entrada\tCelda\tSpearman (ρ)');
+    expect(texto).toContain('Precio\tModelo!C5\t0.81\t0.7');
+    expect(texto).toContain('Coste\tModelo!C6\t-0.52\t0.3');
+    expect(texto).toContain('sobre 10000 iteraciones');
+  });
+
+  it('sin sensibilidad no escribe una tabla vacía', () => {
+    expect(comoTexto()).not.toContain('Qué la mueve');
+  });
+
+  it('escribe el histograma y el umbral guardado en el modelo', () => {
+    const modelo = { ...MODELO, outputs: MODELO.outputs.map((o) => ({ ...o, threshold: { value: 0, direction: 'below' as const } })) };
+    const resultado: SimulacionCompletada = {
+      ...RESULTADO,
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        muestraOrdenada: Float64Array.from([-2, -1, 1, 2]),
+        histograma: [{ x0: -2, x1: 0, count: 2 }, { x0: 0, x1: 2, count: 2 }],
+      })),
+    };
+    const informe = construirInforme(modelo, resultado);
+    const texto = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(texto).toContain('P(VAN < 0)\t0.5');
+    expect(texto).toContain('Histograma: desde\tHasta\tTramo\tIteraciones');
+    expect(texto).toContain('-2\t0\t-2 a 0\t2');
+    expect(informe.histogramas).toEqual([{ nombre: 'VAN', filaInicio: expect.any(Number), barras: 3 }]);
+  });
+
+  it('los números llevan el formato de su celda de origen, o uno razonable (C8)', () => {
+    const conFormato = construirInforme(MODELO, RESULTADO, { formatoDe: () => '#,##0 "€"' });
+    expect(conFormato.formatos.some((f) => f.formato === '#,##0 "€"')).toBe(true);
+    const sinFormato = construirInforme(MODELO, RESULTADO, { formatoDe: () => 'General' });
+    expect(sinFormato.formatos.some((f) => f.formato === '#,##0')).toBe(true);
+    // Una TIR sin formato conocido va en porcentaje.
+    const tir = { ...RESULTADO, salidas: RESULTADO.salidas.map((x) => ({ ...x, nombre: 'TIR del proyecto', resumen: { ...x.resumen, media: 0.2, min: -0.4, max: 0.6 } })) };
+    expect(construirInforme(MODELO, tir).formatos.some((f) => f.formato === '0.0%')).toBe(true);
+  });
+
+  it('una salida constante ocupa una línea, sin gráficos ni sensibilidad en cero (C8)', () => {
+    const constante: SimulacionCompletada = {
+      ...RESULTADO,
+      eleccion: { ...RESULTADO.eleccion, salidasConstantes: ['Modelo!C32'] },
+    };
+    const informe = construirInforme(MODELO, constante);
+    expect(informe.graficos).toHaveLength(0);
+    expect(informe.filas.map((f) => f.join('\t')).join('\n')).toContain('Valor (no depende de ninguna entrada)');
+  });
+
+  it('los gráficos van a la derecha del cuerpo y no encima de sus datos', () => {
+    const informe = construirInforme(MODELO, RESULTADO);
+    for (const g of informe.graficos) {
+      expect(g.desde.col).toBeGreaterThanOrEqual(6);
+      expect(g.hasta.col).toBeLessThan(g.datos.col);
+    }
+    expect(informe.anchos[0]).toBeLessThanOrEqual(40);
+  });
+
+  it('una salida de texto se vuelca por frecuencias, con su gráfico y su cruce (T2)', () => {
+    const texto: SimulacionCompletada = {
+      ...RESULTADO,
+      salidas: [{
+        ...RESULTADO.salidas[0]!,
+        nombre: 'Zona', noNumericas: 100,
+        resumen: { ...RESULTADO.salidas[0]!.resumen, n: 0 },
+        categorias: [{ valor: 'Sur', conteo: 60, proporcion: 0.6 }, { valor: 'Norte', conteo: 40, proporcion: 0.4 }],
+        decisivas: [{ valor: 'Sur', filas: [{ id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', bajo: 0.2, alto: 0.9, rango: 0.7 }] }],
+      }],
+    };
+    const informe = construirInforme(MODELO, texto);
+    const t = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(t).toContain('«Sur» 60 %');
+    expect(t).toContain('Sur\t60\t0.6');
+    expect(t).toContain('Qué decide que salga «Sur»\t10 % más bajo\t10 % más alto');
+    expect(informe.graficos.some((g) => g.titulo.includes('frecuencia'))).toBe(true);
+  });
+
+  it('tornado y araña como gráficos de Excel, y resumen de entradas con su puesto (C1, C2)', () => {
+    const r: SimulacionCompletada = {
+      ...RESULTADO,
+      entradas: [{
+        id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', distribucion: 'Triangular(105; 120; 140)', n: 1000,
+        media: 121.6, desviacion: 7.1, min: 105, max: 140, percentiles: { p5: 110, p50: 121, p95: 134 }, histograma: [], cdf: [],
+      }],
+      salidas: RESULTADO.salidas.map((s) => ({
+        ...s,
+        sensibilidad: [
+          { id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', spearman: 0.8, peso: 0.7 },
+          { id: 'in_b', nombre: 'Unidades', ref: 'Modelo!C6', spearman: -0.3, peso: 0.3 },
+        ],
+        arana: [{ id: 'in_a', nombre: 'Precio unitario', ref: 'Modelo!C5', medias: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], rango: 9 }],
+      })),
+    };
+    const informe = construirInforme(MODELO, r);
+    const tipos = informe.graficos.map((g) => g.tipo);
+    expect(tipos).toContain('barras');
+    expect(tipos).toContain('lineas-filas');
+    const t = informe.filas.map((f) => f.join('\t')).join('\n');
+    expect(t).toContain('Puesto en el tornado');
+    expect(t).toContain('Precio unitario\tModelo!C5\tTriangular(105; 120; 140)\t121.6\t7.1\t110\t121\t134\t1');
   });
 });

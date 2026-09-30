@@ -32,7 +32,7 @@
  * las cuenta aparte (`noNumericas`) en vez de envenenar las estadísticas.
  */
 
-import type { LibroCalculable } from '../engine/compatible/index.ts';
+import type { LibroCalculable, ValorLeido } from '../engine/compatible/index.ts';
 import { rangoDesdeDireccion } from './rangos.ts';
 
 /**
@@ -47,7 +47,13 @@ export function crearLibroCalculable(
   context: Excel.RequestContext,
   direccionesEntrada: readonly string[],
   direccionesSalida: readonly string[],
+  opciones: { congelarPantalla?: boolean; categorias?: readonly (readonly string[] | undefined)[] } = {},
 ): LibroCalculable {
+  // F5: como `ScreenUpdating = False` en VBA. Existe desde ExcelApi 1.9; la
+  // documentación avisa de que llamarlo en bucle puede hacer parpadear la
+  // ventana en algunas versiones, por eso es una opción que se puede quitar.
+  const congelar = Boolean(opciones.congelarPantalla) &&
+    typeof Office !== 'undefined' && Office.context?.requirements?.isSetSupported?.('ExcelApi', '1.9') === true;
   // Resueltos una sola vez: dentro del bucle, volver a pedirlos añadiría
   // trabajo por iteración sin cambiar nada.
   const entradas = direccionesEntrada.map((d) => rangoDesdeDireccion(context, d));
@@ -57,18 +63,52 @@ export function crearLibroCalculable(
   return {
     async calcularIteracion(valoresDeEntrada) {
       for (let i = 0; i < entradas.length; i++) {
-        (entradas[i] as Excel.Range).values = [[valoresDeEntrada[i] as number]];
+        // Una entrada de texto (T1) escribe su categoría, no el índice.
+        const textos = opciones.categorias?.[i];
+        const v = valoresDeEntrada[i] as number;
+        (entradas[i] as Excel.Range).values = [[textos ? (textos[Math.round(v)] ?? '') : v]];
       }
 
-      context.workbook.application.calculate(Excel.CalculationType.recalculate);
+      const app = context.workbook.application;
+      if (congelar && typeof app.suspendScreenUpdatingUntilNextSync === 'function') app.suspendScreenUpdatingUntilNextSync();
+      app.calculate(Excel.CalculationType.recalculate);
 
       for (const salida of salidas) salida.load(['values', 'valueTypes']);
 
       await context.sync();
 
-      const leidas = new Array<number>(nSalidas);
-      for (let i = 0; i < nSalidas; i++) leidas[i] = aNumero(salidas[i] as Excel.Range);
+      const leidas = new Array<ValorLeido>(nSalidas);
+      for (let i = 0; i < nSalidas; i++) leidas[i] = aValor(salidas[i] as Excel.Range);
       return leidas;
+    },
+
+    /**
+     * F5b: varias iteraciones en un solo `sync`. Office.js ejecuta los
+     * comandos en orden, así que cada lectura queda con los valores de *su*
+     * iteración; por eso se piden rangos nuevos para leer en cada una (el
+     * mismo objeto leído dos veces se quedaría con la última). La pantalla
+     * se congela hasta el `sync`, que ahora es uno por lote: Excel repinta
+     * una vez cada lote en vez de una por iteración (prueba H2, 29/09).
+     */
+    async calcularLote(valoresPorIteracion) {
+      const app = context.workbook.application;
+      if (congelar && typeof app.suspendScreenUpdatingUntilNextSync === 'function') app.suspendScreenUpdatingUntilNextSync();
+      const lecturas: Excel.Range[][] = [];
+      for (const valores of valoresPorIteracion) {
+        for (let i = 0; i < entradas.length; i++) {
+          const textos = opciones.categorias?.[i];
+          const v = valores[i] as number;
+          (entradas[i] as Excel.Range).values = [[textos ? (textos[Math.round(v)] ?? '') : v]];
+        }
+        app.calculate(Excel.CalculationType.recalculate);
+        lecturas.push(direccionesSalida.map((d) => {
+          const r = rangoDesdeDireccion(context, d);
+          r.load(['values', 'valueTypes']);
+          return r;
+        }));
+      }
+      await context.sync();
+      return lecturas.map((fila) => fila.map(aValor));
     },
   };
 }
@@ -86,13 +126,16 @@ export function crearLibroCalculable(
  * leer una celda, y que los dos modos difieran ahí sería peor que perder una
  * iteración rara.
  */
-function aNumero(rango: Excel.Range): number {
+function aValor(rango: Excel.Range): ValorLeido {
   const tipo = (rango.valueTypes as unknown[][])?.[0]?.[0];
   const valor = (rango.values as unknown[][])?.[0]?.[0];
 
   if (tipo === Excel.RangeValueType.double || tipo === Excel.RangeValueType.integer) {
     return typeof valor === 'number' ? valor : NaN;
   }
-  if (tipo === Excel.RangeValueType.boolean) return valor === true ? 1 : 0;
+  // Un lógico y un texto se devuelven tal cual (T2, T6): el bucle los cuenta
+  // como categorías. Un lógico cuenta además como 1/0.
+  if (tipo === Excel.RangeValueType.boolean) return valor === true;
+  if (tipo === Excel.RangeValueType.string && typeof valor === 'string' && valor !== '') return valor;
   return NaN;
 }

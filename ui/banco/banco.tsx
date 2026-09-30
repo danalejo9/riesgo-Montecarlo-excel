@@ -11,9 +11,13 @@ import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { CELDAS, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
+import { avisarSeleccion, CELDAS, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
+import { pedirAlPanel } from '../acciones.ts';
 
 instalarExcelFalso();
+
+// B3: en el banco no hay cinta; se expone lo que pulsaría, para probarlo.
+(window as unknown as { __cinta: (accion: string) => Promise<void> }).__cinta = pedirAlPanel;
 
 // Para poder inspeccionar desde fuera qué escribió el volcado: el banco no
 // dibuja una cuadrícula, así que esta es la única forma de comprobarlo.
@@ -40,6 +44,7 @@ function Banco() {
             value={celda}
             onChange={(e) => {
               seleccion.ref = e.target.value;
+              avisarSeleccion();
               setCelda(e.target.value);
             }}
           >

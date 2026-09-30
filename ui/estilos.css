@@ -19,6 +19,14 @@
   --acento: #217346; /* el verde de Excel */
   --error-fondo: #fdf3f4;
   --error-borde: #d13438;
+  /* Polaridad del tornado: validados contra el fondo (CVD ΔE ≥ 19). */
+  --sube: #2a78d6;
+  --baja: #e34948;
+  /* Series categóricas (orden fijo, validado para daltonismo). */
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,6 +38,12 @@
     --acento: #4cc38a;
     --error-fondo: #2d1b1d;
     --error-borde: #f1707b;
+    --sube: #3987e5;
+    --baja: #e66767;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
   }
 }
 
@@ -90,6 +104,11 @@ button {
   cursor: pointer;
 }
 button:disabled { opacity: .6; cursor: default; }
+/* Acción secundaria: con borde, para que se vea que se puede pulsar (ronda
+   del 29/09: «no se sabe qué es texto y qué es un botón»). */
+button.secundario { background: transparent; color: var(--acento); font-weight: 600; }
+button.secundario:hover { background: color-mix(in srgb, var(--acento) 10%, transparent); }
+section.compartido { border-left: 3px solid var(--acento); padding-left: 10px; }
 
 .error {
   border: 1px solid var(--error-borde);
@@ -100,8 +119,11 @@ button:disabled { opacity: .6; cursor: default; }
 }
 .error h2 { color: var(--error-borde); }
 .error pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+.error-cabecera { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.cerrar-error { background: none; border: 0; padding: 0 4px; font-size: 14px; color: var(--error-borde); cursor: pointer; min-height: 0; }
 
 .aviso { max-width: 42ch; }
+.aviso-error { white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; max-height: 40vh; overflow: auto; user-select: text; }
 
 .ejemplos {
   margin: 6px 0 0;
@@ -151,7 +173,7 @@ code {
   margin-top: 8px;
 }
 .campo { display: flex; flex-direction: column; gap: 2px; }
-.campo.ancho { grid-column: 1 / -1; }
+.campo.ancho, .parametros > .ancho { grid-column: 1 / -1; }
 .campo .ayuda { font-size: 11px; }
 
 input[type='text'], select {
@@ -257,6 +279,27 @@ button.principal { width: 100%; padding: 8px; font-weight: 600; }
 /* El nombre de una salida lo escribe el usuario: se enseña tal cual, sin la
    mayúscula forzada que llevan los títulos de sección del panel. */
 h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); letter-spacing: 0; }
+h2.titulo-salida { font-size: 16px; margin-bottom: 6px; }
+.ref-salida { font-size: 12px; font-weight: 400; color: var(--tenue); margin-left: 4px; }
+
+/* U2: lo esencial a la vista (cifras clave e histograma); el resto, plegado. */
+.barra-resultados .resumen-calculo { margin: 0 0 6px; font-size: 12px; color: var(--tenue); }
+.barra-resultados .fila-botones { margin-top: 6px; }
+.cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; margin: 4px 0 8px; }
+.cifras > div { border: 1px solid var(--borde); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; min-width: 0; }
+.cifra { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cifra-nombre { font-size: 11px; color: var(--tenue); }
+.plegable { border-top: 1px solid var(--borde); margin-top: 10px; }
+.plegable > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; padding: 8px 0 4px; }
+.plegable > summary::-webkit-details-marker { display: none; }
+.plegable > summary::before { content: '▸'; color: var(--tenue); font-size: 11px; width: 10px; flex: none; transition: transform .15s; }
+.plegable[open] > summary::before { transform: rotate(90deg); }
+.plegable-titulo { font-size: 13px; font-weight: 600; flex: none; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plegable-titulo h2 { display: inline; margin: 0; }
+.plegable-resumen { font-size: 12px; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.plegable-cuerpo { padding-bottom: 4px; }
+.plegable-cuerpo > h3:first-child { margin-top: 4px; }
+section > .plegable:first-child { border-top: 0; margin-top: 0; }
 
 .botonera { display: flex; flex-wrap: wrap; gap: 8px; }
 .botonera button { margin-top: 8px; }
@@ -273,3 +316,212 @@ h2.titulo-salida { text-transform: none; font-size: 14px; color: var(--texto); l
 .correlacion input[type='range'] { width: 100%; margin: 4px 0 0; accent-color: var(--acento); }
 
 .guardado { margin: 8px 0 0; }
+
+/* --- Tornado de sensibilidad --- */
+.tornado { margin: 8px 0 0; }
+.tornado-leyenda { display: flex; justify-content: space-between; font-size: 11px; color: var(--tenue); margin: 0 0 4px; }
+.tornado-leyenda .marca { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0 4px; vertical-align: middle; }
+.tornado-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 34%) 1fr 3.2em 2.6em;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0; /* separación entre barras */
+  cursor: default;
+}
+.tornado-fila:hover, .tornado-fila:focus { background: color-mix(in srgb, var(--borde) 45%, transparent); outline: none; }
+.tornado-nombre { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tornado-pista { position: relative; height: 14px; }
+.tornado-pista::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--tenue); }
+.tornado-barra { position: absolute; top: 2px; height: 10px; }
+.tornado-barra.sube { left: 50%; background: var(--sube); border-radius: 0 4px 4px 0; }
+.tornado-barra.baja { right: 50%; background: var(--baja); border-radius: 4px 0 0 4px; }
+/* Entrada de texto (T2): pesa, pero no sube ni baja. Centrada y en gris. */
+.tornado-barra.segun { left: 50%; background: var(--tenue, #8a8a8a); border-radius: 0 4px 4px 0; opacity: 0.8; }
+.tornado-valor { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.tornado button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }
+
+/* --- Histograma y umbral --- */
+.histo-barra { fill: var(--acento); }
+.histo-barra.apagada { fill: color-mix(in srgb, var(--tenue) 35%, var(--fondo)); }
+.histo-barra.activa { opacity: 0.75; }
+/* C10: media, mediana y delimitadores sobre el histograma. */
+.marca-media line { stroke: var(--texto); stroke-width: 1.5; }
+.marca-mediana line { stroke: var(--texto); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.marca-media text, .marca-mediana text { font-size: 9px; fill: var(--tenue); }
+.delimitadores line { stroke: var(--texto); stroke-width: 1.5; }
+.delimitadores .arrastrable line { stroke-width: 2; }
+.delimitadores text { font-size: 10px; fill: var(--tenue); font-variant-numeric: tabular-nums; }
+.delimitadores text.fuerte { fill: var(--texto); font-weight: 600; }
+.delimitadores-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.delimitadores-campos input { width: 100%; box-sizing: border-box; }
+.umbral { margin: 8px 0; padding: 8px; border: 1px solid var(--borde); border-radius: 4px; }
+.umbral-pregunta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+.umbral-pregunta input { width: 8em; }
+.umbral-pregunta input[aria-invalid='true'] { border-color: var(--error-borde); }
+.umbral-respuesta { margin: 6px 0 0; }
+.umbral-respuesta strong { font-size: 20px; }
+
+/* --- Precisión (¿bastan las iteraciones?) --- */
+.precision { margin: 8px 0; padding: 6px 8px; border-left: 3px solid var(--acento); font-size: 12px; }
+.precision p { margin: 2px 0; }
+.precision.mejorable { border-left-color: #fab219; }
+.precision-icono { display: inline-block; width: 1.2em; font-weight: 700; }
+.precision.bien .precision-icono { color: var(--acento); }
+
+/* --- Comparación de escenarios --- */
+.curva-referencia { fill: none; stroke: var(--tenue); stroke-width: 2; stroke-dasharray: 5 3; }
+.leyenda-curvas { display: flex; gap: 14px; font-size: 11px; color: var(--tenue); margin: 4px 0 0; }
+.muestra-linea { display: inline-block; width: 18px; margin-right: 5px; vertical-align: middle; border-top: 2px solid var(--acento); }
+.muestra-linea.referencia { border-top: 2px dashed var(--tenue); }
+.comparacion { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.comparacion th, .comparacion td { padding: 3px 4px; text-align: right; border-bottom: 1px solid var(--borde); }
+.comparacion th[scope='row'], .comparacion thead th:first-child { text-align: left; font-weight: normal; color: var(--tenue); }
+.comparacion thead th { font-weight: 600; }
+.fila-botones { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.fila-botones input { flex: 1 1 8em; min-width: 0; }
+
+/* --- Ajuste a datos --- */
+.ajuste { margin: 8px 0; padding: 8px; border: 1px solid var(--borde); border-radius: 4px; }
+.ajuste h4 { margin: 0 0 4px; font-size: 13px; }
+.ajuste textarea { width: 100%; font: inherit; font-size: 12px; background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); border-radius: 3px; padding: 4px; }
+.ajuste-tabla tr { cursor: pointer; }
+.ajuste-tabla tr.elegida { background: color-mix(in srgb, var(--acento) 10%, transparent); }
+.ajuste-tabla th[scope='row'] { color: var(--texto); }
+.tabla-resumen tr.desvio td { font-weight: 600; }
+/* T8: la barra de cada riesgo en el registro. */
+.barra-registro { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.barra-registro > span { display: inline-block; height: 8px; max-width: 30px; background: var(--acento); border-radius: 2px; }
+.impacto-registro { display: block; font-size: 11px; overflow-wrap: anywhere; }
+.parametros-ajuste { display: block; font-size: 11px; }
+.insignia { display: inline-block; font-size: 10px; padding: 0 4px; margin-right: 4px; border-radius: 3px; background: var(--acento); color: var(--fondo); }
+
+/* --- Configuración --- */
+.pestanas .engranaje { margin-left: auto; min-width: 2.2em; font-size: 15px; }
+.presets { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+.presets button { padding: 2px 8px; font-size: 12px; }
+.presets button.activo { background: var(--acento); color: var(--fondo); border-color: var(--acento); }
+.campo.casilla { flex-direction: row; align-items: center; gap: 6px; }
+
+/* --- Araña --- */
+.serie { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.serie.atenuada { opacity: 0.3; }
+.serie-1 { stroke: var(--serie-1); border-color: var(--serie-1) !important; }
+.serie-2 { stroke: var(--serie-2); border-color: var(--serie-2) !important; }
+.serie-3 { stroke: var(--serie-3); border-color: var(--serie-3) !important; }
+.serie-4 { stroke: var(--serie-4); border-color: var(--serie-4) !important; }
+.punto-serie { fill: var(--fondo); stroke-width: 2; }
+/* C4: dispersión, caja y bigotes, abanico. */
+.punto-dispersion { fill: var(--acento); fill-opacity: 0.35; }
+.bigote { stroke: var(--tenue); stroke-width: 1.2; }
+.caja { stroke-width: 1.5; fill-opacity: 0.25; }
+.caja.serie-1 { fill: var(--serie-1); }
+.caja.serie-2 { fill: var(--serie-2); }
+.caja.serie-3 { fill: var(--serie-3); }
+.caja.serie-4 { fill: var(--serie-4); }
+.mediana-caja { stroke: var(--texto); stroke-width: 2; }
+.media-caja { fill: var(--texto); }
+.abanico-exterior { fill: var(--acento); fill-opacity: 0.15; }
+.abanico-interior { fill: var(--acento); fill-opacity: 0.35; }
+.barra-deshacer { margin: 0 0 8px; text-align: right; }
+/* U1: el asistente del primer modelo. */
+.primer-modelo .pasos { margin: 4px 0 8px; padding-left: 20px; font-size: 13px; }
+.primer-modelo .pasos li { margin-bottom: 4px; }
+.plantillas { display: grid; gap: 6px; }
+button.plantilla { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; padding: 8px 10px; }
+button.plantilla .tenue { font-size: 12px; font-weight: 400; }
+.aviso-ok { color: var(--sube); }
+/* E4: ayuda contextual. */
+.ayuda { margin: 2px 0 6px; }
+.enlace-ayuda { background: none; border: 0; padding: 0; color: var(--acento); cursor: pointer; font-size: 12px; text-decoration: underline dotted; }
+.texto-ayuda { margin: 4px 0 0; padding: 6px 8px; font-size: 12px; background: color-mix(in srgb, var(--acento) 8%, transparent); border-radius: 4px; }
+/* E1: la tabla de todas las entradas. */
+.todas-entradas tbody tr { cursor: pointer; }
+.todas-entradas tr.del-libro { cursor: default; color: var(--tenue); }
+/* E2: la matriz de correlaciones. */
+.matriz-correlaciones td, .matriz-correlaciones th { padding: 2px 3px; text-align: center; }
+.matriz-correlaciones th[scope='row'] { text-align: left; white-space: nowrap; font-weight: 400; }
+.matriz-correlaciones td.diagonal { color: var(--tenue); }
+.celda-matriz { width: 3.6em; padding: 2px 3px; text-align: center; font-size: 12px; }
+.celda-matriz[aria-invalid='true'] { border-color: var(--error-borde); }
+/* D2: los dos selectores del estrés, en una fila si caben. */
+.fila-estres { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+/* D4: tornado de cambio en la salida. */
+.grafico button.enlace { background: none; border: 0; padding: 4px 0; color: var(--acento); cursor: pointer; font-size: 12px; }
+.barra-cambio.sube { fill: var(--sube); }
+.barra-cambio.baja { fill: var(--baja); }
+.conmutador { display: inline-flex; border: 1px solid var(--borde); border-radius: 4px; overflow: hidden; margin: 2px 0 8px; }
+.conmutador button { border: 0; border-radius: 0; background: none; padding: 3px 10px; font-size: 12px; color: var(--texto); cursor: pointer; }
+.conmutador button[aria-pressed='true'] { background: var(--acento); color: var(--fondo); }
+.leyenda-series { flex-wrap: wrap; row-gap: 2px; }
+.tornado-contribucion { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.ajuste-tabla th, .ajuste-tabla td { font-size: 11px; }
+.ordenar-ajuste { margin: 6px 0; }
+
+/* E6: resumen de salidas y selector. */
+.selector-salida { display: flex; gap: 8px; align-items: center; margin: 6px 0 10px; }
+.selector-salida select { flex: 1; min-width: 0; }
+.tabla-desplazable { overflow-x: auto; }
+.tabla-resumen { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.tabla-resumen th, .tabla-resumen td { padding: 4px 6px; border-bottom: 1px solid var(--borde); text-align: right; white-space: nowrap; }
+.tabla-resumen th:first-child, .tabla-resumen td:first-child { text-align: left; white-space: normal; }
+.tabla-resumen tbody tr { cursor: pointer; }
+.tabla-resumen tbody tr:hover { background: color-mix(in srgb, var(--acento) 8%, transparent); }
+.tabla-resumen tr.elegida { background: color-mix(in srgb, var(--acento) 15%, transparent); font-weight: 600; }
+
+/* C7: la lectura de cada salida en palabras. */
+.lectura { margin: 4px 0 10px; line-height: 1.45; }
+textarea { width: 100%; font: inherit; box-sizing: border-box; }
+
+/* E7: lista de escenarios. */
+.lista-escenarios { list-style: none; padding: 0; margin: 6px 0; }
+.lista-escenarios li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 2px 0; }
+.lista-escenarios label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lista-escenarios button { margin-top: 0; }
+.tabla-resumen.sin-clic tbody tr { cursor: default; }
+
+/* C9: la distribución teórica sobre el histograma de lo muestreado. */
+.curva-teorica { fill: none; stroke: var(--baja, #e34948); stroke-width: 1.5; }
+
+/* T2: barras de frecuencia de las variables de texto. */
+.barras-categorias { list-style: none; padding: 0; margin: 6px 0; }
+.barras-categorias li { display: grid; grid-template-columns: minmax(60px, 34%) 1fr auto; gap: 8px; align-items: center; padding: 2px 0; font-size: 12px; }
+.barras-categorias li.resaltada .cat-nombre { font-weight: 600; }
+.cat-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-barra { position: relative; height: 12px; background: color-mix(in srgb, var(--borde) 40%, transparent); border-radius: 2px; }
+.cat-relleno { position: absolute; inset: 0 auto 0 0; background: var(--acento); border-radius: 2px; }
+.barras-categorias li:not(.resaltada) .cat-relleno { opacity: .55; }
+.cat-esperada { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--baja, #e34948); }
+.cat-valor { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabla-resumen td.celda-texto { text-align: left; white-space: normal; }
+
+/* C5: vista previa de la distribución en el editor. */
+.vista-previa { margin: 6px 0 0; }
+.vista-previa svg { width: 100%; max-width: 320px; height: auto; display: block; }
+.vista-previa figcaption { white-space: pre-wrap; margin-top: 4px; }
+.previa-area { fill: color-mix(in srgb, var(--acento) 30%, transparent); stroke: var(--acento); stroke-width: 1; }
+.previa-p { stroke: var(--tenue); stroke-dasharray: 2 2; stroke-width: 1; }
+.previa-p50 { stroke: var(--texto); stroke-width: 1; }
+.previa-barra { fill: var(--acento); opacity: .75; }
+
+/* I1: diagnóstico de los datos en el ajuste. */
+.diagnostico-ajuste { border-left: 3px solid var(--acento); padding: 2px 0 2px 10px; margin: 8px 0; }
+.diagnostico-ajuste h5 { margin: 0 0 4px; font-size: 12px; }
+.diagnostico-ajuste ul { margin: 0; padding-left: 16px; font-size: 12px; }
+
+/* U3.3: el catálogo visual de distribuciones. */
+.enlace-catalogo { margin: 0 0 8px; }
+.catalogo { margin: 8px 0 16px; }
+.catalogo h4 { margin: 12px 0 4px; font-size: 12px; color: var(--tenue); font-weight: 600; }
+.catalogo-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.catalogo-ficha {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  text-align: left; padding: 8px; border: 1px solid var(--borde); border-radius: 6px;
+  background: var(--fondo); color: var(--texto); font-weight: 400; cursor: pointer;
+}
+.catalogo-ficha:hover { border-color: var(--acento); }
+.catalogo-ficha:focus-visible { outline: 2px solid var(--acento); outline-offset: 1px; }
+.catalogo-ficha.elegida { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+.catalogo-ficha .tenue { font-size: 12px; line-height: 1.35; }
+.miniatura path, .miniatura rect { fill: var(--serie-1); opacity: 0.8; }

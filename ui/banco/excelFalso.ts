@@ -22,13 +22,20 @@
  */
 
 import { evaluarModelo } from '../../engine/compiler/evaluate.ts';
+import { REGISTRO } from '../../engine/functions/registry.ts';
+import { reemplazarAst } from '../../engine/graph/index.ts';
+import { esLlamadaDistribucion, idDeFuncionRiesgo } from '../../engine/modelo/index.ts';
+import { coercionNumerica } from '../../engine/values/coercion.ts';
+import type { Nodo } from '../../engine/parser/ast.ts';
 import { claveCelda, columnaDeLetras } from '../../engine/parser/index.ts';
 import { construirGrafo, type FormulaCelda, type ValorCelda } from '../../engine/graph/index.ts';
-import { NUMERO, numeroEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
+import { LOGICO, NUMERO, TEXTO, desdeEscalar, numeroEn, textoEn, tipoEn, type ValorEscalar } from '../../engine/values/index.ts';
 
 interface Celda {
   formula?: string;
   valor?: number | string | boolean;
+  /** Formato de número (código invariante, como `numberFormat`). */
+  formato?: string;
 }
 
 /**
@@ -54,7 +61,62 @@ const LIBRO: Record<string, Celda> = {
   B9: { formula: 'B8*0.08' },
   A10: { valor: 'Precio de venta' },
   B10: { formula: 'B8+B9' },
+  // Variables de texto (T1, T2): una zona que cambia el precio, y una salida de texto.
+  A12: { valor: 'Zona' },
+  B12: { valor: 'Norte' },
+  A13: { valor: 'Recargo por zona' },
+  B13: { formula: 'IF(B12="Norte",1.1,IF(B12="Sur",1,0.9))' },
+  A14: { valor: 'Precio en la zona' },
+  B14: { formula: 'B10*B13' },
+  A15: { valor: 'Gama' },
+  B15: { formula: 'IF(B14>75000,"Cara","Normal")' },
+  A16: { valor: '¿Supera 80.000?' },
+  B16: { formula: 'B14>80000' },
+  D12: { valor: 'Norte' }, E12: { valor: 20 },
+  D13: { valor: 'Sur' }, E13: { valor: 50 },
+  D14: { valor: 'Este' }, E14: { valor: 30 },
+  // Funciones RIESGO con celdas como argumentos (B7) y de resultados (B6).
+  A18: { valor: 'Desviación del coste' },
+  B18: { valor: 100 },
+  A19: { valor: 'Coste con RIESGO' },
+  B19: { formula: 'RIESGO.NORMAL(B3,B18)' },
+  A20: { valor: 'Imprevistos' },
+  B20: { formula: '1000+RIESGO.NORMAL(0,B18)' },
+  A21: { valor: 'Coste con funciones' },
+  B21: { formula: 'B19*B4+B20' },
+  A22: { valor: 'Media del precio' },
+  B22: { formula: 'RIESGO.MEDIA(B10)' },
+  // Salida y correlación declaradas desde la fórmula (resto de B6).
+  A24: { valor: 'Materiales' },
+  B24: { formula: 'RIESGO.NORMAL(100,10)' },
+  A25: { valor: 'Transporte' },
+  B25: { formula: 'RIESGO.NORMAL(50,5)' },
+  A26: { valor: 'Correlación' },
+  B26: { formula: 'RIESGO.CORRELACION(B24,B25,0.9)' },
+  A27: { valor: 'Coste total' },
+  B27: { formula: 'RIESGO.SALIDA("Coste total")+B24+B25' },
+  // Fechas (T7): inicio incierto y fin de obra con formato de fecha.
+  A29: { valor: 'Inicio' },
+  B29: { formula: 'RIESGO.TRIANGULAR(DATE(2027,1,1),DATE(2027,2,1),DATE(2027,4,1))', formato: 'dd/mm/yyyy' },
+  A30: { valor: 'Fin de obra' },
+  B30: { formula: 'RIESGO.SALIDA("Fin de obra")+B29+RIESGO.NORMAL(90,10)', formato: 'dd/mm/yyyy' },
+  // Registro de riesgos (T8).
+  A32: { valor: 'Retraso de permisos' },
+  B32: { formula: 'RIESGO.EVENTO(0.3,RIESGO.TRIANGULAR(10000,20000,60000))' },
+  A33: { valor: 'Avería grave' },
+  B33: { formula: 'RIESGO.EVENTO(0.1,50000)' },
+  A34: { valor: 'Coste con riesgos' },
+  B34: { formula: 'RIESGO.SALIDA("Coste con riesgos")+B14+B32+B33' },
+  // Decisión (T9): tres proveedores con distinto factor de precio.
+  A36: { valor: 'Factor del proveedor' },
+  B36: { formula: 'RIESGO.DECISION(0.9,1,1.15)' },
+  A37: { valor: 'Coste según proveedor' },
+  B37: { formula: 'RIESGO.SALIDA("Coste según proveedor")+B14*B36' },
 };
+
+/** El rango usado de la hoja falsa: hasta donde llegan sus celdas. */
+const COLUMNAS_USADAS = ['A', 'B', 'C', 'D', 'E'];
+const FILAS_USADAS = 37;
 
 const refDe = (ref: string) => {
   const m = /^\$?([A-Za-z]{1,3})\$?([0-9]{1,7})$/.exec(ref) as RegExpExecArray;
@@ -70,23 +132,117 @@ function recalcular(): void {
     const { col, fila } = refDe(ref);
     if (celda.formula) formulas.push({ hoja: HOJA, col, fila, formula: celda.formula });
     else if (typeof celda.valor === 'number') valores.push({ hoja: HOJA, col, fila, valor: { tipo: NUMERO, numero: celda.valor } as ValorEscalar });
+    else if (typeof celda.valor === 'string' && celda.valor !== '') valores.push({ hoja: HOJA, col, fila, valor: { tipo: TEXTO, texto: celda.valor } as ValorEscalar });
+    else if (typeof celda.valor === 'boolean') valores.push({ hoja: HOJA, col, fila, valor: { tipo: LOGICO, numero: celda.valor ? 1 : 0 } as ValorEscalar });
   }
 
   const { grafo } = construirGrafo(formulas, valores);
-  const salidas = formulas.map((f) => claveCelda(f.hoja, f.col, f.fila));
-  const r = evaluarModelo(grafo, new Map(), salidas, 1);
-  if (!r.ok) return;
+  conFuncionesRiesgo(grafo);
 
+  // Celda a celda: las funciones RIESGO no las calcula el motor (en Excel las
+  // calcula el complemento), y una sola no debe dejar sin recalcular el resto.
   for (const [ref, celda] of Object.entries(LIBRO)) {
     if (!celda.formula) continue;
     const { col, fila } = refDe(ref);
-    const columna = r.valores.get(claveCelda(HOJA, col, fila));
-    if (columna) celda.valor = tipoEn(columna, 0) === NUMERO ? numeroEn(columna, 0) : '#VALUE!';
+    const clave = claveCelda(HOJA, col, fila);
+    const r = evaluarModelo(grafo, new Map(), [clave], 1);
+    if (!r.ok) {
+      celda.valor = '#NAME?';
+      continue;
+    }
+    const columna = r.valores.get(clave);
+    if (!columna) continue;
+    const tipo = tipoEn(columna, 0);
+    celda.valor = tipo === NUMERO ? numeroEn(columna, 0)
+      : tipo === TEXTO ? (textoEn(columna, 0) ?? '')
+      : tipo === LOGICO ? numeroEn(columna, 0) !== 0
+      : '#VALUE!';
+  }
+}
+
+/**
+ * Las funciones RIESGO del banco: las de verdad (`ui/funciones.ts`), cargadas
+ * con un `CustomFunctions` de mentira. Cada llamada de una fórmula se
+ * sustituye por `_BANCO.RIESGO("Modelo!B20"; "NORMAL"; args…)`, para que la
+ * función sepa su celda como en Excel (y así el modo compatible del banco
+ * pruebe también B1b). Solo argumentos numéricos: es lo que usa el banco.
+ */
+const funcionesRiesgo = new Map<string, (...args: unknown[]) => unknown>();
+(globalThis as unknown as { CustomFunctions: unknown }).CustomFunctions = {
+  associate: (id: string, f: (...args: unknown[]) => unknown) => funcionesRiesgo.set(id, f),
+  Error: class extends Error {},
+  ErrorCode: { invalidNumber: '#NUM!', invalidName: '#NAME?', invalidValue: '#VALUE!', notAvailable: '#N/A' },
+};
+void import('../funciones.ts');
+
+(REGISTRO as Record<string, (typeof REGISTRO)[string]>)['_BANCO.RIESGO'] = (args, n) => {
+  const [dir, id, ...resto] = args.map((a) => a.columnas[0]);
+  const direccion = dir ? String(valorEn(dir)) : '';
+  const f = funcionesRiesgo.get(id ? String(valorEn(id)) : '');
+  const valores = resto.map((c) => (c ? coercionNumerica(c, 0) : NaN));
+  let v: unknown;
+  try {
+    v = f ? f(...valores, { address: direccion }) : '#NAME?';
+  } catch {
+    v = '#NUM!';
+  }
+  const valor: ValorEscalar = typeof v === 'number' ? { tipo: NUMERO, numero: v } : { tipo: TEXTO, texto: String(v) };
+  return desdeEscalar(valor, n);
+};
+
+function valorEn(c: import('../../engine/values/columna.ts').Columna): unknown {
+  const t = tipoEn(c, 0);
+  return t === TEXTO ? textoEn(c, 0) : numeroEn(c, 0);
+}
+
+function conFuncionesRiesgo(grafo: ReturnType<typeof construirGrafo>['grafo']): void {
+  for (const [clave, nodo] of grafo.nodos) {
+    if (!nodo.ast) continue;
+    let hay = false;
+    const cambiar = (x: Nodo): Nodo => {
+      // En un booleano: si no, el `if` estrecha el tipo y el resto no ve funciones.
+      const esDistribucion: boolean = esLlamadaDistribucion(x);
+      if (esDistribucion && x.tipo === 'funcion') {
+        hay = true;
+        return {
+          tipo: 'funcion', nombre: '_BANCO.RIESGO', pos: x.pos,
+          args: [{ tipo: 'texto', valor: clave, pos: x.pos }, { tipo: 'texto', valor: idDeFuncionRiesgo(x.nombre) ?? '', pos: x.pos }, ...x.args.map(cambiar)],
+        };
+      }
+      // Las que declaran algo valen lo que en Excel: 0 la salida, el coeficiente la correlación.
+      const id = x.tipo === 'funcion' ? idDeFuncionRiesgo(x.nombre) : null;
+      if (x.tipo === 'funcion' && id === 'SALIDA') {
+        hay = true;
+        return { tipo: 'numero', valor: 0, pos: x.pos };
+      }
+      if (x.tipo === 'funcion' && id === 'CORRELACION' && x.args[2]) {
+        hay = true;
+        return x.args[2];
+      }
+      // Una decisión vale su primera opción.
+      if (x.tipo === 'funcion' && id === 'DECISION' && x.args[0]) {
+        hay = true;
+        const a = x.args[0];
+        return a.tipo === 'matriz' ? (a.filas[0]?.[0] ?? a) : a;
+      }
+      if (x.tipo === 'funcion') return { ...x, args: x.args.map(cambiar) };
+      if (x.tipo === 'binaria') return { ...x, izq: cambiar(x.izq), der: cambiar(x.der) };
+      if (x.tipo === 'unaria' || x.tipo === 'porcentaje') return { ...x, arg: cambiar(x.arg) };
+      return x;
+    };
+    const nuevo = cambiar(nodo.ast);
+    if (hay) reemplazarAst(grafo, clave, nuevo);
   }
 }
 
 /** Qué celda está "seleccionada". El banco la cambia con un desplegable. */
 export const seleccion = { ref: 'B3' };
+
+/** `workbook.onSelectionChanged` (U3.1: el explorador sigue a la selección). */
+const alSeleccionar = new Set<() => Promise<void> | void>();
+export function avisarSeleccion(): void {
+  for (const f of alSeleccionar) void f();
+}
 
 /**
  * El relleno de cada celda, que aquí no se ve pero sí se puede comprobar: el
@@ -106,8 +262,40 @@ function tipoDeValor(v: Celda['valor']): string {
   return 'Empty';
 }
 
+/** Un rango de varias celdas (D12:E14), solo para leer: las categorías de una entrada de texto. */
+function rangoMultiple(ref: string) {
+  const [a, b] = ref.split(':') as [string, string];
+  const ia = refDe(a);
+  const ib = refDe(b);
+  const filas = ib.fila - ia.fila + 1;
+  const cols = ib.col - ia.col + 1;
+  const letra = (c: number) => String.fromCharCode(64 + c);
+  const valores = Array.from({ length: filas }, (_, f) =>
+    Array.from({ length: cols }, (_, c) => LIBRO[`${letra(ia.col + c)}${ia.fila + f}`]?.valor ?? ''),
+  );
+  return {
+    address: `${HOJA}!${ref}`,
+    rowCount: filas,
+    columnCount: cols,
+    cellCount: filas * cols,
+    values: valores,
+    formulas: valores,
+    worksheet: { name: HOJA, load: () => {} },
+    load: () => {},
+  };
+}
+
 function rangoFalso(ref: string) {
+  if (ref.includes(':')) return rangoMultiple(ref) as unknown as ReturnType<typeof rangoSimple>;
+  return rangoSimple(ref);
+}
+
+function rangoSimple(ref: string) {
   const objetivo = celda(ref);
+  // Como Office.js: `load` toma el valor en ese punto de la cola, no al
+  // leerlo después. Sin esto, varias iteraciones en un mismo viaje (F5b)
+  // leerían todas el valor de la última.
+  let foto: { valor: Celda['valor'] } | null = null;
   return {
     format: {
       fill: {
@@ -127,21 +315,39 @@ function rangoFalso(ref: string) {
     cellCount: 1,
     isNullObject: false,
     get values() {
-      return [[objetivo.valor ?? '']];
+      return [[(foto ? foto.valor : objetivo.valor) ?? '']];
     },
     set values(v: unknown[][]) {
+      // Como en Excel: escribir un valor quita la fórmula (se restaura con `formulas`).
+      delete objetivo.formula;
       objetivo.valor = v[0]?.[0] as number;
+      foto = null;
     },
     get formulas() {
       return [[objetivo.formula ? `=${objetivo.formula}` : (objetivo.valor ?? '')]];
     },
+    // Reescribir la fórmula (refrescar las celdas de B6, restaurar): como en Excel.
+    set formulas(v: unknown[][]) {
+      const x = v[0]?.[0];
+      if (typeof x === 'string' && x.startsWith('=')) objetivo.formula = x.slice(1);
+      else {
+        delete objetivo.formula;
+        objetivo.valor = x as number;
+      }
+      foto = null;
+    },
+    get numberFormat() {
+      return [[objetivo.formato ?? 'General']];
+    },
     get valueTypes() {
-      return [[tipoDeValor(objetivo.valor)]];
+      return [[tipoDeValor(foto ? foto.valor : objetivo.valor)]];
     },
     get worksheet() {
       return { name: HOJA, load: () => {} };
     },
-    load: () => {},
+    load: () => {
+      foto = { valor: objetivo.valor };
+    },
   };
 }
 
@@ -156,13 +362,25 @@ export function instalarExcelFalso(): void {
     visibility: 'Visible',
     load: () => {},
     getRange: (ref: string) => rangoFalso(ref),
+    // Para los nombres legibles (E5): una franja de valores por índices (desde 0).
+    getRangeByIndexes: (fila: number, col: number, filas: number, cols: number) => ({
+      load: () => {},
+      get values() {
+        return Array.from({ length: filas }, (_, f) =>
+          Array.from({ length: cols }, (_, c) => {
+            const letra = String.fromCharCode(65 + col + c);
+            return LIBRO[`${letra}${fila + f + 1}`]?.valor ?? '';
+          }),
+        );
+      },
+    }),
     getUsedRangeOrNullObject: () => ({
       isNullObject: false,
-      address: `${HOJA}!A1:B10`,
+      address: `${HOJA}!A1:E${FILAS_USADAS}`,
       rowIndex: 0,
       columnIndex: 0,
-      rowCount: 10,
-      columnCount: 2,
+      rowCount: FILAS_USADAS,
+      columnCount: COLUMNAS_USADAS.length,
       load: () => {},
       get formulas() {
         return rejilla((c) => (c.formula ? `=${c.formula}` : (c.valor ?? '')));
@@ -174,8 +392,8 @@ export function instalarExcelFalso(): void {
   };
 
   const rejilla = (de: (c: Celda) => unknown): unknown[][] =>
-    Array.from({ length: 10 }, (_, f) =>
-      ['A', 'B'].map((col) => de(LIBRO[`${col}${f + 1}`] ?? {})),
+    Array.from({ length: FILAS_USADAS }, (_, f) =>
+      COLUMNAS_USADAS.map((col) => de(LIBRO[`${col}${f + 1}`] ?? {})),
     );
 
   const contexto = {
@@ -240,6 +458,12 @@ export function instalarExcelFalso(): void {
         },
       },
       getSelectedRange: () => rangoFalso(seleccion.ref),
+      onSelectionChanged: {
+        add: (f: () => Promise<void> | void) => {
+          alSeleccionar.add(f);
+          return { context: undefined, remove: () => alSeleccionar.delete(f) };
+        },
+      },
     },
     sync: () => Promise.resolve(),
   };
@@ -247,9 +471,13 @@ export function instalarExcelFalso(): void {
   const g = globalThis as unknown as Record<string, unknown>;
 
   g.Excel = {
-    run: <T>(fn: (c: typeof contexto) => Promise<T>) => fn(contexto),
-    ChartType: { line: 'Line' },
-    ChartSeriesBy: { columns: 'Columns' },
+    // También `Excel.run(contextoAnterior, fn)`, como al dejar de escuchar un evento.
+    run: <T>(a: unknown, b?: (c: typeof contexto) => Promise<T>) =>
+      (typeof a === 'function' ? (a as (c: typeof contexto) => Promise<T>) : (b as (c: typeof contexto) => Promise<T>))(contexto),
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered' },
+    BorderIndex: { edgeBottom: 'EdgeBottom' },
+    BorderLineStyle: { continuous: 'Continuous' },
+    ChartSeriesBy: { columns: 'Columns', rows: 'Rows' },
     CalculationType: { recalculate: 'Recalculate', full: 'Full' },
     RangeValueType: { double: 'Double', integer: 'Integer', boolean: 'Boolean', string: 'String', error: 'Error', empty: 'Empty' },
     SheetVisibility: { visible: 'Visible' },
@@ -284,10 +512,23 @@ export const hojaVolcada: {
       set values(v: unknown[][]) {
         hojaVolcada.filas = v;
       },
-      format: { font: {}, autofitColumns: () => {} },
+      set numberFormat(_v: unknown[][]) {},
+      format: { font: {}, fill: {}, borders: { getItem: () => ({}) }, autofitColumns: () => {} },
       _dims: [fila, col, filas, cols],
     }),
+    freezePanes: { freezeRows: () => {} },
     getUsedRange: () => ({ format: { autofitColumns: () => {} } }),
+    // Las plantillas (U1) escriben celda a celda: se apuntan en `filas` como [ref, valor].
+    getRange: (ref: string) => ({
+      set values(v: unknown[][]) {
+        hojaVolcada.filas.push([ref, v[0]?.[0]]);
+      },
+      set formulas(v: unknown[][]) {
+        hojaVolcada.filas.push([ref, v[0]?.[0]]);
+      },
+      set numberFormat(_v: unknown[][]) {},
+      format: { font: {}, columnWidth: 0 },
+    }),
     charts: {
       add: () => {
         hojaVolcada.graficos += 1;
@@ -299,4 +540,4 @@ export const hojaVolcada: {
 };
 
 /** Las celdas del libro falso, para el desplegable de selección. */
-export const CELDAS = Object.keys(LIBRO).filter((r) => r.startsWith('B'));
+export const CELDAS = [...Object.keys(LIBRO).filter((r) => r.startsWith('B')), 'D12:E14', 'B24:B25', 'B32:B33'];

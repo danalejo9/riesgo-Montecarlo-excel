@@ -190,3 +190,91 @@ function describir(r: number): string {
   if (Math.abs(r) < 0.05) return fuerza;
   return r > 0 ? `${fuerza} en el mismo sentido` : `${fuerza} en sentido contrario`;
 }
+
+/** La correlación de una celda de la matriz, escrita a mano: «0,6», «-0,3», «» (sin correlación). */
+function leerCoeficiente(texto: string): number | null | undefined {
+  const t = texto.trim().replace(',', '.');
+  if (t === '') return null;
+  const v = Number(t);
+  return Number.isFinite(v) && v >= -1 && v <= 1 ? v : undefined;
+}
+
+/**
+ * La matriz de correlaciones entera (E2): todas las entradas numéricas en
+ * filas y columnas, editable en el triángulo de arriba (el de abajo es su
+ * espejo). Escribe los dos lados a la vez, como el editor de cada entrada, y
+ * dice debajo si el conjunto es imposible.
+ */
+export function MatrizCorrelaciones({ modelo, alCambiar, problemas }: { modelo: ModeloRiesgo; alCambiar: (m: ModeloRiesgo) => void; problemas: readonly string[] }) {
+  const entradas = modelo.inputs.filter((e) => e.dist.type !== 'categorical');
+  const [editando, setEditando] = useState<{ clave: string; texto: string } | null>(null);
+  if (entradas.length < 2) return <p className="tenue">Hacen falta al menos dos entradas numéricas.</p>;
+  const coef = (a: EntradaRiskModel, b: EntradaRiskModel) =>
+    a.correlations.find((c) => c.with === b.id)?.coefficient ?? b.correlations.find((c) => c.with === a.id)?.coefficient;
+  const fijar = (a: string, b: string, v: number | null) => {
+    const inputs = modelo.inputs.map((e) => {
+      if (e.id !== a && e.id !== b) return e;
+      const pareja = e.id === a ? b : a;
+      const resto = e.correlations.filter((c) => c.with !== pareja);
+      return { ...e, correlations: v === null || v === 0 ? resto : [...resto, { with: pareja, coefficient: v }] };
+    });
+    alCambiar({ ...modelo, inputs });
+  };
+  const corto = (t: string) => (t.length > 10 ? `${t.slice(0, 9)}…` : t);
+  return (
+    <div className="matriz-correlaciones">
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead>
+            <tr>
+              <th />
+              {entradas.map((e, j) => <th key={e.id} title={e.name}>{j + 1}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {entradas.map((a, i) => (
+              <tr key={a.id}>
+                <th scope="row" title={a.name}>{i + 1}. {corto(a.name)}</th>
+                {entradas.map((b, j) => {
+                  if (i === j) return <td key={b.id} className="diagonal">1</td>;
+                  const v = coef(a, b);
+                  if (j < i) return <td key={b.id} className="tenue">{v === undefined ? '' : v.toLocaleString('es-ES')}</td>;
+                  const clave = `${a.id}|${b.id}`;
+                  const texto = editando?.clave === clave ? editando.texto : v === undefined ? '' : v.toLocaleString('es-ES');
+                  const invalido = editando?.clave === clave && leerCoeficiente(editando.texto) === undefined;
+                  return (
+                    <td key={b.id}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="celda-matriz"
+                        aria-label={`Correlación entre ${a.name} y ${b.name}`}
+                        aria-invalid={invalido}
+                        value={texto}
+                        placeholder="0"
+                        onChange={(e) => setEditando({ clave, texto: e.target.value })}
+                        onBlur={() => {
+                          if (editando?.clave === clave) {
+                            const x = leerCoeficiente(editando.texto);
+                            if (x !== undefined) fijar(a.id, b.id, x);
+                          }
+                          setEditando(null);
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        Escribe en el triángulo de arriba un número entre -1 y 1 (0,8: suben juntas; -0,5: una sube cuando la otra
+        baja); vacío o 0, independientes. El de abajo es su espejo. Las entradas de texto no se correlacionan.
+      </p>
+      {problemas.length > 0 && <ul className="aviso-linea">{problemas.map((p) => <li key={p}>{p}</li>)}</ul>}
+    </div>
+  );
+}

@@ -24,6 +24,44 @@ import type { MetodoMuestreo } from '../sampling/types.ts';
 
 export const VERSION_ESQUEMA_RISK_MODEL = 1;
 
+/**
+ * Migraciones del modelo guardado (H8): la de la clave `n` convierte un
+ * modelo de la versión `n` en uno de la `n + 1`. Hoy no hay ninguna (solo
+ * existe la v1); cuando cambie el esquema, se añade aquí la que toque y los
+ * libros antiguos se abren sin perder nada. Cada una recibe una copia.
+ */
+export type MigracionRiskModel = (m: Record<string, unknown>) => Record<string, unknown>;
+export const MIGRACIONES_RISK_MODEL: Readonly<Record<number, MigracionRiskModel>> = {};
+
+/**
+ * Pone al día un modelo guardado. Uno de una versión **más nueva** que la del
+ * complemento no se toca (se perdería lo que esta versión no entiende): se
+ * pide actualizar el complemento.
+ */
+export function migrarRiskModel(
+  m: Record<string, unknown>,
+  migraciones: Readonly<Record<number, MigracionRiskModel>> = MIGRACIONES_RISK_MODEL,
+  actual: number = VERSION_ESQUEMA_RISK_MODEL,
+): { ok: true; modelo: Record<string, unknown>; desde: number } | { ok: false; motivo: string } {
+  const v = m.schema;
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) {
+    return { ok: false, motivo: `Versión de esquema no reconocida (${JSON.stringify(v)}). Esta versión del complemento solo entiende RiskModel v${actual}.` };
+  }
+  if (v > actual) {
+    return {
+      ok: false,
+      motivo: `El modelo se guardó con una versión más nueva del complemento (RiskModel v${v}; esta entiende hasta la v${actual}). Actualiza el complemento para abrirlo; no se ha tocado nada.`,
+    };
+  }
+  let modelo = structuredClone(m);
+  for (let n = v; n < actual; n++) {
+    const migrar = migraciones[n];
+    if (!migrar) return { ok: false, motivo: `No hay forma de pasar un modelo de la v${n} a la v${n + 1}.` };
+    modelo = { ...migrar(modelo), schema: n + 1 };
+  }
+  return { ok: true, modelo, desde: v };
+}
+
 /** `'auto'` decide solo (Fase 2 §4); `'fast'`/`'compatible'` fuerzan el motor. */
 export type MotorSimulacion = 'auto' | 'fast' | 'compatible';
 
@@ -46,6 +84,24 @@ export interface SalidaRiskModel {
   id: string;
   name: string;
   ref: string;
+  /**
+   * El umbral que el usuario quiere vigilar en esta salida ("¿qué probabilidad
+   * hay de que el VAN quede por debajo de 0?"). Opcional: los modelos
+   * anteriores no lo traen y siguen siendo válidos.
+   */
+  threshold?: UmbralRiskModel;
+  /**
+   * Para una salida de texto o de sí/no (T2): el valor cuya probabilidad se
+   * vigila («¿qué probabilidad hay de que salga Norte?»). Es el umbral de las
+   * salidas que no son números. Opcional.
+   */
+  valueOfInterest?: string;
+}
+
+export interface UmbralRiskModel {
+  value: number;
+  /** `below`: P(salida < value). `above`: P(salida > value). */
+  direction: 'below' | 'above';
 }
 
 /**
@@ -67,10 +123,44 @@ export interface ConfiguracionRiskModel {
   sampling: MetodoMuestreo;
   engine: MotorSimulacion;
   locale?: LocaleRiskModel;
+  /**
+   * Criterio de precisión y, opcionalmente, "simular hasta alcanzarlo".
+   * Opcional: sin él, margen del 1 % e iteraciones fijas (`iterations`).
+   */
+  convergence?: ConvergenciaRiskModel;
 }
+
+export interface ConvergenciaRiskModel {
+  /** Margen objetivo de la media al 95 %, como fracción: 0,01 = 1 %. */
+  target: number;
+  /**
+   * Si es `true`, se simula por tandas hasta que todas las salidas cumplen
+   * `target`, sin pasar de `maxIterations`. `iterations` pasa a ser la tanda
+   * inicial.
+   */
+  untilConverged: boolean;
+  maxIterations: number;
+}
+
+/** Margen objetivo si el modelo no dice otro. */
+export const OBJETIVO_PRECISION_POR_DEFECTO = 0.01;
+
+/**
+ * El proyecto al que pertenece el modelo (C7): su título y una descripción,
+ * para que el informe y el volcado digan de qué hablan. Opcional: los modelos
+ * anteriores no lo tienen y siguen siendo válidos.
+ */
+export interface ProyectoRiskModel {
+  title: string;
+  description?: string;
+}
+
+export const LARGO_MAXIMO_TITULO = 200;
+export const LARGO_MAXIMO_DESCRIPCION = 2000;
 
 export interface ModeloRiesgo {
   schema: 1;
+  project?: ProyectoRiskModel;
   inputs: EntradaRiskModel[];
   outputs: SalidaRiskModel[];
   settings: ConfiguracionRiskModel;
@@ -114,13 +204,16 @@ const MOTORES: readonly MotorSimulacion[] = ['auto', 'fast', 'compatible'];
  * imposibles se descarta con el mismo mensaje que vería cualquier otro
  * consumidor de esa distribución.
  */
-export function validarRiskModel(json: unknown): ResultadoValidacion {
+export function validarRiskModel(entrada: unknown): ResultadoValidacion {
   const errores: string[] = [];
 
-  if (typeof json !== 'object' || json === null) {
+  if (typeof entrada !== 'object' || entrada === null) {
     return { ok: false, errores: ['El modelo no es un objeto JSON.'] };
   }
-  const m = json as Record<string, unknown>;
+  // H8: un modelo de una versión anterior se pone al día antes de validarlo.
+  const migrado = migrarRiskModel(entrada as Record<string, unknown>);
+  if (!migrado.ok) return { ok: false, errores: [migrado.motivo] };
+  const m = migrado.modelo;
 
   if (m.schema !== VERSION_ESQUEMA_RISK_MODEL) {
     return {
@@ -135,6 +228,20 @@ export function validarRiskModel(json: unknown): ResultadoValidacion {
   const inputs = validarLista(m.inputs, 'inputs', errores, (v, ctx) => validarEntrada(v, ctx, errores));
   const outputs = validarLista(m.outputs, 'outputs', errores, (v, ctx) => validarSalida(v, ctx, errores));
   const settings = validarConfiguracion(m.settings, errores);
+
+  let project: ProyectoRiskModel | undefined;
+  if (m.project !== undefined) {
+    const p = m.project as Record<string, unknown> | null;
+    const valido =
+      typeof p === 'object' && p !== null &&
+      typeof p.title === 'string' && p.title.length <= LARGO_MAXIMO_TITULO &&
+      (p.description === undefined || (typeof p.description === 'string' && p.description.length <= LARGO_MAXIMO_DESCRIPCION));
+    if (!valido) {
+      errores.push(`"project" debe tener un título (hasta ${LARGO_MAXIMO_TITULO} caracteres) y, opcionalmente, una descripción (hasta ${LARGO_MAXIMO_DESCRIPCION}).`);
+    } else {
+      project = { title: p.title as string, ...(typeof p.description === 'string' ? { description: p.description } : {}) };
+    }
+  }
 
   // Unicidad de ids y de refs, entre entradas y salidas a la vez: ambos
   // espacios de nombres comparten el mismo libro.
@@ -162,7 +269,13 @@ export function validarRiskModel(json: unknown): ResultadoValidacion {
 
   return {
     ok: true,
-    modelo: { schema: VERSION_ESQUEMA_RISK_MODEL, inputs, outputs, settings: settings as ConfiguracionRiskModel },
+    modelo: {
+      schema: VERSION_ESQUEMA_RISK_MODEL,
+      ...(project ? { project } : {}),
+      inputs,
+      outputs,
+      settings: settings as ConfiguracionRiskModel,
+    },
   };
 }
 
@@ -242,8 +355,30 @@ function validarSalida(v: unknown, ctx: string, errores: string[]): SalidaRiskMo
   if (!esTextoNoVacio(s.id)) { errores.push(`${ctx}.id debe ser un texto no vacío.`); ok = false; }
   if (!esTextoNoVacio(s.name)) { errores.push(`${ctx}.name debe ser un texto no vacío.`); ok = false; }
   if (!esTextoNoVacio(s.ref)) { errores.push(`${ctx}.ref debe ser un texto no vacío.`); ok = false; }
+  let threshold: UmbralRiskModel | undefined;
+  if (s.threshold !== undefined) {
+    const t = s.threshold as Record<string, unknown> | null;
+    if (
+      typeof t !== 'object' || t === null ||
+      typeof t.value !== 'number' || !Number.isFinite(t.value) ||
+      (t.direction !== 'below' && t.direction !== 'above')
+    ) {
+      errores.push(`${ctx}.threshold debe ser { value: número, direction: "below" | "above" }.`);
+      ok = false;
+    } else {
+      threshold = { value: t.value, direction: t.direction };
+    }
+  }
+  if (s.valueOfInterest !== undefined && (typeof s.valueOfInterest !== 'string' || s.valueOfInterest.length > 200)) {
+    errores.push(`${ctx}.valueOfInterest debe ser un texto de hasta 200 caracteres.`);
+    ok = false;
+  }
   if (!ok) return undefined;
-  return { id: s.id as string, name: s.name as string, ref: s.ref as string };
+  return {
+    id: s.id as string, name: s.name as string, ref: s.ref as string,
+    ...(threshold ? { threshold } : {}),
+    ...(typeof s.valueOfInterest === 'string' ? { valueOfInterest: s.valueOfInterest } : {}),
+  };
 }
 
 function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskModel | undefined {
@@ -290,6 +425,26 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     }
   }
 
+  let convergence: ConvergenciaRiskModel | undefined;
+  if (s.convergence !== undefined) {
+    const c = s.convergence as Record<string, unknown> | null;
+    const valido =
+      typeof c === 'object' && c !== null &&
+      typeof c.target === 'number' && c.target > 0 && c.target < 1 &&
+      typeof c.untilConverged === 'boolean' &&
+      typeof c.maxIterations === 'number' && Number.isInteger(c.maxIterations) && c.maxIterations > 0;
+    if (!valido) {
+      errores.push('settings.convergence debe ser { target: 0..1, untilConverged: sí/no, maxIterations: entero positivo }.');
+      ok = false;
+    } else {
+      convergence = {
+        target: c.target as number,
+        untilConverged: c.untilConverged as boolean,
+        maxIterations: c.maxIterations as number,
+      };
+    }
+  }
+
   if (!ok) return undefined;
   return {
     iterations: s.iterations as number,
@@ -297,5 +452,6 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     sampling: s.sampling as MetodoMuestreo,
     engine: s.engine as MotorSimulacion,
     ...(locale ? { locale } : {}),
+    ...(convergence ? { convergence } : {}),
   };
 }

@@ -27,7 +27,8 @@
  */
 
 import type { ModeloRiesgo } from '../engine/modelo/index.ts';
-import { construirInforme, type SimulacionCompletada } from './informe.ts';
+import { construirInforme, type SimulacionCompletada, type Zona } from './informe.ts';
+import { rangoDesdeDireccion } from './rangos.ts';
 
 export { construirInforme } from './informe.ts';
 
@@ -39,6 +40,9 @@ export const HOJA_RESULTADOS = 'Riesgo Monte Carlo';
 
 const AZUL = '#1F4E79';
 const GRIS = '#666666';
+/** Banda de cada salida: el mismo azul de los títulos, de fondo. */
+const BANDA = '#1F4E79';
+const COLUMNAS_BANDA = 15;
 
 
 export interface VolcadoHecho {
@@ -51,7 +55,9 @@ export async function volcarResultados(
   modelo: ModeloRiesgo,
   resultado: SimulacionCompletada,
 ): Promise<VolcadoHecho> {
-  const bloques = construirInforme(modelo, resultado);
+  // C8: cada salida con el formato numérico de su celda de origen (€, %, miles).
+  const formatos = await leerFormatos(resultado.salidas.map((s) => s.ref));
+  const bloques = construirInforme(modelo, resultado, { formatoDe: (ref) => formatos.get(ref) });
 
   return Excel.run(async (context) => {
     // Rehacer la hoja entera es más simple y más predecible que actualizar
@@ -65,47 +71,86 @@ export async function volcarResultados(
     }
 
     const hoja = context.workbook.worksheets.add(HOJA_RESULTADOS);
+    const ancho = bloques.anchos.length;
+    const zona = (z: Zona) => hoja.getRangeByIndexes(z.fila, z.col, z.filas, z.cols);
 
-    // Todas las filas de una vez: una sola asignación de rango para el cuerpo
-    // del informe, en vez de una por bloque.
-    const ancho = bloques.filas.reduce((m, f) => Math.max(m, f.length), 1);
-    const rejilla = bloques.filas.map((f) => {
-      const fila: (string | number | boolean)[] = [...f];
-      while (fila.length < ancho) fila.push('');
-      return fila;
-    });
+    // Todo el cuerpo en una sola asignación.
+    hoja.getRangeByIndexes(0, 0, bloques.filas.length, ancho).values = bloques.filas;
 
-    const cuerpo = hoja.getRangeByIndexes(0, 0, rejilla.length, ancho);
-    cuerpo.values = rejilla;
-
+    for (const f of bloques.formatos) {
+      zona(f).numberFormat = Array.from({ length: f.filas }, () => Array.from({ length: f.cols }, () => f.formato));
+    }
     for (const fila of bloques.titulos) {
       const r = hoja.getRangeByIndexes(fila, 0, 1, ancho);
       r.format.font.bold = true;
       r.format.font.color = AZUL;
     }
+    for (const fila of bloques.bandas) {
+      const r = hoja.getRangeByIndexes(fila, 0, 1, COLUMNAS_BANDA);
+      r.format.fill.color = BANDA;
+      r.format.font.color = '#FFFFFF';
+      r.format.font.bold = true;
+    }
+    for (const c of bloques.cabeceras) {
+      const r = zona(c);
+      r.format.font.bold = true;
+      r.format.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderLineStyle.continuous;
+    }
     for (const fila of bloques.tenues) {
-      hoja.getRangeByIndexes(fila, 0, 1, ancho).format.font.color = GRIS;
+      hoja.getRangeByIndexes(fila, 0, 1, 1).format.font.color = GRIS;
     }
     hoja.getRangeByIndexes(0, 0, 1, 1).format.font.size = 14;
 
-    // Un gráfico nativo por salida, sobre los puntos que acaban de escribirse.
-    for (const curva of bloques.curvas) {
-      const datos = hoja.getRangeByIndexes(curva.filaInicio, 0, curva.puntos, 2);
-      const grafico = hoja.charts.add(Excel.ChartType.line, datos, Excel.ChartSeriesBy.columns);
-      grafico.title.text = `${curva.nombre} — probabilidad acumulada`;
-      // `setPosition` espera celdas, no índices: se le da un rango a la
-      // derecha de los datos para que el gráfico no tape la tabla.
-      grafico.setPosition(
-        hoja.getRangeByIndexes(curva.filaInicio, 3, 1, 1),
-        hoja.getRangeByIndexes(curva.filaInicio + 15, 10, 1, 1),
+    // Gráficos nativos de Excel junto a cada salida, sobre sus datos.
+    for (const g of bloques.graficos) {
+      const tipo = g.tipo === 'linea' || g.tipo === 'lineas-filas' ? Excel.ChartType.line
+        : g.tipo === 'barras' ? Excel.ChartType.barClustered
+        : Excel.ChartType.columnClustered;
+      const grafico = hoja.charts.add(
+        tipo,
+        zona(g.datos),
+        g.tipo === 'lineas-filas' ? Excel.ChartSeriesBy.rows : Excel.ChartSeriesBy.columns,
       );
-      grafico.legend.visible = false;
+      grafico.title.text = g.titulo;
+      // La araña necesita leyenda: una línea por entrada.
+      grafico.legend.visible = g.tipo === 'lineas-filas';
+      grafico.setPosition(
+        hoja.getRangeByIndexes(g.desde.fila, g.desde.col, 1, 1),
+        hoja.getRangeByIndexes(g.hasta.fila, g.hasta.col, 1, 1),
+      );
     }
 
-    hoja.getUsedRange().format.autofitColumns();
+    // Anchos fijos: con «autoajustar», una nota larga ensanchaba la columna A
+    // hasta media pantalla (prueba L3 del usuario).
+    bloques.anchos.forEach((caracteres, c) => {
+      hoja.getRangeByIndexes(0, c, 1, 1).format.columnWidth = caracteres * 6.5;
+    });
+    hoja.freezePanes.freezeRows(0);
     hoja.activate();
     await context.sync();
 
-    return { filas: rejilla.length, hoja: HOJA_RESULTADOS };
+    return { filas: bloques.filas.length, hoja: HOJA_RESULTADOS };
   });
+}
+
+/** El formato numérico de cada celda de salida, en un viaje. Si falla, ninguno. */
+async function leerFormatos(refs: readonly string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    await Excel.run(async (context) => {
+      const rangos = refs.map((ref) => {
+        const r = rangoDesdeDireccion(context, ref);
+        r.load('numberFormat');
+        return { ref, r };
+      });
+      await context.sync();
+      for (const { ref, r } of rangos) {
+        const f = (r.numberFormat as unknown[][])?.[0]?.[0];
+        if (typeof f === 'string') out.set(ref, f);
+      }
+    });
+  } catch {
+    // Sin formatos, el informe usa los suyos: no es motivo para no volcar.
+  }
+  return out;
 }

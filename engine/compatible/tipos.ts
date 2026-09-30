@@ -48,7 +48,20 @@ export interface LibroCalculable {
    * Escribe un valor por entrada, recalcula y devuelve un valor por salida,
    * en el mismo orden en que se declararon.
    */
-  calcularIteracion(valoresDeEntrada: readonly number[]): Promise<readonly number[]>;
+  calcularIteracion(valoresDeEntrada: readonly number[]): Promise<readonly ValorLeido[]>;
+  /**
+   * Varias iteraciones en un solo viaje a Excel (F5b): para cada una, escribe,
+   * recalcula y lee, todo encolado, y sincroniza una vez al final. El viaje es
+   * lo caro del modo compatible, y Excel repinta la hoja en cada uno: con
+   * lotes va más rápido y parpadea mucho menos. Opcional.
+   */
+  calcularLote?(valoresPorIteracion: readonly (readonly number[])[]): Promise<readonly (readonly ValorLeido[])[]>;
+}
+
+/** Cómo se llaman VERDADERO y FALSO en el idioma del libro (T6). */
+export interface NombresLogicos {
+  verdadero: string;
+  falso: string;
 }
 
 export interface EntradaCompatible {
@@ -56,9 +69,19 @@ export interface EntradaCompatible {
   direccion: string;
   /** Las muestras ya generadas, una por iteración. */
   muestras: Buffer;
+  /** Entrada de texto (T1): las muestras son índices y estos sus textos. */
+  categorias?: readonly string[];
 }
 
+/**
+ * Lo que devuelve una salida en una iteración: un número, un texto (T2) o un
+ * lógico (T6). Un error de Excel llega como `NaN`.
+ */
+export type ValorLeido = number | string | boolean;
+
 export interface OpcionesCompatible {
+  /** Nombres de VERDADERO/FALSO para las salidas de sí/no; por defecto, los del idioma activo. */
+  nombresLogicos?: NombresLogicos;
   libro: LibroCalculable;
   entradas: readonly EntradaCompatible[];
   /** Direcciones de las celdas de salida, en orden. */
@@ -73,6 +96,13 @@ export interface OpcionesCompatible {
    * preguntar a menudo no penaliza y hace que el botón de cancelar responda.
    */
   cadaCuantas?: number;
+  /** Cuántas de las primeras iteraciones se guardan valor a valor (sensibilidad). */
+  retenerMuestra?: number;
+  /**
+   * Iteraciones por viaje a Excel, si el libro sabe hacer lotes (F5b). 1 es
+   * una por viaje, como hasta el 29/09.
+   */
+  lote?: number;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }

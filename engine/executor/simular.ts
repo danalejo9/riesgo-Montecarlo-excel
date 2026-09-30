@@ -11,6 +11,7 @@
  * panel a mitad de una simulación de un millón de iteraciones no deje nada a
  * medias más que estadísticas parciales, descartables sin más.
  */
+import { sumarConteos } from './categorias.ts';
 import type { Plan } from '../compiler/plan.ts';
 import type { Grafo } from '../graph/graph.ts';
 import { combinarTDigest, type TDigest } from '../stats/tdigest.ts';
@@ -42,6 +43,22 @@ export interface OpcionesSimulacion {
    * `engine/values/regional.ts`.
    */
   regional?: ConfiguracionRegional;
+  /**
+   * Cuántas de las primeras iteraciones se guardan valor a valor, para el
+   * análisis de sensibilidad. 0 (lo predeterminado) no guarda nada. Un
+   * ejecutor externo tiene que respetarlo por su cuenta; si no devuelve
+   * muestras, la salida simplemente no la trae.
+   */
+  retenerMuestra?: number;
+  /**
+   * Al menos cuántos bloques hacer, si `n` lo permite (sin bajar de 1.024
+   * iteraciones por bloque). Con el tamaño adaptativo solo, diez mil
+   * iteraciones son **un** bloque y un pool de ocho hilos tendría siete
+   * parados. Es un número fijo y no "tantos como hilos" a propósito: el troceo
+   * decide cómo se combinan los t-digest, y así la misma semilla da el mismo
+   * resultado en un portátil de cuatro núcleos que en uno de dieciséis.
+   */
+  bloquesMinimos?: number;
 }
 
 export interface SalidaSimulada {
@@ -52,6 +69,12 @@ export interface SalidaSimulada {
    * `welford` y de `digest`. Ver `ParcialSalida.noNumericas`.
    */
   noNumericas: number;
+  /** Las primeras iteraciones, valor a valor, si se pidió `retenerMuestra`. */
+  muestra?: Float64Array;
+  /** Salidas de texto o sí/no (T2, T6): valor → iteraciones. */
+  categorias?: Record<string, number>;
+  /** El valor de texto de cada iteración retenida, alineado con `muestra`. */
+  muestraTexto?: (string | null)[];
 }
 
 export type ResultadoSimulacion =
@@ -73,6 +96,7 @@ export async function simularPorBloques(
   opciones: OpcionesSimulacion = {},
 ): Promise<ResultadoSimulacion> {
   const compresionTDigest = opciones.compresionTDigest ?? 100;
+  const limiteMuestra = Math.max(0, Math.min(n, Math.floor(opciones.retenerMuestra ?? 0)));
   const entradasResueltas = resolverEntradas(definicionesEntrada, seed, n);
 
   // Aproximación del ancho del grafo: las entradas más las celdas del plan
@@ -81,17 +105,26 @@ export async function simularPorBloques(
   // vez— pero sobreestimar el número de buffers vivos solo hace el bloque
   // más chico de lo estrictamente necesario, nunca al revés.
   const buffersVivosEstimado = entradasResueltas.length + plan.orden.length - plan.esConstante.size;
-  const tamano = tamanoBloqueAdaptativo(buffersVivosEstimado, opciones.presupuestoBytesPorWorker);
+  const adaptativo = tamanoBloqueAdaptativo(buffersVivosEstimado, opciones.presupuestoBytesPorWorker);
+  const tamano = opciones.bloquesMinimos
+    ? Math.min(adaptativo, Math.max(1024, Math.ceil(n / opciones.bloquesMinimos)))
+    : adaptativo;
   const bloques = particionarEnBloques(n, tamano);
 
   const ejecutor =
-    opciones.ejecutor ?? crearEjecutorSecuencial(grafo, plan, entradasResueltas, seed, compresionTDigest);
+    opciones.ejecutor ??
+    crearEjecutorSecuencial(grafo, plan, entradasResueltas, seed, compresionTDigest, limiteMuestra);
   const bloquesPorRonda = Math.max(1, opciones.bloquesPorRonda ?? bloques.length);
 
   const acumuladoWelford = new Map<string, EstadoWelford>();
   const digestsPorSalida = new Map<string, TDigest[]>();
   const noNumericasPorSalida = new Map<string, number>();
+  const muestrasPorSalida = new Map<string, Float64Array>();
+  const categoriasPorSalida = new Map<string, Record<string, number>>();
+  const muestrasTextoPorSalida = new Map<string, (string | null)[]>();
+  let hayMuestra = false;
   for (const clave of plan.salidas) {
+    if (limiteMuestra > 0) muestrasPorSalida.set(clave, new Float64Array(limiteMuestra).fill(NaN));
     acumuladoWelford.set(clave, crearWelford());
     digestsPorSalida.set(clave, []);
     noNumericasPorSalida.set(clave, 0);
@@ -113,15 +146,32 @@ export async function simularPorBloques(
       const ronda = bloques.slice(i, i + bloquesPorRonda);
       const resultados = await ejecutor.ejecutar(ronda);
 
-      for (const parcial of resultados) {
+      resultados.forEach((parcial, k) => {
+        const inicio = (ronda[k] as { inicio: number }).inicio;
         for (const clave of plan.salidas) {
           const p = parcial.get(clave);
           if (!p) continue;
+          const destino = muestrasPorSalida.get(clave);
+          if (destino && p.muestra) {
+            destino.set(p.muestra.subarray(0, Math.max(0, limiteMuestra - inicio)), inicio);
+            hayMuestra = true;
+          }
           acumuladoWelford.set(clave, combinar(acumuladoWelford.get(clave) as EstadoWelford, p.welford));
           (digestsPorSalida.get(clave) as TDigest[]).push(p.digest);
           noNumericasPorSalida.set(clave, (noNumericasPorSalida.get(clave) as number) + (p.noNumericas ?? 0));
+          if (p.categorias) {
+            categoriasPorSalida.set(clave, sumarConteos(categoriasPorSalida.get(clave) ?? {}, p.categorias));
+          }
+          if (p.muestraTexto && limiteMuestra > 0) {
+            let texto = muestrasTextoPorSalida.get(clave);
+            if (!texto) {
+              texto = new Array<string | null>(limiteMuestra).fill(null);
+              muestrasTextoPorSalida.set(clave, texto);
+            }
+            for (let j = 0; j < p.muestraTexto.length && inicio + j < limiteMuestra; j++) texto[inicio + j] = p.muestraTexto[j] ?? null;
+          }
         }
-      }
+      });
 
       completadas += ronda.reduce((acc, b) => acc + b.largo, 0);
       opciones.progreso?.(completadas, n);
@@ -133,12 +183,19 @@ export async function simularPorBloques(
     establecerRegional(regionalPrevia);
   }
 
+  // Si se canceló, solo vale el tramo que de verdad se calculó: los bloques
+  // se despachan en orden, así que lo completado es un prefijo.
+  const largoMuestra = Math.min(limiteMuestra, completadas);
   const porSalida = new Map<string, SalidaSimulada>();
   for (const clave of plan.salidas) {
+    const muestra = hayMuestra ? muestrasPorSalida.get(clave)?.subarray(0, largoMuestra) : undefined;
     porSalida.set(clave, {
       welford: acumuladoWelford.get(clave) as EstadoWelford,
       digest: combinarTDigest(digestsPorSalida.get(clave) as TDigest[], compresionTDigest),
       noNumericas: noNumericasPorSalida.get(clave) as number,
+      ...(muestra ? { muestra } : {}),
+      ...(categoriasPorSalida.has(clave) ? { categorias: categoriasPorSalida.get(clave) as Record<string, number> } : {}),
+      ...(muestrasTextoPorSalida.has(clave) ? { muestraTexto: (muestrasTextoPorSalida.get(clave) as (string | null)[]).slice(0, largoMuestra) } : {}),
     });
   }
 

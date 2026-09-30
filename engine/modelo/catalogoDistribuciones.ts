@@ -1,5 +1,5 @@
 /**
- * Las trece distribuciones, descritas para que una interfaz pueda pintarlas
+ * Todas las distribuciones, descritas para que una interfaz pueda pintarlas
  * sin saber nada de ninguna.
  *
  * Sin esto, el panel tendría un `switch` de trece ramas con los nombres de los
@@ -15,6 +15,7 @@
  * 2026-09-19): lo que se guarda y lo que se lee no tienen por qué coincidir.
  */
 import type { DistributionSpec } from './distributionSchema.ts';
+import { textoFecha } from './fechas.ts';
 
 export type TipoDistribucion = DistributionSpec['type'];
 
@@ -142,6 +143,92 @@ export const CATALOGO_DISTRIBUCIONES: readonly DescripcionDistribucion[] = [
     parametros: [P('lambda', 'Media', { ayuda: 'Sucesos esperados en el periodo.', min: 0 })],
     porDefecto: { type: 'poisson', lambda: 3 },
   },
+  // B5: distribuciones nuevas.
+  {
+    tipo: 'trigen',
+    nombre: 'Trigen (triangular por percentiles)',
+    cuando: 'Como la triangular, pero con dos percentiles en vez de mínimo y máximo: «el 10 % de las veces baja de 80».',
+    parametros: [
+      P('low', 'Valor bajo', { ayuda: 'El que solo se rebasa por abajo con la probabilidad de abajo.' }),
+      P('mode', 'Más probable'),
+      P('high', 'Valor alto'),
+      P('pLow', 'Probabilidad por debajo del bajo', { ayuda: 'Entre 0 y 1; 0,1 = un 10 %.', min: 0, max: 1 }),
+      P('pHigh', 'Probabilidad por debajo del alto', { ayuda: 'Entre 0 y 1; 0,9 = el 90 %.', min: 0, max: 1 }),
+    ],
+    porDefecto: { type: 'trigen', low: 80, mode: 100, high: 150, pLow: 0.1, pHigh: 0.9 },
+  },
+  {
+    tipo: 'student',
+    nombre: 't de Student',
+    cuando: 'Como la normal, pero con colas más gruesas: sorpresas grandes más frecuentes. Pocos grados de libertad, colas más gruesas.',
+    parametros: [
+      P('df', 'Grados de libertad', { ayuda: 'Más de 2 para que tenga desviación; con 30 o más es casi una normal.', min: 0 }),
+      P('loc', 'Centro'),
+      P('scale', 'Escala', { min: 0 }),
+    ],
+    porDefecto: { type: 'student', df: 5, loc: 0, scale: 1 },
+  },
+  {
+    tipo: 'logistic',
+    nombre: 'Logística',
+    cuando: 'Parecida a la normal y simétrica, con colas algo más gruesas. Crecimientos y demandas.',
+    parametros: [P('mean', 'Media'), P('scale', 'Escala', { min: 0 })],
+    porDefecto: { type: 'logistic', mean: 0, scale: 1 },
+  },
+  {
+    tipo: 'loglogistic',
+    nombre: 'Log-logística',
+    cuando: 'Positiva y con cola a la derecha, como la lognormal: duraciones, tiempos de reparación, rentas.',
+    parametros: [P('scale', 'Escala (mediana)', { min: 0 }), P('shape', 'Forma', { ayuda: 'Más de 1 para que tenga media; más alta, más concentrada.', min: 0 })],
+    porDefecto: { type: 'loglogistic', scale: 1, shape: 3 },
+  },
+  {
+    tipo: 'pareto',
+    nombre: 'Pareto',
+    cuando: 'Nunca por debajo de un mínimo y con una cola derecha muy larga: grandes siniestros, pérdidas extremas.',
+    parametros: [P('min', 'Mínimo', { min: 0 }), P('shape', 'Forma', { ayuda: 'Más de 1 para que tenga media; más baja, cola más larga.', min: 0 })],
+    porDefecto: { type: 'pareto', min: 1, shape: 3 },
+  },
+  {
+    tipo: 'intuniform',
+    nombre: 'Uniforme entera',
+    cuando: 'Cualquier número entero entre dos, todos igual de probables: plazas, días, unidades.',
+    parametros: [P('min', 'Mínimo', { entero: true }), P('max', 'Máximo', { entero: true })],
+    porDefecto: { type: 'intuniform', min: 1, max: 6 },
+  },
+  {
+    tipo: 'geometric',
+    nombre: 'Geométrica',
+    cuando: 'Cuántos intentos fallan antes del primer éxito: ofertas hasta ganar un contrato.',
+    parametros: [P('p', 'Probabilidad de éxito', { ayuda: 'Entre 0 y 1, en cada intento.', min: 0, max: 1 })],
+    porDefecto: { type: 'geometric', p: 0.3 },
+  },
+  {
+    tipo: 'negbin',
+    nombre: 'Binomial negativa',
+    cuando: 'Cuántos intentos fallan antes de conseguir r éxitos. También, conteos más dispersos que una Poisson.',
+    parametros: [P('r', 'Éxitos buscados', { min: 0 }), P('p', 'Probabilidad de éxito', { min: 0, max: 1 })],
+    porDefecto: { type: 'negbin', r: 3, p: 0.4 },
+  },
+  {
+    tipo: 'hypergeometric',
+    nombre: 'Hipergeométrica',
+    cuando: 'Cuántos defectuosos salen al revisar una muestra sin reponer de un lote con un número conocido de ellos.',
+    parametros: [
+      P('n', 'Tamaño de la muestra', { min: 0, entero: true }),
+      P('successes', 'Casos en la población', { ayuda: 'Por ejemplo, las piezas defectuosas del lote.', min: 0, entero: true }),
+      P('population', 'Tamaño de la población', { min: 1, entero: true }),
+    ],
+    porDefecto: { type: 'hypergeometric', n: 10, successes: 5, population: 50 },
+  },
+  {
+    tipo: 'histogram',
+    nombre: 'Histograma (forma libre)',
+    cuando: 'Una forma dibujada a mano: entre un mínimo y un máximo, en tramos iguales, cada uno con su peso.',
+    // El mínimo y el máximo son números; los pesos, una lista que el panel edita aparte.
+    parametros: [P('min', 'Mínimo'), P('max', 'Máximo')],
+    porDefecto: { type: 'histogram', min: 0, max: 100, weights: [1, 3, 5, 3, 1] },
+  },
   {
     tipo: 'discrete',
     nombre: 'Discreta',
@@ -151,7 +238,22 @@ export const CATALOGO_DISTRIBUCIONES: readonly DescripcionDistribucion[] = [
     parametros: [],
     porDefecto: { type: 'discrete', values: [0, 1], weights: [1, 1] },
   },
+  {
+    tipo: 'categorical',
+    nombre: 'Categórica (texto)',
+    cuando: 'Una lista de textos posibles, cada uno con su probabilidad: zona, proveedor, escenario.',
+    // Como la discreta: listas, no números; el panel la edita aparte.
+    parametros: [],
+    porDefecto: { type: 'categorical', categories: ['A', 'B'], weights: [1, 1] },
+  },
 ];
+
+/** Las distribuciones de números enteros (se pintan como barras, sin curva encima). */
+const DISCRETAS_ENTERAS: ReadonlySet<TipoDistribucion> = new Set(['bernoulli', 'binomial', 'poisson', 'geometric', 'negbin', 'hypergeometric', 'intuniform']);
+
+export function esDiscretaEntera(tipo: TipoDistribucion): boolean {
+  return DISCRETAS_ENTERAS.has(tipo);
+}
 
 const POR_TIPO = new Map(CATALOGO_DISTRIBUCIONES.map((d) => [d.tipo, d] as const));
 
@@ -168,7 +270,15 @@ export function resumirDistribucion(spec: DistributionSpec): string {
   const desc = POR_TIPO.get(spec.type);
   if (!desc) return String(spec.type);
 
+  const acotada = spec.truncate && (spec.truncate.min !== undefined || spec.truncate.max !== undefined)
+    ? ` acotada [${spec.truncate.min ?? '−∞'}; ${spec.truncate.max ?? '∞'}]`
+    : '';
+  if (acotada) return `${resumirDistribucion({ ...spec, truncate: undefined } as DistributionSpec)}${acotada}`;
   if (spec.type === 'discrete') return `Discreta (${spec.values.length} valores)`;
+  if (spec.type === 'categorical') {
+    const lista = spec.categories.slice(0, 4).join(', ');
+    return `Categórica (${lista}${spec.categories.length > 4 ? '…' : ''})`;
+  }
 
   const valores = desc.parametros
     .map((p) => (spec as unknown as Record<string, unknown>)[p.clave])
@@ -177,3 +287,39 @@ export function resumirDistribucion(spec: DistributionSpec): string {
 
   return valores.length > 0 ? `${desc.nombre}(${valores.join('; ')})` : desc.nombre;
 }
+
+/** Parámetros que son una posición (se escriben como fecha) y los que son una dispersión (en días). */
+const POSICION = new Set(['min', 'mode', 'max', 'mean', 'loc', 'low', 'high']);
+const DISPERSION = new Set(['stdDev', 'scale']);
+
+/**
+ * El resumen de una distribución de una celda con formato de fecha (T7):
+ * «Triangular(01/01/2027; 01/02/2027; 01/04/2027)», con la dispersión en días.
+ */
+export function resumirDistribucionFecha(spec: DistributionSpec): string {
+  const desc = POR_TIPO.get(spec.type);
+  if (!desc || desc.parametros.length === 0) return resumirDistribucion(spec);
+  const esLognormalVariable = spec.type === 'lognormal' && spec.parametrization !== 'log';
+  const valores = desc.parametros.map((p) => {
+    const v = (spec as unknown as Record<string, unknown>)[p.clave];
+    if (typeof v !== 'number') return null;
+    if (POSICION.has(p.clave) || (esLognormalVariable && p.clave === 'p1')) return textoFecha(v);
+    if (DISPERSION.has(p.clave) || (esLognormalVariable && p.clave === 'p2')) return `${Number(v.toPrecision(4)).toLocaleString('es-ES')} días`;
+    return String(v);
+  }).filter((x): x is string => x !== null);
+  return `${desc.nombre}(${valores.join('; ')})`;
+}
+
+/**
+ * El catálogo visual (U3.3), agrupado por **lo que sabe quien modela**, no
+ * por familias estadísticas: se busca «sé el mínimo y el máximo», no «una
+ * beta». Cada distribución está en un grupo, y solo en uno.
+ */
+export const GRUPOS_CATALOGO: readonly { titulo: string; tipos: readonly TipoDistribucion[] }[] = [
+  { titulo: 'Sé el mínimo, el más probable y el máximo', tipos: ['triangular', 'pert', 'trigen', 'uniform'] },
+  { titulo: 'Varía alrededor de un valor central', tipos: ['normal', 'student', 'logistic'] },
+  { titulo: 'Siempre positiva, con cola a la derecha', tipos: ['lognormal', 'loglogistic', 'gamma', 'weibull', 'exponential', 'pareto'] },
+  { titulo: 'Una proporción, entre 0 y 1', tipos: ['beta'] },
+  { titulo: 'Pasa o no pasa, o se cuenta', tipos: ['bernoulli', 'binomial', 'poisson', 'negbin', 'geometric', 'hypergeometric', 'intuniform'] },
+  { titulo: 'Una forma o una lista propias', tipos: ['histogram', 'discrete', 'categorical'] },
+];

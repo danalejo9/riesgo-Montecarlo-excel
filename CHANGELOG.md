@@ -5,6 +5,969 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### U3.5 y U3.6: clic derecho y Detener (2026-09-29)
+
+**Añadido**
+- **Clic derecho** en una celda → «Riesgo Monte Carlo»: Marcar como entrada,
+  Marcar como salida, Ver distribución.
+- Botón **Detener** en la cinta (grupo Simulación): activo solo mientras se
+  simula (Simular se desactiva a la vez); hace lo mismo que Cancelar.
+
+### U3.4: lista de entradas y salidas (2026-09-29)
+
+**Añadido**
+- Botón **Entradas y salidas** en la cinta (grupo Análisis): la ventana del
+  explorador, en su pestaña de lista, con todas las entradas (del panel y de
+  funciones RIESGO) y salidas, su distribución o su valor más frecuente, y
+  media, p5 y p95. Pulsar una fila la selecciona en la hoja y enseña su
+  distribución. Excel solo deja una ventana por complemento: por eso lista y
+  explorador comparten ventana, con dos pestañas.
+
+**Corregido**
+- Una función RIESGO dentro de una operación en una celda con fecha
+  (`=B29+RIESGO.NORMAL(90;10)`) se enseñaba como fecha (`Normal(30/03/1900;
+  10 días)`); es una duración: ahora `Normal(90; 10)`.
+
+### U3.3: catálogo visual de distribuciones (2026-09-29)
+
+**Añadido**
+- En el editor de cada entrada, «¿Cuál elegir? Ver el catálogo»: todas las
+  distribuciones con su forma en miniatura y cuándo usarla, agrupadas por lo
+  que se sabe (mínimo-más probable-máximo, valor central, cola a la derecha,
+  proporción, conteos, forma propia). Elegir una es como elegirla en el
+  desplegable.
+
+### U3.1 y U3.2: cinta reorganizada y explorador de distribución (2026-09-29)
+
+**Añadido**
+- **Cinta en grupos**: Panel · Celdas · Simulación (menú **Iteraciones** con
+  1.000 a 100.000 y «Otra cantidad…», la actual desactivada) · Modo del
+  libro · Análisis (Ver distribución, Ajustar a datos, Escenarios) ·
+  Informes (Volcar a una hoja, Informe PDF) · Ayuda (Ayuda, Ejemplos,
+  Diagnóstico). Iconos nuevos (`scripts/generar-iconos.mjs`).
+- **Explorador de distribución** en ventana flotante: la celda seleccionada
+  (salida o entrada), histograma con dos delimitadores que se arrastran o
+  curva acumulada, y a la derecha media, desviación, extremos, percentiles
+  p1–p99, VaR, CVaR, asimetría y curtosis. Sigue a la selección y se
+  actualiza al volver a simular.
+- **Ajustar a datos** desde la cinta: lee la columna seleccionada y «Usar»
+  aplica la distribución a la celda que se seleccione (si no es entrada, la
+  marca).
+- **Ayuda** en ventana flotante: cómo empezar, qué hace cada grupo de la
+  cinta y qué significa cada número (los textos de la ayuda del panel).
+- **Ejemplos** desde la cinta: escribe la plantilla en una hoja nueva sin
+  abrir el panel.
+
+### Arreglos de la ronda (N4, N6) y hojas de prueba en un clic (2026-09-29)
+
+**Corregido**
+- N4: `ItemNotFound` al resaltar (por ejemplo, al pasar al modo compatible)
+  cuando el libro recordaba celdas de una hoja borrada o renombrada. Ahora
+  esas direcciones se saltan y se olvidan.
+- Una `RIESGO.DECISION` que no afecta a ninguna salida ya no multiplica la
+  simulación por sus opciones.
+
+**Cambiado**
+- «Tu primer modelo» pasa a «Cómo empezar», plegable y recordado; los
+  ejemplos (plantillas) quedan plegados dentro, no son lo primero que se ve.
+
+**Añadido**
+- Diagnóstico → «Rellenar las hojas de prueba»: escribe de una vez las 28
+  fórmulas de las celdas amarillas de «Pruebas» y «Zonas» del libro de
+  demostración, sin tocar las que ya tienen algo.
+- Guía: la cabecera de la ronda, paso a paso (actualizar, copia rellena,
+  qué pruebas quedan).
+
+### F1: LAMBDA y nombres definidos (2026-09-29)
+
+**Añadido**
+- **LAMBDA** en el motor rápido, de las tres formas: invocada en la celda
+  (`LAMBDA(x;y;x/y)(A1;A2)`), guardada en un `LET` y **con nombre** (en el
+  Administrador de nombres), que pueden llamarse unas a otras y recibir otra
+  LAMBDA como argumento. Se resuelven al leer la fórmula, como `LET`.
+- Los **nombres definidos** del libro (constantes, celdas y rangos, del
+  libro o de una hoja) se leen de Excel y se sustituyen: las fórmulas con
+  nombres ya no mandan al modo compatible. Los de referencias relativas se
+  dejan fuera.
+- Libro de prueba `tests/fixtures/fidelidad-lambda.xlsx` (generador
+  `generar-lambda.py`): la ecuación de estado de **Peng-Robinson** con
+  LAMBDA con nombre, en LET y en la celda, con los valores calculados en
+  Python, y una hoja para simular la presión del CO2 con temperatura y
+  volumen inciertos. Guía: N33 e I3.
+- El escáner (`npm run scan`) ya no cuenta como desconocidas las llamadas a
+  LAMBDA con nombre.
+
+**Corregido**
+- Un `LET` que usaba dos veces un valor con una función RIESGO
+  (`LET(x;RIESGO.NORMAL(0;1);x-x)`) sorteaba dos veces; ahora esa celda va
+  al modo compatible, que la calcula como Excel (una vez).
+
+**Se queda en el modo compatible**: una LAMBDA recursiva y las funciones
+que reciben LAMBDA (`MAP`, `REDUCE`, `BYROW`…).
+
+### T8: registro de riesgos en la hoja volcada y el PDF (2026-09-29)
+
+**Añadido**
+- La hoja volcada tiene una sección **REGISTRO DE RIESGOS** (riesgo, celda,
+  impacto, probabilidad, esperado, parte del total, desviación y el total),
+  y el informe PDF la misma tabla tras las entradas.
+
+### Binomial negativa en el ajuste, umbral de RIESGO.SALIDA y fechas en la tabla (2026-09-29)
+
+**Añadido**
+- El ajuste propone la **binomial negativa** (por momentos) cuando los datos
+  son conteos más dispersos que su media; con Poisson y binomial, entra en
+  la bondad y en el bootstrap como discreta.
+- Las salidas declaradas con `RIESGO.SALIDA` admiten **umbral** en
+  Resultados: se guarda en el modelo sin marcar los resultados como
+  desactualizados (la simulación no cambia).
+- «Todas las entradas» (pestaña Modelo) y la hoja volcada escriben las
+  distribuciones de las entradas de fecha **en fechas**, con la dispersión
+  en días: «Triangular(01/01/2027; 01/02/2027; 01/04/2027)».
+
+### F2 (preparación): tiempo de lectura separado (2026-09-29)
+
+**Añadido**
+- «Cómo se calculó» separa **Leer el libro** (con hojas, fórmulas y viajes a
+  Excel) de **Preparar y simular**, para medir libros grandes en Excel.
+- Guía: la ronda del 29/09 explicada en orden al principio, y N30 (medir el
+  libro de 132 hojas) y N31 (escanear los libros propios).
+
+### F1: DESREF con desplazamientos constantes (2026-09-29)
+
+**Añadido**
+- `DESREF` (OFFSET) con todos sus desplazamientos escritos como números se
+  resuelve al leer el libro (`DESREF(A1;2;1)` es B3; `DESREF(A1;0;0;3;1)`,
+  A1:A3): el motor rápido ya puede con esas fórmulas. Con desplazamientos
+  calculados sigue yendo al modo compatible.
+
+### H5: series temporales (2026-09-29)
+
+**Añadido**
+- Cuarta plantilla, **Serie de precios**: un paseo aleatorio con deriva
+  (cada año, el anterior por 1 + un crecimiento incierto) y una serie con
+  reversión a la media, cada año como salida para el abanico. Enseña el
+  patrón que el motor ya admite: encadenar celdas con funciones RIESGO.
+
+### H8: migración del modelo guardado (2026-09-29)
+
+**Añadido**
+- Los modelos guardados de versiones anteriores del esquema se ponen al día
+  al abrirse (cadena de migraciones, hoy vacía: solo existe la v1). Un libro
+  guardado con una versión **más nueva** del complemento no se toca y se
+  pide actualizar el complemento.
+
+### H4: búsqueda de objetivo con riesgo (2026-09-29)
+
+**Añadido**
+- **Buscar objetivo**, en cada salida con umbral: qué valor de una celda deja
+  la probabilidad del umbral en la que se quiere («¿qué precio deja
+  P(VAN < 0) en el 10 %?»). Bisección sobre simulaciones completas con los
+  mismos números aleatorios; sin tocar el libro. Solo motor rápido.
+
+### U1: asistente del primer modelo y plantillas (2026-09-29)
+
+**Añadido**
+- Con el modelo vacío, **«Tu primer modelo»**: los cuatro pasos en corto y
+  tres **plantillas** que se escriben en una hoja nueva, con las funciones
+  RIESGO ya puestas (entradas, salidas con `RIESGO.SALIDA`, riesgos con
+  `RIESGO.EVENTO` y una correlación): proyecto de inversión, presupuesto de
+  obra y cartera. Se simulan sin marcar nada.
+
+### H6 y H7: avisos de coherencia y trazado de dependencias (2026-09-29)
+
+**Añadido**
+- **Avisos de coherencia** al simular: una entrada que no afecta a ninguna
+  salida, y una distribución que da negativos (más del 1 %) en una celda que
+  hoy es positiva.
+- **Por dónde llega cada entrada** (en «Cómo se calculó»): el camino de
+  celdas más corto de cada entrada a cada salida.
+
+### E1–E4: todas las entradas, matriz de correlaciones, deshacer y ayuda (2026-09-29)
+
+**Añadido**
+- **Deshacer** (E3): botón «↶ Deshacer» y Ctrl+Z (fuera de un campo), hasta
+  30 cambios del modelo; lo que se escribe de seguido cuenta como uno.
+- **Todas las entradas** (E1): tabla con las del panel y, tras simular, las
+  funciones RIESGO del libro.
+- **Matriz de correlaciones** (E2): todas las entradas numéricas en una
+  tabla editable (triángulo superior); avisa con nombres si el conjunto es
+  imposible.
+- **Ayuda contextual** (E4): «¿Qué es esto?» bajo las cifras y en cada
+  sección de Resultados y en la matriz de correlaciones.
+
+### D2, D3 y D4: estrés, series de salidas y cambio en la salida (2026-09-29)
+
+**Añadido**
+- **Cambio en la salida** (D4): en «Qué la mueve más», un segundo tornado,
+  en unidades de la salida: la media cuando cada entrada está en su 10 % más
+  bajo y en el más alto. También en el informe PDF.
+- **Estrés** (D2): la salida con una entrada en su 10 % o 25 % más bajo o
+  alto, en torno a su mediana, o en una categoría, frente a la de siempre
+  (media, p5, p50, p95 y umbral), al instante con las iteraciones retenidas.
+- **Series de salidas** (D3): marcar como salida una fila o columna de celdas
+  (hasta 50) crea una salida por celda con nombres de serie («Flujo de caja
+  libre · Año 3»), lista para el abanico.
+
+**Arreglado**
+- Un error de Excel (#N/A, #¿NOMBRE?…) ya no se toma como nombre de una celda.
+
+### B5: distribuciones nuevas (2026-09-29)
+
+**Añadido**
+- Diez distribuciones, en el motor, en el editor del panel (con su «cuándo
+  usarla» y su vista previa) y como funciones de Excel: **t de Student**
+  (`RIESGO.STUDENT`), **logística**, **log-logística**, **Pareto**,
+  **uniforme entera**, **geométrica**, **binomial negativa** (`BINOMNEG`),
+  **hipergeométrica** (`HIPERGEOM`), **Trigen** (triangular por
+  percentiles) e **histograma** de forma libre (`RIESGO.HISTOGRAMA(mín;
+  máx; pesos)`). Cada una probada contra su teoría (Kolmogorov–Smirnov o
+  frecuencias, y momentos).
+
+### C4: gráficas nuevas (2026-09-29)
+
+**Añadido**
+- **Dispersión** de una entrada frente a la salida (elige la entrada), con
+  las primeras 1.500 iteraciones.
+- Con varias salidas, sección **«Comparar salidas»**: **caja y bigotes** en
+  un eje común, **curvas acumuladas superpuestas** y, con tres o más, un
+  **abanico** (mediana, p25–p75 y p5–p95 en el orden de las salidas). También
+  al final del informe PDF.
+
+### C3: iteraciones a una hoja (2026-09-29)
+
+**Añadido**
+- Botón **«Iteraciones a una hoja»** en Resultados: escribe en la hoja
+  «Iteraciones» las entradas y salidas de cada iteración (las primeras,
+  hasta 100.000), emparejadas, para análisis o gráficos propios. Textos como
+  texto, fechas como fechas. Solo tras simular: no se guardan en el libro.
+
+### T9: opciones de decisión (2026-09-29)
+
+**Añadido**
+- `=RIESGO.DECISION(opción1; opción2; …)` o `=RIESGO.DECISION(rango)`: una
+  celda con varias opciones que **no** son aleatorias (proveedor A/B/C,
+  deuda al 60/70/80 %). En la hoja vale la primera. Al simular, el modelo se
+  simula con cada opción (o cada combinación, hasta 16) con los **mismos
+  números aleatorios**, y Resultados enseña **«Comparar decisiones»**:
+  media, p5, p95 y la probabilidad del umbral de cada opción (en una salida
+  de texto, lo más frecuente). Solo con el motor rápido.
+- Libro de demostración: sección 12 de «Pruebas» (filas 62–64). Guía: T11 y N16.
+
+### T8: registro de riesgos (2026-09-29)
+
+**Añadido**
+- `=RIESGO.EVENTO(probabilidad; impacto)`: un riesgo que ocurre con esa
+  probabilidad y, si ocurre, vale el impacto (un número o una función
+  RIESGO). En «Valores fijos» enseña su valor esperado.
+- Sección **«Registro de riesgos»** en Resultados: cada riesgo con su
+  probabilidad, su impacto, su valor esperado (p × impacto medio) y su parte
+  del total, de más a menos. En el tornado, cada riesgo aparece como
+  «(ocurre)» e «(impacto)».
+- Libro de demostración: sección 11 de «Pruebas» (filas 57–59). Guía: T10 y N15.
+
+### T7: entradas y salidas de fecha (2026-09-29)
+
+**Añadido**
+- Las entradas y salidas cuya celda tiene **formato de fecha** se enseñan
+  como fechas en Resultados (cifras, percentiles, histograma, curva,
+  delimitadores, lectura, tabla de salidas, entradas muestreadas), en el
+  informe PDF y en la hoja volcada; la desviación y la semidesviación, en
+  **días**. La pregunta de probabilidad y los delimitadores aceptan fechas
+  escritas (`15/05/2027`).
+- Libro de demostración: sección 10 de «Pruebas» (filas 52–54). Guía: T9 y N14.
+
+### I2: ajuste de distribuciones orientado al riesgo (2026-09-29)
+
+**Añadido**
+- **Error en percentiles** en cada candidata, según lo que más importe:
+  toda la distribución (p5–p95), la cola alta (p50–p99) o la baja (p1–p50).
+  Columna «Perc.» y criterio de orden propio; cada criterio por separado, sin
+  puntuación combinada.
+- Tabla **percentil a percentil** (datos frente a la elegida, diferencia en
+  σ, en negrita lo que se separa más de 0,25 σ).
+- **Bootstrap** bajo demanda: intervalos del 90 % de los parámetros y de los
+  percentiles (200 repeticiones, con semilla: da lo mismo cada vez).
+- **Poisson y binomial** cuando los datos parecen conteos, marcadas como
+  discretas (su AICc no se compara con el de las continuas). La binomial
+  negativa llega con B5 (el motor aún no la tiene).
+
+### B6 (resto): RIESGO.SALIDA y RIESGO.CORRELACION (2026-09-29)
+
+**Añadido**
+- `=RIESGO.SALIDA("nombre")+fórmula` marca la celda como **salida** sin
+  pasar por el panel (vale 0, así que no cambia el resultado de la fórmula).
+  *Simular* ya no exige salidas en el panel.
+- `=RIESGO.CORRELACION(celda1; celda2; coeficiente)` en cualquier celda
+  **correlaciona** dos entradas (con función RIESGO o del panel); la celda
+  enseña el coeficiente. Si el panel ya las correlacionaba, manda la fórmula.
+  Errores claros si una celda no es entrada o el coeficiente no está entre -1
+  y 1.
+- «Preparar para compartir» deja las celdas con `RIESGO.SALIDA` calculando
+  (la llamada pasa a ser un 0) y lleva al panel las salidas y correlaciones
+  declaradas; «Restaurar» lo deshace.
+- Libro de demostración: sección 9 de «Pruebas» (filas 46–49). Guía: F20,
+  F21 y N12.
+
+### U2: Resultados más fáciles de leer (2026-09-29)
+
+**Cambiado**
+- Arriba, una línea con cómo se simuló (motor, iteraciones, tiempo), solo los
+  avisos que importan y los botones *Volcar a una hoja* e *Informe PDF* (las
+  explicaciones pasan a la ayuda al pasar el ratón).
+- Cada salida empieza por **cuatro cifras grandes** (media, p5, p95,
+  desviación), la lectura, el histograma y la pregunta de probabilidad.
+- El resto va en **secciones plegables**: *Qué la mueve más* (abierta),
+  *Estadísticos y percentiles*, *Probabilidad acumulada*, *Medidas de riesgo*,
+  *Qué tiene que pasar*, *Según las entradas de texto*, *Qué pasa si cada
+  entrada se mueve*, *Cómo se calculó* y *Cómo se muestrearon las entradas*.
+  Cada una dice al lado un resumen corto, y el panel recuerda cuáles abriste.
+- Escenarios y *Cómo se calculó* bajan al final.
+
+### C10: marcas y delimitadores en el histograma (2026-09-29)
+
+**Añadido**
+- El histograma de Resultados muestra la **media** (línea continua) y la
+  **mediana** (discontinua; se omite si cae encima de la media).
+- Dos **delimitadores que se arrastran** sobre el gráfico (empiezan en p5 y
+  p95) y dicen encima el porcentaje por debajo, entre los dos y por encima;
+  las barras fuera se atenúan. También se escriben a mano en *Desde* y
+  *Hasta* (se ajustan al rango de la muestra).
+- En el informe PDF, el histograma lleva fijos la media, la mediana y los
+  delimitadores en p5 y p95 (5 % / 90 % / 5 %).
+
+### Etapa 2 — B1b: las funciones RIESGO sortean con Excel en el bucle (2026-09-29)
+
+**Añadido**
+- El **modo compatible** simula ya una función RIESGO **dentro de una
+  operación** o **con parámetros que cambian** (antes solo el motor rápido):
+  la celda conserva su fórmula y la función devuelve en cada iteración el
+  mismo sorteo que usaría el motor rápido. Con alguna de estas celdas se va de
+  una iteración por viaje a Excel (más lento, pero correcto).
+- Siguen sin admitirse en el compatible, con un aviso: varias funciones RIESGO
+  en la misma fórmula, y `RIESGO.TRUNCAR` con parámetros que cambian.
+- Banco de pruebas: calcula las funciones RIESGO con las de verdad
+  (`ui/funciones.ts`), así que su modo compatible prueba también esto.
+
+### Etapa 2 — B3: la cinta actúa sin abrir el panel (2026-09-29)
+
+**Añadido**
+- Grupo **«Acciones»** en la cinta: *Marcar entrada*, *Marcar salida*,
+  *Simular* y *Quitar resaltado*. Marcar pinta la celda sin abrir el panel
+  (solo se abre si hay algo que avisar); Simular abre el panel para el
+  progreso y los resultados. Iconos nuevos con los colores del resaltado.
+
+### Etapa 2 — B2: modo del libro (2026-09-29)
+
+**Añadido**
+- **«Modo del libro» en la cinta**: *Valores fijos* (por defecto) o
+  *Aleatorio*. En valores fijos, cada `RIESGO.*` enseña la media, o la
+  mediana, la moda o un percentil, según se elija en Configuración; en
+  aleatorio, un valor al azar que cambia con F9. El botón del modo activo
+  queda desactivado. Se guarda en el libro. La simulación no cambia.
+- Las funciones de distribución son volátiles (para que F9 sortee y un
+  cambio de modo se vea con un recálculo); las de resultados, no.
+
+### Etapa 2 — B1: runtime compartido (2026-09-29)
+
+Primer cambio del manifiesto (versión 0.5).
+
+**Cambiado**
+- **Panel, cinta y funciones `RIESGO.*` en un solo proceso** (`SharedRuntime`):
+  `taskpane.html` es a la vez el panel, la página de los comandos y la de las
+  funciones (carga `funciones.js`). Se quitan `commands.html` y
+  `funciones.html`.
+- **Los botones de la cinta ejecutan una acción** (`ui/acciones.ts`) que pone
+  la pestaña y muestra el panel sin recargarlo: se acaba el instante en blanco
+  de la prueba B4.
+- **Resultados en la hoja (B6) en memoria**: las funciones leen lo que tiene
+  el panel; las celdas que dijeron «simula primero» se apuntan solas y se
+  refrescan al publicarse los resultados, también al abrir el libro (en otro
+  equipo, en cuanto el panel carga los resultados guardados en el libro).
+- Diagnóstico: línea «Runtime compartido».
+
+**Requisito nuevo**: `SharedRuntime 1.1` (Excel para la Web; Windows con
+Microsoft 365 desde la versión 2002, o Excel 2021; Mac desde 16.35). En el
+iPad el complemento no se instala (tampoco funcionaba antes; abrir allí un
+libro preparado para compartir sigue igual).
+
+### Tercera ronda de pruebas del usuario (2026-09-29)
+
+La guía completa, recorrida entera en Excel (Windows y Web). Todo OK salvo lo
+de abajo; las tandas 7 y 8 de fidelidad, recalculadas en su Excel, pasan (47
+comprobaciones).
+
+**Arreglado**
+- **Las entradas de texto no salían en el tornado ni en la lectura** (T2): en
+  la hoja «Zonas», la zona es lo que más mueve los ingresos (≈ 60 % de la
+  variación) y el panel decía que Unidades y Precio explicaban el 100 %.
+  Ahora cada categoría se sustituye por la media de la salida en ella (la
+  razón de correlación) y entra en la regresión con las demás; se pinta en
+  gris, sin «sube/baja», y la lectura dice «según el valor que tome». No
+  entra en la araña (no tiene décimos).
+- **Preparar para compartir** crea las entradas con nombre legible
+  («Demanda»), no con la referencia (J1).
+- **Botones que parecían texto** (E4, T1): «Ajustar a datos históricos…»,
+  «Usar los datos tal cual», «Leer de la selección», «Poner nombres desde la
+  hoja», «Cambiar en Configuración», «Cerrar» y «Cancelar» tienen ahora borde.
+- **Vista previa** con tres cifras significativas (A2: «p5 0,010654»).
+
+**Añadido**
+- **Modo compatible por lotes** (F5b, a raíz de H2): 20 iteraciones por viaje
+  a Excel. Menos repintado y muchos menos viajes; los mismos números.
+
+**Plan**
+- U2 (legibilidad del panel, T6), C10 (marcas y delimitadores en el
+  histograma, sugerencia), y la nota de B4 (el panel en blanco al cambiar de
+  pestaña desde la cinta) en B1.
+
+### Plan: B1b (2026-09-28)
+
+**Cambiado**
+- Plan: nuevo **B1b**, después de B1–B3 en la etapa 2. Con el runtime
+  compartido, las funciones RIESGO devolverán su valor sorteado durante una
+  simulación con el motor compatible. Así, la función dentro de una operación
+  y los parámetros aleatorios (B7) funcionarán también con Excel en el bucle,
+  sin escribir encima de las fórmulas.
+
+### B7 y B6: RIESGO con celdas y resultados en la hoja (2026-09-28)
+
+Pedido por el usuario tras la revisión: poder escribir `=RIESGO.NORMAL(50;
+B3)` y sacar a la hoja la media o el p5 de una salida. Los dos, **sin tocar
+el manifiesto**, para probarlos en la misma ronda que todo lo demás.
+
+**Añadido**
+- **Funciones RIESGO con celdas como argumentos** (B7): cualquier argumento
+  puede ser una celda o un cálculo. Si no depende de nada aleatorio, se
+  calcula una vez con el motor y la celda es una entrada como siempre (vale
+  para los dos motores).
+- **Una función RIESGO dentro de una operación** (`=1000+RIESGO.NORMAL(0;
+  50)`) y **con parámetros que dependen de otra celda aleatoria**
+  (`=RIESGO.NORMAL(C34;50)`): la fórmula se reescribe antes de simular con
+  celdas virtuales. En el segundo caso se muestrea un uniforme y se pasa por
+  el cuantil con los parámetros de cada iteración (`_RIESGO.CUANTIL`), así
+  que el hipercubo, la semilla y la reproducibilidad no cambian. Solo con el
+  motor rápido; con el compatible, un error que dice por qué y qué hacer.
+  (`engine/modelo/riesgoEnGrafo.ts`, `engine/functions/riesgo.ts`.)
+- **Resultados en la hoja** (B6): `RIESGO.MEDIA`, `RIESGO.DESV`,
+  `RIESGO.PERCENTIL(celda; p)`, `RIESGO.PROB(celda; umbral; [por encima])`
+  —también `RIESGO.PROB(celda; "Alta")` en una salida de texto—,
+  `RIESGO.MIN` y `RIESGO.MAX`. Al simular, el panel publica un resumen de
+  cada salida (1.001 cuantiles) en `OfficeRuntime.storage`, que comparte con
+  las funciones; estas reciben la dirección de la celda
+  (`requiresParameterAddresses`). Las celdas que las usan se recalculan al
+  terminar. Una salida que dependa de ellas sigue en el motor rápido: valen lo
+  de la simulación anterior.
+
+**Cambiado**
+- «Preparar para compartir» convierte en entradas las funciones con
+  argumentos fijos (también si son celdas) y **fija en su valor actual** las
+  que no pueden ser una entrada y las de resultados, para que nadie vea
+  `#¿NOMBRE?`; «Restaurar» las devuelve todas.
+- Libro de demostración: secciones 7 (RIESGO con celdas) y 8 (resultados en
+  la hoja) en «Pruebas». Guía: F5 cambiada (ya no es un error usar una
+  celda) y pruebas nuevas F12–F19, T8 y W7.
+
+**Límite conocido** (hasta la etapa 2, B1): los resultados de las funciones
+de B6 se guardan en el equipo, no en el libro. En otro equipo dan `#N/D`
+hasta abrir el panel o simular.
+
+### Guía de pruebas reescrita (2026-09-28)
+
+**Cambiado**
+- `docs/GUIA_PRUEBAS_EXCEL.md` reescrita desde cero para recorrer todo el
+  complemento de principio a fin: preparación, lo básico, configuración,
+  informe y hoja volcada, escenarios, ajuste, funciones RIESGO, LET y
+  matrices, modo compatible, variables de texto, compartir, reproducibilidad,
+  Excel para la Web y libros de fidelidad.
+- Libro de demostración: hoja **«Zonas»** (entrada de texto con BUSCARV,
+  salidas de texto y de sí/no, `RIESGO.CATEGORIA`) y sección 6 en «Pruebas»
+  con celdas preparadas para `RIESGO.DISCRETA`, `RIESGO.TRUNCAR`,
+  `RIESGO.LOGNORMAL2` y `RIESGO.EMPIRICA`. Las etiquetas quedan en la columna
+  B y las instrucciones aparte, para que los nombres legibles salgan limpios.
+
+### Antes de la etapa 2: lo que no toca el manifiesto (2026-09-28)
+
+**Añadido**
+- **Vista previa de la distribución** (C5): al editar una entrada, su forma
+  (curva, o barras si es discreta o de texto) con las líneas de p5, p50 y p95
+  y sus valores debajo (`engine/modelo/vistaPrevia.ts`).
+- **Medidas de riesgo** (H2): VaR y CVaR al 5 % de las dos colas (una salida
+  puede ser una ganancia o un coste), asimetría, curtosis en exceso y
+  semidesviación, en el panel, el PDF y la hoja volcada
+  (`engine/stats/riesgo.ts`).
+- **Resumen de las entradas** en la hoja volcada (C1): distribución, media,
+  desviación, p5, p50 y p95 de lo que de verdad se muestreó, y su puesto en el
+  tornado.
+- **Tornado y araña como gráficos de Excel** (C2) en la hoja volcada, junto a
+  los de la distribución: barras horizontales con la que más pesa arriba, y una
+  línea por entrada con su leyenda.
+- **Qué tiene que pasar** (D1, análisis de escenarios por cola): en las
+  iteraciones en que la salida cae en su 10 % más bajo (o más alto), la
+  mediana de cada entrada frente a la normal, en desviaciones típicas, y en
+  las de texto la categoría que más abunda. En el panel, el PDF y la hoja
+  (`excel/analisisCola.ts`).
+- **Distribuciones acotadas** (B4): mínimo y máximo opcionales para cualquier
+  distribución numérica («Acotar» en el editor, con la vista previa al día), y
+  `=RIESGO.TRUNCAR(RIESGO.NORMAL(100;20);80;120)` en la celda. El muestreo
+  descarta y reescala la masa de fuera.
+- **`RIESGO.DISCRETA(valores; pesos)`** con listas o rangos, y
+  **`RIESGO.LOGNORMAL2(mu; sigma)`** con los parámetros del logaritmo (B4).
+- **Ajuste de distribuciones explicado** (I1): «Lo que dicen los datos»
+  (asimetría, colas, negativos, enteros, proporciones) explica qué familias se
+  proponen y cuáles se descartan; AICc (ahora el criterio por defecto) y
+  Cramér–von Mises junto a BIC y A–D; la gamma por máxima verosimilitud exacta;
+  el histograma de los datos con la curva de la candidata elegida encima;
+  «Usar los datos tal cual» (empírica) y `=RIESGO.EMPIRICA(rango)`.
+
+### Variables de texto y salidas de sí/no (T1–T6) (2026-09-28)
+
+Propuesto por el usuario a raíz de G3: que la simulación trabaje con textos,
+no solo con números. Hasta donde sabemos, ningún complemento del mercado lo
+hace.
+
+**Añadido**
+- **Entradas de texto** (T1): distribución `categorical` («Norte» 20, «Sur»
+  50, «Este» 30). En el panel, escrita o leída de la selección (nombres y
+  probabilidades); al marcar una celda que contiene texto se propone sola.
+  Se muestrea como un índice y el motor pone el texto justo antes de calcular,
+  así que Monte Carlo, hipercubo y reproducibilidad son los de siempre. No se
+  puede correlacionar (el orden de las categorías es arbitrario). También en
+  el modo compatible, que escribe el texto en la celda.
+- **Salidas de texto y de sí/no** (T2, T6): cada bloque cuenta con qué
+  frecuencia sale cada valor (tope de 200 distintos). Barras de frecuencia,
+  probabilidad de un **valor de interés** (guardado en el modelo, el
+  «umbral» de las salidas de texto), lectura en palabras, y comparación entre
+  escenarios por la probabilidad de cada valor. Los VERDADERO/FALSO se
+  cuentan además como 1/0 y usan los nombres del idioma del libro.
+- **Qué entradas deciden cada valor** (T3): su probabilidad cuando cada entrada
+  numérica está en su 10 % más bajo frente a su 10 % más alto.
+- **Cruce por categoría** (T3): cada salida numérica según cada entrada de
+  texto (media, p5, p95), y cada salida de texto según ella (valor más
+  frecuente). Las entradas de texto salen del tornado de correlaciones.
+- **`RIESGO.CATEGORIA(valores; pesos)`** (T4): con listas `{"Norte";"Sur"}` o
+  rangos de la hoja; fuera de la simulación enseña el valor más probable, y
+  «Preparar para compartir» deja ese texto en la celda.
+- Todo ello en el informe PDF, la hoja volcada (con gráfico de frecuencias) y
+  la tabla de escenarios; «Cómo se muestrearon las entradas» enseña las
+  frecuencias de una entrada de texto frente a lo esperado.
+
+### Etapa 1b: lo que se pidió dos veces (F5, C8, C9) (2026-09-28)
+
+**Añadido**
+- **Congelar la pantalla en el modo compatible** (F5): como `ScreenUpdating =
+  False` en VBA (`suspendScreenUpdatingUntilNextSync`, ExcelApi 1.9). Casilla en
+  ⚙ → Rendimiento, marcada por defecto; se guarda en el equipo. Si en alguna
+  versión de Excel parpadea, se desmarca.
+- **Hoja volcada legible** (C8, pedida dos veces): cada salida con el formato
+  numérico de su celda de origen (€, %, miles; si es «General», uno razonable,
+  y porcentaje para una TIR); un bloque por salida con banda de color, la
+  lectura en palabras, estadísticos y percentiles lado a lado, sensibilidad
+  debajo y los dos gráficos a la derecha; los datos de los gráficos en su
+  propia zona («Datos de los gráficos»); las salidas constantes en una línea;
+  anchos de columna fijos (antes una nota larga ensanchaba la columna A).
+- **Cómo se muestrearon las entradas** (C9): en Resultados, para cada
+  entrada, los estadísticos de los valores que de verdad se generaron junto a
+  los de la distribución elegida, su histograma con la curva esperada encima
+  y su curva acumulada (`excel/entradasMuestreadas.ts`).
+
+### Etapa 1: nombres legibles (E5), elegir la salida (E6) informe del proyecto (C7), escenarios (E7), color RIESGO (E8) y núcleos (F4) (2026-09-27)
+
+**Añadido**
+- **Las celdas marcadas nacen con un nombre legible**: el texto de su
+  izquierda («Precio unitario») en vez de «Modelo!C5». En una tabla por años,
+  con números en medio, se añade la celda: «Flujo de caja libre (H28)». Sin
+  texto a la izquierda, el de encima. Se usa en el panel, el tornado, la araña,
+  el informe y el volcado (`excel/nombreSugerido.ts`, `etiquetasEnExcel.ts`).
+- Las entradas que vienen de funciones `RIESGO.*` también se nombran así.
+- **«Poner nombres desde la hoja»** para los modelos marcados antes, cuyas
+  celdas aún se llaman como su referencia.
+- **Elegir la salida en Resultados** (E6): con varias salidas, una tabla
+  resumen arriba (media, p5, p50, p95 y el umbral) y un selector que enseña
+  una cada vez o todas. Se elige pulsando una fila o **seleccionando la celda
+  de la salida en la hoja** (`excel/seleccionActiva.ts`, ExcelApi 1.2).
+- **Informe PDF del proyecto** (C7): título y descripción del proyecto en
+  Configuración (se guardan en el libro, campo opcional `project` del
+  modelo); encabezan el PDF y la hoja volcada. Cada salida lleva una
+  **lectura en palabras** generada con reglas (rango del 90 %, probabilidad del
+  umbral, qué la mueve más, si bastan las iteraciones), también en el panel
+  (`excel/lectura.ts`). Las entradas `RIESGO.*` salen con su nombre legible.
+- **Administrador de escenarios** (E7): varias simulaciones guardadas en el
+  libro con su nombre (hasta 10). Se elige con cuál se compara (tabla de
+  diferencias y curva punteada) y cada salida enseña una tabla con **todos
+  los escenarios a la vez**. Guardar una variante no quita la comparación con
+  el marcado; el mismo nombre actualiza el escenario. La referencia única de
+  antes pasa sola a ser el primer escenario (`excel/escenarios.ts`, clave
+  `riesgoMontecarlo.scenarios`).
+- **Color propio para las celdas con `RIESGO.*`** (E8): melocotón, distinto
+  del amarillo de las entradas del panel. Se pintan al simular (es cuando se
+  descubren).
+
+**Cambiado**
+- **Núcleos en automático según el tamaño** (F4): con poco trabajo
+  (iteraciones × celdas que cambian < 1,5 millones) se simula en un hilo, que
+  es más rápido que arrancar varios (medido en el Excel del usuario: 212 ms en
+  uno frente a 527 ms en ocho). Si los núcleos se eligen a mano, se respetan.
+
+### Segunda ronda de pruebas en Excel (C2–W) y tandas 7 y 8 (2026-09-27)
+
+**Verificado en Excel**
+- Tandas de fidelidad 7 (LET, 14/14) y 8 (matrices, 27/27) calculadas por
+  el Excel del usuario y ya en las pruebas. El único desacuerdo (T8-012) era
+  del lector: Excel guarda `#CALC!` como «valor enriquecido» y escribe
+  `#VALUE!` para lectores antiguos. `tests/helpers/leerFidelidad.ts` lee ahora
+  `xl/richData`.
+- Las 3 fórmulas de `Caso_practico.xlsx` (`SUMAPRODUCTO(H42:DC42/H45:DC45)` y
+  similares) calculan bien y van por el motor rápido (prueba nueva).
+
+**Corregido**
+- **Funciones RIESGO en Excel para la Web** (W5): el servidor de desarrollo
+  no enviaba `Access-Control-Allow-Origin` en `funciones.json` y
+  `funciones.js` (ese middleware va antes que los encabezados de Vite).
+  Pendiente de confirmar en la Web.
+- **Una salida que nunca da un número** (G3, un FILTRAR de nombres) enseñaba
+  «mínimo ∞, máximo −∞» y un tornado de ceros; ahora un aviso claro, también
+  en el PDF.
+- **«Restaurar funciones RIESGO»** (J4) sale arriba de la pestaña Modelo, y
+  como botón, cuando el libro está preparado para compartir.
+
+### Primera ronda de pruebas en Excel (A1–E4) (2026-09-27)
+
+**Corregido**
+- **Un error de guardado no se podía quitar del panel.** Una triangular con
+  el máximo por debajo de la moda llegaba a guardarse, fallaba, y el aviso
+  rojo se quedaba aunque se corrigiera. Ahora el editor no guarda una
+  distribución inválida: la deja como borrador con un aviso al lado
+  (`problemaDeDistribucion`). El recuadro de error tiene ✕ y se borra solo
+  cuando el siguiente guardado sale bien.
+- **Los parámetros se leen en formato español**: «23.000» es veintitrés mil
+  (antes, 23), y se muestran con coma decimal. «0.054» sigue siendo 0,054.
+- **«Referencia sin resolver» al simular una salida que depende de una
+  `RIESGO.*`** que no está en el panel (Modelo!C32 con =RIESGO.NORMAL en
+  C5). Las entradas de funciones se descubren después de resolver las
+  referencias del panel, y preparar la simulación pedía resolverlas otra vez.
+  `resolverConFunciones` (excel/entradasRiesgo.ts) y una prueba con un
+  resolvedor estricto como el de Excel.
+- **El tornado salía en blanco en el PDF**: el navegador no imprime fondos
+  por defecto; ahora `print-color-adjust: exact`. La primera salida ya no
+  empieza en una página nueva, y el tornado y la araña van lado a lado.
+
+**Guía de pruebas**
+- Bloque E rehecho: todo en la hoja «Pruebas», con aviso de reabrir el libro
+  si se escribió en «Modelo», y una E5 nueva (RIESGO dentro del modelo
+  grande). Nota sobre `npm start` en C4.
+
+**Plan**
+- Mejoras propuestas por el usuario registradas: C7 (PDF con datos del
+  proyecto), C8 (hoja volcada legible), E5 (nombres legibles automáticos),
+  E6 (elegir la salida en Resultados), E7 (administrador de escenarios), E8
+  (color para celdas RIESGO), F4 (núcleos en automático según el tamaño).
+
+### Arreglo: el panel se quedaba en blanco dentro de Excel (2026-09-27)
+
+**Corregido**
+- **El panel parpadeaba y se quedaba en blanco en Excel** (primera prueba
+  del usuario). Office.js anula `history.replaceState`, y el panel lo
+  llamaba al montar para recordar la pestaña: el error desmontaba React.
+  Ahora se guarda el original antes de cargar Office.js y se usa con
+  protección (`ui/fragmento.ts`). Reproducido y verificado en Chromium
+  imitando a Office.js. No se vio antes porque el banco de pruebas corre en
+  un navegador normal, donde la función existe.
+
+**Añadido**
+- **Red de seguridad del panel** (`ui/ErrorPanel.tsx`): si algo falla al
+  pintarse, se muestra el mensaje de error y un botón para recargar, en vez
+  de un panel en blanco.
+
+### Plan: motor de ajuste de distribuciones (2026-09-27)
+
+**Plan**
+- §1.2.1 del roadmap: conclusiones del segundo informe de competidores.
+- Nuevo bloque **I** en §2.1: I1 (diagnóstico previo de los datos, AICc,
+  Cramér–von Mises, histograma con densidad, Q-Q, gamma por MLE exacto,
+  distribución empírica y `RIESGO.EMPIRICA`), I2 (error en percentiles con
+  objetivo de cola, bootstrap, discretas) e I3 (avanzado). I1 va tras las
+  pruebas, junto a C5.
+
+### Fusión con el roadmap del estudio de mercado, y tres cosas antes de las pruebas (2026-09-26)
+
+**Plan**
+- Fusionada la revisión del roadmap con el estudio de mercado (§1.2: E4
+  redefinida, E9a adelantada, E12, precio, rechazos). Se escribió sobre el
+  estado del 23/09; sus tres primeras prioridades (tornado, ajuste, Web
+  Worker) ya estaban hechas y se marcan como tales.
+
+**Añadido**
+- **«Preparar para compartir»** (E4 redefinida): convierte cada `RIESGO.*` en
+  una entrada del panel y deja en la celda su media, para que quien abra el
+  libro sin el complemento no vea `#¿NOMBRE?`. Guarda las fórmulas originales
+  y **«Restaurar funciones RIESGO»** las devuelve. Aviso en Resultados si el
+  libro usa funciones RIESGO.
+- **AIC y BIC** en el ajuste de distribuciones (con la densidad de cada
+  candidata), y selector «Ordenar por» AIC / BIC / Anderson–Darling. AIC por
+  defecto: castiga los parámetros de más.
+
+**Cambiado**
+- **El flujo aleatorio de cada entrada va ligado a su celda** (H1): volver a
+  marcar una celda ya no cambia los números con la misma semilla. Los
+  resultados de una misma semilla cambian una vez respecto a versiones
+  anteriores.
+- Guía de pruebas ampliada: bloques J (compartir), K (reproducibilidad) y W
+  (Excel para la Web y Mac).
+
+### Guía de pruebas en Excel y hoja «Pruebas» (2026-09-24)
+
+**Añadido**
+- `docs/GUIA_PRUEBAS_EXCEL.md`: el paso a paso para probar todo en Excel con
+  el libro de demostración, con un código por prueba (A1…I3) y el resultado
+  esperado de cada una.
+- El libro de demostración trae una hoja **«Pruebas»** para lo nuevo:
+  funciones `RIESGO.*`, `LET`, matrices, derrame, entrada con fórmula en el
+  modo compatible y 40 precios históricos para el ajuste a datos. Lo que la
+  guía da como esperado está medido con el motor
+  (`tests/unit/hojaPruebasDemo.test.ts`).
+
+### Matrices en el motor rápido (2026-09-24)
+
+**Añadido**
+- **Funciones de matrices dinámicas** dentro de otra función que las consuma:
+  `FILTRAR`, `ORDENAR`, `ORDENARPOR`, `UNICOS`, `SECUENCIA`, `TRANSPONER`,
+  `MMULT`, `MINVERSA` (`=SUMA(FILTRAR(…))`, `=INDICE(ORDENAR(…); 1)`). Se
+  calculan **por iteración**: un `FILTRAR` cuyo criterio depende de la
+  simulación deja pasar filas distintas en cada una (las que pasan, arriba y
+  en orden; el resto vacío).
+- **Operaciones entre rangos dentro de funciones** y las **fórmulas
+  matriciales clásicas**: `SUMA(A2:A9*B2:B9)`, `SUMAPRODUCTO((A2:A9>5)*B2:B9)`,
+  `SUMA(SI(A2:A9>5; B2:B9))`, constantes `{1;2;3}`, con la difusión de Excel
+  (fila contra columna; `#N/A` donde una no llega). Las funciones escalares
+  (`SI`, `REDONDEAR`, `ABS`…) se aplican elemento a elemento en ese contexto.
+- Lo que **derramaría** (una matriz que llega a la raíz de la fórmula) sigue
+  yendo al modo compatible, con el motivo: las celdas derramadas no tienen
+  fórmula propia y el motor rápido las tomaría por constantes.
+- Octava tanda de fidelidad (`fidelidad-tanda8.xlsx`, 27 casos), escritos como
+  fórmulas matriciales para que cualquier Excel las evalúe igual. Pendiente de
+  calcular en Excel.
+
+**Nivel 2**: 37/41 (quedan `LAMBDA`, `DIVIDIRTEXTO`, `FORMULATEXTO` y
+`IMPORTARDATOSDINAMICOS`).
+
+### Funciones RIESGO.* en las celdas (2026-09-24)
+
+**Añadido**
+- **`=RIESGO.NORMAL(100; 15)`** y otras once (LOGNORMAL, UNIFORME, TRIANGULAR,
+  PERT, BETA, GAMMA, EXPON, WEIBULL, BERNOULLI, BINOMIAL, POISSON) escritas
+  directamente en una celda la declaran entrada incierta, sin pasar por el
+  panel, como en @RISK. Fuera de la simulación la celda muestra la **media**
+  de su distribución, así que el libro calcula con normalidad.
+- Se registran como funciones personalizadas de Excel (manifiesto 0.4.0.0):
+  script de un solo archivo (`funciones.js`), página y metadatos
+  (`funciones.json`) **generados del catálogo del motor**, para que no pueda
+  haber en Excel una función que el motor no sepa simular.
+- Al simular, las celdas `RIESGO.*` de las que depende alguna salida se suman
+  a las entradas del panel (si una está en los dos, manda el panel y se
+  avisa), salen en "Cómo se calculó", en el tornado, en el informe y en el
+  volcado. Basta con tener una salida para simular.
+- Solo argumentos numéricos escritos y la función como fórmula entera; lo
+  demás (`=RIESGO.NORMAL(B2; 15)`, `=1+RIESGO.…`) se rechaza con la celda y el
+  motivo. También se aceptan los nombres `RISK.*`.
+
+**Corregido**
+- **El modo compatible perdía la fórmula de las entradas que tenían una**:
+  el guardián guardaba y restauraba solo el valor, así que una entrada con
+  `=B2*1,1` quedaba convertida en un número tras simular. Ahora guarda la
+  fórmula y la restaura.
+- El motor ya no recorre lo que hay dentro de una celda de entrada (su
+  fórmula y sus precedentes no se usan): una entrada con una función que el
+  motor no conoce ya no manda la simulación al modo compatible.
+
+### Informe PDF (2026-09-24)
+
+**Añadido**
+- Botón **"Informe PDF"** en Resultados: abre en el navegador del sistema un
+  informe maquetado para A4 —cómo se calculó, entradas, y por cada salida el
+  umbral, estadísticos, precisión, comparación con la referencia, histograma,
+  curva acumulada, tornado y araña—, con un botón "Imprimir o guardar como
+  PDF". Una salida por página al imprimir; siempre en claro en papel.
+- Los datos viajan **comprimidos en el fragmento de la dirección** (`#d=…`,
+  unos 4 kB por salida): el navegador no envía el fragmento a ningún
+  servidor, así que no salen del equipo. Dentro de Excel se abre con
+  `openBrowserWindow`, la vía oficial.
+
+### Gráfico de araña y contribución a la varianza (2026-09-24)
+
+**Añadido**
+- **"Qué pasa si cada entrada se mueve"** (gráfico de araña): la media de la
+  salida en cada décimo de cada entrada, en unidades de la salida, con las
+  cuatro entradas de más efecto y su recorrido (±). Sale de la muestra ya
+  simulada: no hace falta simular más.
+- **Contribución a la varianza** en el tornado, por regresión sobre rangos
+  (medida de Pratt): reparte bien el mérito entre entradas correlacionadas,
+  donde el peso ρ² se equivoca. Y el **R²**: qué parte de la variación
+  explican las entradas juntas; si es bajo, el panel avisa de interacciones o
+  efectos no monótonos.
+- Los dos van también al informe volcado.
+
+### Panel de Configuración (2026-09-24)
+
+**Añadido**
+- **Configuración** con un botón ⚙ junto a las pestañas y un botón nuevo en la
+  cinta (cuatro en total; manifiesto 0.3.0.0). Tres bloques:
+  - **Rendimiento** (de este equipo, en el navegador): cuántos núcleos usar,
+    "Automático (3 de 4)" o de 1 al total. No cambia ningún resultado.
+  - **Simulación** (del modelo, en el libro): iteraciones con accesos
+    rápidos (1 mil, 10 mil, 100 mil, 1 M) y cualquier otra cantidad entre 100
+    y 10 millones; semilla, muestreo y motor. Salen de la pestaña Modelo, que
+    queda con un resumen y un enlace.
+  - **Precisión** (del modelo): margen objetivo ±0,5 / 1 / 2 / 5 %, y **simular
+    hasta alcanzarlo**: por tandas (hasta 5) sin pasar de un tope. Cada tanda
+    es una simulación completa con la misma semilla, así que el resultado
+    final es el mismo que pidiendo esas iteraciones de entrada. Solo con el
+    motor rápido; con Excel en el bucle se simulan las iteraciones fijadas y
+    se dice.
+- "Cómo se calculó" cuenta las tandas ("1.000 → 390.000 iteraciones") o
+  avisa si no se alcanzó el margen con el tope.
+- Con un solo núcleo elegido también se calcula en un hilo aparte, para que el
+  panel no se congele.
+
+**Medido** (Chromium, modelo de ejemplo con una lognormal muy dispersa,
+±1 %): 1.000 → 390.000 iteraciones en 482 ms con 3 hilos.
+
+### Ajustar una distribución a datos (2026-09-24)
+
+**Añadido**
+- En cada entrada, **"Ajustar a datos históricos…"**: se pegan los datos (una
+  columna copiada de Excel, con coma decimal) o se leen de la selección, y se
+  proponen las distribuciones que mejor los describen, de mejor a peor, con
+  un botón **Usar**.
+- Candidatas y estimación (`engine/modelo/ajuste.ts`): normal, lognormal y
+  exponencial por máxima verosimilitud; gamma (Minka); Weibull (Newton);
+  uniforme, triangular y PERT con extremos ampliados sin sesgo; beta por
+  momentos si los datos están entre 0 y 1. Solo se proponen las que admiten
+  los datos (nada positivo con datos negativos).
+- Ordenadas por **Anderson–Darling** (pesa las colas) con K–S al lado, y la
+  curva de la elegida sobre la escalera de los datos. Se dice que es una
+  ordenación, no una prueba de aceptación.
+- Parámetros redondeados a seis cifras significativas.
+
+### Comparar escenarios (2026-09-24)
+
+**Añadido**
+- **"Fijar como referencia"** en Resultados, con un nombre ("Sin
+  refinanciación"). Al cambiar el modelo y volver a simular, cada salida
+  enseña una tabla frente a la referencia —media, desviación, p5, p50, p95 y
+  la probabilidad del umbral— con la diferencia (actual − referencia), y la
+  curva acumulada de la referencia punteada debajo de la actual, a la misma
+  escala.
+- La referencia se guarda en el libro (`riesgoMontecarlo.reference`) y
+  sobrevive a cerrarlo. Las salidas se emparejan por id; una que no estaba en
+  la referencia lo dice.
+- El margen relativo de la precisión se muestra con sus cifras ("0,025 %").
+
+### ¿Bastan las iteraciones? (2026-09-24)
+
+**Añadido**
+- Debajo de las estadísticas de cada salida: el **margen de la media al 95 %**
+  (1,96·σ/√n), si es suficiente con un listón del 1 % y, si no, **cuántas
+  iteraciones harían falta**. Con la media cerca de cero se mide contra la
+  desviación.
+- **Intervalos al 95 % de p5 y p95**, por la binomial, sin suponer forma.
+- También en el informe volcado y en los resultados guardados.
+
+### LET (2026-09-24)
+
+**Añadido**
+- **`LET`** en el motor rápido, resuelto al parsear sustituyendo cada nombre
+  por su expresión (`engine/parser/let.ts`): ni el grafo, ni la elección de
+  motor, ni los evaluadores necesitan conocerlo. Ámbitos como en Excel (cada
+  nombre ve los anteriores, un `LET` anidado redefine dentro), mayúsculas
+  indiferentes, y la forma del XML (`_xlfn.LET`, `_xlpm.x`).
+- Tope de 20.000 nodos al expandir: una cadena que crece exponencialmente va
+  al modo compatible con su motivo en vez de colgar el panel.
+- Séptima tanda de fidelidad (`fidelidad-tanda7.xlsx`, 14 casos de `LET`),
+  con el resultado del motor anotado. Pendiente de calcular en Excel.
+
+**Nivel 2**: 29/41 (queda `LAMBDA`, las matriciales dinámicas y dos que
+dependen de estructuras que no se leen).
+
+### Los resultados se guardan en el libro (2026-09-24)
+
+**Añadido**
+- **Al reabrir el libro, la última simulación sigue ahí**: resumen,
+  percentiles, curva, histograma, sensibilidad, motor, hilos y tiempo. Se
+  guarda en `workbook.settings` (`riesgoMontecarlo.results`) al terminar cada
+  simulación; como el modelo, sobrevive si se guarda el archivo.
+- En lugar de las hasta 100.000 iteraciones por salida se guardan **1.001
+  cuantiles** (unos 25 kB por salida): los umbrales se siguen calculando al
+  escribir, con ±0,1 puntos, y el panel dice que son aproximados.
+- **Aviso de resultados desactualizados** cuando el modelo cambia después de
+  simular (distribuciones, celdas, iteraciones, semilla), tanto al reabrir
+  como en la misma sesión. Cambiar solo un umbral no cuenta.
+- El diagnóstico recorta los ajustes largos al enseñarlos.
+
+**Corregido**
+- Los ids de variables nuevas tienen 10 caracteres en vez de 6: la prueba de
+  colisión fallaba una vez de cada ~170 ejecuciones.
+
+### El motor rápido calcula en varios hilos (2026-09-24)
+
+**Añadido**
+- **Web Workers en el panel.** El motor rápido reparte los bloques entre
+  hasta ocho hilos (los núcleos menos uno, que queda para Excel). El panel ya
+  no se congela: el progreso avanza y cancelar responde mientras simula.
+- **El modelo viaja una vez por hilo**; cada trabajo es solo un rango de
+  iteraciones, y las muestras vuelven transferidas, sin copiarse
+  (`engine/executor/pool.ts`, sin depender de ninguna API de hilos).
+- **Misma semilla, mismo resultado** con uno o con ocho hilos: el troceo es
+  fijo (al menos 16 bloques, `bloquesMinimos`) y los resultados se colocan por
+  índice. Probado: estadísticas, t-digest y muestra idénticos bit a bit.
+- Si el entorno no deja crear hilos, o uno no arranca, se calcula en el hilo
+  del panel como antes. "Cómo se calculó" dice con cuántos hilos.
+
+**Medido** (Chromium, 4 núcleos, modelo de ejemplo de 7 celdas, 1.000.000 de
+iteraciones): 969 ms en un hilo, 715 ms con 3. En un modelo tan pequeño manda
+el trabajo fijo (ordenar la muestra, la sensibilidad); la ganancia crece con
+el tamaño del libro.
+
+### Histograma, umbrales y botones en la cinta (2026-09-24)
+
+**Añadido**
+- **Probabilidad de superar un umbral**, arriba de cada salida: "probabilidad
+  de quedar por debajo / por encima de X". Se contesta al escribir, se guarda
+  en el modelo del libro (`outputs[].threshold`) y va al informe volcado.
+- **Histograma** de cada salida (barras de Freedman–Diaconis, de 10 a 50). Con
+  umbral, las barras del lado contado van en color: el área es la probabilidad.
+  En el volcado, tabla y gráfico de columnas nativo.
+- Los dos salen de la muestra retenida (exactos hasta 100.000 iteraciones;
+  por encima, margen de ±0,3 puntos, y el panel lo dice).
+- **Tres botones en la cinta**, pestaña Riesgo: Modelo, Resultados y
+  Diagnóstico. Abren el panel en su pestaña; con el panel abierto, cambian de
+  pestaña sin recargar (fragmento de URL + `hashchange`). Sustituyen a "Abrir
+  panel". Versión del manifiesto: 0.2.0.0.
+- La pestaña Resultados ya no está desactivada sin resultados: explica cómo
+  obtenerlos.
+
+**Para verlo en Excel** hay que volver a cargar el manifiesto: `npm run stop`
+y `npm start`.
+
+### Análisis de sensibilidad: el tornado (2026-09-24)
+
+**Añadido**
+- **Qué entrada mueve más cada salida.** Debajo de cada salida, un gráfico de
+  tornado con la correlación de rangos de Spearman de cada entrada, ordenado
+  de mayor a menor efecto: a la derecha las que la suben, a la izquierda las
+  que la bajan. Las diez primeras, con acceso a la lista completa.
+- El **peso** de cada entrada (ρ² normalizado), marcado como aproximado cuando
+  hay entradas correlacionadas entre sí.
+- La tabla de sensibilidad también se escribe en la hoja al volcar resultados.
+- Funciona con los dos motores. Se calcula sobre las primeras 100.000
+  iteraciones (error típico de ρ ≈ 0,003); el motor retiene solo los valores de
+  las salidas y regenera las entradas, que con un generador de contador salen
+  idénticas.
+
+**Confirmado**
+- El modelo sobrevive a guardar, cerrar y reabrir el libro (verificado por el
+  usuario en su Excel).
+
 ### La sexta tanda vuelve de Excel: 69 de 69 a la primera (2026-09-23)
 
 Las once funciones nuevas del Nivel 1 coinciden con Excel en todos los casos,

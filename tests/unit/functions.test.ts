@@ -335,7 +335,7 @@ describe('registro de funciones', () => {
     expect(funcionSoportada('ISBLANK')).toBe(true);
     expect(funcionSoportada('OFFSET')).toBe(false); // Nivel 1, todavía pendiente
     expect(funcionSoportada('SUBTOTAL')).toBe(true); // Nivel 2, ya implementada
-    expect(funcionSoportada('FILTER')).toBe(false); // Nivel 2, matricial dinámica
+    expect(funcionSoportada('TEXTSPLIT')).toBe(false); // Nivel 2, sin implementar
   });
 
   it('quita el prefijo _xlfn. con el que Excel guarda las funciones posteriores a 2007', () => {

@@ -36,6 +36,8 @@ import {
   NUMBERVALUE, PROPER, REPLACE, REPT, RIGHT, SEARCH, SUBSTITUTE, T, TEXTJOIN, TRIM, TYPE,
   UPPER, VALUE,
 } from './texto.ts';
+import { REGISTRO_MATRICIAL } from './matriciales.ts';
+import { NOMBRE_CUANTIL, RIESGO_CUANTIL } from './riesgo.ts';
 import type { FuncionExcel } from './types.ts';
 
 export const REGISTRO: Record<string, FuncionExcel> = {
@@ -66,6 +68,8 @@ export const REGISTRO: Record<string, FuncionExcel> = {
   TEXT,
   // Nivel 2: agregados que no cuentan dos veces los subtotales intermedios.
   SUBTOTAL, AGGREGATE,
+  // Interna (B7): la escribe la reescritura de las funciones RIESGO, nunca el usuario.
+  [NOMBRE_CUANTIL]: RIESGO_CUANTIL,
 };
 
 /**
@@ -83,8 +87,18 @@ function normalizar(nombre: string): string {
   return nombre.replace(/^_xlfn\./i, '').replace(/^_xlws\./i, '').toUpperCase();
 }
 
+/**
+ * Construcciones que el motor soporta sin ser una función del registro: se
+ * resuelven al parsear y nunca llegan a evaluarse como llamada. `LET` es la
+ * primera (ver `engine/parser/let.ts`), y `LAMBDA` con ella; las matriciales (`FILTRAR`, `ORDENAR`…)
+ * las evalúa el evaluador como matrices, dentro de otra función (ver
+ * `compiler/usoMatricial.ts`). Cuentan como soportadas para el escáner.
+ */
+export const FORMAS_ESPECIALES: ReadonlySet<string> = new Set(['LET', 'LAMBDA', ...Object.keys(REGISTRO_MATRICIAL)]);
+
 export function funcionSoportada(nombre: string): boolean {
-  return Object.prototype.hasOwnProperty.call(REGISTRO, normalizar(nombre));
+  const n = normalizar(nombre);
+  return Object.prototype.hasOwnProperty.call(REGISTRO, n) || FORMAS_ESPECIALES.has(n);
 }
 
 export function obtenerFuncion(nombre: string): FuncionExcel | undefined {

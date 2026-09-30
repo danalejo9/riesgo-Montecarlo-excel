@@ -1,0 +1,63 @@
+/*
+ * El explorador de distribución (U3.1). Hereda el panel (estilos.css): se
+ * parece a Excel. Aquí solo la retícula: gráfico a la izquierda y
+ * estadísticas a la derecha; en una ventana estrecha, una debajo de otra.
+ */
+.explorador {
+  padding: 16px 24px 24px;
+  max-width: 1100px;
+}
+.explorador header h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.explorador header p { margin: 0 0 8px; }
+.explorador-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .explorador-cuerpo { grid-template-columns: minmax(0, 1fr); }
+}
+.selector-vista {
+  display: inline-flex;
+  gap: 0;
+  margin-bottom: 8px;
+}
+.selector-vista button { border-radius: 0; }
+.selector-vista button:first-child { border-radius: 6px 0 0 6px; }
+.selector-vista button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.selector-vista button.activa {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+.explorador-estadisticas h2 { margin: 0 0 8px; font-size: 16px; }
+.explorador-estadisticas h3 { margin: 16px 0 4px; font-size: 13px; color: var(--tenue); font-weight: 600; }
+.tabla-estadisticas {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.tabla-estadisticas th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--tenue);
+  padding: 2px 8px 2px 0;
+}
+.tabla-estadisticas td {
+  text-align: right;
+  padding: 2px 0;
+}
+.explorador footer { margin-top: 16px; }
+.ayuda-pagina { max-width: 720px; }
+.ayuda-pagina h2 { font-size: 16px; margin: 24px 0 8px; }
+.ayuda-pagina h3 { font-size: 14px; margin: 16px 0 4px; }
+.tabla-estadisticas td.texto { text-align: left; padding-bottom: 8px; }
+.tabla-estadisticas th { vertical-align: top; white-space: nowrap; }
+.pestanas-ventana { margin-bottom: 16px; }
+.tabla-lista tbody tr { cursor: pointer; }
+.tabla-lista td { font-variant-numeric: tabular-nums; }

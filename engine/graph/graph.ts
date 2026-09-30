@@ -14,6 +14,9 @@
 import { claveCelda, columnaDeLetras, recorrer, type Nodo, type RefCelda, type RefRango } from '../parser/ast.ts';
 import type { ValorEscalar } from '../values/columna.ts';
 import { parsear } from '../parser/parse.ts';
+import { resolverDesrefConstantes } from '../parser/desref.ts';
+import type { NombresDefinidos } from '../parser/let.ts';
+import { nombresDeHoja, type NombresDelLibro } from '../parser/nombres.ts';
 
 export interface FormulaCelda {
   hoja: string;
@@ -73,6 +76,8 @@ export interface ConstruccionGrafo {
 export function construirGrafo(
   celdas: FormulaCelda[],
   valores: readonly ValorCelda[] = [],
+  /** Los nombres definidos del libro (constantes, referencias y LAMBDA), para resolverlos al parsear. */
+  nombres?: NombresDelLibro,
 ): ConstruccionGrafo {
   const nodos = new Map<string, NodoGrafo>();
   const dependencias = new Map<string, Set<string>>();
@@ -97,12 +102,15 @@ export function construirGrafo(
   };
 
   // Primera pasada: crear todos los nodos con fórmula y parsear.
+  const nombresPorHoja = new Map<string, NombresDefinidos | undefined>();
   for (const c of celdas) {
     const clave = claveCelda(c.hoja, c.col, c.fila);
     const nodo = obtenerNodo(clave, c.hoja, c.col, c.fila);
-    const r = parsear(c.formula);
+    if (nombres && !nombresPorHoja.has(c.hoja)) nombresPorHoja.set(c.hoja, nombresDeHoja(nombres, c.hoja));
+    const r = parsear(c.formula, nombresPorHoja.get(c.hoja));
     if (r.ok) {
-      nodo.ast = r.ast;
+      // F1: DESREF con desplazamientos escritos es una referencia fija.
+      nodo.ast = resolverDesrefConstantes(r.ast);
     } else {
       nodo.errorParseo = r.error;
     }
@@ -124,44 +132,83 @@ export function construirGrafo(
     const clave = claveCelda(c.hoja, c.col, c.fila);
     const nodo = nodos.get(clave) as NodoGrafo;
     if (!nodo.ast) continue;
-
-    recorrer(nodo.ast, (n) => {
-      if (n.tipo === 'celda') {
-        const ref: RefCelda = n.ref;
-        const hoja = ref.hoja ?? c.hoja;
-        const destino = claveCelda(hoja, ref.col, ref.fila);
-        obtenerNodo(destino, hoja, ref.col, ref.fila);
-        agregarArista(clave, destino);
-      } else if (n.tipo === 'rango') {
-        const ref: RefRango = n.ref;
-        const hoja = ref.hoja ?? c.hoja;
-
-        // Rango abierto (columna o fila entera): no se expande, cuenta como
-        // "no expandido" para que quien dimensione el motor lo sepa.
-        if (ref.col1 === null || ref.fila1 === null || ref.col2 === null || ref.fila2 === null) {
-          rangosNoExpandidos++;
-          return;
-        }
-
-        const ancho = ref.col2 - ref.col1 + 1;
-        const alto = ref.fila2 - ref.fila1 + 1;
-        if (ancho * alto > LIMITE_EXPANSION_RANGO) {
-          rangosNoExpandidos++;
-          return;
-        }
-
-        for (let col = ref.col1; col <= ref.col2; col++) {
-          for (let fila = ref.fila1; fila <= ref.fila2; fila++) {
-            const destino = claveCelda(hoja, col, fila);
-            obtenerNodo(destino, hoja, col, fila);
-            agregarArista(clave, destino);
-          }
-        }
-      }
+    rangosNoExpandidos += referenciasDe(nodo.ast, c.hoja, (destino, hoja, col, fila) => {
+      obtenerNodo(destino, hoja, col, fila);
+      agregarArista(clave, destino);
     });
   }
 
   return { grafo: { nodos, dependencias, dependientes }, rangosNoExpandidos };
+}
+
+/**
+ * Recorre las referencias de un AST y llama a `alEncontrar` con cada celda a
+ * la que apunta (los rangos, expandidos). Devuelve cuántos rangos no se
+ * expandieron por abiertos o demasiado anchos.
+ */
+export function referenciasDe(
+  ast: Nodo,
+  hojaActual: string,
+  alEncontrar: (clave: string, hoja: string, col: number, fila: number) => void,
+): number {
+  let noExpandidos = 0;
+  recorrer(ast, (n) => {
+    if (n.tipo === 'celda') {
+      const ref: RefCelda = n.ref;
+      const hoja = ref.hoja ?? hojaActual;
+      alEncontrar(claveCelda(hoja, ref.col, ref.fila), hoja, ref.col, ref.fila);
+    } else if (n.tipo === 'rango') {
+      const ref: RefRango = n.ref;
+      const hoja = ref.hoja ?? hojaActual;
+      // Rango abierto (columna o fila entera): no se expande, cuenta como
+      // "no expandido" para que quien dimensione el motor lo sepa.
+      if (ref.col1 === null || ref.fila1 === null || ref.col2 === null || ref.fila2 === null) {
+        noExpandidos++;
+        return;
+      }
+      const ancho = ref.col2 - ref.col1 + 1;
+      const alto = ref.fila2 - ref.fila1 + 1;
+      if (ancho * alto > LIMITE_EXPANSION_RANGO) {
+        noExpandidos++;
+        return;
+      }
+      for (let col = ref.col1; col <= ref.col2; col++) {
+        for (let fila = ref.fila1; fila <= ref.fila2; fila++) {
+          alEncontrar(claveCelda(hoja, col, fila), hoja, col, fila);
+        }
+      }
+    }
+  });
+  return noExpandidos;
+}
+
+/**
+ * Cambia la fórmula (ya parseada) de una celda del grafo y rehace sus aristas.
+ * Lo usan las funciones RIESGO (B6, B7): una llamada se sustituye por una
+ * constante o por una celda virtual antes de simular. Las celdas a las que
+ * apunte la fórmula nueva y no existan se crean vacías, como al construir.
+ */
+export function reemplazarAst(grafo: Grafo, clave: string, ast: Nodo | undefined): void {
+  const nodo = grafo.nodos.get(clave);
+  if (!nodo) throw new Error(`reemplazarAst: ${clave} no está en el grafo`);
+  for (const d of grafo.dependencias.get(clave) ?? []) grafo.dependientes.get(d)?.delete(clave);
+  grafo.dependencias.set(clave, new Set());
+  delete nodo.errorParseo;
+  if (ast === undefined) {
+    delete nodo.ast;
+    return;
+  }
+  nodo.ast = ast;
+  referenciasDe(ast, nodo.hoja, (destino, hoja, col, fila) => {
+    if (destino === clave) return;
+    if (!grafo.nodos.has(destino)) {
+      grafo.nodos.set(destino, { clave: destino, hoja, col, fila });
+      grafo.dependencias.set(destino, new Set());
+      grafo.dependientes.set(destino, new Set());
+    }
+    (grafo.dependencias.get(clave) as Set<string>).add(destino);
+    (grafo.dependientes.get(destino) as Set<string>).add(clave);
+  });
 }
 
 /** Construye la clave de celda a partir de letras de columna, para conveniencia de tests. */

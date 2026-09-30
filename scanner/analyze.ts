@@ -94,6 +94,11 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
   libro.formulas.forEach((f, i) => indicePorCelda.set(`${f.hoja}!${f.ref}`, i));
   const dependencias: number[][] = libro.formulas.map(() => []);
 
+  // F1: `PR_P(…)` con `PR_P` un nombre del libro es una LAMBDA con nombre, y
+  // `_xlpm.f(…)` una LAMBDA guardada en un LET: las resuelve el parser.
+  const definidos = new Set(libro.nombresDefinidos.map((n) => n.toUpperCase()));
+  const esLambdaConNombre = (bruto: string) => /^_xlpm\./i.test(bruto) || definidos.has(bruto.toUpperCase());
+
   libro.formulas.forEach((celda, i) => {
     const lectura = leerFormula(celda.formula);
     const origen = `${celda.hoja}!${celda.ref}`;
@@ -103,6 +108,7 @@ export function analizar(archivo: string, libro: LibroLeido): Informe {
     let volatil = false;
 
     for (const bruto of lectura.funciones) {
+      if (esLambdaConNombre(bruto)) continue;
       const nombre = normalizar(bruto);
       const propia = esFuncionPropia(nombre);
       const nivel = propia ? 'n0' : clasificar(nombre);

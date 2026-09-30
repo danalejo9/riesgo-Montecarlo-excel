@@ -8,6 +8,8 @@
  * cero que no es cierto.
  */
 
+import { leerFecha, textoFecha } from '../engine/modelo/fechas.ts';
+
 /**
  * Un número para leer, no para copiar.
  *
@@ -65,4 +67,69 @@ export function duracion(ms: number): string {
 export function porcentaje(hechas: number, totales: number): number {
   if (!(totales > 0)) return 0;
   return Math.min(100, Math.max(0, (hechas / totales) * 100));
+}
+
+/**
+ * Lee un número escrito por el usuario: "0", "-1.500.000", "2,5", "71.153".
+ *
+ * Con coma decimal (español, lo predeterminado), un punto que agrupa de tres
+ * en tres es de miles —"71.153" es setenta y un mil, como lo escribe el panel—
+ * y solo un punto que no agrupa bien ("2.5") se toma por decimal. Con punto
+ * decimal, las comas son de miles. `null` si no es un número.
+ */
+export function leerNumero(texto: string, decimal: string = ','): number | null {
+  let t = texto.trim().replace(/\s/g, '').replace('\u2212', '-');
+  if (t === '' || t === '-') return null;
+  if (decimal === ',') {
+    const partes = t.split(',');
+    if (partes.length > 2) return null;
+    const [entera = '', fraccion] = partes;
+    // "0.054" nunca es de miles: nadie agrupa un cero a la izquierda.
+    const miles = /^-?\d{1,3}(\.\d{3})+$/.test(entera) && !/^-?0\./.test(entera);
+    if (fraccion !== undefined || miles) t = `${entera.replace(/\./g, '')}${fraccion !== undefined ? `.${fraccion}` : ''}`;
+  } else {
+    t = t.replace(/,/g, '');
+  }
+  if (!/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(t)) return null;
+  const v = Number(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Un número para editarlo en un campo de texto: coma decimal y sin separador
+ * de miles, para que `leerNumero` lo lea de vuelta igual ("0,054", "23000").
+ */
+export function numeroEditable(v: number | undefined): string {
+  return v === undefined ? '' : String(v).replace('.', ',');
+}
+
+/**
+ * Cómo se enseñan los valores de una salida o entrada (T7): como números o,
+ * si su celda tiene formato de fecha, como fechas; la dispersión (desviación,
+ * semidesviación) de una fecha va en días. `leer` entiende lo que escribe el
+ * usuario en ese mismo formato.
+ */
+export interface FormatoValor {
+  fecha: boolean;
+  valor(n: number): string;
+  dispersion(n: number): string;
+  leer(texto: string, decimal?: string): number | null;
+}
+
+const NUMERICO: FormatoValor = {
+  fecha: false,
+  valor: (n) => numero(n),
+  dispersion: (n) => numero(n),
+  leer: (t, d) => leerNumero(t, d),
+};
+
+const DE_FECHA: FormatoValor = {
+  fecha: true,
+  valor: (n) => textoFecha(n),
+  dispersion: (n) => `${numero(n, 3)} días`,
+  leer: (t, d) => leerFecha(t) ?? leerNumero(t, d),
+};
+
+export function formatoDe(fecha?: boolean): FormatoValor {
+  return fecha ? DE_FECHA : NUMERICO;
 }

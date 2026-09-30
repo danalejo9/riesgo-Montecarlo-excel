@@ -9,6 +9,7 @@
  */
 
 import type { FormulaCelda } from '../engine/graph/index.ts';
+import type { DefinicionNombre } from '../engine/parser/index.ts';
 
 /** Qué se ha encontrado en una celda que no es una fórmula. */
 export interface ValorEstatico {
@@ -26,6 +27,8 @@ export interface LibroLeido {
   formulas: FormulaCelda[];
   /** Las celdas con valor pero sin fórmula: las constantes del modelo. */
   valores: ValorEstatico[];
+  /** Los nombres definidos (Administrador de nombres): constantes, referencias y LAMBDA (F1). */
+  nombres?: DefinicionNombre[];
   estadisticas: EstadisticasLectura;
 }
 

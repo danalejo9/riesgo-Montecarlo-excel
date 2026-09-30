@@ -17,43 +17,33 @@
 
 import { useCallback, useState } from 'react';
 
+import { leerNombresSugeridos } from '../excel/etiquetasEnExcel.ts';
+import { nombreUnico } from '../excel/nombreSugerido.ts';
 import { aplicarResaltado, quitarResaltado } from '../excel/resaltado.ts';
-import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
 import {
-  describirDistribucion,
-  generarId,
+  agruparCorrelaciones,
   resumirDistribucion,
+  resumirDistribucionFecha,
   type DistributionSpec,
   type EntradaRiskModel,
   type ModeloRiesgo,
-  type SalidaRiskModel,
 } from '../engine/modelo/index.ts';
+import { leerSeleccion } from '../excel/seleccion.ts';
 import { medirRitmoEnExcel } from '../excel/simulacionCompatible.ts';
 import { guardarRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import { convieneAvisar, tiempoEstimado } from '../engine/compatible/index.ts';
-import { EditorCorrelaciones } from './EditorCorrelaciones.tsx';
+import { AjusteDatos } from './AjusteDatos.tsx';
+import { Compartir, useFormulasCompartidas } from './Compartir.tsx';
+import { EditorCorrelaciones, MatrizCorrelaciones } from './EditorCorrelaciones.tsx';
+import { Plegable } from './Plegable.tsx';
+import { PLANTILLAS, type Plantilla } from '../excel/plantillas.ts';
+import { escribirPlantilla } from '../excel/escribirPlantilla.ts';
+import { Ayuda } from './ayuda.tsx';
 import { EditorDistribucion } from './EditorDistribucion.tsx';
 import { miles } from './formato.ts';
+import { celdaSeleccionada, marcarSeleccion } from './marcar.ts';
+import { claveComparable } from '../excel/direcciones.ts';
 
-const DISTRIBUCION_GENERICA: DistributionSpec = describirDistribucion('triangular')?.porDefecto ?? {
-  type: 'triangular',
-  min: 0,
-  mode: 1,
-  max: 2,
-};
-
-/**
- * La distribución que se propone al marcar una celda: una triangular de ±10 %
- * **alrededor del valor que ya tiene**.
- *
- * No es una estimación de nada —el usuario tiene que ajustarla— pero es un
- * punto de partida con el orden de magnitud correcto. Proponer (0; 1; 2) sobre
- * una celda que vale 1.200 obliga a borrar tres campos antes de poder pensar,
- * y con diez entradas eso es treinta campos.
- *
- * Con un cero o con una celda que no sea un número no hay magnitud de la que
- * partir, así que se deja la genérica en vez de inventar una.
- */
 /**
  * Lo que tarda el modo compatible, **antes** de pulsar Simular.
  *
@@ -150,22 +140,6 @@ function AvisoCompatible({
   );
 }
 
-function distribucionInicial(valor: number | undefined): DistributionSpec {
-  if (valor === undefined || !Number.isFinite(valor) || valor === 0) return DISTRIBUCION_GENERICA;
-  const margen = Math.abs(valor) * 0.1;
-  return { type: 'triangular', min: limpiar(valor - margen), mode: valor, max: limpiar(valor + margen) };
-}
-
-/**
- * Quita la basura binaria de una multiplicación: `0,1 × 1,1` da
- * `0,11000000000000001` en coma flotante, y ese número aparecería tal cual en
- * el campo y en el resumen de la entrada. No cambia nada del cálculo; cambia
- * que el panel no parezca roto nada más marcar una celda.
- */
-function limpiar(v: number): number {
-  return Number(v.toPrecision(12));
-}
-
 export function Modelo({
   modelo,
   alCambiar,
@@ -173,6 +147,11 @@ export function Modelo({
   ocupado,
   ritmo,
   alMedirRitmo,
+  alAbrirConfiguracion,
+  alDeshacer,
+  entradasDelLibro,
+  idsFecha,
+  pedidoAjuste = 0,
 }: {
   modelo: ModeloRiesgo;
   alCambiar: (m: ModeloRiesgo) => void;
@@ -181,51 +160,84 @@ export function Modelo({
   /** El último ritmo medido del modo compatible en este libro, si lo hay. */
   ritmo: RitmoGuardado | null;
   alMedirRitmo: (r: RitmoGuardado) => void;
+  alAbrirConfiguracion?: () => void;
+  /** Deshacer el último cambio del modelo (E3); sin él, no hay nada que deshacer. */
+  alDeshacer?: () => void;
+  /** Las entradas que declaran funciones RIESGO del libro, de la última simulación (E1). */
+  entradasDelLibro?: readonly { ref: string; distribucion: string; nombre?: string }[];
+  /** Entradas cuya celda tiene formato de fecha, según la última simulación (T7). */
+  idsFecha?: ReadonlySet<string>;
+  /** U3.2: «Ajustar a datos» desde la cinta; cada pulsación lo suma. */
+  pedidoAjuste?: number;
 }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<string | null>(null);
+  const [compartidas, setCompartidas] = useFormulasCompartidas();
+  const preparadoParaCompartir = compartidas !== null && compartidas > 0;
+  const compartir = (
+    <Compartir modelo={modelo} alCambiar={alCambiar} guardadas={compartidas} setGuardadas={setCompartidas} />
+  );
 
-  /** La celda seleccionada, o un aviso de por qué no vale. */
-  const celdaSeleccionada = useCallback(async (): Promise<SeleccionLeida | null> => {
+  /** Para los modelos marcados antes del 27/09: nombrar desde la hoja lo que aún se llama como su celda. */
+  const sinNombre = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name === x.ref);
+  const nombrarDesdeLaHoja = useCallback(async () => {
+    try {
+      const refs = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name === x.ref).map((x) => x.ref);
+      const sugeridos = await leerNombresSugeridos(refs);
+      const usados = [...modelo.inputs, ...modelo.outputs].filter((x) => x.name !== x.ref).map((x) => x.name);
+      const nombrar = <T extends { name: string; ref: string }>(x: T): T => {
+        if (x.name !== x.ref) return x;
+        const nombre = nombreUnico(sugeridos.get(x.ref) ?? x.ref, x.ref, usados);
+        usados.push(nombre);
+        return { ...x, name: nombre };
+      };
+      alCambiar({ ...modelo, inputs: modelo.inputs.map(nombrar), outputs: modelo.outputs.map(nombrar) });
+    } catch (e) {
+      setAviso(`No se pudieron leer las etiquetas de la hoja: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [modelo, alCambiar]);
+
+  const anadir = useCallback(async (como: 'entrada' | 'salida') => {
     setAviso(null);
-    const sel = await leerSeleccion();
-    if (sel.filas * sel.columnas !== 1) {
-      setAviso(`Has seleccionado ${sel.filas} × ${sel.columnas} celdas. Selecciona una sola.`);
-      return null;
-    }
-    return sel;
-  }, []);
-
-  const anadirEntrada = useCallback(async () => {
-    const sel = await celdaSeleccionada();
-    if (!sel) return;
-    const ref = sel.direccion;
-    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
-      setAviso(`${ref} ya está en el modelo.`);
+    const r = await marcarSeleccion(modelo, como);
+    if (!r.ok) {
+      setAviso(r.aviso);
       return;
     }
-    const entrada: EntradaRiskModel = {
-      id: generarId('in'),
-      name: ref,
-      ref,
-      dist: distribucionInicial(sel.valor),
-      correlations: [],
-    };
-    alCambiar({ ...modelo, inputs: [...modelo.inputs, entrada] });
-    setAbierta(entrada.id);
-  }, [modelo, alCambiar, celdaSeleccionada]);
+    alCambiar(r.modelo);
+    if (como === 'entrada') setAbierta(r.id);
+  }, [modelo, alCambiar]);
+  const anadirEntrada = useCallback(() => anadir('entrada'), [anadir]);
 
-  const anadirSalida = useCallback(async () => {
+  // U3.2: el ajuste suelto de la cinta. «Usar» aplica la distribución a la
+  // celda que esté seleccionada entonces: si ya es una entrada, la cambia; si
+  // no, la marca como entrada nueva con esa distribución.
+  const [ajusteCerrado, setAjusteCerrado] = useState(0);
+  const ajusteSuelto = pedidoAjuste > ajusteCerrado;
+  const aplicarAjuste = useCallback(async (dist: DistributionSpec) => {
+    setAviso(null);
     const sel = await celdaSeleccionada();
-    if (!sel) return;
-    const ref = sel.direccion;
-    if (modelo.inputs.some((e) => e.ref === ref) || modelo.outputs.some((s) => s.ref === ref)) {
-      setAviso(`${ref} ya está en el modelo.`);
+    if (typeof sel === 'string') {
+      setAviso(`${sel} Selecciona la celda de la entrada y pulsa «Usar» otra vez.`);
       return;
     }
-    const salida: SalidaRiskModel = { id: generarId('out'), name: ref, ref };
-    alCambiar({ ...modelo, outputs: [...modelo.outputs, salida] });
-  }, [modelo, alCambiar, celdaSeleccionada]);
+    const clave = claveComparable(sel.direccion);
+    const existente = modelo.inputs.find((e) => clave !== undefined && claveComparable(e.ref) === clave);
+    if (existente) {
+      alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === existente.id ? { ...e, dist } : e)) });
+      setAbierta(existente.id);
+    } else {
+      const r = await marcarSeleccion(modelo, 'entrada');
+      if (!r.ok) {
+        setAviso(r.aviso);
+        return;
+      }
+      alCambiar({ ...r.modelo, inputs: r.modelo.inputs.map((e) => (e.id === r.id ? { ...e, dist } : e)) });
+      setAbierta(r.id);
+    }
+    setAjusteCerrado(pedidoAjuste);
+  }, [modelo, alCambiar, pedidoAjuste]);
+  const anadirSalida = useCallback(() => anadir('salida'), [anadir]);
 
   const cambiarEntrada = (id: string, cambio: Partial<EntradaRiskModel>) =>
     alCambiar({ ...modelo, inputs: modelo.inputs.map((e) => (e.id === id ? { ...e, ...cambio } : e)) });
@@ -244,11 +256,48 @@ export function Modelo({
         .map((e) => ({ ...e, correlations: e.correlations.filter((c) => c.with !== id) })),
     });
 
-  const listo = modelo.inputs.length > 0 && modelo.outputs.length > 0;
+  // Las entradas pueden venir también de funciones RIESGO.* escritas en el
+  // libro, que solo se descubren al simular: basta con tener una salida.
+  const listo = modelo.outputs.length > 0;
 
   return (
     <>
       {aviso && <p className="aviso-linea">{aviso}</p>}
+
+      {alDeshacer && (
+        <p className="barra-deshacer">
+          <button type="button" className="secundario" onClick={alDeshacer} title="Deshace el último cambio del modelo (también Ctrl+Z fuera de un campo)">
+            ↶ Deshacer
+          </button>
+        </p>
+      )}
+
+      {ajusteSuelto && (
+        <section className="ajuste-suelto">
+          <AjusteDatos
+            key={pedidoAjuste}
+            pedido={pedidoAjuste}
+            decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+            alUsar={(dist) => void aplicarAjuste(dist)}
+            alCerrar={() => setAjusteCerrado(pedidoAjuste)}
+            explicacion="Para usar una distribución: selecciona en la hoja la celda de la entrada (si no lo es, se marca como entrada) y pulsa «Usar»."
+          />
+        </section>
+      )}
+
+      {modelo.inputs.length === 0 && modelo.outputs.length === 0 && !ajusteSuelto && <PrimerModelo />}
+
+      {preparadoParaCompartir && compartir}
+
+      {sinNombre.length > 0 && (
+        <p className="aviso-linea">
+          {sinNombre.length === 1 ? 'Una celda se llama' : `${miles(sinNombre.length)} celdas se llaman`} como su
+          referencia ({sinNombre.slice(0, 3).map((x) => x.ref).join(', ')}{sinNombre.length > 3 ? '…' : ''}).{' '}
+          <button type="button" className="secundario" onClick={() => void nombrarDesdeLaHoja()}>
+            Poner nombres desde la hoja
+          </button>
+        </p>
+      )}
 
       <section>
         <h2>Entradas inciertas</h2>
@@ -300,6 +349,11 @@ export function Modelo({
                   <EditorDistribucion
                     spec={entrada.dist}
                     alCambiar={(dist) => cambiarEntrada(entrada.id, { dist })}
+                    leerSeleccion={async () => (await leerSeleccion()).valores}
+                  />
+                  <AjusteDatos
+                    decimal={modelo.settings.locale?.decimalSeparator ?? ','}
+                    alUsar={(dist) => cambiarEntrada(entrada.id, { dist })}
                   />
                   <EditorCorrelaciones modelo={modelo} entrada={entrada} alCambiar={alCambiar} />
                 </div>
@@ -311,6 +365,54 @@ export function Modelo({
         <button type="button" onClick={() => void anadirEntrada()} disabled={ocupado}>
           Añadir la selección como entrada
         </button>
+
+        {modelo.inputs.length + (entradasDelLibro?.length ?? 0) >= 2 && (
+          <Plegable id="todas-entradas" titulo="Todas las entradas"
+            resumen={`${modelo.inputs.length} del panel${entradasDelLibro?.length ? ` · ${entradasDelLibro.length} del libro` : ''}`}>
+            <div className="tabla-desplazable">
+              <table className="tabla-resumen todas-entradas">
+                <thead><tr><th>Entrada</th><th>Celda</th><th>Distribución</th><th title="Correlaciones">ρ</th></tr></thead>
+                <tbody>
+                  {modelo.inputs.map((e) => (
+                    <tr key={e.id} onClick={() => setAbierta(e.id)} title="Abrir para editarla">
+                      <td>{e.name}</td>
+                      <td className="tenue">{e.ref}</td>
+                      <td>{idsFecha?.has(e.id) ? resumirDistribucionFecha(e.dist) : resumirDistribucion(e.dist)}</td>
+                      <td>{e.correlations.length || ''}</td>
+                    </tr>
+                  ))}
+                  {(entradasDelLibro ?? []).map((e, i) => (
+                    <tr key={`${e.ref}-${i}`} className="del-libro" title="Una función RIESGO escrita en la celda: se cambia en la hoja">
+                      <td>{e.nombre ?? e.ref}</td>
+                      <td className="tenue">{e.ref}</td>
+                      <td>{e.distribucion}</td>
+                      <td className="tenue">libro</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="tenue">
+              Pulsa una del panel para abrirla y editarla. Las del libro son funciones RIESGO escritas en las celdas (las de
+              la última simulación): se cambian en la hoja.
+            </p>
+          </Plegable>
+        )}
+
+        {modelo.inputs.filter((e) => e.dist.type !== 'categorical').length >= 2 && (
+          <Plegable id="matriz-correlaciones" titulo="Matriz de correlaciones"
+            resumen={(() => {
+              const n = modelo.inputs.reduce((s, e) => s + e.correlations.length, 0) / 2;
+              return n === 0 ? 'todas independientes' : `${Math.round(n)} pareja${Math.round(n) === 1 ? '' : 's'}`;
+            })()}>
+            <Ayuda tema="correlaciones" />
+            <MatrizCorrelaciones modelo={modelo} alCambiar={alCambiar} problemas={(() => {
+              const r = agruparCorrelaciones(modelo.inputs);
+              // Los mensajes nombran los identificadores internos: se cambian por los nombres.
+              return r.ok ? [] : r.errores.map((t) => modelo.inputs.reduce((x, e) => x.split(`"${e.id}"`).join(`«${e.name}»`), t));
+            })()} />
+          </Plegable>
+        )}
       </section>
 
       <section>
@@ -359,8 +461,9 @@ export function Modelo({
         <h2>Resaltado en la hoja</h2>
         <p className="tenue">
           Las entradas se pintan de amarillo y las salidas de verde, el convenio
-          de toda la vida en modelización financiera. Al quitarlo, cada celda
-          vuelve al relleno que tenía.
+          de toda la vida en modelización financiera; las celdas con funciones
+          RIESGO, de melocotón (se descubren al simular). Al quitarlo, cada
+          celda vuelve al relleno que tenía.
         </p>
         <div className="botonera">
           <button type="button" onClick={() => void aplicarResaltado(modelo)} disabled={ocupado}>
@@ -374,73 +477,22 @@ export function Modelo({
 
       <section>
         <h2>Ajustes</h2>
-        <div className="parametros">
-          <label className="campo">
-            <span className="tenue">Iteraciones</span>
-            <select
-              value={modelo.settings.iterations}
-              onChange={(e) =>
-                alCambiar({ ...modelo, settings: { ...modelo.settings, iterations: Number(e.target.value) } })
-              }
-            >
-              {[1_000, 10_000, 100_000, 1_000_000].map((n) => (
-                <option key={n} value={n}>
-                  {miles(n)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Semilla</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              defaultValue={String(modelo.settings.seed)}
-              onBlur={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n)) {
-                  alCambiar({ ...modelo, settings: { ...modelo.settings, seed: Math.trunc(n) } });
-                }
-              }}
-            />
-            <span className="tenue ayuda">La misma semilla da el mismo resultado.</span>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Muestreo</span>
-            <select
-              value={modelo.settings.sampling}
-              onChange={(e) =>
-                alCambiar({
-                  ...modelo,
-                  settings: { ...modelo.settings, sampling: e.target.value as ModeloRiesgo['settings']['sampling'] },
-                })
-              }
-            >
-              <option value="monte-carlo">Monte Carlo</option>
-              <option value="lhs">Hipercubo latino</option>
-            </select>
-          </label>
-
-          <label className="campo">
-            <span className="tenue">Motor</span>
-            <select
-              value={modelo.settings.engine}
-              onChange={(e) =>
-                alCambiar({
-                  ...modelo,
-                  settings: { ...modelo.settings, engine: e.target.value as ModeloRiesgo['settings']['engine'] },
-                })
-              }
-            >
-              <option value="auto">Automático</option>
-              <option value="fast">Rápido</option>
-              <option value="compatible">Compatible (Excel en el bucle)</option>
-            </select>
-          </label>
-        </div>
+        <p className="tenue">
+          {modelo.settings.convergence?.untilConverged
+            ? `Hasta ±${(modelo.settings.convergence.target * 100).toLocaleString('es-ES')} % de precisión (tope ${miles(modelo.settings.convergence.maxIterations)})`
+            : `${miles(modelo.settings.iterations)} iteraciones`}
+          {' · '}semilla {modelo.settings.seed}
+          {' · '}{modelo.settings.sampling === 'lhs' ? 'hipercubo latino' : 'Monte Carlo'}
+          {' · '}motor {modelo.settings.engine === 'auto' ? 'automático' : modelo.settings.engine === 'fast' ? 'rápido' : 'compatible'}
+        </p>
+        {alAbrirConfiguracion && (
+          <button type="button" className="secundario" onClick={alAbrirConfiguracion}>
+            ⚙ Cambiar en Configuración
+          </button>
+        )}
       </section>
+
+      {!preparadoParaCompartir && compartir}
 
       {modelo.settings.engine === 'compatible' && (
         <AvisoCompatible
@@ -453,13 +505,68 @@ export function Modelo({
       )}
 
       <section>
-        <button type="button" className="principal" onClick={alSimular} disabled={ocupado || !listo}>
+        {/* Sin salidas en el panel también: el libro puede declararlas con RIESGO.SALIDA. */}
+        <button type="button" className="principal" onClick={alSimular} disabled={ocupado}>
           {ocupado ? 'Simulando…' : 'Simular'}
         </button>
         {!listo && (
-          <p className="tenue">Hace falta al menos una entrada y una salida.</p>
+          <p className="tenue">
+            Hace falta al menos una salida: márcala aquí o súmale a su fórmula
+            =RIESGO.SALIDA("nombre"). Las entradas pueden ser celdas marcadas aquí o celdas
+            con una función como =RIESGO.NORMAL(100; 15).
+          </p>
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * El asistente del primer modelo (U1): los cuatro pasos, en corto, y tres
+ * plantillas que se escriben en una hoja nueva listas para simular.
+ */
+function PrimerModelo() {
+  const [hecho, setHecho] = useState<string | null>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
+  const [escribiendo, setEscribiendo] = useState(false);
+  const crear = async (p: Plantilla) => {
+    setEscribiendo(true);
+    setFallo(null);
+    try {
+      const hoja = await escribirPlantilla(p);
+      setHecho(`«${p.nombre}» está en la hoja «${hoja}». Pulsa Simular (abajo): sus entradas y salidas ya están en las fórmulas.`);
+    } catch (e) {
+      setFallo(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEscribiendo(false);
+    }
+  };
+  // Plegado y recordado: quien ya sabe empezar lo cierra una vez y no lo vuelve
+  // a ver; los ejemplos, cerrados de salida (no son lo primero que importa).
+  return (
+    <section className="primer-modelo">
+      <Plegable id="primer-modelo" titulo={<h2>Cómo empezar</h2>} abierta resumen="cuatro pasos y ejemplos">
+        <ol className="pasos">
+          <li><strong>Las entradas inciertas.</strong> Selecciona en la hoja una celda cuyo valor no conoces (un precio, unas unidades, un plazo) y pulsa «Añadir la selección como entrada».</li>
+          <li><strong>Su distribución.</strong> Despliégala (▸) y elige cómo puede variar: si sabes el mínimo, el más probable y el máximo, una triangular.</li>
+          <li><strong>La salida.</strong> Selecciona el resultado que te importa (el beneficio, el coste total) y pulsa «Añadir la selección como salida».</li>
+          <li><strong>Simula.</strong> En Resultados verás la media, el rango probable y qué entrada pesa más.</li>
+        </ol>
+        <p className="tenue">¿Ya usas funciones RIESGO en las fórmulas? Te basta el paso 3: marca la salida y simula.</p>
+        <Plegable id="plantillas" titulo={<h3>Ejemplos listos para simular</h3>} resumen={`${PLANTILLAS.length} ejemplos`}>
+          <p className="tenue">Cada uno se escribe en una hoja nueva de este libro, con sus entradas y salidas ya puestas.</p>
+          <div className="plantillas">
+            {PLANTILLAS.map((p) => (
+              <button key={p.id} type="button" className="secundario plantilla" disabled={escribiendo} onClick={() => void crear(p)} title={p.descripcion}>
+                <strong>{p.nombre}</strong>
+                <span className="tenue">{p.descripcion}</span>
+              </button>
+            ))}
+          </div>
+        </Plegable>
+        {hecho && <p className="aviso-ok">{hecho}</p>}
+        {fallo && <p className="aviso-linea">{fallo}</p>}
+      </Plegable>
+    </section>
   );
 }

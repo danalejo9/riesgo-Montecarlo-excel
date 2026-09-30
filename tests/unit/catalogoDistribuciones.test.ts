@@ -22,6 +22,8 @@ import { toDescriptor, type DistributionSpec } from '../../engine/modelo/distrib
  * catálogo **y** TypeScript la compara con el tipo: si falta una, no compila.
  */
 const TIPOS: Array<DistributionSpec['type']> = [
+  // B5
+  'student', 'logistic', 'loglogistic', 'pareto', 'geometric', 'negbin', 'hypergeometric', 'intuniform', 'trigen', 'histogram',
   'normal',
   'lognormal',
   'uniform',
@@ -35,6 +37,7 @@ const TIPOS: Array<DistributionSpec['type']> = [
   'binomial',
   'poisson',
   'discrete',
+  'categorical',
 ];
 
 describe('catálogo de distribuciones', () => {

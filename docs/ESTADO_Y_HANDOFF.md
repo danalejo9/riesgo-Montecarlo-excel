@@ -1,6 +1,6 @@
 # Estado del proyecto y traspaso de contexto
 
-**Última actualización:** 2026-09-21
+**Última actualización:** 2026-09-26 (roadmap reordenado con el estudio de mercado, ver §9 «Siguiente acción» y `FASE3_ROADMAP.md` §1.2)
 **Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada**. El motor tiene ya el **canal de valores completo** (los cinco tipos de celda de Excel) y el **Nivel 1 de funciones de criterio**; el libro de fidelidad pasa **31/31 sin excepciones**. Lo que queda de E3 necesita Excel de verdad (ver §9.12).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
@@ -73,6 +73,7 @@ Los cinco hechos que hay que tener presentes:
 | 15 | Modo compatible (Excel en el bucle) | **Entra en el MVP**, invirtiendo la decisión 2.2 | Con usuarios desconocidos, "no puedo simular tu modelo" es motivo de desinstalar |
 | 16 | Alcance del catálogo de funciones | **Amplio por diseño**, no limitado a los libros del usuario | Los libros propios sirven de suelo mínimo, no de techo. Añadir funciones debe ser barato |
 | 17 | **Configuración regional** (separador decimal) | **Se lee de Office al crear el modelo y se guarda en el libro** (`RiskModel v1`) | Ni se pregunta al usuario ni se relee en cada ejecución: el libro queda reproducible entre máquinas con idiomas distintos, que es lo que necesita un producto que van a compartir 100+ personas. Ver §9.14 |
+| 18 | **Prioridades tras el estudio de mercado** (2026-09-26) | La arquitectura se mantiene; se reordena: tornado y ajuste de distribuciones primero, prueba de humo en Excel Web y Mac adelantada, Web Worker en el navegador, y `RISK.*` sin romper los libros compartidos | Ver `FASE3_ROADMAP.md` §1.2. Rechazados expresamente: créditos de cálculo en la nube, explicaciones con IA externa, integración con matrices dinámicas y Python, WASM sin benchmark |
 
 ### Consecuencia arquitectónica principal
 
@@ -828,14 +829,454 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     sondeos de `FECHANUMERO` en español. Confirmó también la regla de las
     letras de `TEXTO` que la quinta tanda dedujo de un solo caso.
 
+25. [x] **Tornado de sensibilidad y persistencia confirmada (2026-09-24)**
+
+    **El modelo sí sobrevive a guardar, cerrar y reabrir**: el usuario lo
+    comprobó en su Excel con el diagnóstico de ajustes guardados. Cerrado.
+
+    **Análisis de sensibilidad** (`engine/stats/sensibilidad.ts`): Spearman por
+    rangos con empates repartidos, y un peso ρ² normalizado que se presenta
+    como aproximado. Los dos motores retienen las primeras
+    `LIMITE_MUESTRA_SENSIBILIDAD` (100.000) iteraciones de cada salida
+    (`retenerMuestra`); las entradas no se guardan, se regeneran con el mismo
+    generador de contador. Se muestra como tornado en HTML debajo de cada
+    salida (`ui/Resultados.tsx`) y se escribe en la hoja al volcar. Colores de
+    polaridad validados para daltonismo en claro y oscuro.
+
+    **Límite conocido**: el peso reparte mal el mérito entre entradas
+    correlacionadas entre sí; ρ sigue siendo correcto. La contribución a la
+    varianza por regresión (la de @RISK) queda para después.
+
+26. [x] **Histograma, umbrales y botones en la cinta (2026-09-24)**
+
+    `engine/stats/muestra.ts`: la muestra retenida se ordena una vez; de ahí
+    salen el histograma (Freedman–Diaconis, 10–50 barras) y
+    `probabilidadUmbral` (estricta en los dos sentidos: un VAN de 0 no es una
+    pérdida). El umbral vive en el modelo (`SalidaRiskModel.threshold`,
+    opcional y validado) y en el informe volcado, con su gráfico de columnas.
+
+    **Cinta**: tres botones `ShowTaskpane` con el mismo `TaskpaneId` y URL con
+    fragmento (`#modelo`, `#resultados`, `#diagnostico`). El panel lee el
+    fragmento al abrir, escucha `hashchange` y reescribe el fragmento con
+    `replaceState` al cambiar de pestaña a mano, para que el siguiente botón
+    siempre cambie la URL. **Sin verificar en Excel real**: si Office no
+    vuelve a navegar un panel ya abierto con el mismo `TaskpaneId`, el botón
+    solo sirve para abrirlo; la alternativa es un runtime compartido
+    (`Office.addin.showAsTaskpane`), más pesado.
+
+27. [x] **Varios hilos y resultados guardados (2026-09-24)**
+
+    **Hilos** (`engine/executor/pool.ts`, `ui/motor/`): protocolo propio del
+    motor —`iniciar` una vez por hilo con el modelo, luego solo rangos—, sin
+    nombrar ninguna API de hilos; el panel lo monta sobre Web Workers (núcleos
+    − 1, máximo 8) y `excel/ejecutarSimulacion.ts` lo recibe inyectado
+    (`crearPool`). Troceo fijo (`bloquesMinimos: 16`) para que el resultado no
+    dependa del número de núcleos; probado bit a bit contra el secuencial. Si
+    no hay hilos o uno no arranca, se repite en el hilo del panel. Medido en
+    Chromium (4 núcleos, modelo de 7 celdas, 1 M iteraciones): 969 → 715 ms.
+
+    **Resultados guardados** (`excel/resultadosGuardados.ts`, puro): todo lo
+    que enseña el panel más 1.001 cuantiles por salida en vez de la muestra;
+    huella FNV-1a del modelo (sin umbrales) para marcar resultados
+    desactualizados. `riesgoMontecarlo.results` en `workbook.settings`.
+
+28. [x] **Panel de Configuración (2026-09-24)**, pedido por el usuario:
+    núcleos por equipo (`ui/motor/preferencias.ts`, `localStorage`),
+    iteraciones libres, y precisión en el modelo (`settings.convergence`:
+    `target`, `untilConverged`, `maxIterations`). "Hasta alcanzar la
+    precisión" repite la simulación completa con más iteraciones
+    (`siguienteTanda`: lo que falta +10 %, mínimo ×1,5, tope, máx. 5 tandas);
+    no se aplica con el motor compatible.
+
+29. [x] **Araña, contribución a la varianza, informe PDF, funciones RIESGO,
+    matrices y guía de pruebas (2026-09-24)**
+
+    - Araña (`aranaDeSensibilidad`) y contribución a la varianza por
+      regresión sobre rangos (Pratt) con R², en `engine/stats/sensibilidad.ts`.
+    - Informe PDF: `ui/informe.html` abierto con `openBrowserWindow`; datos
+      comprimidos en el fragmento (`excel/informeImprimible.ts`).
+    - Funciones `RIESGO.*` (`engine/modelo/funcionesRiesgo.ts`, `ui/funciones.ts`,
+      `vite.funciones.config.ts`, manifiesto 0.4.0.0); al simular se suman a
+      las entradas (`excel/entradasRiesgo.ts`). El motor deja de recorrer el
+      interior de las entradas (`clausuraDependencias(…, detenerEn)`).
+    - **Corregido**: el guardián del modo compatible restauraba solo valores y
+      borraba la fórmula de las entradas; ahora guarda `originalFormulas`.
+    - Matrices dentro de funciones: `engine/functions/matriciales.ts` y la
+      regla común `compiler/usoMatricial.ts`; lo que derrama sigue en el
+      compatible. Nivel 2: 37/41.
+    - Tandas de fidelidad 7 (LET) y 8 (matrices) pendientes de Excel.
+
+30. [x] **Fusión con el roadmap del estudio de mercado (2026-09-26)**. El
+    usuario revisó el roadmap sobre `main` (estado del 23/09); se fusionó
+    conservando sus decisiones (§1.2 del roadmap: E4 redefinida, E9a, E12,
+    precio, rechazos). Antes de las pruebas se hicieron H1 (flujos
+    aleatorios por celda), «Preparar para compartir» (E4) y AIC/BIC en el
+    ajuste; la guía de pruebas se amplió (bloques J, K, W).
+
+31. [x] **Segundo informe de competidores y motor de ajuste (2026-09-27)**.
+    Solo plan, sin código: §1.2.1 del roadmap (confirma multiplataforma,
+    compartir y precio; colaboración = coautoría de Excel, H10)
+    y nuevo bloque **I** en §2.1 (I1 ajuste rápido y explicado, junto a C5
+    tras las pruebas; I2 ajuste orientado al riesgo; I3 avanzado).
+
+32. [x] **Panel en blanco en Excel (2026-09-27)**. Primera prueba real: el
+    panel parpadeaba y quedaba en blanco. Causa: Office.js deja
+    `history.replaceState` en `null` y el panel lo llamaba al montar
+    (navegación por fragmento de la cinta). Arreglo en `ui/fragmento.ts` +
+    copia del original en `taskpane.html`, y `ErrorPanel` para que un fallo
+    futuro se vea en vez de dejarlo en blanco. **Lección**: el banco del
+    navegador no reproduce las modificaciones que Office.js hace a `window`;
+    probar con un `office.js` falso que las imite.
+
+33. [x] **Primera ronda de pruebas del usuario (2026-09-27, A1–E4)**.
+    Pasaron A, B, C y D1. Arreglado: «Referencia sin resolver» con salidas
+    que dependen de `RIESGO.*` fuera del panel (nunca había funcionado en
+    Excel: faltaba una prueba de extremo a extremo con resolvedor estricto)
+    y el tornado en blanco en el PDF. Guía E rehecha. Mejoras del usuario en
+    el roadmap (C7, C8, E5–E8, F4). **Siguiente del usuario**: repetir C2 y
+    E1–E5, seguir desde F.
+    Después: el editor ya no guarda distribuciones inválidas (borrador +
+    aviso), el error se puede cerrar, y los parámetros se leen en español.
+
+34. [x] **Segunda ronda del usuario (2026-09-27, C2–W) y tandas 7 y 8**.
+    Todo pasa salvo W5 (RIESGO en la Web: CORS, arreglado sin confirmar).
+    Tandas 7 y 8 en verde (lector de errores enriquecidos). Caso práctico: sus
+    3 SUMAPRODUCTO van por el rápido. Arreglos menores G3 y J4. Pendiente del
+    usuario: K; repetir W5, J4, G3; decidir E10 (licencia y precio).
+    **Siguiente de desarrollo**: E5 (nombres legibles), E6 (elegir salida),
+    C7 (PDF del proyecto), según el orden de §2.1.
+
+35. [x] **Etapa 1 hecha (2026-09-28)**: E5 nombres legibles, E6 elegir la
+    salida (tabla + selector + salto por selección en la hoja), C7 informe
+    del proyecto (campo `project` del modelo y lectura en palabras con
+    reglas), E7 escenarios (hasta 10, migra la referencia única), E8 color
+    melocotón para `RIESGO.*`, F4 un hilo con poco trabajo. Diseño de los
+    libros tutoriales y del manual en `docs/LIBROS_TUTORIAL.md` (bloque M, al
+    final). Pendiente del usuario: bloque L de la guía. **Siguiente**: etapa
+    2 (B1 runtime compartido, B2 determinístico/probabilístico, B3 cinta).
+
+36. [x] **Etapa 1b y variables de texto (2026-09-28)**. F5 (pantalla
+    congelada en el compatible), C8 (hoja volcada con formatos y bloques), C9
+    (cómo se muestreó cada entrada). Bloque T: distribución `categorical`
+    (índice muestreado → texto en `ejecutarPlan`), recuento de textos y
+    lógicos por bloque (`executor/categorias.ts`), análisis en
+    `excel/analisisTexto.ts`, `valueOfInterest` en las salidas,
+    `RIESGO.CATEGORIA` con rangos leídos del libro (`lectorRangos.ts`), modo
+    compatible con `ValorLeido`. **Siguiente**: reescribir la guía de pruebas
+    desde cero y que el usuario la recorra entera; después, etapa 2.
+
+37. [x] **Antes de la etapa 2 y guía reescrita (2026-09-28)**. Hecho lo que
+    no toca el manifiesto: C5 (vista previa), H2 (VaR, CVaR, forma), C1/C2
+    (resumen de entradas, tornado y araña en la hoja volcada), D1 («Qué tiene
+    que pasar»), B4 (acotar, `RIESGO.TRUNCAR`, `RIESGO.DISCRETA`,
+    `RIESGO.LOGNORMAL2`) e I1 (ajuste explicado, `RIESGO.EMPIRICA`).
+    `docs/GUIA_PRUEBAS_EXCEL.md` reescrita desde cero (bloques 0, A–H, T, J,
+    K, W, I); el libro de demostración tiene la hoja «Zonas» y la sección 6
+    de «Pruebas» para las funciones nuevas. **Siguiente**: el usuario recorre
+    la guía entera; después, etapa 2.
+
+38. [x] **B7 y B6 sin tocar el manifiesto (2026-09-28)**. B7: argumentos que
+    son celdas o cálculos (caso 1, se resuelven una vez con el motor), RIESGO
+    dentro de una operación (caso 2, celda virtual) y parámetros aleatorios
+    (caso 3, uniforme + `_RIESGO.CUANTIL`); casos 2 y 3 solo motor rápido.
+    B6: `RIESGO.MEDIA/DESV/PERCENTIL/PROB/MIN/MAX` leen un almacén en
+    `OfficeRuntime.storage` que publica el panel (`excel/resultadosEnHoja.ts`,
+    `almacenResultadosHoja.ts`); el motor sustituye esas llamadas por el valor
+    anterior (`resultadosEnGrafo.ts`). Compartir fija en su valor lo que no
+    puede ser entrada. Guía: F5 nueva, F12–F19, T8, W7. **Pendiente de B6**:
+    `RIESGO.SALIDA`, `RIESGO.CORRELACION` y, con B1, leer del libro.
+
+39. [x] **Tercera ronda del usuario (2026-09-29), guía completa**. Todo OK
+    salvo: T2 (entradas de texto fuera del tornado: arreglado con la media por
+    categoría en `excel/informe.ts`), J1 (nombres al compartir), botones que
+    parecían texto, cifras de la vista previa. H2 → F5b (compatible por lotes,
+    `calcularLote`). B4 (panel en blanco al cambiar de pestaña) se resuelve
+    con B1. Nuevos en el plan: U2 (legibilidad), C10 (histograma con marcas).
+    Pendientes del usuario: W6, W7 (probables OK), Mac (no tiene). Tandas 7 y
+    8 recalculadas: 47/47. **Siguiente**: etapa 2 (B1).
+
+40. [x] **B1, runtime compartido (2026-09-29)**. Manifiesto 0.5: `<Runtimes>`
+    (`Panel.Url`, long), `SharedRuntime 1.1` exigido, `FunctionFile` y
+    `<Page>` de las funciones = `taskpane.html`, botones `ExecuteFunction`
+    (`ui/acciones.ts`). `taskpane.html` carga `funciones.js` (guardado contra
+    la falta de `CustomFunctions`). B6 en memoria (`almacenEnMemoria`) y
+    celdas pendientes (`requiresAddress`). Validación del manifiesto: el
+    servicio de Microsoft da 403 desde aquí; comprobado contra la
+    documentación oficial (repositorio `OfficeDev/office-js-docs-pr`) y con
+    pruebas de estructura (`runtimeCompartidoB1.test.ts`). **Falta Excel
+    real**: al instalarlo, `npm run stop` + `npm start`; en la Web, quitar y
+    volver a cargar el manifiesto. **Siguiente**: B2, B3, B1b.
+
+41. [x] **B2, modo del libro (2026-09-29)**. `engine/modelo/valorFijo.ts`
+    (moda por familia, valor fijo, aleatorio, lectura del modo),
+    `excel/modoLibroCompartido.ts` (en memoria para las funciones),
+    `excel/modoLibro.ts` (guardar, recalcular, cinta con `requestUpdate`).
+    Grupo «Modo del libro» en el manifiesto (`modoFijo`, `modoAleatorio`).
+    Funciones de distribución volátiles. **Siguiente**: B3, B1b.
+
+42. [x] **B3, cinta que actúa (2026-09-29)**. `ui/marcar.ts` (marcar la
+    selección, compartido con Modelo.tsx), manejadores del panel registrados
+    con `manejarDesdeLaCinta` y llamados por `pedirAlPanel`. Grupo
+    «Acciones» en el manifiesto. En el banco, `window.__cinta(accion)`.
+    **Siguiente**: B1b.
+
+43. [x] **B1b (2026-09-29)**. `noCompatibles` en `riesgoEnGrafo.ts`;
+    `sorteosPorClave` en `ejecutarSimulacion.ts` (las entradas virtuales no
+    se escriben: las sortea la función de su celda); `simularEnExcel` con
+    `sorteos` (lote 1 y `iteracion` en `simulacionEnExcel`); funciones con
+    `requiresAddress`. **Etapa 2 terminada en código** (B1, B2, B3, B1b):
+    falta la ronda del usuario (bloque N de la guía).
+
+44. [x] **C10 (2026-09-29)**. `Histograma` (`ui/Resultados.tsx`) con
+    `marcas` (media, mediana, `fijos`) y `muestraOrdenada` (delimitadores
+    arrastrables con captura del puntero y `CampoLimite`). El informe pasa
+    p5/p95 fijos. Guía N10. **Siguiente**: U2.
+
+45. [x] **U2 (2026-09-29)**. `ui/Plegable.tsx` (`<details>` que recuerda
+    su estado en `localStorage`, con resumen junto al título). Resultados:
+    barra de arriba (resumen del cálculo, avisos, botones), cifras clave,
+    lectura, histograma y umbral a la vista; el resto plegado.
+    `MedidasDeRiesgo` y `QueTieneQuePasar` con `conTitulo`. Guía N11.
+    **Siguiente**: RIESGO.SALIDA y RIESGO.CORRELACION (resto de B6).
+
+46. [x] **B6 completo (2026-09-29)**. `excel/declaracionesEnGrafo.ts`:
+    `leerDeclaraciones` (salidas y correlaciones del grafo, con errores por
+    celda), `sustituirDeclaraciones` (0 / coeficiente), `formulaSinSalida`
+    (compartir), `aplicarCorrelacionesDeFunciones` (por la celda real de cada
+    entrada; manda la fórmula). En `ejecutarSimulacion.ts` las salidas
+    declaradas se añaden con id `rs_` y la comprobación «sin salidas» va
+    después de leer el libro; *Simular* siempre activo. Compartir:
+    `formulaNueva` en `CongelacionCompartir`, salidas y correlaciones al
+    panel. Banco: celdas B24–B27; el rango falso admite `formulas =` y
+    escribir un valor quita la fórmula, como Excel. Límite: el umbral de una
+    salida declarada con la función no se guarda (no está en el panel).
+    **Siguiente**: I2.
+
+47. [x] **I2 (2026-09-29)**. `engine/modelo/ajuste.ts`: `specsDe(x,
+    discretas, solo?)` (las familias, o una sola para reajustar),
+    `errorGeneral/Superior/Inferior` en cada candidata
+    (`PERCENTILES_OBJETIVO`), `tablaPercentiles`, `percentilDatos`
+    (PERCENTIL.INC), Poisson y binomial para conteos (`discreta: true`),
+    `bootstrapAjuste` (mulberry32 con semilla, intervalos del 90 %,
+    `etiqueta` legible). UI en `AjusteDatos.tsx`: «Lo que más importa»,
+    columna Perc., `PercentilesAjuste`, `Fiabilidad` (bajo demanda; 85 ms con
+    60 datos en el banco). **Siguiente**: T7 (fechas).
+
+48. [x] **T7 (2026-09-29)**. `engine/modelo/fechas.ts` (`esFormatoFecha`
+    con el código invariante, serie ↔ fecha con el 29/02/1900 de Excel,
+    `leerFecha`), `excel/formatoCeldas.ts` (lee `numberFormat` de entradas y
+    salidas; si falla, números), `fecha?: true` en `ResultadoSalida` y
+    `EntradaMuestreada` (`conFechas` en `ejecutarSimulacion.ts`),
+    `formatoDe(fecha)` (`valor`, `dispersion`, `leer`) usado por Resultados,
+    Histograma, CurvaAcumulada, MedidasDeRiesgo, PrecisionSalida, Umbral y el
+    informe; `lectura.ts` con `fecha`; volcado con `"días"` en la dispersión.
+    Banco: B29–B30 con formato. **Siguiente**: T8 (registro de riesgos).
+
+49. [x] **T8 (2026-09-29)**. `FUNCION_EVENTO`; `expandirEventos` en
+    `riesgoEnGrafo.ts` (EVENTO → BERNOULLI × impacto, dentro del análisis;
+    nombres «(ocurre)»/«(impacto)»), `eventos` en el resultado;
+    `excel/registroRiesgos.ts` (p, impacto, valor esperado y desviación
+    exactos desde las distribuciones), `registroRiesgos` en la simulación,
+    `RegistroRiesgos` en Resultados. En Excel, `EVENTO` = modo(Bernoulli) ×
+    impacto (con B1b si es la única función de la celda). Banco: B32–B34.
+    **Siguiente**: T9 (opciones de decisión).
+
+50. [x] **T9 (2026-09-29)**. `FUNCION_DECISION` (declaración: no es
+    distribución); `excel/decisiones.ts` (`leerDecisiones` con literales,
+    `{…}` y rangos de valores escritos; `combinaciones`, `fijarCombinacion`,
+    `etiquetaCombinacion`); en `ejecutarSimulacion.ts`, la opción 0 se fija
+    antes del análisis, las demás se simulan con `porElRapido` y la misma
+    semilla, y `decisiones` va en el resultado (`resumenParaDecision`).
+    `TablaDecisiones` en Resultados (numéricas y de texto). En Excel, la
+    primera opción (parámetro `repeating`). Banco: B36–B37. **Siguiente**:
+    C3 (exportar iteraciones).
+
+51. [x] **C3 (2026-09-29)**. `iteraciones` en el resultado (solo en
+    memoria; `serializarResultados` lo quita): entradas regeneradas con el
+    generador de contador y la muestra retenida de cada salida, emparejadas
+    (`construirIteraciones`, en los dos motores; fechas por `conFechas`).
+    `excel/iteraciones.ts` (`tablaIteraciones`, puro) y
+    `excel/exportarIteraciones.ts` (hoja «Iteraciones», tramos de 5.000
+    filas, cabecera fija). Botón en la barra de Resultados. **Siguiente**:
+    C4 (dispersión, caja, abanico, curvas superpuestas).
+
+52. [x] **C4 (2026-09-29)**. `ui/Graficos.tsx`: `Dispersion` (de
+    `resultado.iteraciones`, 1.500 puntos, entradas numéricas),
+    `CajasSalidas`, `CurvasSuperpuestas` y `Abanico` (eje común, colores de
+    serie; el abanico con ≥ 3). Sección «Comparar salidas» en Resultados y al
+    final del informe PDF. **Siguiente**: resto de B (B5, distribuciones
+    nuevas).
+
+53. [x] **B5 (2026-09-29)**. Motor: `continuasB5.ts` (Student con
+    Newton sobre la beta incompleta y respaldo por bisección; logística,
+    log-logística, Pareto), `discretasB5.ts` (geométrica cerrada; binomial
+    negativa e hipergeométrica con la acumulada en tabla y búsqueda binaria;
+    uniforme entera), `trigen.ts` (punto fijo para mínimo y máximo) e
+    `histograma.ts`. Esquema, descriptor, catálogo (con `esDiscretaEntera`),
+    moda, funciones de Excel (`HISTOGRAMA` con lista), editor (pesos del
+    histograma). Pruebas `distribucionesB5.test.ts` (KS, frecuencias,
+    momentos, cuantiles de tablas). **Siguiente**: D2–D4.
+
+54. [x] **D2–D4 (2026-09-29)**. D4: `TornadoCambio` (medias del primer y
+    último décimo de la araña) con conmutador en «Qué la mueve más» y en el
+    informe. D2: `excel/estres.ts` (tramos por percentiles de la entrada o
+    categoría, sobre `resultado.iteraciones`) y `Estres` en Resultados. D3:
+    `marcarSerie` en `ui/marcar.ts` (fila o columna, hasta 50),
+    `celdasDelRango` en `direcciones.ts`, `leerVecinos` y `nombresDeSerie`.
+    Los errores de Excel ya no son etiquetas. **Siguiente**: E (uso del
+    panel), H, U1.
+
+55. [x] **E1–E4 (2026-09-29)**. E3: historial en `Panel.tsx`
+    (`modeloActual`, `historial`, agrupa cambios en 1 s, 30 como mucho;
+    Ctrl+Z fuera de campos), `alDeshacer` en Modelo. E1: tabla «Todas las
+    entradas» (las del libro por `entradasDelLibro`, de la última
+    simulación). E2: `MatrizCorrelaciones` en `EditorCorrelaciones.tsx`
+    (triángulo superior, escribe los dos lados; errores con nombres). E4:
+    `ui/ayuda.tsx` (`AYUDA`, `Ayuda`). **Siguiente**: H (resto) y U1.
+
+56. [x] **H6, H7 (2026-09-29)**. `excel/coherencia.ts`:
+    `avisosDeCoherencia` (lo que necesitan las salidas sin cruzar las
+    entradas; `cdf(0)` > 1 % en celdas positivas) y `trazarDependencias`
+    (anchura por `dependientes`, camino más corto, virtuales ocultas). En el
+    resultado, `avisosCoherencia` (arriba en Resultados) y `trazado` («Cómo
+    se calculó»). H3 queda cubierta por `RIESGO.DECISION`. **Siguiente**:
+    U1 (asistente y plantillas), H4, H5, H8.
+
+57. [x] **U1 (2026-09-29)**. `excel/plantillas.ts` (tres plantillas como
+    datos: celdas con texto, número o fórmula en la forma de
+    `Range.formulas`), `excel/escribirPlantilla.ts` (hoja nueva con nombre
+    libre), `PrimerModelo` en `Modelo.tsx` con el modelo vacío.
+    `plantillasU1.test.ts` simula cada plantilla con todo el camino del
+    panel. Banco: la hoja nueva admite `getRange`. **Siguiente**: H4, H5,
+    H8; después F según los libros, G y M.
+
+58. [x] **H4 (2026-09-29)**. `excel/busquedaObjetivo.ts` (`biseccion`,
+    pura, parada a 0,1 puntos), `busqueda` en `PeticionSimulacion`: tras
+    preparar, cada punto fija la celda (`reemplazarAst`) y simula con
+    `porElRapido` y la misma semilla; el resultado lleva `busqueda`.
+    `BuscarObjetivo` en Resultados (con umbral) y `alBuscarObjetivo` en
+    Panel (no toca los resultados actuales). Banco: 16 simulaciones en
+    19 s antes de la parada anticipada. **Siguiente**: H5, H8.
+
+59. [x] **H8 (2026-09-29)**. `migrarRiskModel` en `riskModel.ts` (cadena
+    `MIGRACIONES_RISK_MODEL`, vacía; copia con `structuredClone`; versión
+    más nueva → no se toca, pedir actualizar). `validarRiskModel` migra
+    antes de validar. **Siguiente**: H5 (series temporales), después F, G, M.
+
+60. [x] **H5 (2026-09-29)**. Plantilla `serie` en `excel/plantillas.ts`
+    (paseo con deriva y reversión a la media con fórmulas encadenadas),
+    probada en `plantillasU1.test.ts` (media 103 → 116, dispersión que se
+    abre, tipo → 4,2 %). **Siguiente**: F (según los libros del usuario),
+    G, M (tutoriales y manual), I3; y la ronda del usuario (bloque N).
+
+61. [x] **F1 (DESREF, 2026-09-29)**. `resolverDesrefConstantes`
+    (`engine/parser/desref.ts`) en `construirGrafo`, tras parsear: OFFSET con
+    enteros escritos → celda o rango (o #¡REF! fuera de la hoja). El escáner
+    sigue contando OFFSET como no cubierta (prudente: solo lo está con
+    constantes). **Siguiente**: la ronda del usuario (bloque N, N1–N29);
+    luego LAMBDA si la piden los libros, G (decisiones del usuario), M.
+
+62. [x] **Preparar la ronda (2026-09-29)**. «Leer el libro» y «Preparar y
+    simular» en «Cómo se calculó» (F2 se mide en el Excel del usuario, sin
+    enviar el libro). Guía con el orden de la ronda arriba, N30 (humedales,
+    10.000 y 1.000 iteraciones) y N31 (`npm run scan` sobre sus libros).
+    **Siguiente**: esperar la ronda; con sus cifras, optimizar lectura o
+    cálculo (F2) y desarrollar solo las funciones que salgan en N31.
+
+63. [x] **Tres pendientes pequeños (2026-09-29)**. Binomial negativa en
+    `specsDe` y `logDensidad` (`engine/modelo/ajuste.ts`, discreta vía
+    `esDiscretaDeConteo`); umbral de las salidas `rs_` (`cambiarSalida` en
+    `ui/Resultados.tsx`; `huellaModelo` ignora las `rs_`); fechas en
+    «Todas las entradas» y la hoja volcada (`resumirDistribucionFecha` en el
+    catálogo, `idsFecha` de Panel a Modelo). Decisiones y búsqueda de
+    objetivo con el motor compatible: **versión 2**. **Siguiente**: registro
+    de riesgos en la hoja volcada y el PDF; libro de prueba con LAMBDA
+    (Peng-Robinson) y soporte de LAMBDA en el motor.
+
+64. [x] **T8 en el volcado y el PDF (2026-09-29)**. Sección «REGISTRO DE
+    RIESGOS» en `construirInforme` (tras el resumen de salidas) y
+    `registroRiesgos` en `DatosInforme`, pintado por `RegistroImpreso`
+    (`ui/informe.tsx`). Probado en `informeImprimible.test.ts`.
+    **Siguiente**: libro con LAMBDA (Peng-Robinson) y LAMBDA en el motor.
+
+65. [x] **F1: LAMBDA y nombres definidos (2026-09-29)**. `expandirLet`
+    (`engine/parser/let.ts`) resuelve también LAMBDA con cierres (parámetros,
+    cuerpo y el ámbito donde se escribió): `INVOCAR` es el nodo interno de
+    `expr(args)` (parser, caso `func`); `f(x)` con `f` del LET o del libro se
+    aplica; argumentos de más o de menos → #VALUE!; recursión (>64 llamadas
+    anidadas), LAMBDA sin invocar y nombres cíclicos → `no-soportado`.
+    `riesgoRepetido` renuncia si un mismo objeto RIESGO queda dos veces (un
+    valor de LET/LAMBDA usado dos veces: serían dos sorteos). Nombres:
+    `leerNombresDefinidos`/`nombresDeHoja` (`engine/parser/nombres.ts`),
+    `construirGrafo(…, nombres)`, `leerLibro` los lee de `workbook.names` y de
+    cada hoja (si falla, sin nombres). Libro `tests/fixtures/fidelidad-lambda.xlsx`
+    (`generar-lambda.py`, Peng-Robinson; 23 casos, 11 nombres, hoja
+    PengRobinson). Pruebas: `lambda.test.ts` (contra Python, simulación con
+    media 39,37 y σ 2,06 como Python con 400.000) y `fidelidadLambda.test.ts`
+    (en espera del Excel del usuario, N33/I3). **Siguiente**: la ronda del
+    usuario (N1–N33, W6, W7); con sus resultados, F2 y lo que salga en N31.
+
+66. [x] **Ronda parcial del usuario (N1–N6, 2026-09-29)**. N1–N3 y N6 OK.
+    N4 fallaba con `ItemNotFound` en `restaurar` del resaltado (dirección de
+    una hoja que ya no existe): `direccionPintable` (`excel/direcciones.ts`)
+    y `leerPrevios` carga las hojas y filtra. `leerDecisiones(grafo,
+    clavesSalida)` solo cuenta las decisiones del ámbito de las salidas.
+    «Cómo empezar» plegable (plantillas dentro, plegadas). Botón
+    Diagnóstico → «Rellenar las hojas de prueba» (`excel/hojasPrueba.ts`,
+    `rellenarHojasPrueba.ts`). N6: F9 lento en «Aleatorio» (funciones
+    personalizadas volátiles con `requiresAddress`, cada una un viaje al
+    runtime JS); se pide medirlo en N7 antes de optimizar. Propuestas de la
+    cinta y de interacción (ventana de distribución con estadísticas,
+    delimitadores, catálogo de distribuciones, manual/ejemplos en la cinta):
+    evaluadas con el usuario, pendientes de su decisión.
+
+67. [x] **U3.1 y U3.2 (2026-09-29)**. Decidido con el usuario el bloque U3
+    (roadmap). Cinta: 7 grupos; menú `menuIteraciones` (items `iter1000`…,
+    `iterOtra`) con `requestUpdate` en `excel/cinta.ts`; acciones nuevas en
+    `ui/main.tsx` (las del panel, con `pedirAlPanel`; los ejemplos, directo).
+    Ventanas flotantes con `excel/ventana.ts` (`displayDialogAsync`; datos en
+    `#d=` con `excel/codificacion.ts`, luego `messageChild`; en el banco,
+    `window.open` + `postMessage`). Explorador: `vistaDeCelda` (salida o
+    entrada de la última simulación, 501 cuantiles para los delimitadores),
+    sigue a `escucharSeleccion`. Banco: `onSelectionChanged` y
+    `Excel.run(contexto, fn)`. Probado en `exploradorU3.test.ts` (incluye que
+    cada `FunctionName` del manifiesto esté registrada) y en el banco
+    (explorador sobre salida y entrada, delimitadores, iteraciones 5.000,
+    ajuste desde la cinta). **Siguiente**: U3.3 (catálogo) y U3.4 (lista de
+    entradas y salidas).
+
+68. [x] **U3.3 (2026-09-29)**. `GRUPOS_CATALOGO` (catálogo del motor,
+    agrupado por lo que sabe quien modela; probado que cada tipo está en uno
+    y solo uno) y `Catalogo`/`Miniatura` en `EditorDistribucion.tsx` (forma
+    de `vistaPrevia` del ejemplo por defecto). Visto en el banco.
+    **Siguiente**: U3.4.
+
+69. [x] **U3.4 (2026-09-29)**. `listaDelModelo` (`excel/explorador.ts`) y
+    pestaña «Entradas y salidas» en `ui/explorador.tsx` (una sola ventana
+    por complemento en Office: lista y explorador comparten); la fila manda
+    `{accion:'ir', ref}` con `hablarAlPanel` y el panel selecciona la celda y
+    reenvía la vista. Botón `btnListaModelo` (`verListaModelo`). De paso:
+    `esTodaLaFormula` (`excel/entradasRiesgo.ts`): una RIESGO dentro de una
+    operación no hereda el formato de fecha de la celda. **Siguiente**: la
+    ronda del usuario (N1–N38); U3.5–U3.6 si los confirma.
+
+70. [x] **U3.5 y U3.6 (2026-09-29)**, confirmados por el usuario.
+    `ExtensionPoint ContextMenu` / `ContextMenuCell` con un `Menu`
+    (`ctxEntrada`, `ctxSalida`, `ctxDistribucion`: las acciones de la
+    cinta). `btnDetener` (`detenerSimulacion` → `cancelado.current`),
+    `estadoSimulando` en `excel/cinta.ts`. Banco: detener a los 60 ms deja
+    la simulación «cancelada». **Siguiente**: la ronda del usuario (N1–N39).
+
 **Siguiente acción al retomar**, en orden de valor:
 
-1. **Averiguar por qué el modelo no sobrevivió a cerrar y reabrir**, con el
-   diagnóstico de ajustes guardados.
-2. **Análisis de sensibilidad** (E7): qué entrada explica más la varianza.
-3. **`LET`**, y los **botones en la cinta**.
-4. **Las tres fórmulas matriciales de `Caso_practico.xlsx`**.
-5. **`DESREF` con desplazamientos constantes**, resuelto al compilar.
+1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
+2. ~~Etapa 2~~ ✅ en código el 29/09 (B1, B2, B3, B1b). **El usuario
+   recorre el bloque N de la guía**; arreglar lo que falle.
+3. Después, etapa 2: B1–B3 (runtime compartido, modo
+   determinista/probabilístico, cinta que actúa) y **B1b** (las funciones
+   RIESGO sortean en el motor compatible: casos 2 y 3 de B7 con Excel en el
+   bucle, sin sobrescribir fórmulas); luego el resto de B6 (SALIDA,
+   CORRELACION, leer del libro), I2, T7–T9.
 
 ### Estado del árbol tras E0–E2 (completa) y el arranque de E3
 

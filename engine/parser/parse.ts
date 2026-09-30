@@ -22,6 +22,7 @@ import {
   type RefCelda,
   type RefRango,
 } from './ast.ts';
+import { expandirLet, INVOCAR, type NombresDefinidos } from './let.ts';
 import { tokenizar, type Token } from './lexer.ts';
 
 export interface ErrorSintaxis {
@@ -54,7 +55,18 @@ class Fallo extends Error {
   }
 }
 
-export function parsear(formula: string): ResultadoParseo {
+/**
+ * `nombres`: los nombres definidos que ve la fórmula (los del libro y los de
+ * su hoja), para resolver los que son constantes, referencias o `LAMBDA`.
+ */
+export function parsear(formula: string, nombres?: NombresDefinidos): ResultadoParseo {
+  const r = parsearSinExpandir(formula);
+  // LET, LAMBDA y los nombres se resuelven aquí, antes de que nadie vea el árbol: ver `let.ts`.
+  return r.ok ? { ok: true, ast: expandirLet(r.ast, nombres) } : r;
+}
+
+/** El árbol tal cual, con `LET`, `LAMBDA` y los nombres sin resolver (para los nombres definidos). */
+export function parsearSinExpandir(formula: string): ResultadoParseo {
   try {
     const p = new Parser(tokenizar(formula));
     const ast = p.expresion(0);
@@ -241,8 +253,15 @@ class Parser {
         return n;
       }
 
-      case 'func':
-        return this.llamada(t);
+      case 'func': {
+        // `LAMBDA(x; x+1)(3)`: la llamada se invoca con lo que va detrás.
+        let n = this.llamada(t);
+        while (this.actual.t === '(') {
+          const pos = this.actual.pos;
+          n = { tipo: 'funcion', nombre: INVOCAR, args: [n, ...this.argumentos(t.texto)], pos };
+        }
+        return n;
+      }
 
       case '(': {
         const dentro = this.expresion(0);
@@ -280,12 +299,17 @@ class Parser {
   }
 
   private llamada(nombre: Token): Nodo {
+    return { tipo: 'funcion', nombre: nombre.texto, args: this.argumentos(nombre.texto), pos: nombre.pos };
+  }
+
+  /** `(a, b, …)`, con los huecos de los argumentos omitidos. */
+  private argumentos(de: string): Nodo[] {
     this.consumir('(');
     const args: Nodo[] = [];
 
     if (this.actual.t === ')') {
       this.avanzar();
-      return { tipo: 'funcion', nombre: nombre.texto, args, pos: nombre.pos };
+      return args;
     }
 
     for (;;) {
@@ -303,11 +327,11 @@ class Parser {
 
       throw new Fallo(
         sep.pos,
-        `Se esperaba "," o ")" en los argumentos de ${nombre.texto}`,
+        `Se esperaba "," o ")" en los argumentos de ${de}`,
       );
     }
 
-    return { tipo: 'funcion', nombre: nombre.texto, args, pos: nombre.pos };
+    return args;
   }
 
   /** Constante matricial: {1,2;3,4}. La coma separa columnas y el `;` filas. */

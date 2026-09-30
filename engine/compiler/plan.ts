@@ -38,7 +38,8 @@ export interface Plan {
 export type ResultadoPlan = { ok: true; plan: Plan } | { ok: false; error: ErrorPlan };
 
 export function compilarPlan(grafo: Grafo, entradas: ReadonlySet<string>, salidas: string[]): ResultadoPlan {
-  const necesarias = clausuraDependencias(grafo, salidas);
+  // Se detiene en las entradas: su fórmula y sus precedentes no se evalúan.
+  const necesarias = clausuraDependencias(grafo, salidas, entradas);
   const { orden, enCiclo } = ordenarTopologicamente(grafo, necesarias);
 
   for (const clave of orden) {

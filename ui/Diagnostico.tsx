@@ -19,6 +19,8 @@ import { analizarCompatibilidad, type InformeCompatibilidad } from '../excel/com
 import { versionMaximaDisponible, type EntornoOffice } from '../excel/entorno.ts';
 import { leerLibro, type EstadisticasLectura } from '../excel/lectorLibro.ts';
 import { leerSeleccion, type SeleccionLeida } from '../excel/seleccion.ts';
+import { rellenarHojasPrueba } from '../excel/rellenarHojasPrueba.ts';
+import { FORMULAS_DE_PRUEBA } from '../excel/hojasPrueba.ts';
 import { duracion, miles } from './formato.ts';
 
 export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | null; alFallar: (e: unknown) => void }) {
@@ -65,6 +67,23 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
     }
   }, [alFallar]);
 
+  const [relleno, setRelleno] = useState<string | null>(null);
+  const alRellenar = useCallback(async () => {
+    setOcupado(true);
+    try {
+      const r = await rellenarHojasPrueba();
+      setRelleno([
+        r.escritas > 0 ? `Escritas ${r.escritas} fórmulas.` : 'No había nada que escribir.',
+        r.respetadas.length > 0 ? `Ya tenían algo y no se tocaron: ${r.respetadas.join(', ')}.` : '',
+        r.faltan.length > 0 ? `Este libro no tiene la hoja ${r.faltan.join(' ni la hoja ')}: abre el libro de demostración.` : '',
+      ].filter(Boolean).join(' '));
+    } catch (e) {
+      alFallar(e);
+    } finally {
+      setOcupado(false);
+    }
+  }, [alFallar]);
+
   const alLeerAjustes = useCallback(async () => {
     setOcupado(true);
     try {
@@ -90,6 +109,8 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
               <dt>Versión</dt><dd>{entorno.version}</dd>
               <dt>Idioma</dt><dd>{entorno.idioma}</dd>
               <dt>ExcelApi</dt><dd>hasta {versionMaximaDisponible(entorno)}</dd>
+              <dt>Runtime compartido</dt>
+              <dd>{entorno.runtimeCompartido ? 'sí: panel, cinta y funciones en el mismo proceso' : 'no'}</dd>
               {regional && (
                 <>
                   <dt>Separadores</dt>
@@ -152,10 +173,24 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
             </p>
           ) : (
             <pre className="ejemplos">
-              {ajustes.map((a) => `${a.clave}\n${a.valor}\n`).join('\n')}
+              {ajustes
+                .map((a) => `${a.clave}\n${a.valor.length > 1500 ? `${a.valor.slice(0, 1500)}… (${miles(a.valor.length)} caracteres en total)` : a.valor}\n`)
+                .join('\n')}
             </pre>
           )
         )}
+      </section>
+
+      <section>
+        <h2>Hojas de prueba</h2>
+        <p className="tenue">
+          Para la guía de pruebas, en el libro de demostración: escribe de una vez las {FORMULAS_DE_PRUEBA.length} fórmulas
+          de las celdas amarillas de «Pruebas» y «Zonas». Las celdas que ya tienen algo no se tocan.
+        </p>
+        <button type="button" onClick={() => void alRellenar()} disabled={ocupado}>
+          Rellenar las hojas de prueba
+        </button>
+        {relleno && <p className="aviso-ok">{relleno}</p>}
       </section>
 
       <section>

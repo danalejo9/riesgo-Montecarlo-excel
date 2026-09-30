@@ -15,10 +15,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { REGISTRO } from '../../engine/functions/registry.ts';
+import { FORMAS_ESPECIALES, REGISTRO } from '../../engine/functions/registry.ts';
 import { NIVEL_0, NIVEL_1, NIVEL_2, NO_SOPORTADAS } from '../../scanner/catalog.ts';
 
-const implementadas = new Set(Object.keys(REGISTRO));
+const implementadas = new Set([...Object.keys(REGISTRO), ...FORMAS_ESPECIALES]);
 
 /**
  * Funciones que el catálogo promete y el motor todavía no tiene, con el
@@ -79,17 +79,19 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
       'SUBSTITUTE', 'T', 'TEXT', 'TEXTJOIN', 'TRIM', 'TYPE', 'UPPER', 'VALUE',
       // Agregados que excluyen los subtotales intermedios.
       'AGGREGATE', 'SUBTOTAL',
+      // Nombres locales y funciones anónimas: se resuelven al parsear (engine/parser/let.ts).
+      'LAMBDA', 'LET',
+      // Matriciales dinámicas, dentro de una función que las consuma
+      // (engine/functions/matriciales.ts, compiler/usoMatricial.ts).
+      'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TRANSPOSE', 'UNIQUE',
     ].sort());
   });
 
   it('lo que queda de Nivel 2 es lo que el escáner debe seguir marcando bloqueante', () => {
     const pendientes = [...NIVEL_2].filter((f) => !implementadas.has(f)).sort();
     expect(pendientes).toEqual([
-      // Matriciales dinámicas: devuelven varias celdas ("derraman") y el motor
-      // modela una celda por valor. Necesitan otro modelo, no otra función.
-      'FILTER', 'MINVERSE', 'MMULT', 'SEQUENCE', 'SORT', 'SORTBY', 'TEXTSPLIT', 'TRANSPOSE', 'UNIQUE',
-      // Nombres locales y funciones anónimas: necesitan ámbitos en el evaluador.
-      'LAMBDA', 'LET',
+      // Divide texto en varias celdas: solo tiene sentido derramando.
+      'TEXTSPLIT',
       // Dependen de estructuras que el motor no lee: tablas dinámicas y el
       // texto de las fórmulas.
       'FORMULATEXT', 'GETPIVOTDATA',
@@ -101,8 +103,10 @@ describe('el catálogo del escáner y el registro del motor no se han separado',
   });
 
   it('todo lo implementado está clasificado en alguna parte del catálogo', () => {
+    // Las internas (empiezan por `_`, como `_RIESGO.CUANTIL` de B7) las escribe
+    // el propio motor al reescribir una fórmula: nunca aparecen en un libro.
     const sinClasificar = [...implementadas].filter(
-      (f) => !NIVEL_0.has(f) && !NIVEL_1.has(f) && !NIVEL_2.has(f) && !NO_SOPORTADAS.has(f),
+      (f) => !f.startsWith('_') && !NIVEL_0.has(f) && !NIVEL_1.has(f) && !NIVEL_2.has(f) && !NO_SOPORTADAS.has(f),
     );
     expect(sinClasificar).toEqual([]);
   });

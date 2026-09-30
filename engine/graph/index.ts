@@ -1,6 +1,8 @@
 export {
   claveDeReferencia,
   construirGrafo,
+  reemplazarAst,
+  referenciasDe,
   type ConstruccionGrafo,
   type FormulaCelda,
   type Grafo,

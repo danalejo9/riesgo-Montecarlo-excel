@@ -22,26 +22,77 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
-import { guardarModelo, leerModelo } from '../excel/almacenModelo.ts';
+import {
+  guardarEscenarios, guardarModelo, guardarResultados, leerEscenariosGuardados, leerModelo, leerResultadosGuardados,
+} from '../excel/almacenModelo.ts';
+import {
+  elegirActivo, guardarEscenario, quitarEscenario, restaurarEscenarios, serializarEscenarios, vacio as sinEscenarios,
+  type AlmacenEscenarios,
+} from '../excel/escenarios.ts';
+import { huellaModelo, restaurarResultados, serializarResultados } from '../excel/resultadosGuardados.ts';
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
-import { aplicarResaltado } from '../excel/resaltado.ts';
+import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
+import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
+import { abrirVentana, type Ventana } from '../excel/ventana.ts';
+import { codificarJson } from '../excel/codificacion.ts';
+import { listaDelModelo, vistaDeCelda, vistaPorDefecto, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
+
+/** Lo que el panel manda al explorador (U3.1, U3.4). */
+interface MensajeExplorador {
+  vista?: VistaExplorador;
+  motivo?: string;
+  lista?: ListaModelo;
+  pestana?: 'distribucion' | 'lista';
+}
+import { rangoDesdeDireccion } from '../excel/rangos.ts';
+import { actualizarCintaIteraciones, actualizarCintaSimulando, ITERACIONES_CINTA } from '../excel/cinta.ts';
+import { escucharSeleccion } from '../excel/seleccionActiva.ts';
+import { leerSeleccion } from '../excel/seleccion.ts';
+import { volcarResultados } from '../excel/volcarResultados.ts';
+import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
+import { escenarioActivo } from '../excel/escenarios.ts';
+import { abrirEnNavegador } from './Resultados.tsx';
+import { marcarSeleccion } from './marcar.ts';
+import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
+import { aplicarModo, leerModoGuardado } from '../excel/modoLibro.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
   ejecutarSimulacion,
   type AvanceSimulacion,
   type ResultadoSimulacionPanel,
 } from '../excel/ejecutarSimulacion.ts';
-import { modeloVacio, type ModeloRiesgo } from '../engine/modelo/index.ts';
+import { modeloVacio, resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
+import { Configuracion } from './Configuracion.tsx';
+import { crearPoolNavegador } from './motor/poolNavegador.ts';
+import { compensanHilos } from '../engine/executor/pool.ts';
+import { hilosEfectivos, leerCongelarPantalla, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { Modelo } from './Modelo.tsx';
 import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
+import { escribirFragmento } from './fragmento.ts';
 
-type Pestana = 'modelo' | 'resultados' | 'diagnostico';
+export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
+
+/**
+ * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
+ * fragmento (`taskpane.html#resultados`). Sin fragmento, o con uno que no es
+ * una pestaña, el modelo.
+ */
+export function pestanaDeFragmento(hash: string): Pestana {
+  const h = hash.replace(/^#/, '').toLowerCase();
+  return h === 'resultados' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
+}
+
+const PREFIJO_FALLO_GUARDADO = 'El modelo no se pudo guardar:';
+
+/** Cuántos cambios se pueden deshacer, y cuánto tiempo entre dos para que cuenten como uno (E3). */
+const MAX_DESHACER = 30;
+const AGRUPAR_CAMBIOS_MS = 1000;
 
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
-  const [pestana, setPestana] = useState<Pestana>('modelo');
+  const [pestana, setPestana] = useState<Pestana>(() => pestanaDeFragmento(window.location.hash));
   const [modelo, setModelo] = useState<ModeloRiesgo | null>(null);
   const [modeloInvalido, setModeloInvalido] = useState<{ errores: string[]; crudo: string } | null>(null);
   const [resultado, setResultado] = useState<ResultadoSimulacionPanel | null>(null);
@@ -50,9 +101,35 @@ export function Panel() {
   const [simulando, setSimulando] = useState(false);
   const [ritmo, setRitmo] = useState<RitmoGuardado | null>(null);
   const [guardado, setGuardado] = useState<EstadoGuardado>({ estado: 'sin-cambios' });
+  const [escenarios, setEscenarios] = useState<AlmacenEscenarios>(sinEscenarios);
+  /** U3.2: «Ajustar a datos» en la cinta; cada pulsación abre el ajuste con la selección. */
+  const [pedidoAjuste, setPedidoAjuste] = useState(0);
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
+
+  // Si Office vuelve a navegar con el panel abierto (otro botón de la cinta),
+  // solo cambia el fragmento: no hay recarga, y los resultados siguen ahí.
+  useEffect(() => {
+    // La pestaña visible queda escrita en el fragmento, sin disparar
+    // "hashchange" (replaceState no lo hace). Así, pulsar en la cinta el botón
+    // de otra pestaña siempre cambia la URL y siempre se nota.
+    // Ver `fragmento.ts`: dentro de Excel, Office.js anula replaceState.
+    escribirFragmento(pestana);
+  }, [pestana]);
+
+  useEffect(() => {
+    const alCambiar = () => setPestana(pestanaDeFragmento(window.location.hash));
+    // B1: los botones de la cinta piden la pestaña también con un evento
+    // (`acciones.ts`), por si el fragmento ya la decía.
+    const alPedir = (e: Event) => setPestana(pestanaDeFragmento(String((e as CustomEvent).detail ?? '')));
+    window.addEventListener('hashchange', alCambiar);
+    window.addEventListener('riesgo:pestana', alPedir);
+    return () => {
+      window.removeEventListener('hashchange', alCambiar);
+      window.removeEventListener('riesgo:pestana', alPedir);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -80,6 +157,36 @@ export function Panel() {
 
         const base = lectura.estado === 'ok' ? lectura.modelo : modeloVacio();
 
+        // Los resultados de la última simulación, y los escenarios con los que
+        // compararlos, si el libro los trae.
+        if (lectura.estado === 'ok') {
+          void leerEscenariosGuardados()
+            .then(({ texto, legado }) => setEscenarios(restaurarEscenarios(texto, legado)))
+            .catch(() => {
+              // Sin escenarios legibles, no hay comparación: nada más.
+            });
+          // B2: el modo del libro guardado (valores fijos o aleatorio).
+          void leerModoGuardado()
+            .then((m) => aplicarModo(m, { guardar: false }))
+            .catch(() => {
+              // Sin modo guardado legible, valores fijos (la media): lo de siempre.
+            });
+          void leerResultadosGuardados()
+            .then((texto) => {
+              if (!texto) return;
+              const r = restaurarResultados(texto);
+              // Solo si no se ha simulado ya en esta sesión mientras se leía.
+              if (!r.ok) return;
+              setResultado((actual) => actual ?? r.resultado);
+              recordarCeldasRiesgo((r.resultado.entradasDeFunciones ?? []).map((e) => e.ref));
+              // B6: que RIESGO.MEDIA y compañía tengan los resultados también en otro equipo.
+              void publicarRestaurados(r.resultado).catch(() => {});
+            })
+            .catch(() => {
+              // Sin resultados guardados legibles se abre como un libro sin simular.
+            });
+        }
+
         // La configuración regional se lee de Excel la primera vez y se guarda
         // con el modelo: es parte de lo que el modelo significa (`VALOR("1,5")`
         // vale 1,5 en un libro español y es un error en uno inglés). Un modelo
@@ -102,7 +209,26 @@ export function Panel() {
     })();
   }, []);
 
-  const cambiarModelo = useCallback((m: ModeloRiesgo) => {
+  // E3: deshacer. Cada cambio apunta el modelo anterior; los que llegan
+  // seguidos (escribir un nombre letra a letra) cuentan como uno solo.
+  const modeloActual = useRef<ModeloRiesgo | null>(null);
+  modeloActual.current = modelo;
+  const historial = useRef<ModeloRiesgo[]>([]);
+  const ultimoApunte = useRef(0);
+  const [puedeDeshacer, setPuedeDeshacer] = useState(false);
+
+  const cambiarModelo = useCallback((m: ModeloRiesgo, opciones?: { sinHistorial?: boolean }) => {
+    const previo = modeloActual.current;
+    if (!opciones?.sinHistorial && previo && previo !== m) {
+      const ahora = Date.now();
+      if (ahora - ultimoApunte.current > AGRUPAR_CAMBIOS_MS) {
+        historial.current.push(previo);
+        if (historial.current.length > MAX_DESHACER) historial.current.shift();
+      }
+      ultimoApunte.current = ahora;
+      setPuedeDeshacer(true);
+    }
+    modeloActual.current = m;
     setModelo(m);
 
     // El resaltado solo se rehace cuando cambian **las celdas**, no en cada
@@ -122,14 +248,119 @@ export function Panel() {
       (r) => {
         if (!r.ok) {
           setGuardado({ estado: 'fallo', detalle: r.errores.join('\n') });
-          setError(`El modelo no se pudo guardar:\n${r.errores.join('\n')}`);
+          setError(`${PREFIJO_FALLO_GUARDADO}\n${r.errores.join('\n')}`);
         } else {
           setGuardado({ estado: r.verificado ? 'guardado' : 'sin-verificar', cuando: new Date() });
+          // Un fallo de guardado anterior ya no aplica: el modelo actual sí se guardó.
+          setError((previo) => (previo?.startsWith(PREFIJO_FALLO_GUARDADO) ? null : previo));
         }
       },
       (e: unknown) => setGuardado({ estado: 'fallo', detalle: mensajeDe(e) }),
     );
   }, []);
+
+  const deshacer = useCallback(() => {
+    const previo = historial.current.pop();
+    if (previo) cambiarModelo(previo, { sinHistorial: true });
+    ultimoApunte.current = 0;
+    setPuedeDeshacer(historial.current.length > 0);
+  }, [cambiarModelo]);
+
+  // Ctrl+Z (o ⌘Z) fuera de un campo de texto: dentro, deshace lo escrito, como siempre.
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      e.preventDefault();
+      deshacer();
+    };
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, [deshacer]);
+
+  // U3.1: el explorador de distribución. Enseña la celda seleccionada y la
+  // sigue mientras está abierto (y la vuelve a mandar tras cada simulación).
+  const explorador = useRef<{ ventana: Ventana; dejar?: () => Promise<void>; direccion: string } | null>(null);
+  const mensajeExplorador = useCallback((direccion: string): MensajeExplorador => {
+    const { resultado: r, modelo: m } = ultimo.current;
+    const umbrales = new Map((m?.outputs ?? []).filter((o) => o.threshold).map((o) => [o.id, o.threshold as { value: number; direction: 'below' | 'above' }]));
+    const v = vistaDeCelda(direccion, r?.ok ? r : null, umbrales);
+    const lista = m ? listaDelModelo(m, r?.ok ? r : null, (id) => {
+      const e = m.inputs.find((x) => x.id === id);
+      return e ? resumirDistribucion(e.dist) : '';
+    }) : undefined;
+    return { ...(v.ok ? { vista: v.vista } : { motivo: v.motivo }), ...(lista ? { lista } : {}) };
+  }, []);
+  const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' = 'distribucion') => {
+    let direccion = '';
+    try {
+      direccion = (await leerSeleccion()).direccion;
+    } catch {
+      // sin selección legible, se abre con la primera salida
+    }
+    const r = ultimo.current.resultado;
+    let mensaje = mensajeExplorador(direccion);
+    if (!mensaje.vista) {
+      const porDefecto = vistaPorDefecto(r?.ok ? r : null);
+      if (porDefecto.ok) mensaje = { ...(mensaje.lista ? { lista: mensaje.lista } : {}), vista: porDefecto.vista };
+    }
+    mensaje = { ...mensaje, pestana: pestanaVentana };
+    const abierta = explorador.current;
+    if (abierta && abierta.ventana.enviar(mensaje)) return;
+    const ventana = await abrirVentana('explorador.html', await codificarJson(mensaje), {
+      alto: 75,
+      ancho: 60,
+      // U3.4: pulsar una fila de la lista selecciona esa celda en la hoja.
+      alRecibir: (texto) => {
+        let pedido: { accion?: string; ref?: string } = {};
+        try {
+          pedido = JSON.parse(texto) as typeof pedido;
+        } catch {
+          return;
+        }
+        if (pedido.accion !== 'ir' || !pedido.ref) return;
+        const ref = pedido.ref;
+        if (explorador.current) {
+          explorador.current.direccion = ref;
+          explorador.current.ventana.enviar(mensajeExplorador(ref));
+        }
+        void Excel.run(async (ctx) => {
+          rangoDesdeDireccion(ctx, ref).select();
+          await ctx.sync();
+        }).catch(() => {});
+      },
+      alCerrar: () => {
+        void explorador.current?.dejar?.().catch(() => {});
+        explorador.current = null;
+      },
+    });
+    explorador.current = { ventana, direccion };
+    try {
+      const dejar = await escucharSeleccion((d) => {
+        if (!explorador.current) return;
+        explorador.current.direccion = d;
+        explorador.current.ventana.enviar(mensajeExplorador(d));
+      });
+      if (explorador.current) explorador.current.dejar = dejar;
+      else void dejar().catch(() => {});
+    } catch {
+      // sin el evento de selección, la ventana enseña lo que se abrió
+    }
+  }, [mensajeExplorador]);
+  useEffect(() => {
+    const e = explorador.current;
+    if (e && resultado?.ok) e.ventana.enviar(mensajeExplorador(e.direccion));
+  }, [resultado, mensajeExplorador]);
+  // U3.6: Detener solo tiene sentido mientras se simula.
+  useEffect(() => {
+    void actualizarCintaSimulando(simulando);
+  }, [simulando]);
+  // U3.2: la cinta marca las iteraciones actuales (desactiva esa opción del menú).
+  const iteracionesActuales = modelo?.settings.iterations;
+  useEffect(() => {
+    if (iteracionesActuales !== undefined) void actualizarCintaIteraciones(iteracionesActuales);
+  }, [iteracionesActuales]);
 
   const simular = useCallback(async () => {
     if (!modelo) return;
@@ -144,9 +375,32 @@ export function Panel() {
         modelo,
         progreso: setAvance,
         debeCancelar: () => cancelado.current,
+        congelarPantalla: leerCongelarPantalla(),
+        crearPool: (contexto, { iteraciones }) => {
+          const preferencia = leerPreferenciaHilos();
+          // F4: en automático, una simulación pequeña va en un hilo (arrancar
+          // varios tarda más de lo que ahorran). Si el usuario eligió los
+          // núcleos a mano, se respeta.
+          if (preferencia === 'auto' && !compensanHilos(contexto.plan, iteraciones)) return null;
+          return crearPoolNavegador(contexto, hilosEfectivos(preferencia));
+        },
       });
-      setResultado(r);
-      if (r.ok) setPestana('resultados');
+      const conHuella = r.ok ? { ...r, huellaModelo: huellaModelo(modelo), idSimulacion: new Date().toISOString() } : r;
+      setResultado(conHuella);
+      if (conHuella.ok) {
+        setPestana('resultados');
+        // E8: las celdas con RIESGO.* se conocen ahora; se pintan con su color.
+        recordarCeldasRiesgo((conHuella.entradasDeFunciones ?? []).map((e) => e.ref));
+        void aplicarResaltado(modelo).catch(() => {});
+        // B6: los resultados, para las funciones RIESGO.MEDIA, PERCENTIL…
+        void publicarResultados(conHuella)
+          .then(() => refrescarCeldas(celdasParaRefrescar(conHuella.celdasConResultados)))
+          .catch(() => {});
+        // Guardarlos no puede estropear la simulación: si falla, se dice y ya.
+        void guardarResultados(serializarResultados(modelo, conHuella)).catch((e: unknown) =>
+          setError(`Los resultados no se pudieron guardar en el libro: ${mensajeDe(e)}`),
+        );
+      }
 
       // Un ritmo medido de verdad vale más que cualquier estimación, y es lo
       // que permite avisar **antes** la próxima vez.
@@ -167,6 +421,84 @@ export function Panel() {
     }
   }, [modelo]);
 
+  // B3: la cinta actúa sin abrir el panel. Se registran con lo último del
+  // estado (refs), para no volver a registrarlos en cada cambio.
+  const ultimo = useRef({ modelo, cambiarModelo, simular, resultado, escenarios });
+  ultimo.current = { modelo, cambiarModelo, simular, resultado, escenarios };
+  useEffect(() => {
+    const marcar = (como: 'entrada' | 'salida') => async () => {
+      const { modelo: m, cambiarModelo: cambiar } = ultimo.current;
+      if (!m) return mostrarPanel();
+      const r = await marcarSeleccion(m, como);
+      if (!r.ok) {
+        // Solo si algo no cuadra hace falta ver el panel, y es para leer por qué.
+        setError(r.aviso);
+        setPestana('modelo');
+        return mostrarPanel();
+      }
+      setError(null);
+      cambiar(r.modelo); // pinta la celda y guarda el modelo: esa es la señal
+    };
+    const quitas = [
+      manejarDesdeLaCinta('marcarEntrada', marcar('entrada')),
+      manejarDesdeLaCinta('marcarSalida', marcar('salida')),
+      manejarDesdeLaCinta('simular', async () => {
+        // El progreso y los resultados se ven en el panel.
+        void mostrarPanel();
+        await ultimo.current.simular();
+      }),
+      manejarDesdeLaCinta('quitarResaltado', () => quitarResaltado()),
+      // U3.2: el menú de iteraciones, sin abrir Configuración.
+      ...ITERACIONES_CINTA.map((n) => manejarDesdeLaCinta(`iteraciones:${n}`, async () => {
+        const { modelo: m, cambiarModelo: cambiar } = ultimo.current;
+        if (!m) return mostrarPanel();
+        cambiar({ ...m, settings: { ...m.settings, iterations: n } });
+      })),
+      // U3.6: Detener desde la cinta es lo mismo que Cancelar en el panel.
+      manejarDesdeLaCinta('detener', async () => {
+        cancelado.current = true;
+      }),
+      manejarDesdeLaCinta('verDistribucion', () => abrirExplorador()),
+      manejarDesdeLaCinta('verListaModelo', () => abrirExplorador('lista')),
+      manejarDesdeLaCinta('ajustarDatos', async () => {
+        setPestana('modelo');
+        setPedidoAjuste((x) => x + 1);
+        await mostrarPanel();
+      }),
+      manejarDesdeLaCinta('verEscenarios', async () => {
+        setPestana('resultados');
+        await mostrarPanel();
+        setTimeout(() => document.getElementById('seccion-escenarios')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+      }),
+      manejarDesdeLaCinta('volcarHoja', async () => {
+        const { modelo: m, resultado: r } = ultimo.current;
+        if (!m || !r?.ok) {
+          setPestana('resultados');
+          return mostrarPanel();
+        }
+        try {
+          await volcarResultados(m, r);
+        } catch (e) {
+          setError(`No se pudo volcar a una hoja: ${mensajeDe(e)}`);
+          await mostrarPanel();
+        }
+      }),
+      manejarDesdeLaCinta('informePdf', async () => {
+        const { modelo: m, resultado: r, escenarios: esc } = ultimo.current;
+        if (!m || !r?.ok) {
+          setPestana('resultados');
+          return mostrarPanel();
+        }
+        const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc) }));
+        abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
+      }),
+      manejarDesdeLaCinta('abrirAyuda', async () => {
+        await abrirVentana('ayuda.html', '', { alto: 70, ancho: 45 });
+      }),
+    ];
+    return () => quitas.forEach((q) => q());
+  }, []);
+
   return (
     <main>
       <header>
@@ -178,17 +510,30 @@ export function Panel() {
               type="button"
               className={p === pestana ? 'activa' : ''}
               onClick={() => setPestana(p)}
-              disabled={p === 'resultados' && !(resultado?.ok === true)}
             >
               {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
             </button>
           ))}
+          <button
+            type="button"
+            className={`engranaje${pestana === 'configuracion' ? ' activa' : ''}`}
+            onClick={() => setPestana('configuracion')}
+            aria-label="Configuración"
+            title="Configuración"
+          >
+            ⚙
+          </button>
         </nav>
       </header>
 
       {error && (
         <section className="error">
-          <h2>Algo falló</h2>
+          <div className="error-cabecera">
+            <h2>Algo falló</h2>
+            <button type="button" className="cerrar-error" aria-label="Cerrar el aviso" title="Cerrar el aviso" onClick={() => setError(null)}>
+              ✕
+            </button>
+          </div>
           <pre>{error}</pre>
         </section>
       )}
@@ -238,17 +583,71 @@ export function Panel() {
           <Modelo
             modelo={modelo}
             alCambiar={cambiarModelo}
+            {...(puedeDeshacer ? { alDeshacer: deshacer } : {})}
+            {...(resultado?.ok && resultado.entradasDeFunciones ? { entradasDelLibro: resultado.entradasDeFunciones } : {})}
+            {...(resultado?.ok && resultado.entradas ? { idsFecha: new Set(resultado.entradas.filter((e) => e.fecha).map((e) => e.id)) } : {})}
+            pedidoAjuste={pedidoAjuste}
             alSimular={() => void simular()}
             ocupado={simulando}
             ritmo={ritmo}
             alMedirRitmo={setRitmo}
+            alAbrirConfiguracion={() => setPestana('configuracion')}
           />
         ) : (
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
         ))}
 
+      {pestana === 'resultados' && !(resultado?.ok === true) && !simulando && (
+        <section>
+          <h2>Todavía no hay resultados</h2>
+          <p className="tenue">
+            Simula desde la pestaña Modelo y aparecerán aquí. Los resultados
+            viven mientras el panel está abierto: para conservarlos, vuélcalos a
+            una hoja del libro.
+          </p>
+          <button type="button" onClick={() => setPestana('modelo')}>Ir al modelo</button>
+        </section>
+      )}
+
       {pestana === 'resultados' && resultado?.ok === true && modelo && (
-        <Resultados modelo={modelo} resultado={resultado} />
+        <Resultados
+          modelo={modelo}
+          resultado={resultado}
+          alCambiarModelo={cambiarModelo}
+          alBuscarObjetivo={async (busqueda, alAvanzar) => {
+            const r = await ejecutarSimulacion({ modelo, busqueda, progreso: (a) => alAvanzar(a.mensaje) });
+            if (!r.ok) return [r.mensaje, ...r.detalles].join(' ');
+            return r.busqueda ?? 'La búsqueda no devolvió resultado.';
+          }}
+          escenarios={escenarios}
+          alCambiarEscenarios={(accion) => {
+            let nuevo: AlmacenEscenarios;
+            if (accion.tipo === 'guardar') {
+              const r = guardarEscenario(escenarios, accion.etiqueta, resultado);
+              if (!r.ok) {
+                setError(r.motivo);
+                return;
+              }
+              nuevo = r.almacen;
+            } else if (accion.tipo === 'quitar') {
+              nuevo = quitarEscenario(escenarios, accion.id);
+            } else {
+              nuevo = elegirActivo(escenarios, accion.id);
+            }
+            setEscenarios(nuevo);
+            void guardarEscenarios(serializarEscenarios(modelo, nuevo)).catch((e: unknown) =>
+              setError(`Los escenarios no se pudieron guardar en el libro: ${mensajeDe(e)}`),
+            );
+          }}
+        />
+      )}
+
+      {pestana === 'configuracion' && modelo && (
+        <Configuracion
+          modelo={modelo}
+          alCambiar={cambiarModelo}
+          hilosUltimaSimulacion={resultado?.ok ? resultado.hilos : undefined}
+        />
       )}
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}
@@ -281,7 +680,7 @@ function Progreso({ avance, alCancelar }: { avance: AvanceSimulacion; alCancelar
           </p>
         </>
       )}
-      <button type="button" className="plano" onClick={alCancelar}>
+      <button type="button" className="secundario" onClick={alCancelar}>
         Cancelar
       </button>
     </section>

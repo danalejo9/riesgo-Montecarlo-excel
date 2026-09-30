@@ -13,11 +13,16 @@
  * existe, y `RiskModel` no sabe que `DescriptorDistribucion` tiene nombres
  * en español — cada uno solo ve su propio idioma.
  */
-import type { DescriptorDistribucion, ParametrizacionLognormal } from '../distributions/index.ts';
+import { construirDesdeDescriptor, type DescriptorDistribucion, type ParametrizacionLognormal } from '../distributions/index.ts';
 
 export type LognormalParametrization = 'variable' | 'log';
 
-export type DistributionSpec =
+export type DistributionSpec = BaseSpec & {
+  /** Acotada (B4): se descarta lo que cae fuera de [min, max]. Cualquiera de los dos puede faltar. */
+  truncate?: { min?: number; max?: number };
+};
+
+type BaseSpec =
   | { type: 'normal'; mean: number; stdDev: number }
   | { type: 'lognormal'; p1: number; p2: number; parametrization?: LognormalParametrization }
   | { type: 'uniform'; min: number; max: number }
@@ -30,7 +35,34 @@ export type DistributionSpec =
   | { type: 'bernoulli'; p: number }
   | { type: 'binomial'; n: number; p: number }
   | { type: 'poisson'; lambda: number }
-  | { type: 'discrete'; values: number[]; weights: number[] };
+  | { type: 'discrete'; values: number[]; weights: number[] }
+  // B5: distribuciones nuevas.
+  | { type: 'student'; df: number; loc: number; scale: number }
+  | { type: 'logistic'; mean: number; scale: number }
+  | { type: 'loglogistic'; scale: number; shape: number }
+  | { type: 'pareto'; min: number; shape: number }
+  | { type: 'geometric'; p: number }
+  | { type: 'negbin'; r: number; p: number }
+  | { type: 'hypergeometric'; n: number; successes: number; population: number }
+  | { type: 'intuniform'; min: number; max: number }
+  | { type: 'trigen'; low: number; mode: number; high: number; pLow: number; pHigh: number }
+  | { type: 'histogram'; min: number; max: number; weights: number[] }
+  /**
+   * Una entrada de **texto** (T1): «Norte» con peso 20, «Sur» con 25… Se
+   * muestrea como el índice de la categoría (una discreta 0..m−1), y el
+   * motor pone el texto en la celda justo antes de calcular. Así el muestreo,
+   * el hipercubo latino, las correlaciones y la reproducibilidad son los de
+   * siempre.
+   */
+  | { type: 'categorical'; categories: string[]; weights: number[] };
+
+/** Límite de categorías de una entrada de texto: más no se leen en un panel. */
+export const MAXIMO_CATEGORIAS = 200;
+
+/** Las categorías de una entrada de texto, o `undefined` si es numérica. */
+export function categoriasDe(spec: DistributionSpec): readonly string[] | undefined {
+  return spec.type === 'categorical' ? spec.categories : undefined;
+}
 
 const PARAMETRIZACION_A_INGLES: Record<ParametrizacionLognormal, LognormalParametrization> = {
   variable: 'variable',
@@ -42,6 +74,17 @@ const PARAMETRIZACION_A_ESPANOL: Record<LognormalParametrization, Parametrizacio
 };
 
 export function toDescriptor(spec: DistributionSpec): DescriptorDistribucion {
+  const base = descriptorBase(spec);
+  const t = spec.truncate;
+  if (!t || (t.min === undefined && t.max === undefined)) return base;
+  if (spec.type === 'categorical') throw new Error('Una entrada de texto no se puede acotar');
+  if ((t.min !== undefined && !Number.isFinite(t.min)) || (t.max !== undefined && !Number.isFinite(t.max))) {
+    throw new Error('Los límites de la distribución acotada tienen que ser números');
+  }
+  return { ...base, truncado: { ...(t.min !== undefined ? { min: t.min } : {}), ...(t.max !== undefined ? { max: t.max } : {}) } };
+}
+
+function descriptorBase(spec: DistributionSpec): DescriptorDistribucion {
   switch (spec.type) {
     case 'normal': return { tipo: 'normal', media: spec.mean, desviacion: spec.stdDev };
     case 'lognormal':
@@ -62,6 +105,27 @@ export function toDescriptor(spec: DistributionSpec): DescriptorDistribucion {
     case 'binomial': return { tipo: 'binomial', n: spec.n, p: spec.p };
     case 'poisson': return { tipo: 'poisson', lambda: spec.lambda };
     case 'discrete': return { tipo: 'discreta', valores: spec.values, pesos: spec.weights };
+    case 'student': return { tipo: 'student', gl: spec.df, centro: spec.loc, escala: spec.scale };
+    case 'logistic': return { tipo: 'logistica', media: spec.mean, escala: spec.scale };
+    case 'loglogistic': return { tipo: 'loglogistica', escala: spec.scale, forma: spec.shape };
+    case 'pareto': return { tipo: 'pareto', minimo: spec.min, forma: spec.shape };
+    case 'geometric': return { tipo: 'geometrica', p: spec.p };
+    case 'negbin': return { tipo: 'binomialNegativa', r: spec.r, p: spec.p };
+    case 'hypergeometric': return { tipo: 'hipergeometrica', n: spec.n, exitos: spec.successes, poblacion: spec.population };
+    case 'intuniform': return { tipo: 'uniformeEntera', min: spec.min, max: spec.max };
+    case 'trigen': return { tipo: 'trigen', inferior: spec.low, moda: spec.mode, superior: spec.high, pInferior: spec.pLow, pSuperior: spec.pHigh };
+    case 'histogram': return { tipo: 'histograma', min: spec.min, max: spec.max, pesos: spec.weights };
+    case 'categorical': {
+      const c = spec.categories;
+      if (!Array.isArray(c) || c.length === 0) throw new Error('CATEGÓRICA: hace falta al menos una categoría');
+      if (c.length > MAXIMO_CATEGORIAS) throw new Error(`CATEGÓRICA: como mucho ${MAXIMO_CATEGORIAS} categorías`);
+      if (!c.every((x) => typeof x === 'string' && x.trim() !== '')) throw new Error('CATEGÓRICA: cada categoría tiene que ser un texto no vacío');
+      if (new Set(c).size !== c.length) throw new Error('CATEGÓRICA: hay categorías repetidas');
+      if (!Array.isArray(spec.weights) || spec.weights.length !== c.length) {
+        throw new Error('CATEGÓRICA: tiene que haber un peso por categoría');
+      }
+      return { tipo: 'discreta', valores: c.map((_, i) => i), pesos: spec.weights };
+    }
     default:
       // `spec` puede venir de JSON sin validar (workbook.settings): a
       // diferencia de un `switch` sobre un tipo ya comprobado por TypeScript,
@@ -91,7 +155,31 @@ export function fromDescriptor(d: DescriptorDistribucion): DistributionSpec {
     case 'binomial': return { type: 'binomial', n: d.n, p: d.p };
     case 'poisson': return { type: 'poisson', lambda: d.lambda };
     case 'discreta': return { type: 'discrete', values: d.valores, weights: d.pesos };
+    case 'student': return { type: 'student', df: d.gl, loc: d.centro, scale: d.escala };
+    case 'logistica': return { type: 'logistic', mean: d.media, scale: d.escala };
+    case 'loglogistica': return { type: 'loglogistic', scale: d.escala, shape: d.forma };
+    case 'pareto': return { type: 'pareto', min: d.minimo, shape: d.forma };
+    case 'geometrica': return { type: 'geometric', p: d.p };
+    case 'binomialNegativa': return { type: 'negbin', r: d.r, p: d.p };
+    case 'hipergeometrica': return { type: 'hypergeometric', n: d.n, successes: d.exitos, population: d.poblacion };
+    case 'uniformeEntera': return { type: 'intuniform', min: d.min, max: d.max };
+    case 'trigen': return { type: 'trigen', low: d.inferior, mode: d.moda, high: d.superior, pLow: d.pInferior, pHigh: d.pSuperior };
+    case 'histograma': return { type: 'histogram', min: d.min, max: d.max, weights: d.pesos };
     default:
       throw new Error(`Tipo de distribución no reconocido: ${JSON.stringify((d as { tipo?: unknown }).tipo)}`);
+  }
+}
+
+/**
+ * Por qué una distribución no se puede muestrear tal como está (mínimo mayor
+ * que la moda, desviación negativa…), o `null` si es válida. Lo usa el editor
+ * del panel para avisar sin guardar, en vez de dejar que el guardado falle.
+ */
+export function problemaDeDistribucion(spec: DistributionSpec): string | null {
+  try {
+    construirDesdeDescriptor(toDescriptor(spec));
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
   }
 }

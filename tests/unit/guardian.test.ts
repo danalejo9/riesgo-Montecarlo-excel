@@ -120,3 +120,33 @@ describe('hayRecuperacionPendiente / restaurarDesdeRecuperacion / descartarRecup
     expect(r.ok).toBe(true);
   });
 });
+
+describe('entradas con fórmula', () => {
+  it('se restaura la fórmula, no el último valor (antes se perdía la fórmula)', () => {
+    const valores: Record<string, number> = { A1: 100, A2: 7 };
+    const formulas: Record<string, string> = { A1: '=RIESGO.NORMAL(100,15)' };
+    let recovery: RecoveryRecord | undefined;
+    const store: AlmacenGuardian = {
+      readRecovery: () => recovery,
+      writeRecovery: (r) => { recovery = r; },
+      clearRecovery: () => { recovery = undefined; },
+      readCalculationMode: () => 'automatic',
+      setCalculationMode: () => {},
+      readValue: (ref) => valores[ref] as number,
+      writeValue: (ref, v) => { valores[ref] = v; delete formulas[ref]; },
+      readFormula: (ref) => formulas[ref],
+      writeFormula: (ref, f) => { formulas[ref] = f; },
+    };
+
+    iniciarProteccion(store, ['A1', 'A2'], 'manual');
+    expect(recovery?.originalFormulas).toEqual({ A1: '=RIESGO.NORMAL(100,15)' });
+
+    // La simulación escribe valores encima.
+    store.writeValue('A1', 123.4);
+    store.writeValue('A2', 9);
+
+    restaurarDesdeRecuperacion(store);
+    expect(formulas.A1).toBe('=RIESGO.NORMAL(100,15)');
+    expect(valores.A2).toBe(7);
+  });
+});

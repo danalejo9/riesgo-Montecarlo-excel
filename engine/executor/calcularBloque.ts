@@ -16,6 +16,7 @@ import { tdigestDeBuffer } from '../stats/tdigest.ts';
 import { acumular, crearWelford } from '../stats/welford.ts';
 import type { Bloque } from './bloques.ts';
 import { generarTramoDeEntrada, type DefinicionEntrada } from './entradas.ts';
+import { contarCategorias } from './categorias.ts';
 import type { ResultadoBloque } from './tipos.ts';
 
 export type ResultadoCalculoBloque = { ok: true; parcial: ResultadoBloque } | { ok: false; error: ErrorPlan };
@@ -27,23 +28,35 @@ export function calcularBloque(
   seed: number,
   bloque: Bloque,
   compresionTDigest: number,
+  limiteMuestra = 0,
 ): ResultadoCalculoBloque {
   const entradas = new Map<string, Buffer>();
+  const categorias = new Map<string, readonly string[]>();
   for (const def of entradasResueltas) {
     entradas.set(def.clave, generarTramoDeEntrada(def, seed, bloque.inicio, bloque.largo));
+    if (def.categorias) categorias.set(def.clave, def.categorias);
   }
 
-  const r = ejecutarPlan(grafo, plan, entradas, bloque.largo);
+  const r = ejecutarPlan(grafo, plan, entradas, bloque.largo, categorias);
   if (!r.ok) return { ok: false, error: r.error };
 
   const parcial: ResultadoBloque = new Map();
   for (const clave of plan.salidas) {
-    const buffer = aBufferNumerico(r.valores.get(clave) as Columna, bloque.largo);
+    const columna = r.valores.get(clave) as Columna;
+    const buffer = aBufferNumerico(columna, bloque.largo);
+    // Lo que cae por debajo de `limiteMuestra` se copia **antes** de apartar
+    // los no numéricos: la muestra tiene que seguir alineada, iteración a
+    // iteración, con las muestras de las entradas.
+    const retener = Math.min(bloque.largo, limiteMuestra - bloque.inicio);
+    const muestra = retener > 0 ? buffer.slice(0, retener) : undefined;
     const { utiles, noNumericas } = separarUtilizables(buffer);
+    const recuento = contarCategorias(columna, bloque.largo, Math.max(0, retener));
     parcial.set(clave, {
+      ...(recuento ? { categorias: recuento.conteos, ...(recuento.muestra ? { muestraTexto: recuento.muestra } : {}) } : {}),
       welford: acumular(crearWelford(), utiles),
       digest: tdigestDeBuffer(utiles, compresionTDigest),
       noNumericas,
+      ...(muestra ? { muestra } : {}),
     });
   }
   return { ok: true, parcial };

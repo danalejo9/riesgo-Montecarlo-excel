@@ -7,6 +7,7 @@ export {
 export type {
   AvanceCompatible,
   EntradaCompatible,
+  ValorLeido,
   LibroCalculable,
   OpcionesCompatible,
 } from './tipos.ts';

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Explorador de distribución</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  </head>
+  <body>
+    <!--
+      U3.1: la ventana flotante del explorador. No habla con Excel: el panel
+      le manda qué enseñar (en la URL, #d=…, y después por mensaje).
+    -->
+    <div id="raiz"></div>
+    <script type="module" src="./explorador.tsx"></script>
+  </body>
+</html>

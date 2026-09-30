@@ -21,6 +21,17 @@ export interface ParcialSalida {
    * porque el hilo principal tiene que poder sumarlas.
    */
   noNumericas: number;
+  /**
+   * Los valores crudos de las iteraciones del bloque que caen dentro del
+   * límite de muestra de la simulación (`OpcionesSimulacion.retenerMuestra`),
+   * con `NaN` donde no hubo número. Es lo que permite el análisis de
+   * sensibilidad, que necesita ordenar valores y no solo resumirlos.
+   */
+  muestra?: Float64Array;
+  /** Salidas de texto o sí/no (T2, T6): valor → iteraciones del bloque. */
+  categorias?: Record<string, number>;
+  /** El valor de texto de cada iteración retenida del bloque, alineado con `muestra`. */
+  muestraTexto?: (string | null)[];
 }
 
 /** clave de celda de salida -> su parcial en un bloque concreto. */
