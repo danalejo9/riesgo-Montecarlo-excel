@@ -201,6 +201,19 @@ Las pruebas en Excel del módulo de cronograma se añadirán a la guía como blo
 | **P5** | Costo‑plazo: hitos como entradas del modelo de costos, costos que dependen del tiempo, JCL | 5–7 d |
 | **P6** (v2) | Clima probabilístico, escenarios antes y después de mitigar, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
 
+**Primera versión sencilla (v0 del módulo)**: P0 + P1 + P2 + un P3 mínimo
+(tabla de Excel → fechas, chequeo con semáforo y Monte Carlo del plazo con
+P50/P80/P90, curva S e índice de criticidad). Desde el 30/09, con P0 y el
+núcleo de P1 hechos, quedan **unas 2–3 semanas de trabajo**, más lo que
+tarden las rondas de prueba en Excel. Importadores (P4) y JCL (P5): unas
+2–3 semanas más.
+
+**Libro de pruebas propio**: `ejemplos/demo-cronograma.xlsx` (generado por
+`ejemplos/generar-cronograma.py`, con un CPM independiente en Python y la
+hoja «Esperado»). Cada etapa P amplía ese libro y añade sus pruebas al
+bloque Q de la guía; `tests/unit/cronogramaDemo.test.ts` lo comprueba en
+cada `npm test`.
+
 Lanzamiento del módulo: **P0 a P5, unos 35–45 días de trabajo**. Puede ir en la v1 o en una versión posterior, según cuándo esté lista la v1 de costos.
 
 ---

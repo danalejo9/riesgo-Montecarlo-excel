@@ -47,6 +47,8 @@
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
 > - Pendientes de antes: **W6** y **W7** (Excel para la Web).
+> - **Bloque Q (cronograma, nuevo el 30/09)**: después del N, con su propio
+>   libro, `ejemplos/demo-cronograma.xlsx`. Ver la sección Q, justo antes de la A.
 > - **Sigue siendo lo primero** aunque haya empezado el módulo Cronograma
 >   (plan del 30/09, `docs/PLAN_CRONOGRAMA_QSRA.md` §4, pista A): lo que
 >   falle aquí se arregla antes de avanzar allí. Sus pruebas serán el bloque Q.
@@ -519,6 +521,77 @@ la cinta **Entradas y salidas** (grupo Análisis).
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
+
+---
+
+## Q. Cronograma (frente C, módulo nuevo)
+
+Tiene **su propio libro de pruebas**: `ejemplos/demo-cronograma.xlsx` (lo
+genera `ejemplos/generar-cronograma.py`; no lo edites a mano, se regenera).
+Es un centro comunitario de 20 actividades con las cuatro relaciones (FC, CC,
+FF, CF), retardos, un adelanto, hitos, un «inicio no antes de» y festivos. La
+hoja **«Esperado»** trae las fechas correctas, calculadas por el script con su
+propio CPM, no por el complemento. Las mismas fechas se comprueban solas en
+cada `npm test` (`tests/unit/cronogramaDemo.test.ts`); aquí se comprueba que
+en tu Excel se lee, se calcula y se escribe igual.
+
+Prepara una copia, como con el de costos:
+`Copy-Item ejemplos\demo-cronograma.xlsx "$HOME\Desktop\cronograma-prueba.xlsx"`
+y ábrela. El manifiesto no cambió: basta con recargar el panel.
+
+**Q1. La pestaña.** En el panel aparece una pestaña nueva, **Cronograma**,
+entre Resultados y Diagnóstico. Dentro: un texto corto y dos botones,
+**Calcular cronograma** y **Plantilla de cronograma**.
+
+**Q2. Calcular.** Pulsa **Calcular cronograma**. Esperado:
+- Tres cifras: **16/07/2027** (fin del proyecto), **118** (días laborables) y
+  **12 / 20** (actividades críticas).
+- «Ruta crítica: Inicio del proyecto → Permisos y licencias → Diseño detallado
+  → Movilización de obra → Excavación → Cimentación → Estructura →
+  Mampostería → Acabados interiores → Limpieza final → Entrega al cliente →
+  Vigilancia hasta la entrega».
+- Se crea la hoja **«Cronograma (resultado)»**, con las fechas en formato
+  dd/mm/aaaa y las 12 críticas en amarillo. Sin errores ni avisos.
+
+**Q3. Igual que «Esperado».** Las dos hojas tienen el encabezado en la fila 5
+y las actividades en la 6 a la 25, en las mismas columnas. En cualquier celda
+vacía de «Esperado» escribe
+`=SUMAPRODUCTO(--('Cronograma (resultado)'!A6:I25<>A6:I25))`.
+Esperado: **0** (ninguna celda distinta). Si no da 0, apunta cuál difiere.
+
+**Q4. Recalcular no duplica.** Pulsa **Calcular cronograma** otra vez: la hoja
+«Cronograma (resultado)» se rehace, no aparece una «(resultado) 2».
+
+**Q5. Un festivo mueve el fin.** En «Calendario», en **A18** (debajo del
+último festivo) escribe `15/07/2027`. Calcula. Esperado: fin **19/07/2027**
+(la limpieza salta el festivo y el fin de semana), **118** días laborables
+igual. Borra A18 y vuelve a calcular: 16/07/2027.
+
+**Q6. Dependencia circular.** En «Actividades», fila 5 (Permisos y
+licencias), cambia Predecesoras de `1` a `5`. Calcula. Esperado, en rojo:
+«Hay una dependencia circular entre: 2, 4, 5…». Solo esas tres, no las que
+van detrás. No se escribe resultado nuevo. Devuélvelo a `1`.
+
+**Q7. Predecesora que no existe.** Fila 8 (Excavación): Predecesoras
+`3;44`. Esperado: ««5» tiene como predecesora «44», que no existe». Devuélvelo a `3;4`.
+
+**Q8. Duración mal escrita.** Fila 9 (Cimentación): Duración `cinco`.
+Esperado: «Fila 9 («6»): la duración «cinco» no es un número de días
+válido». Devuélvelo a `15`. Prueba también `15 días` y `15d`: se aceptan.
+
+**Q9. Predecesoras en español y en inglés.** Fila 11 (Fabricación del
+ascensor) dice `3FC+5`. Cámbialo a `3FS+5`: mismo resultado. Q3 sigue
+dando 0.
+
+**Q10. Plantilla en un libro nuevo.** Libro en blanco → panel → Cronograma →
+**Plantilla de cronograma**. Esperado: «Creadas: Calendario y Actividades»,
+con tres actividades de ejemplo (Diseño, Construcción, Entrega) y el inicio
+del proyecto en la fecha de hoy. **Calcular cronograma** → 40 días
+laborables. Pulsar Plantilla otra vez: «Las dos hojas ya existían: no se ha
+tocado nada».
+
+**Q11. Excel para la Web (y Mac, si tienes).** Repite Q1–Q4 con el libro
+subido a OneDrive.
 
 ---
 

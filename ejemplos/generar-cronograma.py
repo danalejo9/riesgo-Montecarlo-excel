@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""
+Genera el libro de pruebas del cronograma (frente C, bloque Q de la guía):
+
+    python3 ejemplos/generar-cronograma.py
+
+Es al cronograma lo que `demo-proyecto-aurora.xlsx` es al modelo de costos:
+un proyecto que las dos partes conocemos de memoria, con **el resultado
+esperado ya escrito** en la hoja «Esperado». Así, cualquier diferencia entre
+lo que calcula el complemento y lo que dice esa hoja es información sobre el
+complemento, no sobre el cronograma.
+
+Los valores esperados **no** salen del motor del complemento: los calcula
+este script con su propio CPM, escrito aparte y en otro lenguaje. Si los dos
+coinciden, no es porque compartan el mismo error. `tests/unit/cronogramaDemo.test.ts`
+compara el motor con esta hoja en cada `npm test`.
+
+El proyecto (un centro comunitario de dos plantas) es corriente a propósito,
+pero toca todo lo que el CPM tiene que saber hacer: las cuatro relaciones
+(FC, CC, FF, CF), retardos y un adelanto, hitos, una convergencia de varias
+rutas, un «inicio no antes de», festivos y un suministro de plazo largo que
+compite con la obra.
+"""
+
+import datetime as dt
+import math
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+
+INICIO = dt.date(2027, 2, 1)  # lunes
+LABORABLES = {0, 1, 2, 3, 4}  # lunes a viernes (weekday() de Python)
+FESTIVOS = [
+    (dt.date(2027, 3, 25), "Jueves Santo"),
+    (dt.date(2027, 3, 26), "Viernes Santo"),
+    (dt.date(2027, 5, 1), "Día del Trabajo (cae en sábado)"),
+    (dt.date(2027, 7, 20), "Festivo nacional"),
+    (dt.date(2027, 8, 16), "Festivo nacional"),
+]
+
+# (ID, actividad, duración, predecesoras, mín, más probable, máx, categoría, costo por día, inicio no antes de)
+ACTIVIDADES = [
+    ("1", "Inicio del proyecto", 0, "", None, None, None, "Hitos", 0, None),
+    ("2", "Permisos y licencias", 15, "1", 10, 15, 35, "Trámites", 200, None),
+    ("3", "Diseño detallado", 20, "1", 18, 20, 28, "Diseño", 900, None),
+    ("4", "Movilización de obra", 5, "2", 4, 5, 8, "Obra gris", 1500, None),
+    ("5", "Excavación", 10, "3;4", 8, 10, 16, "Obra gris", 2500, None),
+    ("6", "Cimentación", 15, "5", 13, 15, 22, "Obra gris", 3000, None),
+    ("7", "Estructura", 30, "6", 27, 30, 42, "Obra gris", 3500, None),
+    ("8", "Fabricación del ascensor", 45, "3FC+5", 40, 45, 70, "Suministros", 100, None),
+    ("9", "Cubierta", 12, "7", 10, 12, 18, "Obra gris", 2200, None),
+    ("10", "Instalaciones eléctricas", 20, "7CC+10", 18, 20, 26, "Instalaciones", 1800, None),
+    ("11", "Instalaciones hidráulicas", 18, "7CC+10", 16, 18, 25, "Instalaciones", 1600, None),
+    ("12", "Mampostería", 20, "7FC-5", 18, 20, 28, "Obra gris", 2000, None),
+    ("13", "Montaje del ascensor", 8, "8;9", 7, 8, 12, "Suministros", 1200, None),
+    ("14", "Acabados interiores", 25, "10;11;12", 22, 25, 35, "Acabados", 2400, None),
+    ("15", "Fachada", 15, "9", 13, 15, 20, "Acabados", 1900, None),
+    ("16", "Pruebas de instalaciones", 6, "10FF+3;11FF+3", 5, 6, 10, "Instalaciones", 800, None),
+    ("17", "Paisajismo", 10, "15", 8, 10, 14, "Exteriores", 700, dt.date(2027, 6, 28)),
+    ("18", "Limpieza final", 3, "13;14;16;17", 3, 3, 5, "Acabados", 500, None),
+    ("19", "Entrega al cliente", 0, "18", None, None, None, "Hitos", 0, None),
+    ("20", "Vigilancia hasta la entrega", 10, "19CF", None, None, None, "Obra gris", 150, None),
+]
+
+TIPOS = {"FC": "FS", "FS": "FS", "CC": "SS", "SS": "SS", "FF": "FF", "CF": "SF", "SF": "SF"}
+
+
+# ---------------------------------------------------------------------------
+# El CPM de referencia, independiente del motor en TypeScript.
+# ---------------------------------------------------------------------------
+def dias_laborables(desde, cuantos):
+    festivos = {f for f, _ in FESTIVOS}
+    dias, d = [], desde
+    while len(dias) < cuantos:
+        if d.weekday() in LABORABLES and d not in festivos:
+            dias.append(d)
+        d += dt.timedelta(days=1)
+    return dias
+
+
+DIAS = dias_laborables(INICIO, 2000)
+
+
+def indice_desde(fecha):
+    return next(i for i, d in enumerate(DIAS) if d >= fecha)
+
+
+def leer_preds(texto):
+    rel = []
+    for parte in [p.strip() for p in texto.replace(",", ";").split(";") if p.strip()]:
+        num = ""
+        i = 0
+        while i < len(parte) and parte[i].isdigit():
+            num += parte[i]
+            i += 1
+        resto = parte[i:]
+        tipo = "FS"
+        if resto[:2].upper() in TIPOS:
+            tipo = TIPOS[resto[:2].upper()]
+            resto = resto[2:]
+        retardo = float(resto) if resto else 0.0
+        rel.append((num, tipo, retardo))
+    return rel
+
+
+def cpm():
+    acts = {a[0]: a for a in ACTIVIDADES}
+    preds = {a[0]: leer_preds(a[3]) for a in ACTIVIDADES}
+    dur = {a[0]: a[2] for a in ACTIVIDADES}
+    orden, hecho = [], set()
+    while len(orden) < len(ACTIVIDADES):  # los IDs no están necesariamente en orden
+        for a in ACTIVIDADES:
+            if a[0] not in hecho and all(p in hecho for p, _, _ in preds[a[0]]):
+                orden.append(a[0])
+                hecho.add(a[0])
+    es, ef = {}, {}
+    for s in orden:
+        v = 0.0
+        if acts[s][9] is not None:
+            v = max(v, indice_desde(acts[s][9]))
+        for p, t, r in preds[s]:
+            v = max(v, {"FS": ef.get(p, 0) + r, "SS": es.get(p, 0) + r,
+                        "FF": ef.get(p, 0) + r - dur[s], "SF": es.get(p, 0) + r - dur[s]}[t])
+        es[s], ef[s] = v, v + dur[s]
+    fin = max(ef.values())
+    sucs = {a[0]: [] for a in ACTIVIDADES}
+    for s in orden:
+        for p, t, r in preds[s]:
+            sucs[p].append((s, t, r))
+    ls, lf = {}, {}
+    for p in reversed(orden):
+        v = fin
+        for s, t, r in sucs[p]:
+            v = min(v, {"FS": ls[s] - r, "SS": ls[s] - r + dur[p],
+                        "FF": lf[s] - r, "SF": lf[s] - r + dur[p]}[t])
+        lf[p], ls[p] = v, v - dur[p]
+    return es, ef, ls, lf, fin
+
+
+def fecha_fin(f, d):
+    return DIAS[max(0, math.ceil(f) - 1)] if (d > 0 or f > 0) else DIAS[0]
+
+
+def fecha_inicio(i, d):
+    return fecha_fin(i, 0) if d == 0 else DIAS[int(math.floor(i))]
+
+
+ES, EF, LS, LF, FIN = cpm()
+
+# ---------------------------------------------------------------------------
+# El libro.
+# ---------------------------------------------------------------------------
+AZUL = "1F4E79"
+TITULO = Font(size=14, bold=True, color=AZUL)
+H = Font(bold=True, color=AZUL)
+CAB = Font(bold=True, color="FFFFFF")
+FONDO = PatternFill("solid", fgColor=AZUL)
+AMARILLO = PatternFill("solid", fgColor="FFF2CC")
+FECHA = "dd/mm/yyyy"
+DINERO = '"US$" #,##0'
+
+wb = Workbook()
+ins = wb.active
+ins.title = "Instrucciones"
+LINEAS = [
+    ("t", "Libro de pruebas del cronograma — Riesgo Monte Carlo"),
+    ("", ""),
+    ("p", "Es el libro del frente C (módulo Cronograma). Lo generó ejemplos/generar-cronograma.py;"),
+    ("p", "no lo edites a mano: si hay que cambiarlo, se cambia el script y se vuelve a generar."),
+    ("", ""),
+    ("h", "Qué hay en cada hoja"),
+    ("p", "«Actividades»: el cronograma de un centro comunitario, 20 actividades, con las cuatro"),
+    ("p", "relaciones (FC, CC, FF, CF), retardos, un adelanto, dos hitos, un «inicio no antes de»"),
+    ("p", "y la incertidumbre de cada duración (mínimo, más probable, máximo) para el Monte Carlo."),
+    ("p", "«Calendario»: inicio del proyecto, días laborables (lunes a viernes) y festivos."),
+    ("p", "«Esperado»: las fechas que debe dar el complemento, calculadas aparte por el script."),
+    ("", ""),
+    ("h", "Cómo se usa"),
+    ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
+    ("p", "Compárala con «Esperado»: mismas fechas, misma holgura y mismas actividades críticas."),
+    ("p", "Los pasos exactos, y qué tocar para provocar cada error, están en la guía de pruebas,"),
+    ("p", "bloque Q (docs/GUIA_PRUEBAS_EXCEL.md)."),
+    ("", ""),
+    ("h", "Resultado esperado, en una línea"),
+    ("p", f"Fin del proyecto: {fecha_fin(FIN, 1).strftime('%d/%m/%Y')} · {FIN:g} días laborables · "
+          f"{sum(1 for a in ACTIVIDADES if abs(LS[a[0]] - ES[a[0]]) < 1e-9)} actividades críticas."),
+]
+for i, (tipo, texto) in enumerate(LINEAS, start=1):
+    c = ins.cell(row=i, column=1, value=texto)
+    if tipo == "t":
+        c.font = TITULO
+    elif tipo == "h":
+        c.font = H
+ins.column_dimensions["A"].width = 100
+
+# Actividades: título en la fila 1, encabezado en la 3 (el lector lo busca).
+act = wb.create_sheet("Actividades")
+act["A1"] = "Cronograma — Centro comunitario"
+act["A1"].font = TITULO
+CABECERA = ["ID", "Actividad", "Duración (días)", "Predecesoras", "Mínimo", "Más probable",
+            "Máximo", "Categoría", "Costo por día", "Inicio no antes de"]
+for j, t in enumerate(CABECERA, start=1):
+    c = act.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=4):
+    for j, v in enumerate(a, start=1):
+        c = act.cell(row=i, column=j, value=v if v != "" else None)
+        if j == 9:
+            c.number_format = DINERO
+        if j == 10 and v is not None:
+            c.number_format = FECHA
+    act.cell(row=i, column=4).alignment = Alignment(horizontal="left")
+for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18], start=1):
+    act.column_dimensions[get_column_letter(j)].width = w
+act.freeze_panes = "C4"
+
+cal = wb.create_sheet("Calendario")
+cal["A1"], cal["B1"] = "Inicio del proyecto", INICIO
+cal["B1"].number_format = FECHA
+cal["A1"].font = H
+cal["A3"] = "Días laborables"
+cal["A3"].font = H
+for k, (dia, lab) in enumerate([("Lunes", 1), ("Martes", 1), ("Miércoles", 1), ("Jueves", 1),
+                                  ("Viernes", 1), ("Sábado", 0), ("Domingo", 0)], start=4):
+    cal.cell(row=k, column=1, value=dia)
+    cal.cell(row=k, column=2, value="Sí" if lab else "No")
+cal["A12"] = "Festivos"
+cal["A12"].font = H
+for k, (f, nombre) in enumerate(FESTIVOS, start=13):
+    cal.cell(row=k, column=1, value=f).number_format = FECHA
+    cal.cell(row=k, column=2, value=nombre)
+cal.column_dimensions["A"].width = 20
+cal.column_dimensions["B"].width = 34
+
+esp = wb.create_sheet("Esperado")
+esp["A1"] = "Resultado esperado del CPM determinista (calculado por el script, no por el complemento)"
+esp["A1"].font = H
+esp["A2"], esp["B2"] = "Fin del proyecto", fecha_fin(FIN, 1)
+esp["B2"].number_format = FECHA
+esp["A3"], esp["B3"] = "Duración (días laborables)", FIN
+CAB_ESP = ["ID", "Actividad", "Duración", "Inicio", "Fin", "Inicio tardío", "Fin tardío",
+           "Holgura total", "Crítica"]
+for j, t in enumerate(CAB_ESP, start=1):
+    c = esp.cell(row=5, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=6):
+    k, d = a[0], a[2]
+    holgura = LS[k] - ES[k]
+    fila = [k, a[1], d, fecha_inicio(ES[k], d), fecha_fin(EF[k], d),
+            fecha_inicio(max(0, LS[k]), d), fecha_fin(LF[k], d),
+            0 if abs(holgura) < 1e-9 else holgura, "Sí" if holgura < 1e-9 else "No"]
+    for j, v in enumerate(fila, start=1):
+        c = esp.cell(row=i, column=j, value=v)
+        if 4 <= j <= 7:
+            c.number_format = FECHA
+        if j == 9 and v == "Sí":
+            c.fill = AMARILLO
+for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8], start=1):
+    esp.column_dimensions[get_column_letter(j)].width = w
+
+wb.save("ejemplos/demo-cronograma.xlsx")
+print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días")

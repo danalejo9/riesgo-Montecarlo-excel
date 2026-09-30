@@ -5,6 +5,28 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P0 y P1: cronograma determinista y su libro de pruebas (2026-09-30)
+
+**Añadido**
+- Pestaña **Cronograma** en el panel: «Plantilla de cronograma» (crea las
+  hojas «Actividades» y «Calendario» con un ejemplo, si no existen) y
+  «Calcular cronograma» (camino crítico determinista: fin del proyecto,
+  duración, actividades críticas y ruta crítica; escribe la hoja «Cronograma
+  (resultado)» con las críticas en amarillo).
+- Motor `engine/cronograma/`: predecesoras con la sintaxis de MS Project en
+  español e inglés (`3FC+2`, `5CC-1`, `7FF`, `8CF`), calendario laborable
+  con festivos, CPM con las cuatro relaciones, retardos y adelantos,
+  «inicio no antes de», holgura total; lector de las hojas por nombre de
+  columna, con mensajes que dicen la fila. Una predecesora que no existe, un
+  ID repetido o un ciclo se dicen y no se calcula.
+- **Libro de pruebas del cronograma** `ejemplos/demo-cronograma.xlsx` (y su
+  generador `ejemplos/generar-cronograma.py`, con un CPM propio en Python):
+  20 actividades y la hoja «Esperado». `cronogramaDemo.test.ts` compara el
+  motor con ella en cada `npm test`. Guía: bloque **Q** (Q1–Q11).
+- Capa de capacidades por licencia (`engine/licencia/capacidades.ts`),
+  tabla de monedas con USD por defecto (`engine/modelo/moneda.ts`) y
+  catálogo de textos del módulo (`ui/textos/es.ts`).
+
 ### Plan: módulo Cronograma (QSRA) (2026-09-30)
 
 **Añadido (documentación)**

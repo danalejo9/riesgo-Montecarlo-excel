@@ -1280,6 +1280,21 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     empieza en P0. **Siguiente**: la ronda del usuario (bloque N) y, en
     paralelo, P0.
 
+72. [x] **P0 y P1 (núcleo) del cronograma (2026-09-30)**. `engine/cronograma/`
+    (`tipos`, `predecesoras`, `calendario` con `IndiceLaborable`, `cpm` con
+    `calcularCPM`/`ordenTopologico` —los ciclos se podan para nombrar solo
+    sus miembros—, `lectorTabla`, `hojas`), `engine/licencia/capacidades.ts`,
+    `engine/modelo/moneda.ts`, `excel/cronograma.ts`, `ui/Cronograma.tsx`,
+    `ui/textos/es.ts`. **Libro de pruebas propio** del frente C:
+    `ejemplos/demo-cronograma.xlsx` con «Esperado» calculado por
+    `ejemplos/generar-cronograma.py` (CPM independiente en Python);
+    `tests/helpers/leerHoja.ts` lee cualquier hoja como `range.values`.
+    Guía: bloque Q. El banco del navegador (`ui/banco/excelFalso.ts`) no
+    tiene hojas reales, así que la pestaña solo se prueba en Excel.
+    Falta de P1: avance (fecha de corte, duración remanente), más
+    restricciones y calendarios por actividad. **Siguiente**: P2 (chequeo de
+    salud) y P3 (Monte Carlo del plazo), con la ronda N y Q del usuario.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

@@ -63,6 +63,8 @@ import {
 } from '../excel/ejecutarSimulacion.ts';
 import { modeloVacio, resumirDistribucion, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { Diagnostico } from './Diagnostico.tsx';
+import { Cronograma } from './Cronograma.tsx';
+import { textosCronograma } from './textos/es.ts';
 import { Configuracion } from './Configuracion.tsx';
 import { crearPoolNavegador } from './motor/poolNavegador.ts';
 import { compensanHilos } from '../engine/executor/pool.ts';
@@ -72,7 +74,7 @@ import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
 import { escribirFragmento } from './fragmento.ts';
 
-export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
+export type Pestana = 'modelo' | 'resultados' | 'cronograma' | 'diagnostico' | 'configuracion';
 
 /**
  * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
@@ -81,7 +83,7 @@ export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
  */
 export function pestanaDeFragmento(hash: string): Pestana {
   const h = hash.replace(/^#/, '').toLowerCase();
-  return h === 'resultados' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
+  return h === 'resultados' || h === 'cronograma' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
 }
 
 const PREFIJO_FALLO_GUARDADO = 'El modelo no se pudo guardar:';
@@ -504,14 +506,14 @@ export function Panel() {
       <header>
         <h1>Riesgo Monte Carlo</h1>
         <nav className="pestanas">
-          {(['modelo', 'resultados', 'diagnostico'] as const).map((p) => (
+          {(['modelo', 'resultados', 'cronograma', 'diagnostico'] as const).map((p) => (
             <button
               key={p}
               type="button"
               className={p === pestana ? 'activa' : ''}
               onClick={() => setPestana(p)}
             >
-              {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
+              {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : p === 'cronograma' ? textosCronograma.pestana : 'Diagnóstico'}
             </button>
           ))}
           <button
@@ -649,6 +651,8 @@ export function Panel() {
           hilosUltimaSimulacion={resultado?.ok ? resultado.hilos : undefined}
         />
       )}
+
+      {pestana === 'cronograma' && <Cronograma alFallar={(e) => setError(mensajeDe(e))} />}
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}
     </main>
