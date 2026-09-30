@@ -23,6 +23,7 @@ import {
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
 import { leerNumero, miles } from './formato.ts';
+import { EditorPlantilla } from './PlantillaInforme.tsx';
 import { aplicarModo } from '../excel/modoLibro.ts';
 import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import {
@@ -62,6 +63,8 @@ export function Configuracion({
   return (
     <>
       <Proyecto modelo={modelo} alCambiar={alCambiar} />
+
+      <EditorPlantilla />
 
       <ModoDelLibro />
 

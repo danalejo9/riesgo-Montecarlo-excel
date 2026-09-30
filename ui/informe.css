@@ -1,6 +1,21 @@
-/* Maquetación del informe imprimible: pantalla ancha y hoja A4. */
+/* Maquetación del informe imprimible: pantalla ancha y hoja (tamaño y
+   orientación, de la plantilla: la regla @page la pone ui/informe.tsx). */
 .informe { max-width: 820px; margin: 0 auto; padding: 16px; }
+.portada { border-bottom: 3px solid var(--color-informe, var(--borde)); padding-bottom: 8px; margin-bottom: 8px; }
 .portada h1 { font-size: 22px; margin: 0 0 4px; }
+.informe h1, .informe h2 { color: var(--color-informe, inherit); }
+/* En pantalla oscura, el color de la plantilla (pensado para papel) no se leería. */
+@media screen and (prefers-color-scheme: dark) { .informe h1, .informe h2 { color: inherit; } }
+.membrete { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.logo-informe { max-height: 56px; max-width: 220px; object-fit: contain; }
+.empresa-informe { font-size: 14px; font-weight: 600; }
+.subtitulo-informe { font-size: 15px; margin: 0 0 4px; }
+.cifras-informe { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 8px 0 12px; }
+.cifras-informe div { display: flex; flex-direction: column; }
+.cifras-informe strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+.cifras-informe span { font-size: 11px; color: var(--tenue); }
+.nota-informe { font-size: 11px; margin: 4px 0; }
+.punto-semaforo { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; vertical-align: baseline; }
 .descripcion-proyecto { white-space: pre-line; margin: 8px 0 0; max-width: 70ch; }
 .lectura { margin: 6px 0 10px; max-width: 75ch; line-height: 1.5; }
 .barra-informe { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 0 16px; border-bottom: 1px solid var(--borde); margin-bottom: 12px; }
@@ -9,7 +24,7 @@
 .datos dd { margin: 0; font-variant-numeric: tabular-nums; }
 .dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .tabla-informe td, .tabla-informe th { text-align: left !important; }
-.salida-informe { border-top: 2px solid var(--borde); padding-top: 10px; margin-top: 18px; }
+.salida-informe { border-top: 2px solid var(--color-informe, var(--borde)); padding-top: 10px; margin-top: 18px; }
 .salida-informe h2 { font-size: 17px; }
 .pie-informe { margin-top: 24px; font-size: 11px; }
 /* Sin interacción en papel: las leyendas de "pasa el ratón" sobran. */
@@ -17,7 +32,6 @@
 @media (max-width: 600px) { .dos-columnas { grid-template-columns: 1fr; } }
 
 @media print {
-  @page { size: A4; margin: 14mm; }
   /* En papel siempre en claro, aunque el sistema esté en modo oscuro. */
   :root {
     color-scheme: light;
@@ -39,6 +53,9 @@
   .tornado-fila:hover { background: none; }
   .informe figcaption { display: none; }
   svg, table, .precision { break-inside: avoid; }
+  /* El Gantt, en una página propia: es el gráfico más ancho. */
+  .gantt-informe { break-before: page; }
+  .gantt-informe svg { break-inside: auto; }
 }
 /* Los gráficos del panel están pensados para 280 px de ancho: en la hoja se
    limitan para que el texto de los ejes no crezca con ellos. */
@@ -46,3 +63,5 @@
 .informe .tornado { max-width: 520px; }
 .informe .datos { align-content: start; }
 .dos-columnas { align-items: start; }
+/* Los gráficos del cronograma (V3), igual: en horizontal crecerían con la página. */
+.informe figure svg { max-width: 420px; }

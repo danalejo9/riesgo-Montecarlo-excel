@@ -1,14 +1,20 @@
 /**
  * La página del informe imprimible ("PDF"): lee los datos del fragmento de la
- * dirección y los pinta con los mismos gráficos del panel, maquetados para una
- * hoja A4. "Imprimir → Guardar como PDF" hace el resto.
+ * dirección y los pinta con los mismos gráficos del panel, maquetados para
+ * imprimir. "Imprimir → Guardar como PDF" hace el resto. V3: sirve para los
+ * dos informes (costos y cronograma) y aplica la plantilla del libro
+ * (portada, logo, pie, página y qué secciones van y en qué orden).
  */
 
 import { esSalidaDeTexto } from '../excel/analisisTexto.ts';
-import { Fragment, StrictMode, useEffect, useState } from 'react';
+import { Fragment, StrictMode, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
+import type { DatosInformeCronograma } from '../excel/informeCronograma.ts';
+import { plantillaPorDefecto, reglaPagina, type IdSeccionCostos, type PlantillaInforme } from '../excel/plantillaInforme.ts';
+import { SeccionesCronograma } from './informeCronograma.tsx';
+import { textosInforme as T } from './textos/es.ts';
 import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
   MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
@@ -17,7 +23,7 @@ import './estilos.css';
 import './informe.css';
 
 function Informe() {
-  const [datos, setDatos] = useState<DatosInforme | null | 'cargando'>('cargando');
+  const [datos, setDatos] = useState<DatosInforme | DatosInformeCronograma | null | 'cargando'>('cargando');
 
   useEffect(() => {
     const codigo = new URLSearchParams(window.location.hash.slice(1)).get('d');
@@ -27,37 +33,85 @@ function Informe() {
     }
     void decodificarInforme(codigo).then((d) => {
       setDatos(d);
-      if (d) document.title = `Informe de riesgo — ${new Date(d.generado).toLocaleDateString('es-ES')}`;
+      if (d) document.title = `${tituloDe(d)} — ${new Date(d.generado).toLocaleDateString('es-ES')}`;
     });
   }, []);
 
-  if (datos === 'cargando') return <p className="tenue">Preparando el informe…</p>;
+  if (datos === 'cargando') return <p className="tenue">{T.preparando}</p>;
   if (!datos) {
     return (
       <main className="informe">
-        <h1>No hay informe que enseñar</h1>
-        <p>Esta página se abre desde el panel del complemento, con el botón «Informe PDF» de Resultados.</p>
+        <h1>{T.nada}</h1>
+        <p>{T.nadaAyuda}</p>
       </main>
     );
   }
-
-  const a = datos.ajustes;
+  if ('tipo' in datos) {
+    return (
+      <Marco p={datos.plantilla} titulo={tituloDe(datos)} generado={datos.generado} libro={datos.libro} pie={T.pieCronograma}>
+        <SeccionesCronograma datos={datos} />
+      </Marco>
+    );
+  }
   return (
-    <main className="informe">
+    <Marco p={datos.plantilla ?? plantillaPorDefecto()} titulo={tituloDe(datos)} generado={datos.generado} libro={datos.libro} descripcion={datos.descripcion} pie={T.pieCostos}>
+      <SeccionesCostos datos={datos} />
+    </Marco>
+  );
+}
+
+function tituloDe(d: DatosInforme | DatosInformeCronograma): string {
+  return d.plantilla?.titulo.trim() || d.titulo;
+}
+
+/** Lo común a los dos informes: la regla de página, la barra de imprimir, la portada y el pie. */
+function Marco({ p, titulo, generado, libro, descripcion, pie, children }: {
+  p: PlantillaInforme;
+  titulo: string;
+  generado: string;
+  libro?: string;
+  descripcion?: string;
+  pie: string;
+  children: ReactNode;
+}) {
+  return (
+    <main className="informe" style={{ '--color-informe': p.color } as CSSProperties}>
+      <style>{reglaPagina(p)}</style>
       <div className="solo-pantalla barra-informe">
-        <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
-        <span className="tenue">En el cuadro de impresión, elige «Guardar como PDF» como impresora.</span>
+        <button type="button" className="principal" onClick={() => window.print()}>{T.imprimir}</button>
+        <span className="tenue">{T.imprimirAyuda}{p.pie.trim() || p.numeroPagina ? ` ${T.margenesAyuda}` : ''}</span>
       </div>
 
       <header className="portada">
-        <h1>{datos.titulo}</h1>
+        {(p.logo || p.empresa) && (
+          <div className="membrete">
+            {p.logo && <img src={p.logo} alt={p.empresa} className="logo-informe" />}
+            {p.empresa && <span className="empresa-informe">{p.empresa}</span>}
+          </div>
+        )}
+        <h1>{titulo}</h1>
+        {p.subtitulo && <p className="subtitulo-informe">{p.subtitulo}</p>}
         <p className="tenue">
-          {new Date(datos.generado).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}
-          {datos.libro ? ` · ${datos.libro}` : ''}
+          {new Date(generado).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}
+          {libro ? ` · ${libro}` : ''}
+          {p.autor ? ` · ${T.preparadoPor} ${p.autor}` : ''}
         </p>
-        {datos.descripcion && <p className="descripcion-proyecto">{datos.descripcion}</p>}
+        {descripcion && <p className="descripcion-proyecto">{descripcion}</p>}
       </header>
 
+      {children}
+
+      <footer className="tenue pie-informe">{pie}</footer>
+    </main>
+  );
+}
+
+/** El informe de costos, con las secciones en el orden y la visibilidad de la plantilla. */
+function SeccionesCostos({ datos }: { datos: DatosInforme }) {
+  const a = datos.ajustes;
+  const comparables = datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length);
+  const piezas: Partial<Record<IdSeccionCostos, ReactNode>> = {
+    ajustes: (
       <section>
         <h2>Cómo se calculó</h2>
         <dl className="datos">
@@ -68,7 +122,8 @@ function Informe() {
           <dt>Tiempo</dt><dd>{duracion(a.tiempoMs)}</dd>
         </dl>
       </section>
-
+    ),
+    entradas: (
       <section>
         <h2>Entradas inciertas</h2>
         <table className="comparacion tabla-informe">
@@ -80,30 +135,24 @@ function Informe() {
           </tbody>
         </table>
       </section>
-
-      {datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />}
-
-      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}
-
-      {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
-        <section className="salida-informe">
-          <h2>Comparar salidas</h2>
-          <div className="dos-columnas graficos-informe">
-            <div><h3>Caja y bigotes</h3><CajasSalidas salidas={datos.salidas} /></div>
-            <div><h3>Curvas acumuladas</h3><CurvasSuperpuestas salidas={datos.salidas} /></div>
-          </div>
-          {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 3 && (
-            <div><h3>Abanico</h3><Abanico salidas={datos.salidas} /></div>
-          )}
-        </section>
-      )}
-
-      <footer className="tenue pie-informe">
-        Percentiles aproximados (t-digest). Sensibilidad por correlación de rangos y regresión sobre las primeras
-        iteraciones. Generado por Riesgo Monte Carlo; todo el cálculo se hizo en el equipo del usuario.
-      </footer>
-    </main>
-  );
+    ),
+    registro: datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />,
+    salidas: datos.salidas.length > 0 && (
+      <>{datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}</>
+    ),
+    comparar: comparables.length >= 2 && (
+      <section className="salida-informe">
+        <h2>Comparar salidas</h2>
+        <div className="dos-columnas graficos-informe">
+          <div><h3>Caja y bigotes</h3><CajasSalidas salidas={datos.salidas} /></div>
+          <div><h3>Curvas acumuladas</h3><CurvasSuperpuestas salidas={datos.salidas} /></div>
+        </div>
+        {comparables.length >= 3 && <div><h3>Abanico</h3><Abanico salidas={datos.salidas} /></div>}
+      </section>
+    ),
+  };
+  const secciones = (datos.plantilla ?? plantillaPorDefecto()).seccionesCostos;
+  return <>{secciones.filter((x) => x.visible && piezas[x.id]).map((x) => <Fragment key={x.id}>{piezas[x.id]}</Fragment>)}</>;
 }
 
 /** El registro de riesgos (T8), como en el panel: de más a menos esperado. */

@@ -23,6 +23,8 @@ import type { FilaRiesgo } from './registroRiesgos.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
+import { normalizarPlantilla, type PlantillaInforme } from './plantillaInforme.ts';
+import type { DatosInformeCronograma } from './informeCronograma.ts';
 
 export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' | 'muestraTexto'> {
   umbral?: { texto: string; probabilidad: number };
@@ -53,12 +55,14 @@ export interface DatosInforme {
   /** El registro de riesgos (T8), si el libro tiene `RIESGO.EVENTO`. */
   registroRiesgos?: FilaRiesgo[];
   salidas: SalidaInforme[];
+  /** V3: la plantilla (portada, logo, pie, secciones). Sin ella, la de siempre. */
+  plantilla?: PlantillaInforme;
 }
 
 export function datosDelInforme(
   modelo: ModeloRiesgo,
   resultado: SimulacionCompletada,
-  opciones: { libro?: string; referencia?: ReferenciaGuardada | null; ahora?: Date } = {},
+  opciones: { libro?: string; referencia?: ReferenciaGuardada | null; ahora?: Date; plantilla?: PlantillaInforme } = {},
 ): DatosInforme {
   const nombrePorId = new Map(modelo.inputs.map((e) => [e.id, e.name] as const));
   const ref = opciones.referencia && opciones.referencia.resultado.idSimulacion !== resultado.idSimulacion
@@ -71,6 +75,7 @@ export function datosDelInforme(
     ...(modelo.project?.description?.trim() ? { descripcion: modelo.project.description.trim() } : {}),
     generado: (opciones.ahora ?? new Date()).toISOString(),
     ...(opciones.libro ? { libro: opciones.libro } : {}),
+    ...(opciones.plantilla ? { plantilla: opciones.plantilla } : {}),
     ajustes: {
       iteraciones: resultado.iteracionesCompletadas,
       semilla: modelo.settings.seed,
@@ -129,11 +134,17 @@ export function datosDelInforme(
 }
 
 /** Los datos, comprimidos y listos para ir detrás de `#d=`. */
-export async function codificarInforme(datos: DatosInforme): Promise<string> {
+export async function codificarInforme(datos: DatosInforme | DatosInformeCronograma): Promise<string> {
   return codificarJson(datos);
 }
 
-export async function decodificarInforme(codigo: string): Promise<DatosInforme | null> {
-  const datos = (await decodificarJson(codigo)) as DatosInforme | null;
-  return datos && datos.version === 1 && Array.isArray(datos.salidas) ? datos : null;
+/** Cualquiera de los dos informes; la plantilla, siempre completa. */
+export async function decodificarInforme(codigo: string): Promise<DatosInforme | DatosInformeCronograma | null> {
+  const datos = (await decodificarJson(codigo)) as (DatosInforme & { tipo?: string }) | DatosInformeCronograma | null;
+  if (!datos || datos.version !== 1) return null;
+  if ('tipo' in datos && datos.tipo === 'cronograma') {
+    return (datos as DatosInformeCronograma).gantt ? { ...(datos as DatosInformeCronograma), plantilla: normalizarPlantilla((datos as DatosInformeCronograma).plantilla) } : null;
+  }
+  const d = datos as DatosInforme;
+  return Array.isArray(d.salidas) ? { ...d, plantilla: normalizarPlantilla(d.plantilla) } : null;
 }

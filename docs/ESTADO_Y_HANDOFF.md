@@ -1389,6 +1389,19 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Pruebas exactas: prob. 1 = añadirla al cronograma; prob. 0 = sin ella.
     **Siguiente**: V3 (informe PDF configurable, los dos frentes).
 
+83. [x] **V3 (2026-09-30)**. `excel/plantillaInforme.ts` (plantilla:
+    título, subtítulo, empresa, autor, logo reducido, pie, número de
+    página, color, papel, orientación y secciones de cada informe con orden
+    y visibilidad; `normalizarPlantilla`, `moverSeccion`, `reglaPagina` con
+    márgenes `@bottom-left/right`), `almacenPlantilla.ts` (en
+    `workbook.settings`), `informeCronograma.ts` (datos resumidos: Gantt de
+    ≤ 80 barras, nube de ≤ 400 puntos). `ui/informe.tsx` pinta los dos
+    informes con un marco común; `ui/informeCronograma.tsx`,
+    `ui/graficosCronograma.tsx` (compartidos con el panel),
+    `ui/PlantillaInforme.tsx` en Configuración. Probado en el banco con
+    Playwright y el PDF de Chromium (pie y «Página N de M» en cada página).
+    Guía Q46–Q48. **Siguiente**: V4 (incertidumbre en costos).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

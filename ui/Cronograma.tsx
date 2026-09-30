@@ -20,8 +20,13 @@ import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import { escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
+import { datosInformeCronograma } from '../excel/informeCronograma.ts';
+import { codificarInforme } from '../excel/informeImprimible.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
+import { abrirEnNavegador } from './Resultados.tsx';
+import { HistogramaFechas, NubeCostoPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
@@ -33,6 +38,7 @@ interface Simulado {
   narrativa: string[];
   hoja: string;
   hilos: number;
+  escenario: 'antes' | 'despues';
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
 }
 
@@ -147,7 +153,10 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         await escribirHojaGantt(hojaGantt(vista));
         ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       }
-      setSimulado({ r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1, ...(comparacion ? { comparacion } : {}) });
+      setSimulado({
+        r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1, escenario: escenario === 'despues' ? 'despues' : 'antes',
+        ...(comparacion ? { comparacion } : {}),
+      });
     } catch (e) {
       alFallar(e);
     } finally {
@@ -169,6 +178,26 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
           if (texto.includes('"listo"')) ventana.enviar(vista);
         },
       });
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
+  /** V3: el informe PDF, con la plantilla del libro y lo último calculado y simulado. */
+  const abrirInforme = async () => {
+    if (!resultado || !datos) return;
+    try {
+      const d = datosInformeCronograma({
+        cronograma: datos.cron,
+        filas: resultado.filas,
+        fechaFinProyecto: resultado.fechaFinProyecto,
+        duracionProyecto: resultado.duracionProyecto,
+        salud,
+        ...(simulado ? { simulado } : {}),
+        ...(simulado?.comparacion ? { comparacion: simulado.comparacion } : {}),
+        plantilla: await plantillaDelLibro(),
+      });
+      abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${await codificarInforme(d)}`);
     } catch (e) {
       alFallar(e);
     }
@@ -274,6 +303,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
           <p className="tenue">{T.escritoEn(resultado.hoja)}</p>
           <p>
             <button type="button" onClick={verCronograma} disabled={ocupado !== null || !datos}>{T.verCronograma}</button>{' '}
+            <button type="button" onClick={abrirInforme} disabled={ocupado !== null || !datos} title={T.informeAyuda}>{T.informe}</button>{' '}
             <span className="tenue">{T.verCronogramaAyuda}</span>
           </p>
         </>
@@ -412,45 +442,10 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
   );
 }
 
-/** Barras por día (agrupadas si hay muchos), con el cronograma y el P80 marcados. */
 function Histograma({ r }: { r: ResultadoSimulacionPlazo }) {
-  const h = r.histograma;
-  if (h.length === 0) return null;
-  const d0 = h[0]!.dia;
-  const d1 = h[h.length - 1]!.dia;
-  const paso = Math.max(1, Math.ceil((d1 - d0 + 1) / 40));
-  const barras = new Map<number, number>();
-  for (const x of h) {
-    const k = d0 + Math.floor((x.dia - d0) / paso) * paso;
-    barras.set(k, (barras.get(k) ?? 0) + x.cuenta);
-  }
-  const max = Math.max(...barras.values());
-  const n = Math.ceil((d1 - d0 + 1) / paso);
-  const W = 300;
-  const H = 110;
-  const ancho = W / n;
-  const xDia = (d: number) => ((d - d0) / paso) * ancho;
-  const diaDet = Math.max(0, Math.ceil(r.determinista.dias - 1e-9) - 1);
-  const diaP80 = r.dias.p80 - 1;
   return (
-    <figure style={{ margin: '8px 0' }}>
-      <figcaption className="tenue" style={{ fontSize: 12 }}>{T.histograma}</figcaption>
-      <svg viewBox={`0 0 ${W} ${H + 14}`} width="100%" role="img" aria-label={T.histograma}>
-        {[...barras].map(([d, c]) => (
-          <rect key={d} x={xDia(d) + 0.5} y={H - (c / max) * H} width={Math.max(1, ancho - 1)} height={(c / max) * H} fill="var(--acento)" opacity={d <= diaP80 ? 0.9 : 0.45} />
-        ))}
-        {[{ d: diaDet, t: T.marcaCronograma }, { d: diaP80, t: 'P80' }].map(({ d, t }) => (
-          d >= d0 - paso && d <= d1 + paso ? (
-            <g key={t}>
-              <line x1={xDia(d) + ancho / 2} x2={xDia(d) + ancho / 2} y1={0} y2={H} stroke="var(--texto, #333)" strokeDasharray="3 2" />
-              <text x={Math.min(W - 40, Math.max(0, xDia(d) + ancho / 2 + 2))} y={10} fontSize="9" fill="currentColor">{t}</text>
-            </g>
-          ) : null
-        ))}
-        <text x={0} y={H + 12} fontSize="9" fill="currentColor">{textoFecha(h[0]!.fecha)}</text>
-        <text x={W} y={H + 12} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(h[h.length - 1]!.fecha)}</text>
-      </svg>
-    </figure>
+    <HistogramaFechas histograma={r.histograma} diaCronograma={Math.max(0, Math.ceil(r.determinista.dias - 1e-9) - 1)}
+      diaP80={r.dias.p80 - 1} titulo={T.histograma} marcaCronograma={T.marcaCronograma} />
   );
 }
 
@@ -490,41 +485,21 @@ function Importado({ i, alEscribir, alCancelar }: {
   );
 }
 
-/** La nube costo–plazo (P5): cada punto es una iteración; las líneas, los P80. El cuadrante abajo a la izquierda es el «a tiempo y en presupuesto». */
+/** La nube costo–plazo (P5). */
 function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
   const c = r.costos;
   if (!c) return null;
-  const n = r.finProyecto.length;
-  const paso = Math.max(1, Math.floor(n / 1500));
-  const xs: number[] = [];
-  const ys: number[] = [];
-  for (let i = 0; i < n; i += paso) {
-    xs.push(r.finProyecto[i] as number);
-    ys.push(c.porIteracion[i] as number);
+  const paso = Math.max(1, Math.floor(r.finProyecto.length / 1500));
+  const puntos: Array<[number, number]> = [];
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < r.finProyecto.length; i += paso) {
+    const f = r.finProyecto[i] as number;
+    puntos.push([f, c.porIteracion[i] as number]);
+    min = Math.min(min, f);
+    max = Math.max(max, f);
   }
-  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
-  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
-  const W = 300;
-  const H = 150;
-  const px = (v: number) => ((v - x0) / Math.max(1e-9, x1 - x0)) * (W - 10) + 5;
-  const py = (v: number) => H - 5 - ((v - y0) / Math.max(1e-9, y1 - y0)) * (H - 10);
-  const xP80 = px(r.dias.p80);
-  const yP80 = py(c.p80);
-  return (
-    <figure style={{ margin: '8px 0' }}>
-      <figcaption className="tenue" style={{ fontSize: 12 }}>{T.nube}</figcaption>
-      <svg viewBox={`0 0 ${W} ${H + 14}`} width="100%" role="img" aria-label={T.nube}>
-        <rect x={0} y={yP80} width={xP80} height={H - yP80} fill="var(--acento)" opacity={0.08} />
-        {xs.map((x, i) => <circle key={i} cx={px(x)} cy={py(ys[i] as number)} r={1.4} fill="var(--acento)" opacity={0.35} />)}
-        <line x1={xP80} x2={xP80} y1={0} y2={H} stroke="var(--texto, #333)" strokeDasharray="3 2" />
-        <line x1={0} x2={W} y1={yP80} y2={yP80} stroke="var(--texto, #333)" strokeDasharray="3 2" />
-        <text x={xP80 + 2} y={10} fontSize="9" fill="currentColor">P80 plazo</text>
-        <text x={W - 2} y={yP80 - 3} fontSize="9" fill="currentColor" textAnchor="end">P80 costo</text>
-        <text x={2} y={H + 12} fontSize="9" fill="currentColor">{textoFecha(r.cal(x0))}</text>
-        <text x={W} y={H + 12} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(r.cal(x1))}</text>
-      </svg>
-    </figure>
-  );
+  return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
 }
 
 /** V1: antes y después de mitigar, y lo que rinde cada respuesta. */

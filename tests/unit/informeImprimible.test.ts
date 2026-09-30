@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { modeloVacio } from '../../engine/modelo/index.ts';
 import { construirInforme, type SimulacionCompletada } from '../../excel/informe.ts';
 import { codificarInforme, datosDelInforme, decodificarInforme } from '../../excel/informeImprimible.ts';
+import { plantillaPorDefecto } from '../../excel/plantillaInforme.ts';
 
 function caso() {
   const m = modeloVacio();
@@ -37,7 +38,8 @@ describe('informe imprimible', () => {
     const d = datosDelInforme(m, r);
     const codigo = await codificarInforme(d);
     expect(codigo).toMatch(/^[A-Za-z0-9_-]+$/); // apto para una URL
-    expect(await decodificarInforme(codigo)).toEqual(d);
+    // V3: al leerlo, la plantilla siempre completa (la de por defecto si no venía).
+    expect(await decodificarInforme(codigo)).toEqual({ ...d, plantilla: plantillaPorDefecto() });
   });
 
   it('un código roto no rompe la página', async () => {

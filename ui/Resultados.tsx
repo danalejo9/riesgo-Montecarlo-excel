@@ -51,6 +51,7 @@ import { leerSeleccion } from '../excel/seleccion.ts';
 import type { ResultadoDecisiones, SalidaEnOpcion } from '../excel/decisiones.ts';
 import { resultadosDesactualizados } from '../excel/resultadosGuardados.ts';
 import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import {
   compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada,
 } from '../excel/comparacion.ts';
@@ -119,7 +120,7 @@ export function Resultados({
   const abrirInforme = async () => {
     setFalloVolcado(null);
     try {
-      const codigo = await codificarInforme(datosDelInforme(modelo, resultado, { referencia: referencia ?? null }));
+      const codigo = await codificarInforme(datosDelInforme(modelo, resultado, { referencia: referencia ?? null, plantilla: await plantillaDelLibro() }));
       const url = `${new URL('/informe.html', window.location.href).href}#d=${codigo}`;
       abrirEnNavegador(url);
     } catch (e) {

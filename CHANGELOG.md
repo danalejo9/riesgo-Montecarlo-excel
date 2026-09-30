@@ -5,6 +5,24 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V3: informe PDF configurable, costos y cronograma (2026-09-30)
+
+**Añadido**
+- **Plantilla del informe** en ⚙ Configuración → Informe PDF: título,
+  subtítulo, empresa, «preparado por», logo (se reduce solo), pie de
+  página, número de página («Página 3 de 12»), color de los títulos, papel
+  (A4, Carta, Oficio) y orientación, y **qué secciones van y en qué orden**
+  en cada informe. Se guarda en el libro.
+- **Informe PDF del cronograma** (botón junto a «Ver cronograma»): resumen
+  ejecutivo con las cifras y el texto, Gantt probabilístico, curva S e
+  histograma, riesgos de plazo, mitigación antes y después, costo y plazo
+  (JCL), salud, actividades más críticas y cómo se calculó. Con
+  cronogramas grandes, el Gantt se queda con las 80 actividades más
+  críticas y lo dice.
+- El informe de costos usa la misma plantilla (desde Resultados y desde la
+  cinta). Sin plantilla, sale como siempre.
+- Guía Q46–Q48.
+
 ### V2: riesgos que añaden trabajo (2026-09-30)
 
 **Añadido**

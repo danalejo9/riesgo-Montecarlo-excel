@@ -50,6 +50,7 @@ import { escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { leerSeleccion } from '../excel/seleccion.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
 import { codificarInforme, datosDelInforme } from '../excel/informeImprimible.ts';
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import { escenarioActivo } from '../excel/escenarios.ts';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { marcarSeleccion } from './marcar.ts';
@@ -491,7 +492,7 @@ export function Panel() {
           setPestana('resultados');
           return mostrarPanel();
         }
-        const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc) }));
+        const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc), plantilla: await plantillaDelLibro() }));
         abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
       }),
       manejarDesdeLaCinta('abrirAyuda', async () => {

@@ -881,6 +881,42 @@ Prueba un error: «Después de» `6` y «Antes de» `5` → «Una actividad nuev
 de “Riesgos de plazo” crea una dependencia circular…». Al terminar, borra la
 fila 9 (las cifras de las demás pruebas son sin R6).
 
+**Q46. Plantilla del informe PDF (V3).** En **⚙ Configuración → Informe
+PDF**: Título «Puente Aurora — riesgo del plazo», Subtítulo «Comité de
+inversiones», Empresa, Preparado por, Pie de página «Confidencial · Uso
+interno», Orientación **Horizontal**, un logo (PNG o JPG) y un color.
+Desmarca «Salud del cronograma» y sube «Gantt probabilístico» un puesto
+(↑). Pulsa **Guardar plantilla** → «Plantilla guardada en el libro.».
+Cierra y vuelve a abrir el panel (o el libro, guardándolo): la plantilla
+sigue ahí. **Restablecer** la deja como venía (sin guardar hasta que
+pulses Guardar).
+
+**Q47. Informe PDF del cronograma.** Con Q46 guardada, calcula y simula
+(«Comparar antes y después», 10.000, PERT) y pulsa **Informe PDF** (junto a
+«Ver cronograma»). Se abre en el navegador. Esperado:
+- Arriba el logo, la empresa, el título y el subtítulo; la fecha y
+  «Preparado por …».
+- Las secciones en este orden: Resumen ejecutivo (fin 16/07/2027, P80
+  24/08/2027, prob. de cumplir 1 %, costo P80 US$ 1.343.353, JCL y el
+  texto), Gantt probabilístico (página propia, con las franjas P10–P90),
+  Fechas de fin, Riesgos de plazo, Mitigación (US$ 28.000, P80 del
+  13/08/2027), Costo y plazo (JCL), Actividades más críticas y Cómo se
+  calculó. **No** aparece «Salud del cronograma».
+- Imprime → Guardar como PDF: papel horizontal; en **cada página**, abajo a
+  la izquierda «Confidencial · Uso interno» y abajo a la derecha «Página N
+  de M» (en Chrome/Edge, con «Encabezados y pies de página» activado; en
+  Safari puede que no salgan: anótalo).
+- Sin simular (solo «Calcular cronograma»), el informe sale con el
+  resumen determinista, el Gantt y la salud, y avisa de que falta simular.
+
+**Q48. Informe PDF de costos con la misma plantilla.** Abre el libro de
+costos de siempre, pon un Pie «Borrador», desmarca «Cómo se calculó» en
+las secciones de costos, sube «Registro de riesgos» un puesto y guarda.
+Simula y pulsa **Informe PDF** en Resultados (y también desde la cinta):
+título de la plantilla (o el del proyecto si lo dejas vacío), el registro
+antes de las entradas, sin «Cómo se calculó», y «Borrador» y el número en
+cada página. Con la plantilla por defecto, el informe es el de siempre.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»
