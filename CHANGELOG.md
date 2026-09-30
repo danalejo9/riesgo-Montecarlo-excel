@@ -5,6 +5,14 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### W3: casos de validación publicables (2026-09-30)
+
+**Añadido**
+- `docs/VALIDACION_CRONOGRAMA.md`, generado con `npm run
+  validacion:cronograma`: 12 casos con su planteamiento, la respuesta
+  esperada (analítica o de la implementación independiente en Python) y la
+  del motor. Los mismos casos pasan en cada `npm test`.
+
 ### W2: reserva de contingencia y su reparto (2026-09-30)
 
 **Añadido**

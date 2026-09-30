@@ -1532,6 +1532,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     costo (`SinRiesgos`). Panel con selector de nivel, bloque en la hoja,
     sección en el PDF. Guía Q68. **Siguiente**: W3 (casos de validación).
 
+96. [x] **W3 (2026-09-30)**. `tests/validacion/casos.ts`: 12 casos (8
+    analíticos: serie, merge bias con 1/2/5 rutas y criticidad, risk driver
+    común frente a independientes, ramificación, JCL independiente y
+    ligada, CPM a mano con las cuatro relaciones y festivo, calendario de 6
+    días, clima; 2 contra el oráculo Python). Corren en cada `npm test`
+    (`validacion.test.ts`); `npm run validacion:cronograma` escribe
+    `docs/VALIDACION_CRONOGRAMA.md` (31 de 31). Dos esperados «a mano»
+    estaban mal (FC+2 con festivo; JCL con días enteros) y se corrigieron:
+    el motor tenía razón. Pendiente: los ejemplos publicados de GAO y AACE,
+    cuando se tengan los documentos. **Siguiente**: W4 (merge bias).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
