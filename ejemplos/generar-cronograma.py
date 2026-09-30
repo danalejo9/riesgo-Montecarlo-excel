@@ -211,6 +211,13 @@ RIESGOS = [
 ]
 ITERACIONES_MC = 20000
 
+# Costos (P5): costo fijo por actividad (materiales, equipos comprados), costo
+# indirecto del proyecto por día laborable y costo directo de algunos riesgos.
+COSTO_FIJO = {"5": 18000, "6": 65000, "7": 140000, "8": 95000, "9": 30000, "10": 42000, "11": 36000,
+              "12": 25000, "14": 60000, "15": 38000, "17": 12000}
+COSTO_INDIRECTO_DIA = 1800
+COSTO_RIESGO = {"R2": 12000, "R3": 20000}
+
 
 def afectadas(texto):
     ids = {a[0] for a in ACTIVIDADES}
@@ -244,16 +251,19 @@ def monte_carlo():
             sucs[p].append((s_, t, r))
     ina = {a[0]: (indice_desde(a[9]) if a[9] else 0) for a in ACTIVIDADES}
     riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
-    fines, crit = [], {a[0]: 0 for a in ACTIVIDADES}
+    fines, crit, costos, fines_dia = [], {a[0]: 0 for a in ACTIVIDADES}, [], []
+    fijo = sum(COSTO_FIJO.values())
     for _ in range(ITERACIONES_MC):
         d = {}
         for a in ACTIVIDADES:
             d[a[0]] = pert_muestra(rng, a[4], a[5], a[6]) if a[4] is not None else a[2]
+        costo = fijo
         for (rid, _, p, lo, mp, hi, _), ids in riesgos:
             if rng.random() < p:
                 f = 1 + pert_muestra(rng, lo, mp, hi)
                 for i in ids:
                     d[i] *= f
+                costo += COSTO_RIESGO.get(rid, 0)
         es, ef = {}, {}
         for s_ in orden:
             v = ina[s_]
@@ -271,10 +281,17 @@ def monte_carlo():
             if v - d[p] - es[p] < 1e-9:
                 crit[p] += 1
         fines.append(max(0, math.ceil(fin - 1e-9) - 1))  # día de fin (índice laborable)
-    fines.sort()
-    def cuantil(p):
-        return fines[max(1, math.ceil(p * len(fines) - 1e-9)) - 1]
-    return {p: cuantil(p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()}
+        costo += sum(acts[k][8] * d[k] for k in d) + COSTO_INDIRECTO_DIA * fin
+        costos.append(costo)
+    pares = list(zip(fines, costos))
+    fines_ord, costos_ord = sorted(fines), sorted(costos)
+    def cuantil(lista, p):
+        return lista[max(1, math.ceil(p * len(lista) - 1e-9)) - 1]
+    d80, c80 = cuantil(fines_ord, 0.8), cuantil(costos_ord, 0.8)
+    jcl = sum(1 for f, c in pares if f <= d80 and c <= c80) / len(pares)
+    costo_pct = {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}
+    return ({p: cuantil(fines_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()},
+            costo_pct, jcl)
 
 
 def salud():
@@ -303,7 +320,8 @@ def salud():
     ]
 
 
-PCT, CRIT = monte_carlo()
+PCT, CRIT, COSTO_PCT, JCL = monte_carlo()
+COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
 
 # ---------------------------------------------------------------------------
@@ -364,7 +382,7 @@ CABECERA = ["ID", "Actividad", "Duración (días)", "Predecesoras", "Mínimo", "
             "Máximo", "Categoría", "Costo por día", "Inicio no antes de",
             # Avance y más restricciones (vacías en el escenario base; ver «Avance (prueba)»).
             "Inicio real", "Fin real", "% completado", "Duración restante",
-            "Inicio no después de", "Terminar no antes de", "Terminar no después de"]
+            "Inicio no después de", "Terminar no antes de", "Terminar no después de", "Costo fijo"]
 for j, t in enumerate(CABECERA, start=1):
     c = act.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -376,7 +394,10 @@ for i, a in enumerate(ACTIVIDADES, start=4):
         if j == 10 and v is not None:
             c.number_format = FECHA
     act.cell(row=i, column=4).alignment = Alignment(horizontal="left")
-for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21], start=1):
+for i, a in enumerate(ACTIVIDADES, start=4):
+    if a[0] in COSTO_FIJO:
+        act.cell(row=i, column=18, value=COSTO_FIJO[a[0]]).number_format = DINERO
+for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13], start=1):
     act.column_dimensions[get_column_letter(j)].width = w
 for i in range(4, 4 + len(ACTIVIDADES)):
     for j in (11, 12, 15, 16, 17):
@@ -397,6 +418,9 @@ for k, (dia, lab) in enumerate([("Lunes", 1), ("Martes", 1), ("Miércoles", 1), 
                                   ("Viernes", 1), ("Sábado", 0), ("Domingo", 0)], start=4):
     cal.cell(row=k, column=1, value=dia)
     cal.cell(row=k, column=2, value="Sí" if lab else "No")
+cal["A11"], cal["B11"] = "Costo indirecto por día", COSTO_INDIRECTO_DIA
+cal["B11"].number_format = DINERO
+cal["A11"].font = H
 cal["A12"] = "Festivos"
 cal["A12"].font = H
 for k, (f, nombre) in enumerate(FESTIVOS, start=13):
@@ -441,7 +465,7 @@ rie = wb.create_sheet("Riesgos de plazo")
 rie["A1"] = "Riesgos de plazo — cada uno alarga a la vez todas sus actividades (AACE 57R-09)"
 rie["A1"].font = TITULO
 CAB_R = ["ID", "Riesgo", "Probabilidad", "Impacto mínimo", "Impacto más probable", "Impacto máximo",
-         "Actividades afectadas"]
+         "Actividades afectadas", "Costo si ocurre"]
 for j, t in enumerate(CAB_R, start=1):
     c = rie.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -450,7 +474,10 @@ for i, r in enumerate(RIESGOS, start=4):
         c = rie.cell(row=i, column=j, value=v)
         if 3 <= j <= 6:
             c.number_format = "0%"
-for j, w in enumerate([6, 44, 12, 15, 20, 15, 22], start=1):
+for i, r in enumerate(RIESGOS, start=4):
+    if r[0] in COSTO_RIESGO:
+        rie.cell(row=i, column=8, value=COSTO_RIESGO[r[0]]).number_format = DINERO
+for j, w in enumerate([6, 44, 12, 15, 20, 15, 22, 15], start=1):
     rie.column_dimensions[get_column_letter(j)].width = w
 
 sal = wb.create_sheet("Esperado (salud)")
@@ -466,7 +493,8 @@ sal.column_dimensions["A"].width = 22
 
 sim = wb.create_sheet("Esperado (simulación)")
 sim["A1"] = (f"Monte Carlo de referencia: {ITERACIONES_MC} iteraciones en Python (PERT + riesgos de plazo). "
-             "El complemento usa otros números aleatorios: debe coincidir en ±1 día y ±3 puntos de criticidad.")
+             "El complemento usa otros números aleatorios: debe coincidir en ±1 día, ±3 puntos de criticidad, "
+             "±1 % de costo y ±3 puntos de JCL. El costo determinista es exacto.")
 sim["A1"].font = H
 sim["A3"], sim["B3"], sim["C3"] = "Percentil", "Días laborables", "Fecha de fin"
 for c in (sim["A3"], sim["B3"], sim["C3"]):
@@ -475,6 +503,16 @@ for i, p in enumerate((0.1, 0.5, 0.8, 0.9), start=4):
     sim.cell(row=i, column=1, value=f"P{int(p * 100)}")
     sim.cell(row=i, column=2, value=PCT[p] + 1)
     sim.cell(row=i, column=3, value=DIAS[PCT[p]]).number_format = FECHA
+sim["E3"], sim["F3"] = "Costo", "Valor"
+for c in (sim["E3"], sim["F3"]):
+    c.font, c.fill = CAB, FONDO
+for i, (nombre, v) in enumerate([("Determinista (exacto)", COSTO_DET), ("P10", COSTO_PCT[0.1]), ("P50", COSTO_PCT[0.5]),
+                                  ("P80", COSTO_PCT[0.8]), ("P90", COSTO_PCT[0.9]), ("JCL: P(plazo ≤ P80 y costo ≤ P80)", JCL)],
+                                 start=4):
+    sim.cell(row=i, column=5, value=nombre)
+    sim.cell(row=i, column=6, value=round(v, 4) if nombre.startswith("JCL") else round(v, 2)).number_format = "0%" if nombre.startswith("JCL") else DINERO
+sim.column_dimensions["E"].width = 34
+sim.column_dimensions["F"].width = 16
 sim["A10"], sim["B10"], sim["C10"] = "ID", "Actividad", "Índice de criticidad"
 for c in (sim["A10"], sim["B10"], sim["C10"]):
     c.font, c.fill = CAB, FONDO

@@ -34,6 +34,13 @@ export function moneda(codigo: string = MONEDA_POR_DEFECTO): Moneda {
   return MONEDAS[codigo.toUpperCase()] ?? (MONEDAS[MONEDA_POR_DEFECTO] as Moneda);
 }
 
+/** Una cantidad escrita con su moneda, en español: «US$ 1.343.194», «1.343.194 €». */
+export function textoMoneda(valor: number, codigo: string = MONEDA_POR_DEFECTO): string {
+  const m = moneda(codigo);
+  const cifra = new Intl.NumberFormat('es-ES', { maximumFractionDigits: m.decimales, minimumFractionDigits: m.decimales, useGrouping: 'always' }).format(valor);
+  return m.simboloDetras ? `${cifra} ${m.simbolo}` : `${m.simbolo} ${cifra}`;
+}
+
 /** Código de formato de Excel (invariante, en-US) para una moneda. */
 export function formatoMoneda(codigo: string = MONEDA_POR_DEFECTO): string {
   const m = moneda(codigo);

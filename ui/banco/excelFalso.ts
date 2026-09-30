@@ -548,7 +548,7 @@ export function instalarExcelFalso(): void {
     // También `Excel.run(contextoAnterior, fn)`, como al dejar de escuchar un evento.
     run: <T>(a: unknown, b?: (c: typeof contexto) => Promise<T>) =>
       (typeof a === 'function' ? (a as (c: typeof contexto) => Promise<T>) : (b as (c: typeof contexto) => Promise<T>))(contexto),
-    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered', xyscatterLinesNoMarkers: 'XYScatterLinesNoMarkers' },
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered', xyscatterLinesNoMarkers: 'XYScatterLinesNoMarkers', xyscatter: 'XYScatter' },
     BorderIndex: { edgeBottom: 'EdgeBottom' },
     BorderLineStyle: { continuous: 'Continuous' },
     ChartSeriesBy: { columns: 'Columns', rows: 'Rows' },

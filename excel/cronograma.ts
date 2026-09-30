@@ -70,9 +70,9 @@ async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, ree
   }
   if (h.filaEncabezado >= 0 && !h.otrosEncabezados?.length) hoja.freezePanes.freezeRows(h.filaEncabezado + 1);
   for (const f of h.resaltar ?? []) hoja.getRangeByIndexes(f, 0, 1, ancho).format.fill.color = '#FFF2CC';
-  if (h.grafico) {
-    const g = h.grafico;
-    const grafico = hoja.charts.add(Excel.ChartType.xyscatterLinesNoMarkers, hoja.getRangeByIndexes(g.fila, g.col, g.filas, 2), Excel.ChartSeriesBy.columns);
+  for (const g of h.graficos ?? []) {
+    const tipo = g.tipo === 'puntos' ? Excel.ChartType.xyscatter : Excel.ChartType.xyscatterLinesNoMarkers;
+    const grafico = hoja.charts.add(tipo, hoja.getRangeByIndexes(g.fila, g.col, g.filas, 2), Excel.ChartSeriesBy.columns);
     grafico.title.text = g.titulo;
     grafico.legend.visible = false;
     grafico.setPosition(hoja.getRangeByIndexes(g.anclaFila, g.anclaCol, 1, 1), hoja.getRangeByIndexes(g.anclaFila + 16, g.anclaCol + 5, 1, 1));

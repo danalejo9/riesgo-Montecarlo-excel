@@ -34,8 +34,10 @@ export interface Actividad {
   tresPuntos?: TresPuntos;
   /** Categoría o frente, para asignar incertidumbre en bloque (P3). */
   categoria?: string;
-  /** Costo que se paga por cada día que dura la actividad (P5). */
+  /** Costo que se paga por cada día que dura la actividad (P5): crece si se alarga. */
   costoPorDia?: number;
+  /** Costo que no depende de la duración (materiales, equipos comprados) (P5). */
+  costoFijo?: number;
   /** «Inicio no antes de» (fecha de serie de Excel). */
   inicioNoAntesDe?: number;
   /** «Inicio no después de»: no mueve la actividad, pero reduce su holgura (y puede volverla negativa). */
@@ -69,6 +71,8 @@ export interface Cronograma {
   actividades: Actividad[];
   /** Fecha de corte (*data date*): el trabajo que queda empieza ese día o después. */
   fechaCorte?: number;
+  /** Costo indirecto del proyecto por día laborable que dura (administración, vigilancia, alquileres) (P5). */
+  costoIndirectoDia?: number;
 }
 
 /** Un problema al leer o al calcular, con dónde está, para enseñarlo tal cual. */

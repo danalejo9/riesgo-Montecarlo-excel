@@ -5,13 +5,19 @@
  */
 
 import { textoFecha } from '../modelo/fechas.ts';
+import { MONEDA_POR_DEFECTO, textoMoneda } from '../modelo/moneda.ts';
 import type { InformeSalud } from './salud.ts';
 import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 const dias = (n: number) => `${Math.round(n)} ${Math.round(n) === 1 ? 'día laborable' : 'días laborables'}`;
 
-export function narrativaPlazo(r: ResultadoSimulacionPlazo, impacto?: { porRiesgo: ImpactoRiesgo[] }, salud?: InformeSalud): string[] {
+export function narrativaPlazo(
+  r: ResultadoSimulacionPlazo,
+  impacto?: { porRiesgo: ImpactoRiesgo[] },
+  salud?: InformeSalud,
+  codigoMoneda = MONEDA_POR_DEFECTO,
+): string[] {
   const out: string[] = [];
   const det = r.determinista.dias;
   const reserva = r.dias.p80 - Math.ceil(det - 1e-9);
@@ -38,5 +44,14 @@ export function narrativaPlazo(r: ResultadoSimulacionPlazo, impacto?: { porRiesg
     .filter((a) => a.criticidad > 0.2 && !Number.isNaN(a.correlacion))
     .sort((a, b) => b.criticidad * b.correlacion - a.criticidad * a.correlacion)[0];
   if (clave) out.push(`La actividad que más mueve la fecha de fin es «${clave.nombre}» (crítica en el ${pct(clave.criticidad)} de los casos).`);
+
+  const c = r.costos;
+  if (c) {
+    const dinero = (x: number) => textoMoneda(x, codigoMoneda);
+    let frase = `El costo tiene un 80 % de probabilidad de no pasar de ${dinero(c.p80)} (el cronograma lo estima en ${dinero(c.determinista)})`;
+    frase += `; pero cumplir a la vez el P80 de plazo y el P80 de costo solo ocurre en el ${pct(c.jclP80)} de los casos`;
+    if (c.conjunto80 && c.jclP80 < 0.8) frase += `: para un 80 % conjunto hacen falta el ${textoFecha(c.conjunto80.fecha)} y ${dinero(c.conjunto80.costo)}`;
+    out.push(`${frase}.`);
+  }
   return out;
 }

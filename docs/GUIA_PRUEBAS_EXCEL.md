@@ -778,6 +778,40 @@ actividad, horas sueltas o «lo más tarde posible», que aquí se simplifican).
 **Q35. Web y Mac.** Repite Q31 en Excel para la Web (el selector de archivos
 del navegador).
 
+**Q36. Costo y plazo juntos (P5).** En `cronograma-prueba.xlsx` (escenario
+base, sin avance), fíjate en los datos de costo: «Actividades» tiene
+**Costo por día** (columna I) y **Costo fijo** (columna R); «Calendario»,
+**Costo indirecto por día** = US$ 1.800 (fila 11); «Riesgos de plazo»,
+**Costo si ocurre** (columna H: licencia 12.000, ascensor 20.000). Calcula y
+**Simula el plazo** (10.000, PERT). Esperado, además de lo de Q13:
+- Tres cifras más: **costo P50 US$ 1.305.685**, **costo P80 US$ 1.343.353**
+  y **76 %** «plazo y costo P80 a la vez (JCL)».
+- Una sexta frase: «El costo tiene un 80 % de probabilidad de no pasar de
+  US$ 1.343.353 (el cronograma lo estima en US$ 1.225.500); pero cumplir a la
+  vez el P80 de plazo y el P80 de costo solo ocurre en el 76 % de los casos:
+  para un 80 % conjunto hacen falta el 26/08/2027 y US$ 1.349.536.»
+- Una **nube de puntos** costo–fecha con las dos líneas P80 y el cuadrante
+  de abajo a la izquierda sombreado.
+- En la tabla de riesgos, una columna **Costo de P80**: lluvias US$ 33.527,
+  licencia 9.555, acabados 6.479, ascensor 9.246 (casi no retrasa, pero
+  cuesta) y la oportunidad −3.472.
+
+**Q37. La hoja con el costo.** En «Cronograma (simulación)»: un bloque
+**Costo del proyecto** (cronograma 1.225.500, P10–P90, media), la
+probabilidad conjunta (76 %), la de cumplir a la vez fecha y costo del
+cronograma (menos del 1 %), «Para un 80 % conjunto: fecha 26/08/2027 … y
+presupuesto 1.349.536»; y la tabla **Costo y plazo (500 iteraciones)** con su
+**gráfico de puntos** a la derecha. Compara con «Esperado (simulación)»,
+columnas E–F: determinista **exacto** (1.225.500), P50/P80/P90 a menos del
+1 % y la JCL a ±3 puntos (el script usa otros números aleatorios).
+
+**Q38. Sin costos, como antes.** Borra el costo indirecto (Calendario!B11)
+y las columnas I, R de «Actividades» y H de «Riesgos de plazo» (o prueba con
+el libro de Q31, que no trae costos): la simulación no enseña cifras de
+costo ni la nube, y la hoja no tiene el bloque. Deshaz (Ctrl+Z).
+
+**Q39. Web y Mac.** Repite Q36 en Excel para la Web: las mismas cifras.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

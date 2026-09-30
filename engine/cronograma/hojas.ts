@@ -36,8 +36,8 @@ export interface HojaAEscribir {
   formatosRango?: Array<{ fila: number; col: number; filas: number; cols: number; formato: string }>;
   /** Filas (desde 0) que se resaltan en amarillo. */
   resaltar?: number[];
-  /** Un gráfico de dispersión con líneas sobre dos columnas contiguas (x, y). */
-  grafico?: { titulo: string; fila: number; col: number; filas: number; anclaFila: number; anclaCol: number };
+  /** Gráficos de dispersión sobre dos columnas contiguas (x, y): con líneas (curva S) o solo puntos (costo–plazo). */
+  graficos?: Array<{ titulo: string; fila: number; col: number; filas: number; anclaFila: number; anclaCol: number; tipo: 'lineas' | 'puntos' }>;
 }
 
 export const ENCABEZADO_ACTIVIDADES = [
@@ -152,6 +152,7 @@ export function hojaSimulacionPlazo(
   r: ResultadoSimulacionPlazo,
   impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number; diasP80: number } },
   narrativa: string[] = [],
+  codigoMoneda = MONEDA_POR_DEFECTO,
 ): HojaAEscribir {
   const v: (string | number)[][] = [];
   const encabezados: number[] = [];
@@ -188,18 +189,62 @@ export function hojaSimulacionPlazo(
   for (const { p, fecha } of r.curvaS) v.push(['', fecha, p]);
   fechaEn(fc, 1, r.curvaS.length);
   pctEn(fc, 2, r.curvaS.length);
-  const grafico = { titulo: 'Curva S del fin del proyecto', fila: fc, col: 1, filas: r.curvaS.length, anclaFila: fc, anclaCol: 4 };
+  const graficos: NonNullable<HojaAEscribir['graficos']> = [
+    { titulo: 'Curva S del fin del proyecto', fila: fc, col: 1, filas: r.curvaS.length, anclaFila: fc, anclaCol: 4, tipo: 'lineas' },
+  ];
   v.push(['']);
+
+  // P5: costo y plazo juntos.
+  const c = r.costos;
+  if (c) {
+    const dinero = formatoMoneda(codigoMoneda);
+    const enDinero = (fila: number, col: number, filas = 1) => fechas.push({ fila, col, filas, cols: 1, formato: dinero });
+    encabezados.push(v.length);
+    v.push(['Costo del proyecto', 'Valor']);
+    const fk = v.length;
+    v.push(['Costo del cronograma (sin incertidumbre ni riesgos)', c.determinista]);
+    v.push(['P10', c.p10]);
+    v.push(['P50', c.p50]);
+    v.push(['P80', c.p80]);
+    v.push(['P90', c.p90]);
+    v.push(['Media', c.media]);
+    enDinero(fk, 1, 6);
+    v.push(['Probabilidad conjunta: plazo ≤ P80 y costo ≤ P80 (JCL)', c.jclP80]);
+    pctEn(v.length - 1, 1);
+    v.push(['Probabilidad de cumplir a la vez la fecha y el costo del cronograma', c.jclPlan]);
+    pctEn(v.length - 1, 1);
+    if (c.conjunto80) {
+      v.push(['Para un 80 % conjunto: fecha', c.conjunto80.fecha, `${c.conjunto80.dias} días laborables`]);
+      fechaEn(v.length - 1, 1);
+      v.push(['… y presupuesto', c.conjunto80.costo, `(percentil ${Math.round(c.conjunto80.q * 1000) / 10} de cada uno)`]);
+      enDinero(v.length - 1, 1);
+    }
+    v.push(['']);
+    // Nube de puntos: una muestra de 500 iteraciones, fecha de fin y costo.
+    encabezados.push(v.length);
+    v.push(['Costo y plazo (500 iteraciones)', 'Fecha de fin', 'Costo']);
+    const fp = v.length;
+    const paso = Math.max(1, Math.floor(r.finProyecto.length / 500));
+    let puntos = 0;
+    for (let i = 0; i < r.finProyecto.length && puntos < 500; i += paso, puntos++) {
+      v.push(['', r.cal(r.finProyecto[i] as number), c.porIteracion[i] as number]);
+    }
+    fechaEn(fp, 1, puntos);
+    enDinero(fp, 2, puntos);
+    graficos.push({ titulo: 'Costo y fecha de fin, iteración a iteración', fila: fp, col: 1, filas: puntos, anclaFila: fp, anclaCol: 4, tipo: 'puntos' });
+    v.push(['']);
+  }
 
   if (impacto && impacto.porRiesgo.length > 0) {
     encabezados.push(v.length);
-    v.push(['ID', 'Riesgo', 'Probabilidad', 'Ocurrió', 'Días de P80 que aporta', 'Días de P50 que aporta']);
+    v.push(['ID', 'Riesgo', 'Probabilidad', 'Ocurrió', 'Días de P80 que aporta', 'Días de P50 que aporta', ...(c ? ['Costo de P80 que aporta'] : [])]);
     const fr = v.length;
     for (const x of impacto.porRiesgo) {
       const ocurrio = r.riesgos.find((y) => y.id === x.id)?.ocurrio ?? NaN;
-      v.push([x.id, x.nombre, x.probabilidad, ocurrio, x.diasP80, x.diasP50]);
+      v.push([x.id, x.nombre, x.probabilidad, ocurrio, x.diasP80, x.diasP50, ...(c ? [x.costoP80 ?? 0] : [])]);
     }
     pctEn(fr, 2, impacto.porRiesgo.length, 2);
+    if (c) fechas.push({ fila: fr, col: 6, filas: impacto.porRiesgo.length, cols: 1, formato: formatoMoneda(codigoMoneda) });
     v.push(['']);
   }
 
@@ -224,7 +269,7 @@ export function hojaSimulacionPlazo(
     anchos: [8, 44, 16, 18, 13, 13, 13, 13, 13, 13, 13],
     formatosRango: [{ fila: fa, col: 0, filas: r.actividades.length, cols: 1, formato: '@' }, ...fechas],
     resaltar: r.actividades.map((a, i) => (a.criticidad >= 0.5 ? fa + i : -1)).filter((x) => x >= 0),
-    grafico,
+    graficos,
   };
 }
 

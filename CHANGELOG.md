@@ -5,6 +5,24 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P5: costo y plazo juntos (JCL) (2026-09-30)
+
+**Añadido**
+- Costos en el cronograma: **Costo fijo** por actividad (además del **Costo
+  por día**), **Costo indirecto por día** del proyecto en «Calendario» y
+  **Costo si ocurre** en «Riesgos de plazo».
+- Cada iteración de la simulación calcula también el costo: fijos + costo
+  por día × duración simulada + indirecto × plazo del proyecto + riesgos
+  que ocurren. Resultados: costo del cronograma, P10–P90, media,
+  **probabilidad conjunta (JCL)** de cumplir a la vez el P80 de plazo y de
+  costo, la de cumplir la fecha y el costo del cronograma, y la fecha y el
+  presupuesto que dan un **80 % conjunto**. Por riesgo: lo que aporta al P80
+  del costo.
+- En el panel: cifras de costo y JCL, sexta frase del resumen y la nube
+  costo–plazo. En la hoja: bloque de costo y gráfico de puntos.
+- Libro de pruebas: costos en las hojas y costo y JCL de referencia en
+  Python. Guía: Q36–Q39.
+
 ### P4: importar de MS Project y Primavera P6 (2026-09-30)
 
 **Añadido**

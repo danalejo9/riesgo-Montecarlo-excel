@@ -62,6 +62,11 @@ export const textosCronograma = {
   criticidadCol: 'Crítica en',
   actividadCol: 'Actividad',
   histograma: 'Fecha de fin: cuántas iteraciones terminan cada día',
+  costoP50: 'costo P50',
+  costoP80: 'costo P80',
+  jcl: 'plazo y costo P80 a la vez (JCL)',
+  nube: 'Costo y fecha de fin, iteración a iteración',
+  costoP80Col: 'Costo de P80',
   marcaCronograma: 'cronograma',
   calculadoCon: (n: number, hilos: number) => `${n.toLocaleString('es')} iteraciones en ${hilos} ${hilos === 1 ? 'hilo' : 'hilos'}.`,
 } as const;

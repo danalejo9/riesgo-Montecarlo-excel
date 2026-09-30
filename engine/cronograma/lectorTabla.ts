@@ -23,7 +23,7 @@ export function normalizar(s: unknown): string {
   return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'inicioNoAntesDe'
+type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'costoFijo' | 'inicioNoAntesDe'
   | 'inicioNoDespuesDe' | 'terminarNoAntesDe' | 'terminarNoDespuesDe' | 'inicioReal' | 'finReal' | 'completado' | 'restante';
 
 /** Cada campo con los encabezados que lo identifican (normalizados, por prefijo). */
@@ -39,6 +39,7 @@ const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['max', ['maxim', 'max ', 'max', 'pesimista']],
   ['categoria', ['categoria', 'frente']],
   ['costoPorDia', ['costo por dia', 'coste por dia', 'costo diario', 'coste diario']],
+  ['costoFijo', ['costo fijo', 'coste fijo']],
   ['inicioNoAntesDe', ['inicio no antes']],
   ['inicioNoDespuesDe', ['inicio no despues']],
   ['terminarNoAntesDe', ['terminar no antes', 'fin no antes']],
@@ -188,15 +189,19 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
     }
 
     if (!vacia(col(fila, 'categoria'))) act.categoria = String(col(fila, 'categoria')).trim();
-    const costo = col(fila, 'costoPorDia');
-    if (!vacia(costo)) {
+    let costoMal = false;
+    for (const [campo, texto] of [['costoPorDia', 'el costo por día'], ['costoFijo', 'el costo fijo']] as const) {
+      const costo = col(fila, campo);
+      if (vacia(costo)) continue;
       const v = numeroDe(costo);
       if (v === undefined) {
-        error(`el costo por día «${String(costo)}» no es un número`);
-        continue;
+        error(`${texto} «${String(costo)}» no es un número`);
+        costoMal = true;
+        break;
       }
-      act.costoPorDia = v;
+      act[campo] = v;
     }
+    if (costoMal) continue;
     let fallo = false;
     for (const campo of ['inicioNoAntesDe', 'inicioNoDespuesDe', 'terminarNoAntesDe', 'terminarNoDespuesDe', 'inicioReal', 'finReal'] as const) {
       const v = col(fila, campo);
@@ -269,6 +274,7 @@ function siNo(v: Celda): boolean | undefined {
 export interface LecturaCalendario {
   inicio?: number;
   fechaCorte?: number;
+  costoIndirectoDia?: number;
   calendario: Calendario;
   problemas: ProblemaCronograma[];
 }
@@ -291,6 +297,7 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
   }
   let inicio: number | undefined;
   let fechaCorte: number | undefined;
+  let costoIndirectoDia: number | undefined;
   const laborables = [...CALENDARIO_ESTANDAR.laborables];
   const festivos = new Set<number>();
   for (let f = 0; f < valores.length; f++) {
@@ -304,6 +311,13 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
     if (etiqueta.startsWith('fecha de corte') || etiqueta.startsWith('fecha de estado') || etiqueta.startsWith('fecha de datos')) {
       if (typeof fila[1] === 'number') fechaCorte = fila[1];
       else if (!vacia(fila[1])) problemas.push({ gravedad: 'error', hoja, fila: primeraFila + f, mensaje: `Fila ${primeraFila + f}: la fecha de corte debe ser una fecha` });
+      continue;
+    }
+    if (etiqueta.startsWith('costo indirecto') || etiqueta.startsWith('coste indirecto')) {
+      if (vacia(fila[1])) continue;
+      const v = numeroDe(fila[1]);
+      if (v === undefined || v < 0) problemas.push({ gravedad: 'error', hoja, fila: primeraFila + f, mensaje: `Fila ${primeraFila + f}: el costo indirecto por día debe ser un número` });
+      else costoIndirectoDia = v;
       continue;
     }
     const dia = DIAS.find(([n]) => etiqueta === n);
@@ -327,7 +341,13 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
     problemas.push({ gravedad: 'error', hoja, mensaje: 'Falta «Inicio del proyecto» (columna A) con su fecha (columna B)' });
   }
   if (!laborables.some(Boolean)) problemas.push({ gravedad: 'error', hoja, mensaje: 'Ningún día de la semana es laborable' });
-  return { inicio, ...(fechaCorte !== undefined ? { fechaCorte } : {}), calendario: { laborables, festivos }, problemas };
+  return {
+    inicio,
+    ...(fechaCorte !== undefined ? { fechaCorte } : {}),
+    ...(costoIndirectoDia !== undefined ? { costoIndirectoDia } : {}),
+    calendario: { laborables, festivos },
+    problemas,
+  };
 }
 
 /** Las dos hojas juntas. `cronograma` solo si no hay errores. */
@@ -357,7 +377,13 @@ export function leerCronograma(
   }
   if (problemas.some((p) => p.gravedad === 'error') || c.inicio === undefined) return { problemas };
   return {
-    cronograma: { inicio: c.inicio, calendario: c.calendario, actividades: a.actividades, ...(c.fechaCorte !== undefined ? { fechaCorte: c.fechaCorte } : {}) },
+    cronograma: {
+      inicio: c.inicio,
+      calendario: c.calendario,
+      actividades: a.actividades,
+      ...(c.fechaCorte !== undefined ? { fechaCorte: c.fechaCorte } : {}),
+      ...(c.costoIndirectoDia !== undefined ? { costoIndirectoDia: c.costoIndirectoDia } : {}),
+    },
     problemas,
   };
 }

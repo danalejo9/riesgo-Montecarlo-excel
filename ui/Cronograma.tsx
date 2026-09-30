@@ -15,6 +15,7 @@ import {
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
+import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import { escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
@@ -318,15 +319,26 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
         <div><span className="cifra">{textoFecha(r.fechas.p90)}</span><span className="cifra-nombre">P90</span></div>
         <div><span className="cifra">{Math.round(r.probDeterminista * 100)} %</span><span className="cifra-nombre">{T.probCumplir}</span></div>
       </div>
+      {r.costos && (
+        <div className="cifras fechas">
+          <div><span className="cifra">{textoMoneda(r.costos.p50)}</span><span className="cifra-nombre">{T.costoP50}</span></div>
+          <div><span className="cifra">{textoMoneda(r.costos.p80)}</span><span className="cifra-nombre">{T.costoP80}</span></div>
+          <div><span className="cifra">{Math.round(r.costos.jclP80 * 100)} %</span><span className="cifra-nombre">{T.jcl}</span></div>
+        </div>
+      )}
       {s.narrativa.map((l) => <p key={l}>{l}</p>)}
       <Histograma r={r} />
+      {r.costos && <Nube r={r} />}
       {impacto && impacto.porRiesgo.length > 0 && (
         <Plegable id="cronograma-riesgos" abierta titulo={T.riesgos}>
           <table>
-            <thead><tr><th>{T.riesgoCol}</th><th>{T.probCol}</th><th>{T.diasP80}</th></tr></thead>
+            <thead><tr><th>{T.riesgoCol}</th><th>{T.probCol}</th><th>{T.diasP80}</th>{r.costos && <th>{T.costoP80Col}</th>}</tr></thead>
             <tbody>
               {impacto.porRiesgo.map((x) => (
-                <tr key={x.id}><td>{x.nombre}</td><td>{Math.round(x.probabilidad * 100)} %</td><td>{x.diasP80 > 0 ? `+${x.diasP80}` : x.diasP80}</td></tr>
+                <tr key={x.id}>
+                  <td>{x.nombre}</td><td>{Math.round(x.probabilidad * 100)} %</td><td>{x.diasP80 > 0 ? `+${x.diasP80}` : x.diasP80}</td>
+                  {r.costos && <td>{textoMoneda(x.costoP80 ?? 0)}</td>}
+                </tr>
               ))}
             </tbody>
           </table>
@@ -420,5 +432,42 @@ function Importado({ i, alEscribir, alCancelar }: {
         </p>
       )}
     </div>
+  );
+}
+
+/** La nube costo–plazo (P5): cada punto es una iteración; las líneas, los P80. El cuadrante abajo a la izquierda es el «a tiempo y en presupuesto». */
+function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
+  const c = r.costos;
+  if (!c) return null;
+  const n = r.finProyecto.length;
+  const paso = Math.max(1, Math.floor(n / 1500));
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (let i = 0; i < n; i += paso) {
+    xs.push(r.finProyecto[i] as number);
+    ys.push(c.porIteracion[i] as number);
+  }
+  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const W = 300;
+  const H = 150;
+  const px = (v: number) => ((v - x0) / Math.max(1e-9, x1 - x0)) * (W - 10) + 5;
+  const py = (v: number) => H - 5 - ((v - y0) / Math.max(1e-9, y1 - y0)) * (H - 10);
+  const xP80 = px(r.dias.p80);
+  const yP80 = py(c.p80);
+  return (
+    <figure style={{ margin: '8px 0' }}>
+      <figcaption className="tenue" style={{ fontSize: 12 }}>{T.nube}</figcaption>
+      <svg viewBox={`0 0 ${W} ${H + 14}`} width="100%" role="img" aria-label={T.nube}>
+        <rect x={0} y={yP80} width={xP80} height={H - yP80} fill="var(--acento)" opacity={0.08} />
+        {xs.map((x, i) => <circle key={i} cx={px(x)} cy={py(ys[i] as number)} r={1.4} fill="var(--acento)" opacity={0.35} />)}
+        <line x1={xP80} x2={xP80} y1={0} y2={H} stroke="var(--texto, #333)" strokeDasharray="3 2" />
+        <line x1={0} x2={W} y1={yP80} y2={yP80} stroke="var(--texto, #333)" strokeDasharray="3 2" />
+        <text x={xP80 + 2} y={10} fontSize="9" fill="currentColor">P80 plazo</text>
+        <text x={W - 2} y={yP80 - 3} fontSize="9" fill="currentColor" textAnchor="end">P80 costo</text>
+        <text x={2} y={H + 12} fontSize="9" fill="currentColor">{textoFecha(r.cal(x0))}</text>
+        <text x={W} y={H + 12} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(r.cal(x1))}</text>
+      </svg>
+    </figure>
   );
 }

@@ -67,6 +67,9 @@ describe('riesgos de plazo', () => {
   it('lee la hoja del libro, con categorías resueltas a actividades', () => {
     const { riesgos, problemas } = leerRiesgosPlazo(hoja('Riesgos de plazo'), cron.actividades);
     expect(problemas).toEqual([]);
+    expect(riesgos.map((r) => r.costo)).toEqual([undefined, 12000, 20000, undefined, undefined]);
+    expect(cron.costoIndirectoDia).toBe(1800);
+    expect(cron.actividades.find((a) => a.id === '7')).toMatchObject({ costoPorDia: 3500, costoFijo: 140000 });
     expect(riesgos.map((r) => r.id)).toEqual(['R1', 'R2', 'R3', 'R4', 'R5']);
     expect(riesgos[0]!.actividades).toEqual(['4', '5', '6', '7', '9', '12', '20']); // «Obra gris»
     expect(riesgos[4]).toMatchObject({ probabilidad: 0.2, impactoMin: -0.15, impactoMax: -0.05 });
@@ -97,6 +100,16 @@ describe('Monte Carlo del plazo (P3)', () => {
     }
     expect(r.determinista.dias).toBe(118);
     expect(r.probDeterminista).toBeLessThan(0.05); // la fecha del cronograma casi nunca se cumple
+
+    // P5: costo y JCL. El determinista es exacto; el resto, ±1 % y ±3 puntos.
+    const c = r.costos!;
+    const val = (fila: number) => (esperado[fila] as unknown[])[5] as number;
+    expect(c.determinista).toBeCloseTo(val(3), 6);
+    [c.p10, c.p50, c.p80, c.p90].forEach((x, i) => expect(Math.abs(x / val(4 + i) - 1)).toBeLessThan(0.01));
+    expect(Math.abs(c.jclP80 - val(8))).toBeLessThanOrEqual(0.03);
+    expect(c.jclP80).toBeLessThan(0.8); // lo conjunto es menos probable que cada uno por separado
+    expect(c.porIteracion).toHaveLength(r.finProyecto.length);
+    expect(c.conjunto80!.q).toBeGreaterThan(0.8);
   });
 
   it('misma semilla, mismo resultado; otro troceado, mismo resultado', async () => {
@@ -145,6 +158,9 @@ describe('Monte Carlo del plazo (P3)', () => {
     expect(imp.porRiesgo.find((x) => x.id === 'R5')!.diasP80).toBeLessThanOrEqual(0); // una oportunidad: quitarla alarga
     expect(imp.porRiesgo[0]!.diasP80).toBeGreaterThan(0);
     expect(imp.sinRiesgos.diasP80).toBeLessThan(base.dias.p80);
+    // Con costos: lo que cada riesgo aporta al P80 del costo. El del ascensor alarga poco el plazo, pero cuesta.
+    expect(imp.porRiesgo.find((x) => x.id === 'R3')!.costoP80).toBeGreaterThan(0);
+    expect(imp.sinRiesgos.costoP80).toBeLessThan(base.costos!.p80);
   });
 
   it('se puede cancelar entre bloques', async () => {
@@ -172,7 +188,8 @@ describe('hoja de la simulación y resumen en palabras', () => {
     const r = await simularPlazo(cron, riesgos, op);
     const imp = await impactoDeRiesgos(cron, riesgos, r, op);
     const texto = narrativaPlazo(r, imp, revisarSalud(cron.actividades, cpm.filas));
-    expect(texto).toHaveLength(5);
+    expect(texto).toHaveLength(6);
+    expect(texto[5]).toMatch(/^El costo tiene un 80 % de probabilidad de no pasar de US\$ [\d.]+ .* solo ocurre en el \d+ % de los casos: para un 80 % conjunto hacen falta el \d\d\/\d\d\/2027 y US\$ [\d.]+\.$/);
     expect(texto[0]).toMatch(/^Hay un 80 % de probabilidad de terminar el \d\d\/\d\d\/2027 o antes/);
     expect(texto[1]).toContain('convergencias');
     expect(texto[2]).toMatch(/reserva de \d+ días laborables/);
@@ -191,8 +208,15 @@ describe('hoja de la simulación y resumen en palabras', () => {
     const enc = h.otrosEncabezados!;
     expect(h.valores[enc[enc.length - 1]!]!.slice(0, 3)).toEqual(['ID', 'Actividad', 'Criticidad']);
     expect(h.valores.slice(enc[enc.length - 1]! + 1)).toHaveLength(20);
-    expect(h.grafico).toMatchObject({ filas: 20, col: 1 });
-    expect(h.valores[h.grafico!.fila + 19]![2]).toBe(1); // la curva S acaba en el 100 %
+    const curva = h.graficos![0]!;
+    expect(curva).toMatchObject({ filas: 20, col: 1, tipo: 'lineas' });
+    expect(h.valores[curva.fila + 19]![2]).toBe(1); // la curva S acaba en el 100 %
+    // P5: el bloque de costo y la nube costo–plazo con su gráfico de puntos.
+    expect(col0).toContain('Costo del proyecto');
+    expect(h.valores.find((f) => String(f[0]).startsWith('Probabilidad conjunta'))![1]).toBe(r.costos!.jclP80);
+    const nube = h.graficos![1]!;
+    expect(nube).toMatchObject({ tipo: 'puntos', filas: 500 });
+    expect(h.valores[nube.fila]![2]).toBe(r.costos!.porIteracion[0]);
     expect(h.resaltar!.length).toBeGreaterThan(0);
   });
 

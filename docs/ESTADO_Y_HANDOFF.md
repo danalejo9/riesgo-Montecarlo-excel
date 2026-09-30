@@ -1348,6 +1348,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     importación en `ui/Cronograma.tsx`. Verificado 20/20 con los dos
     archivos de ejemplo y en el banco. **Siguiente**: P5 (JCL).
 
+78. [x] **P5 (2026-09-30), dentro del módulo**. `costoFijo`,
+    `costoIndirectoDia`, `RiesgoPlazo.costo`; costo por iteración en
+    `simularTramo` (arreglo `costo` del bloque, `tramos[].costo`),
+    `analizarCostos` (JCL con días de fin y costo, `conjunto80` buscando el
+    mismo percentil en los dos), `ImpactoRiesgo.costoP80`,
+    `ResultadoSimulacionPlazo.cal`, `textoMoneda`, varios gráficos por hoja
+    (`graficos`, curva S y nube de puntos), `Nube` en el panel. Verificado
+    contra Python (costo determinista exacto, percentiles ±1 %, JCL ±3
+    puntos). **Falta** la otra mitad del plan de P5: usar el plazo simulado
+    como entrada del **modelo de costos del libro** (`RIESGO.CRONOGRAMA`).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

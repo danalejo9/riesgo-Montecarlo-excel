@@ -32,6 +32,8 @@ export interface RiesgoPlazo {
   impactoMax: number;
   /** IDs de las actividades afectadas, ya resueltas (sin categorías). */
   actividades: string[];
+  /** Costo directo si ocurre (multas, reparaciones), además del que causa el retraso (P5). */
+  costo?: number;
   fila?: number;
 }
 
@@ -62,6 +64,7 @@ export function leerRiesgosPlazo(
     mp: ['impacto mas probable', 'impacto probable'],
     max: ['impacto max'],
     actividades: ['actividades', 'afecta'],
+    costo: ['costo si ocurre', 'coste si ocurre', 'costo'],
   }, ['id', 'probabilidad']);
   if (!tabla.ok) return { riesgos: [], problemas: [{ gravedad: 'error', hoja, mensaje: tabla.error }] };
 
@@ -101,7 +104,13 @@ export function leerRiesgosPlazo(
       continue;
     }
     const nombre = String(celda('nombre') ?? '').trim() || id;
-    riesgos.push({ id, nombre, probabilidad: p, impactoMin: a, impactoMasProbable: mp, impactoMax: b, actividades: [...new Set(afectadas)], fila });
+    const costoCrudo = celda('costo');
+    const costo = costoCrudo === '' || costoCrudo === undefined ? undefined : numeroDe(costoCrudo);
+    if (costoCrudo !== '' && costoCrudo !== undefined && costo === undefined) { error('«Costo si ocurre» debe ser un número'); continue; }
+    riesgos.push({
+      id, nombre, probabilidad: p, impactoMin: a, impactoMasProbable: mp, impactoMax: b, actividades: [...new Set(afectadas)], fila,
+      ...(costo !== undefined ? { costo } : {}),
+    });
   }
   return { riesgos, problemas };
 }
