@@ -1507,6 +1507,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     oportunidades I5→I1). Panel con las tres vistas; hoja con las tres
     matrices; PDF con la consolidada.
 
+93. [x] **Plan del bloque W (2026-09-30)**. Aprobado por el usuario, por
+    etapas y en el corto plazo: W1 hitos contractuales y multas, W2 reserva
+    de contingencia, W3 casos de validación, W4 merge bias con gráfico,
+    W5 `RIESGO.CRONOGRAMA("Hito")`, W6 plantillas por sector y primer uso,
+    W7 escenarios «¿qué pasa si?» (`PLAN_CRONOGRAMA_QSRA.md` §4.2).
+    Aplazados: SECOP y cadenas de eventos. **Siguiente**: W1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

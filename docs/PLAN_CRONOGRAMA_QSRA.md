@@ -263,6 +263,27 @@ pruebas al bloque Q de la guía.
 SECOP. **No recomendados**: nivelación de recursos, base de datos
 multiusuario propia.
 
+### 4.2 Bloque W — lo que pide la venta (aprobado por el usuario el 30/09)
+
+Propuesto tras cerrar el bloque V; el usuario lo aprueba entero, por etapas
+y en el corto plazo, **en este orden**:
+
+| # | Código | Funcionalidad | Qué aporta | Esfuerzo |
+|---|---|---|---|---|
+| 1 | **W1** (A) | **Hitos contractuales y multas por retraso**: fecha contractual por hito, probabilidad de cumplirla, P80 de cada hito y multa por día de retraso (con tope) sumada al costo y a la JCL | Lo que miran el contratante y el gerente: fechas del contrato y cláusula penal | 2–3 d |
+| 2 | **W2** (C) | **Reserva de contingencia y su reparto**: cuánto tiempo y dinero reservar para el nivel de confianza elegido y cuánto le toca a cada riesgo | Presupuestos y ofertas defendibles | 1–2 d |
+| 3 | **W3** (F) | **Casos de validación publicables**: ejemplos de la literatura (GAO‑16‑89G, AACE 57R‑09, *merge bias* analítico) reproducidos con el motor, documentados | Credibilidad al vender | 2–3 d |
+| 4 | **W4** (G) | **Merge bias explicado con un gráfico**: en cada convergencia, cuánto retrasa esperar a la rama más lenta | Explica por qué el P80 cae después del cronograma | 1 d |
+| 5 | **W5** (B) | **`RIESGO.CRONOGRAMA("Hito")`**: cualquier hito (fecha o días) como entrada del modelo de costos, en la misma iteración | JCL con cualquier hito, no solo con el fin | 2–3 d |
+| 6 | **W6** (E) | **Plantillas por sector y guía de primer uso**: vivienda, vía, edificio público, software; recorrido guiado | Menos barrera de entrada para pymes | 2–3 d |
+| 7 | **W7** (D) | **Escenarios «¿qué pasa si?»**: alternativas (más cuadrillas, turnos, otro proveedor) comparadas con los mismos números aleatorios | Decidir entre opciones, no solo mitigar riesgos | 2 d |
+
+**Total:** unos 12–17 días. Cada etapa con sus pruebas (y referencia
+calculada aparte cuando haya números) y su bloque en la guía.
+
+**Para después** (decisión del usuario, 30/09): H, referencias de SECOP
+(*reference class forecasting*), e I, cadenas de eventos.
+
 ---
 
 ## 5. Lo que las decisiones de negocio pendientes sí cambian en el desarrollo
