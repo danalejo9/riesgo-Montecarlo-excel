@@ -177,7 +177,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 | E12 | Diferenciadores: depurador de escenarios, conversor de @RISK, narrativa local | 8–12 d | ⬜ después de la v1.0 (§1.2) |
-| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, P1 ✅ (salvo calendarios por actividad), P2 ✅, P3 ✅, P3c ✅, P3b ✅, P4 ✅, P5 ✅ (JCL en el módulo y «Plazo simulado» para el modelo de costos) (30/09; libro de pruebas propio y bloque Q1–Q41). Pendiente: calendarios por actividad (aplazado) y P6 (v2) (§E13) |
+| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, P1 ✅ (salvo calendarios por actividad), P2 ✅, P3 ✅, P3c ✅, P3b ✅, P4 ✅, P5 ✅ (JCL en el módulo y «Plazo simulado» para el modelo de costos) (30/09; libro de pruebas propio y bloque Q1–Q41). Siguiente: bloque V (v2), empezando por V1 (§E13) |
 
 **Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
 salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el
@@ -1048,7 +1048,7 @@ deben revisarse antes de publicar. No es una tarea técnica y no la puedo resolv
 | P3c | Vistas: ventana «Ver cronograma» (Gantt interactivo con flechas, zoom, criticidad, franja P10–P90) y hoja «Cronograma (Gantt)» de celdas coloreadas | 2 d |
 | P4 | Importadores MSPDI (XML de MS Project) y XER (P6) en TypeScript, con verificación contra las fechas de origen | 6–8 d |
 | P5 | Costo‑plazo: hitos como entradas del modelo de costos (`RIESGO.CRONOGRAMA`), costos dependientes del tiempo, dispersión y JCL | 5–7 d |
-| P6 | (v2) Clima probabilístico, escenarios pre/post mitigación, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
+| P6 | (v2) Bloque V, en este orden: V1 mitigación antes/después · V2 riesgos que añaden trabajo · V3 informe PDF configurable (costos y cronograma: título, logo, pie, secciones) · V4 incertidumbre en costos · V5 seguimiento en el tiempo · V6 rangos por sector y ayudas para estimar · V7 calendarios por actividad · V8 clima probabilístico · V9 exportar a MS Project/P6 · V10 registro de riesgos completo · V11 simulación rápida configurable. Detalle en `PLAN_CRONOGRAMA_QSRA.md` §4.1 | 30–40 d |
 
 **Criterio de hecho (P0–P5):** el libro de ejemplo del cronograma pasa el chequeo, su CPM determinista coincide con las fechas de un XML de MS Project y un XER de ejemplo, el *merge bias* coincide con el valor analítico, 5.000 actividades × 10.000 iteraciones corren en menos de 10 s en Excel Web o Mac, y la dispersión costo‑fecha sale de la misma simulación. Pruebas en Excel: bloque Q de la guía.
 

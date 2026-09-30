@@ -201,7 +201,7 @@ Las pruebas en Excel del módulo de cronograma se añadirán a la guía como blo
 | **P3c** | **Vistas del cronograma** (pedido del usuario, 30/09): ventana flotante «Ver cronograma» con Gantt interactivo (barras, flechas FC/CC/FF/CF, zoom, críticas y criticidad en color, franja P10–P90, líneas del cronograma y del P80, predecesoras y sucesoras al pulsar) y hoja «Cronograma (Gantt)» de celdas coloreadas para compartir e imprimir sin el complemento | 2 d |
 | **P4** | Importadores de XML de MS Project y XER de P6, con verificación contra las fechas de origen | 6–8 d |
 | **P5** | Costo‑plazo: hitos como entradas del modelo de costos, costos que dependen del tiempo, JCL | 5–7 d |
-| **P6** (v2) | Clima probabilístico, escenarios antes y después de mitigar, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
+| **P6** (v2) | Ver §4.1 «Versión 2 del módulo»: bloque V (V1–V11) | 30–40 d |
 
 **Estado al 30/09 (tarde):** la v0 sencilla está **hecha en código** (P0, núcleo
 de P1, P2 y P3), verificada contra el libro de pruebas y en el banco del
@@ -224,6 +224,40 @@ bloque Q de la guía; `tests/unit/cronogramaDemo.test.ts` lo comprueba en
 cada `npm test`.
 
 Lanzamiento del módulo: **P0 a P5, unos 35–45 días de trabajo**. Puede ir en la v1 o en una versión posterior, según cuándo esté lista la v1 de costos.
+
+**Estado al 30/09 (noche):** P0–P5 hechos en código (salvo calendarios por
+actividad, que pasan a V7), más «Rellenar los rangos vacíos». Guía Q1–Q41.
+
+### 4.1 Versión 2 del módulo — bloque V (aprobado por el usuario el 30/09)
+
+Inspirado en lo que hacen Safran, Acumen, Primavera Risk Analysis,
+RiskyProject, Full Monte y Epoch, y elegido por el usuario. **En este
+orden** (el recomendado): lo que convierte el análisis en decisión, lo que
+se entrega, lo que completa la JCL, lo que fideliza, lo que mejora las
+estimaciones, y después lo que da exactitud de obra.
+
+| # | Código | Funcionalidad | Qué aporta | Esfuerzo |
+|---|---|---|---|---|
+| 1 | **V1** (A) | **Mitigación antes y después**: por riesgo, probabilidad e impacto después de responder, costo de la respuesta y responsable; simular antes, después o comparar con los mismos números aleatorios; por respuesta, días y dinero que ahorra por cada unidad invertida | Pasar de medir a decidir | 3–4 d |
+| 2 | **V2** (E) | **Riesgos que añaden trabajo** (ramificación probabilística): si ocurre, aparece una actividad nueva con su duración (y su costo) entre unas predecesoras y unas sucesoras, en vez de alargar las existentes | Reprocesos y trámites extra, típicos de obra pública | 2–3 d |
+| 3 | **V3** (B) | **Informe ejecutivo en PDF configurable**, para los **dos frentes** (costos y cronograma): título, subtítulo, empresa, **logo**, **pie de página**, colores, qué secciones incluir y en qué orden, orientación y tamaño de página; plantillas guardadas en el libro | Lo que se entrega a la junta o al cliente | 3–4 d |
+| 4 | **V4** (D) | **Incertidumbre en los costos** de cada actividad: mínimo, más probable y máximo del costo fijo y del costo por día | JCL completa | 1–2 d |
+| 5 | **V5** (C) | **Seguimiento en el tiempo**: guardar cada simulación con su fecha de corte (instantáneas) y ver la tendencia del P50/P80 de plazo y costo y de la probabilidad de cumplir; hoja y gráfico de tendencia | Informe mensual; se usa cada mes | 2–3 d |
+| 6 | **V6** (H) | **Rangos por sector y ayudas para estimar**: bibliotecas de rangos típicos por tipo de actividad (obra civil, instalaciones, software, trámites…), estimar con P10/P90 (Trigen) en vez de mínimo y máximo, y avisos contra el optimismo (todas con el mismo ±%, rangos demasiado estrechos) | Estimaciones mejores para quien no sabe estadística | 2–3 d |
+| 7 | **V7** (G) | **Calendarios por actividad**: varios calendarios (p. ej. 5 días, 6 días, continuo) con sus festivos, una columna «Calendario» en «Actividades», CPM y simulación en eje de tiempo común; importados de MS Project y P6 | Exactitud en obra; fechas iguales a las de los archivos importados | 4–5 d |
+| 8 | **V8** (F) | **Clima probabilístico**: hoja «Clima» con los días perdidos por mes (mínimo, más probable, máximo), actividades expuestas marcadas; en cada iteración se sortean los días no trabajables | Temporadas de lluvia; muy relevante en Latinoamérica | 3–4 d (sobre V7) |
+| 9 | **V9** (I) | **Devolver los resultados a MS Project y P6**: XML de Project y XER con P50/P80 y criticidad en campos personalizados | El planificador ve los resultados en su herramienta | 2 d |
+| 10 | **V10** (J) | **Registro de riesgos completo**: matriz de probabilidad e impacto con colores, responsable, estado, fechas de revisión, riesgos cualitativos y riesgos solo de costo | Gestión de riesgos completa en un solo sitio | 3–4 d |
+| 11 | **V11** (K) | **Simulación rápida mientras se edita**, **configurable**: activar o no, cuántas iteraciones (p. ej. 500–2.000) y cada cuánto; con el resultado marcado como «vista previa» | Respuesta inmediata al cambiar el cronograma | 1 d |
+
+**Total:** unos 30–40 días. Cada etapa V amplía el libro de pruebas del
+cronograma (con su referencia calculada aparte cuando haya números) y añade
+pruebas al bloque Q de la guía.
+
+**Explicados al usuario y aplazados** (sin fecha): cadenas de eventos
+(Event Chain Methodology) y *reference class forecasting* con datos de
+SECOP. **No recomendados**: nivelación de recursos, base de datos
+multiusuario propia.
 
 ---
 

@@ -1370,6 +1370,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     pymes; los importadores avisan). **Siguiente**: la ronda de pruebas del
     usuario (N y Q1–Q41) y, con sus resultados, arreglos; después, P6 (v2).
 
+80. [x] **Plan de la versión 2 del cronograma (2026-09-30)**. Bloque V
+    (V1–V11) aprobado por el usuario, en `PLAN_CRONOGRAMA_QSRA.md` §4.1; el
+    informe PDF configurable (V3) vale para los dos frentes. **Siguiente**:
+    V1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
