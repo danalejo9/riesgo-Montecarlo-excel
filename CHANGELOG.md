@@ -8,6 +8,9 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 ### P5: costo y plazo juntos (JCL) (2026-09-30)
 
 **Añadido**
+- Hoja **«Plazo simulado»**: 1.000 valores representativos del plazo (y del
+  costo) de la simulación, para usarlos en el modelo de costos del libro con
+  `=RIESGO.EMPIRICA('Plazo simulado'!A3:A1002)`. Guía: Q40.
 - Costos en el cronograma: **Costo fijo** por actividad (además del **Costo
   por día**), **Costo indirecto por día** del proyecto en «Calendario» y
   **Costo si ocurre** en «Riesgos de plazo».

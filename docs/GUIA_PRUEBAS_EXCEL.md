@@ -812,6 +812,18 @@ costo ni la nube, y la hoja no tiene el bloque. Deshaz (Ctrl+Z).
 
 **Q39. Web y Mac.** Repite Q36 en Excel para la Web: las mismas cifras.
 
+**Q40. Del cronograma al modelo de costos.** Tras simular (Q36) aparece la
+hoja **«Plazo simulado»**: 1.000 filas (A3:A1002) con los días laborables
+del plazo simulado, de menor a mayor (de ~115 a ~171), su fecha de fin y su
+costo. En una hoja nueva «Costos»: B1 `=RIESGO.EMPIRICA('Plazo
+simulado'!A3:A1002)`, B2 `=B1*1800`; marca **B2** como salida y simula con
+la pestaña **Resultados** (el motor de costos de siempre). Esperado: la
+media de B1 ≈ **134,96** días (la misma que la simulación del plazo) y la de
+B2 ≈ **242.900**. Así un presupuesto hecho en Excel puede depender del plazo
+simulado. (Se conserva la distribución del plazo, no la iteración: si el
+modelo de costos tiene otras entradas relacionadas con el cronograma, esa
+correlación no se ve; para eso está la JCL de Q36.)
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

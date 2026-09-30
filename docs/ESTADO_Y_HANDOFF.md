@@ -1356,8 +1356,11 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `ResultadoSimulacionPlazo.cal`, `textoMoneda`, varios gráficos por hoja
     (`graficos`, curva S y nube de puntos), `Nube` en el panel. Verificado
     contra Python (costo determinista exacto, percentiles ±1 %, JCL ±3
-    puntos). **Falta** la otra mitad del plan de P5: usar el plazo simulado
-    como entrada del **modelo de costos del libro** (`RIESGO.CRONOGRAMA`).
+    puntos). Del cronograma al modelo de costos del libro: hoja «Plazo
+    simulado» (`hojaPlazoSimulado`, 1.000 cuantiles) que se usa con
+    `RIESGO.EMPIRICA`; se descartó por ahora una función `RIESGO.CRONOGRAMA`
+    propia (manifiesto nuevo, y el mismo resultado). **Siguiente**:
+    calendarios por actividad; rangos por defecto por sector (P6).
 
 **Siguiente acción al retomar**, en orden de valor:
 

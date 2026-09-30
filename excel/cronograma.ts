@@ -111,9 +111,10 @@ export async function escribirResultadoCPM(r: Extract<ResultadoCPM, { ok: true }
   });
 }
 
-/** Escribe la hoja de la simulación del plazo (se rehace entera). */
-export async function escribirHojaSimulacion(h: HojaAEscribir): Promise<string> {
+/** Escribe la hoja de la simulación del plazo (se rehace entera) y, si se da, la de «Plazo simulado». */
+export async function escribirHojaSimulacion(h: HojaAEscribir, plazo?: HojaAEscribir): Promise<string> {
   return Excel.run(async (context) => {
+    if (plazo) await escribirHoja(context, plazo, true);
     await escribirHoja(context, h, true);
     return h.nombre;
   });

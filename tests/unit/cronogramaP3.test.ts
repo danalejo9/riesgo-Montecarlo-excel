@@ -7,11 +7,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CALENDARIO_ESTANDAR, calcularCPM, hojaSimulacionPlazo, impactoDeRiesgos, leerActividades, leerCronograma, leerPredecesoras, leerRiesgosPlazo,
-  narrativaPlazo, nuevoAcumulador, plantillaActividades, plantillaRiesgos, prepararPlazo, simularPlazoEnParalelo, simularTramo,
+  hojaPlazoSimulado, narrativaPlazo, nuevoAcumulador, plantillaActividades, plantillaRiesgos, prepararPlazo, simularPlazoEnParalelo, simularTramo,
   muestreadorDuracion, revisarSalud, simularPlazo, OPCIONES_PLAZO_POR_DEFECTO,
   type Actividad, type Cronograma, type RiesgoPlazo,
 } from '../../engine/cronograma/index.ts';
 import { crearHilosPlazoNode } from '../helpers/hilosPlazoNode.ts';
+import { empiricaDesdeLista } from '../../engine/modelo/funcionesRiesgo.ts';
 import { streamOf } from '../../engine/random/philox.ts';
 import { leerHojaComoMatriz } from '../helpers/leerHoja.ts';
 
@@ -285,5 +286,24 @@ describe('simulación en varios hilos (P3b)', () => {
     expect(r.cancelada).toBe(true);
     expect(r.iteraciones).toBe(r.finProyecto.length);
     expect(r.iteraciones).toBeLessThan(100_000);
+  });
+});
+
+describe('del cronograma al modelo de costos (P5)', () => {
+  it('«Plazo simulado»: 1.000 valores representativos con la distribución del plazo, que lee RIESGO.EMPIRICA', async () => {
+    const riesgos = leerRiesgosPlazo(hoja('Riesgos de plazo'), cron.actividades).riesgos;
+    const r = await simularPlazo(cron, riesgos, { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: 20_000 });
+    const h = hojaPlazoSimulado(r);
+    expect(h.valores[1]).toEqual(['Días laborables', 'Fecha de fin', 'Costo del cronograma']);
+    const dias = h.valores.slice(2).map((f) => f[0] as number);
+    expect(dias).toHaveLength(1000);
+    expect([...dias].sort((a, b) => a - b)).toEqual(dias);
+    const media = dias.reduce((a, b) => a + b, 0) / dias.length;
+    expect(media).toBeCloseTo(r.mediaDias, 0);
+    // El percentil 80 de los 1.000 valores cae en el mismo día que el P80 de la simulación.
+    expect(Math.ceil((dias[799] as number) - 1e-9)).toBe(r.dias.p80);
+    // Y RIESGO.EMPIRICA los acepta tal cual.
+    const e = empiricaDesdeLista(dias);
+    expect(typeof e === 'string' ? e : e.media).toBeCloseTo(media, 6);
   });
 });

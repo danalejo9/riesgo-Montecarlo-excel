@@ -8,7 +8,7 @@
 import { useRef, useState } from 'react';
 
 import {
-  calcularCPM, hojaGantt, importarCronograma, verificarContraFuente,
+  calcularCPM, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
   type CronogramaImportado, type Verificacion, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
@@ -121,7 +121,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         if (!cancelado.current) impacto = imp;
       }
       const narrativa = narrativaPlazo(r, impacto, salud ?? undefined);
-      const hoja = await escribirHojaSimulacion(hojaSimulacionPlazo(r, impacto, narrativa));
+      const hoja = await escribirHojaSimulacion(hojaSimulacionPlazo(r, impacto, narrativa), r.cancelada ? undefined : hojaPlazoSimulado(r));
       if (resultado) {
         const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r, datos.cron.fechaCorte);
         await escribirHojaGantt(hojaGantt(vista));

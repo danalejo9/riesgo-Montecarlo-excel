@@ -323,3 +323,47 @@ export function hojaCalendarioDe(c: Cronograma): HojaAEscribir {
     anchos: [20, 40],
   };
 }
+
+export const HOJA_PLAZO_SIMULADO = 'Plazo simulado';
+/** Cuántos valores representativos se escriben (filas 3 a 1002). */
+export const VALORES_PLAZO_SIMULADO = 1000;
+
+/**
+ * P5, del cronograma al modelo de costos del libro: 1.000 valores
+ * representativos (los percentiles 0,05 %, 0,15 % … 99,95 %) del plazo
+ * simulado, en días laborables y como fecha de fin, y del costo si lo hay.
+ * En cualquier celda del modelo de costos, `=RIESGO.EMPIRICA('Plazo
+ * simulado'!A3:A1002)` es una entrada con la misma distribución que el plazo
+ * de la simulación; por ejemplo, para que los costos indirectos dependan del
+ * plazo. (Con la distribución, no con la iteración: la correlación con otras
+ * entradas del modelo de costos no se conserva.)
+ */
+export function hojaPlazoSimulado(r: ResultadoSimulacionPlazo, codigoMoneda = MONEDA_POR_DEFECTO): HojaAEscribir {
+  const n = VALORES_PLAZO_SIMULADO;
+  const dias = Float64Array.from(r.finProyecto).sort();
+  const costos = r.costos ? Float64Array.from(r.costos.porIteracion).sort() : null;
+  const en = (o: Float64Array, q: number) => {
+    const pos = q * (o.length - 1);
+    const i0 = Math.floor(pos);
+    const i1 = Math.min(o.length - 1, i0 + 1);
+    return (o[i0] as number) + ((o[i1] as number) - (o[i0] as number)) * (pos - i0);
+  };
+  const filas: (string | number)[][] = [];
+  for (let i = 0; i < n; i++) {
+    const q = (i + 0.5) / n;
+    const d = Math.round(en(dias, q) * 100) / 100;
+    filas.push([d, r.cal(d), ...(costos ? [Math.round(en(costos, q))] : [])]);
+  }
+  return {
+    nombre: HOJA_PLAZO_SIMULADO,
+    valores: [
+      [`Plazo simulado (${r.iteraciones} iteraciones): 1.000 valores representativos. Úsalo en el modelo de costos con =RIESGO.EMPIRICA('Plazo simulado'!A3:A1002)`],
+      ['Días laborables', 'Fecha de fin', ...(costos ? ['Costo del cronograma'] : [])],
+      ...filas,
+    ],
+    formatos: costos ? { 1: FORMATO_FECHA, 2: formatoMoneda(codigoMoneda) } : { 1: FORMATO_FECHA },
+    filaEncabezado: 1,
+    primeraFilaDatos: 2,
+    anchos: [16, 14, 20],
+  };
+}
