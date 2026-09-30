@@ -201,6 +201,13 @@ Las pruebas en Excel del módulo de cronograma se añadirán a la guía como blo
 | **P5** | Costo‑plazo: hitos como entradas del modelo de costos, costos que dependen del tiempo, JCL | 5–7 d |
 | **P6** (v2) | Clima probabilístico, escenarios antes y después de mitigar, ramificación probabilística, rangos por sector, ayudas de elicitación | — |
 
+**Estado al 30/09 (tarde):** la v0 sencilla está **hecha en código** (P0, núcleo
+de P1, P2 y P3), verificada contra el libro de pruebas y en el banco del
+navegador; falta que el usuario la pruebe en Excel (bloque Q, Q1–Q20).
+Pendiente: repartir la simulación en Web Workers (hoy 5.000 actividades ×
+10.000 iteraciones = 11,3 s en un hilo en el contenedor de desarrollo), el
+resto de P1 (avance, restricciones, calendarios por actividad), P4 y P5.
+
 **Primera versión sencilla (v0 del módulo)**: P0 + P1 + P2 + un P3 mínimo
 (tabla de Excel → fechas, chequeo con semáforo y Monte Carlo del plazo con
 P50/P80/P90, curva S e índice de criticidad). Desde el 30/09, con P0 y el

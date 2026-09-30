@@ -5,6 +5,31 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P2 y P3: salud del cronograma y Monte Carlo del plazo (2026-09-30)
+
+**Añadido**
+- **Salud del cronograma** (P2) en la pestaña Cronograma: diez comprobaciones
+  al estilo DCMA‑14 (lógica completa, adelantos, retardos, tipos de relación,
+  restricciones, holgura negativa y alta, duraciones largas, incertidumbre
+  asignada, convergencias), cada una con semáforo, el porqué y las
+  actividades implicadas. El rojo bloquea la simulación.
+- **Simulación del plazo** (P3): Monte Carlo vectorizado por bloques sobre
+  la red (CPM hacia delante y hacia atrás en cada iteración), duraciones PERT
+  o triangulares, y **riesgos de plazo** de la hoja «Riesgos de plazo» al
+  estilo AACE 57R‑09 (probabilidad, impacto en % y actividades por ID o por
+  categoría; un riesgo alarga a la vez todas sus actividades). Resultados:
+  P50/P80/P90 de fin, probabilidad de cumplir la fecha del cronograma,
+  histograma, curva S, criticidad de cada actividad, «quitar un riesgo y
+  volver a simular» en días de P80, y un resumen en cinco frases generado
+  en local. Semilla fija, reproducible; se puede cancelar.
+- Hoja **«Cronograma (simulación)»** con el resumen, la curva S y su gráfico,
+  los riesgos y el Gantt probabilístico (fechas P10–P90 de cada actividad).
+- Plantilla: también crea «Riesgos de plazo».
+- Libro de pruebas: hojas «Riesgos de plazo», «Esperado (salud)» y
+  «Esperado (simulación)» (Monte Carlo de referencia en Python, 20.000
+  iteraciones). Guía: Q11–Q20. `npm run bench:cronograma`.
+- Banco del navegador: hojas con rejilla de verdad para el cronograma.
+
 ### P0 y P1: cronograma determinista y su libro de pruebas (2026-09-30)
 
 **Añadido**

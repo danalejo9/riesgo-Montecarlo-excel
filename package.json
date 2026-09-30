@@ -15,6 +15,7 @@
     "validate-manifest": "office-addin-manifest validate manifest.xml",
     "scan": "node scanner/cli.ts",
     "bench": "node --experimental-strip-types --no-warnings bench/motor.ts",
+    "bench:cronograma": "node --experimental-strip-types --no-warnings bench/cronograma.ts",
     "build:tipos": "tsc -b",
     "start:depurar": "office-addin-debugging start manifest.xml desktop --dev-server-port 9090"
   },

@@ -4,3 +4,8 @@ export * from './calendario.ts';
 export * from './cpm.ts';
 export * from './lectorTabla.ts';
 export * from './hojas.ts';
+export * from './salud.ts';
+export * from './riesgos.ts';
+export * from './simulacion.ts';
+export * from './muestreo.ts';
+export * from './narrativa.ts';

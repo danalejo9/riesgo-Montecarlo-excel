@@ -1295,6 +1295,24 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     restricciones y calendarios por actividad. **Siguiente**: P2 (chequeo de
     salud) y P3 (Monte Carlo del plazo), con la ronda N y Q del usuario.
 
+73. [x] **P2 y P3 (2026-09-30)**. `salud.ts` (`revisarSalud`, 10
+    comprobaciones con semáforo; rojo bloquea), `riesgos.ts`
+    (`leerRiesgosPlazo`: drivers AACE 57R‑09, actividades por ID o
+    categoría), `simulacion.ts` (`simularPlazo` vectorizado por bloques con
+    CPM adelante/atrás, `ContadorDias` para percentiles por día,
+    `impactoDeRiesgos` con números aleatorios comunes), `muestreo.ts` (PERT
+    por el algoritmo BA de Cheng: la inversa de la beta costaba ~10 µs por
+    muestra), `narrativa.ts`, `hojaSimulacionPlazo` y
+    `leerHojaGenerica`. UI completa en `ui/Cronograma.tsx`; el banco
+    (`ui/banco/excelFalso.ts`, `hojasMatriz`) ya recorre Plantilla → Calcular
+    → Simular. Verificado contra un Monte Carlo independiente en Python
+    (`generar-cronograma.py`, ±1 día y ±3 puntos de criticidad) y contra el
+    merge bias analítico. **Rendimiento**: 5.000 actividades × 10.000
+    iteraciones = 11,3 s en un hilo en el contenedor de desarrollo (objetivo
+    < 10 s): falta repartirlo en Web Workers (P3b). **Siguiente**: P3b
+    (workers), P1 pendiente (avance, restricciones, calendarios por
+    actividad), P4 (importadores), P5 (JCL); y la ronda N y Q del usuario.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

@@ -4,24 +4,51 @@
  * archivo con las mismas claves. Los textos del resto del panel se pasarán a
  * este catálogo en E10.
  */
+const lista = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs[xs.length - 1]}`);
+
 export const textosCronograma = {
   pestana: 'Cronograma',
   titulo: 'Cronograma',
   intro:
-    'Calcula las fechas de tu cronograma a partir de las hojas «Actividades» y «Calendario». ' +
-    'Por ahora sin incertidumbre (camino crítico determinista); el Monte Carlo del plazo llega en la etapa P3.',
+    'Calcula las fechas de tu cronograma a partir de las hojas «Actividades» y «Calendario», revisa su calidad ' +
+    'y simula el plazo con la incertidumbre de las duraciones y los riesgos de la hoja «Riesgos de plazo».',
   sinCapacidad: 'Tu licencia no incluye el módulo Cronograma.',
   plantilla: 'Plantilla de cronograma',
-  plantillaAyuda: 'Crea las hojas «Actividades» y «Calendario» con un ejemplo, si no existen.',
+  plantillaAyuda: 'Crea las hojas «Actividades», «Calendario» y «Riesgos de plazo» con un ejemplo, si no existen.',
   plantillaCreada: (hojas: string[]) =>
-    hojas.length === 0 ? 'Las dos hojas ya existían: no se ha tocado nada.' : `Creadas: ${hojas.join(' y ')}.`,
+    hojas.length === 0 ? 'Las hojas ya existían: no se ha tocado nada.' : `Creadas: ${lista(hojas)}.`,
   calcular: 'Calcular cronograma',
   calculando: 'Calculando…',
-  errores: 'Hay que corregir esto antes de calcular',
+  errores: 'Hay que corregir esto',
   avisos: 'Avisos',
   finProyecto: 'Fin del proyecto',
   dias: 'días laborables',
   criticas: 'Actividades críticas',
   escritoEn: (hoja: string) => `Resultado completo en la hoja «${hoja}».`,
   rutaCritica: 'Ruta crítica',
+  salud: 'Salud del cronograma',
+  saludResumen: { verde: 'Bien', amarillo: 'Con avisos', rojo: 'Hay que corregirlo antes de simular' },
+  saludBloquea: 'El semáforo está en rojo: corrige lo marcado y vuelve a calcular antes de simular.',
+  actividadesImplicadas: 'Actividades',
+  simulacion: 'Simulación del plazo',
+  iteraciones: 'Iteraciones',
+  forma: 'Forma de las duraciones',
+  formas: { pert: 'PERT (recomendada)', triangular: 'Triangular (más pesimista)' },
+  simular: 'Simular el plazo',
+  simulando: (hechas: number, total: number) => `Simulando… ${Math.round((100 * hechas) / Math.max(1, total))} %`,
+  midiendoRiesgos: (hechos: number, total: number) => `Midiendo cada riesgo… ${hechos} de ${total}`,
+  cancelar: 'Cancelar',
+  cancelada: 'Simulación cancelada: el resultado es parcial.',
+  primeroCalcula: 'Primero calcula el cronograma.',
+  probCumplir: 'cumplir la fecha del cronograma',
+  riesgos: 'Riesgos de plazo',
+  riesgoCol: 'Riesgo',
+  diasP80: 'Días de P80',
+  probCol: 'Prob.',
+  sinRiesgos: 'Sin la hoja «Riesgos de plazo», solo se simula la incertidumbre de las duraciones.',
+  masCriticas: 'Actividades que más deciden el plazo',
+  criticidadCol: 'Crítica en',
+  actividadCol: 'Actividad',
+  histograma: 'Fecha de fin: cuántas iteraciones terminan cada día',
+  marcaCronograma: 'cronograma',
 } as const;

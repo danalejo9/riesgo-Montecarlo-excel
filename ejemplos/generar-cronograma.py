@@ -149,6 +149,114 @@ def fecha_inicio(i, d):
 ES, EF, LS, LF, FIN = cpm()
 
 # ---------------------------------------------------------------------------
+# Riesgos de plazo (risk drivers, AACE 57R-09): probabilidad, impacto en % de
+# la duración y actividades afectadas (por ID o por categoría).
+# ---------------------------------------------------------------------------
+RIESGOS = [
+    ("R1", "Lluvias intensas durante la obra gris", 0.50, 0.05, 0.10, 0.25, "Obra gris"),
+    ("R2", "Demora en la licencia de construcción", 0.30, 0.20, 0.40, 0.80, "2"),
+    ("R3", "Retraso del proveedor del ascensor", 0.40, 0.10, 0.20, 0.50, "8"),
+    ("R4", "Bajo rendimiento de la cuadrilla de acabados", 0.25, 0.05, 0.15, 0.30, "Acabados"),
+    ("R5", "Oportunidad: estructura prefabricada", 0.20, -0.15, -0.10, -0.05, "7"),
+]
+ITERACIONES_MC = 20000
+
+
+def afectadas(texto):
+    ids = {a[0] for a in ACTIVIDADES}
+    out = []
+    for t in [x.strip() for x in texto.split(";") if x.strip()]:
+        out += [t] if t in ids else [a[0] for a in ACTIVIDADES if a[7] == t]
+    return out
+
+
+def pert_muestra(rng, a, m, b):
+    if b <= a:
+        return m
+    al = 1 + 4 * (m - a) / (b - a)
+    be = 1 + 4 * (b - m) / (b - a)
+    return a + (b - a) * rng.betavariate(al, be)
+
+
+def monte_carlo():
+    import random
+    rng = random.Random(20270201)
+    acts = {a[0]: a for a in ACTIVIDADES}
+    preds = {a[0]: leer_preds(a[3]) for a in ACTIVIDADES}
+    orden, hecho = [], set()
+    while len(orden) < len(ACTIVIDADES):
+        for a in ACTIVIDADES:
+            if a[0] not in hecho and all(p in hecho for p, _, _ in preds[a[0]]):
+                orden.append(a[0]); hecho.add(a[0])
+    sucs = {a[0]: [] for a in ACTIVIDADES}
+    for s_ in orden:
+        for p, t, r in preds[s_]:
+            sucs[p].append((s_, t, r))
+    ina = {a[0]: (indice_desde(a[9]) if a[9] else 0) for a in ACTIVIDADES}
+    riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
+    fines, crit = [], {a[0]: 0 for a in ACTIVIDADES}
+    for _ in range(ITERACIONES_MC):
+        d = {}
+        for a in ACTIVIDADES:
+            d[a[0]] = pert_muestra(rng, a[4], a[5], a[6]) if a[4] is not None else a[2]
+        for (rid, _, p, lo, mp, hi, _), ids in riesgos:
+            if rng.random() < p:
+                f = 1 + pert_muestra(rng, lo, mp, hi)
+                for i in ids:
+                    d[i] *= f
+        es, ef = {}, {}
+        for s_ in orden:
+            v = ina[s_]
+            for p, t, r in preds[s_]:
+                v = max(v, {"FS": ef[p] + r, "SS": es[p] + r, "FF": ef[p] + r - d[s_], "SF": es[p] + r - d[s_]}[t])
+            es[s_], ef[s_] = v, v + d[s_]
+        fin = max(ef.values())
+        lf = {}
+        for p in reversed(orden):
+            v = fin
+            for s_, t, r in sucs[p]:
+                v = min(v, {"FS": lf[s_] - d[s_] - r, "SS": lf[s_] - d[s_] - r + d[p],
+                            "FF": lf[s_] - r, "SF": lf[s_] - r + d[p]}[t])
+            lf[p] = v
+            if v - d[p] - es[p] < 1e-9:
+                crit[p] += 1
+        fines.append(max(0, math.ceil(fin - 1e-9) - 1))  # día de fin (índice laborable)
+    fines.sort()
+    def cuantil(p):
+        return fines[max(1, math.ceil(p * len(fines) - 1e-9)) - 1]
+    return {p: cuantil(p) for p in (0.1, 0.5, 0.8, 0.9)}, {k: v / ITERACIONES_MC for k, v in crit.items()}
+
+
+def salud():
+    """El chequeo de salud, calculado aparte (umbrales DCMA)."""
+    tareas = [a for a in ACTIVIDADES if a[2] > 0]
+    rel = [(a[0], p, t, r) for a in ACTIVIDADES for p, t, r in leer_preds(a[3])]
+    con_suc = {p for _, p, _, _ in rel}
+    sin_pred = [a[0] for a in ACTIVIDADES if not a[3]]
+    sin_suc = [a[0] for a in ACTIVIDADES if a[0] not in con_suc]
+    abiertos = len(sin_pred) - 1 + len(sin_suc) - 1
+    nT, nR = len(tareas), len(rel)
+    no_fc = [x for x in rel if x[2] != "FS"]
+    cf = [x for x in rel if x[2] == "SF"]
+    hol = {a[0]: LS[a[0]] - ES[a[0]] for a in ACTIVIDADES}
+    return [
+        ("logica", "verde" if abiertos == 0 else ("rojo" if abiertos / len(ACTIVIDADES) > 0.05 else "amarillo")),
+        ("adelantos", "amarillo" if any(r < 0 for *_, r in rel) else "verde"),
+        ("retardos", "amarillo" if sum(1 for *_, r in rel if r > 0) / nR > 0.05 else "verde"),
+        ("relaciones", "amarillo" if cf or len(no_fc) / nR > 0.1 else "verde"),
+        ("restricciones", (lambda k: "amarillo" if k / len(ACTIVIDADES) > 0.05 else ("info" if k else "verde"))(sum(1 for a in ACTIVIDADES if a[9]))),
+        ("holgura-negativa", "rojo" if any(h < -1e-9 for h in hol.values()) else "verde"),
+        ("holgura-alta", "amarillo" if sum(1 for a in tareas if hol[a[0]] > 44) / nT > 0.05 else "verde"),
+        ("duracion-larga", "amarillo" if sum(1 for a in tareas if a[2] > 44) / nT > 0.05 else "verde"),
+        ("incertidumbre", (lambda k: "verde" if k == 0 else ("amarillo" if k / nT > 0.5 else "info"))(sum(1 for a in tareas if a[4] is None or a[4] == a[6]))),
+        ("convergencias", "info" if any(len(leer_preds(a[3])) >= 3 for a in ACTIVIDADES) else "verde"),
+    ]
+
+
+PCT, CRIT = monte_carlo()
+SALUD = salud()
+
+# ---------------------------------------------------------------------------
 # El libro.
 # ---------------------------------------------------------------------------
 AZUL = "1F4E79"
@@ -174,7 +282,9 @@ LINEAS = [
     ("p", "relaciones (FC, CC, FF, CF), retardos, un adelanto, dos hitos, un «inicio no antes de»"),
     ("p", "y la incertidumbre de cada duración (mínimo, más probable, máximo) para el Monte Carlo."),
     ("p", "«Calendario»: inicio del proyecto, días laborables (lunes a viernes) y festivos."),
+    ("p", "«Riesgos de plazo»: cinco riesgos (uno es una oportunidad) que alargan a la vez sus actividades."),
     ("p", "«Esperado»: las fechas que debe dar el complemento, calculadas aparte por el script."),
+    ("p", "«Esperado (salud)» y «Esperado (simulación)»: el semáforo y el Monte Carlo de referencia."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -259,5 +369,55 @@ for i, a in enumerate(ACTIVIDADES, start=6):
 for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8], start=1):
     esp.column_dimensions[get_column_letter(j)].width = w
 
+rie = wb.create_sheet("Riesgos de plazo")
+rie["A1"] = "Riesgos de plazo — cada uno alarga a la vez todas sus actividades (AACE 57R-09)"
+rie["A1"].font = TITULO
+CAB_R = ["ID", "Riesgo", "Probabilidad", "Impacto mínimo", "Impacto más probable", "Impacto máximo",
+         "Actividades afectadas"]
+for j, t in enumerate(CAB_R, start=1):
+    c = rie.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, r in enumerate(RIESGOS, start=4):
+    for j, v in enumerate(r, start=1):
+        c = rie.cell(row=i, column=j, value=v)
+        if 3 <= j <= 6:
+            c.number_format = "0%"
+for j, w in enumerate([6, 44, 12, 15, 20, 15, 22], start=1):
+    rie.column_dimensions[get_column_letter(j)].width = w
+
+sal = wb.create_sheet("Esperado (salud)")
+sal["A1"] = "Chequeo de salud esperado (calculado por el script)"
+sal["A1"].font = H
+for j, t in enumerate(["Comprobación", "Semáforo"], start=1):
+    c = sal.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, (cod, est) in enumerate(SALUD, start=4):
+    sal.cell(row=i, column=1, value=cod)
+    sal.cell(row=i, column=2, value=est)
+sal.column_dimensions["A"].width = 22
+
+sim = wb.create_sheet("Esperado (simulación)")
+sim["A1"] = (f"Monte Carlo de referencia: {ITERACIONES_MC} iteraciones en Python (PERT + riesgos de plazo). "
+             "El complemento usa otros números aleatorios: debe coincidir en ±1 día y ±3 puntos de criticidad.")
+sim["A1"].font = H
+sim["A3"], sim["B3"], sim["C3"] = "Percentil", "Días laborables", "Fecha de fin"
+for c in (sim["A3"], sim["B3"], sim["C3"]):
+    c.font, c.fill = CAB, FONDO
+for i, p in enumerate((0.1, 0.5, 0.8, 0.9), start=4):
+    sim.cell(row=i, column=1, value=f"P{int(p * 100)}")
+    sim.cell(row=i, column=2, value=PCT[p] + 1)
+    sim.cell(row=i, column=3, value=DIAS[PCT[p]]).number_format = FECHA
+sim["A10"], sim["B10"], sim["C10"] = "ID", "Actividad", "Índice de criticidad"
+for c in (sim["A10"], sim["B10"], sim["C10"]):
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=11):
+    sim.cell(row=i, column=1, value=a[0])
+    sim.cell(row=i, column=2, value=a[1])
+    sim.cell(row=i, column=3, value=round(CRIT[a[0]], 3)).number_format = "0%"
+sim.column_dimensions["A"].width = 12
+sim.column_dimensions["B"].width = 32
+sim.column_dimensions["C"].width = 18
+
 wb.save("ejemplos/demo-cronograma.xlsx")
-print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días")
+print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días; "
+      f"P50 {PCT[0.5] + 1} · P80 {PCT[0.8] + 1} · P90 {PCT[0.9] + 1} días; salud {SALUD}")

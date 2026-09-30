@@ -586,14 +586,80 @@ ascensor) dice `3FC+5`. Cámbialo a `3FS+5`: mismo resultado. Q3 sigue
 dando 0.
 
 **Q10. Plantilla en un libro nuevo.** Libro en blanco → panel → Cronograma →
-**Plantilla de cronograma**. Esperado: «Creadas: Calendario y Actividades»,
-con tres actividades de ejemplo (Diseño, Construcción, Entrega) y el inicio
-del proyecto en la fecha de hoy. **Calcular cronograma** → 40 días
-laborables. Pulsar Plantilla otra vez: «Las dos hojas ya existían: no se ha
-tocado nada».
+**Plantilla de cronograma**. Esperado: «Creadas: Calendario, Riesgos de plazo
+y Actividades», con tres actividades de ejemplo (Diseño, Construcción,
+Entrega), dos riesgos y el inicio del proyecto en la fecha de hoy.
+**Calcular cronograma** → 40 días laborables. Pulsar Plantilla otra vez:
+«Las hojas ya existían: no se ha tocado nada».
 
-**Q11. Excel para la Web (y Mac, si tienes).** Repite Q1–Q4 con el libro
-subido a OneDrive.
+**Q11. Salud del cronograma (P2).** De vuelta en `cronograma-prueba.xlsx`,
+con todo como venía: **Calcular cronograma**. Debajo de las cifras aparece
+**Salud del cronograma** con un punto **amarillo** («Con avisos»), abierta.
+Debe coincidir con la hoja **«Esperado (salud)»**, línea por línea:
+- Verdes: Lógica completa, Sin holgura negativa, Holgura de hasta 44 días.
+- Amarillas: Sin adelantos (actividad **12**), Pocos retardos, Relaciones
+  fin‑comienzo («1 CF»), Duraciones de hasta 44 días (actividad **8**, la
+  fabricación del ascensor).
+- Grises (información): Restricciones de fecha (**17**), Incertidumbre en las
+  duraciones (1 de 18: la vigilancia), Puntos de convergencia (**14** y **18**).
+- Al pulsar una línea se abre el porqué y las actividades implicadas.
+
+**Q12. Rojo bloquea.** En «Actividades», añade dos filas al final: ID `21`,
+«Suelta A», duración 5; ID `22`, «Suelta B», duración 5 (sin predecesoras).
+Calcula. Esperado: **Lógica completa** en **rojo** («2 de 22 (9 %)…»,
+actividades 21, 22), el punto de la salud en rojo, el botón **Simular el
+plazo** desactivado y el aviso «El semáforo está en rojo…». Borra las dos
+filas y calcula: vuelve el amarillo.
+
+**Q13. Simular el plazo (P3).** Deja 10.000 iteraciones y **PERT
+(recomendada)**. **Simular el plazo**. Tarda un par de segundos (se ve el
+porcentaje y luego «Midiendo cada riesgo… n de 6»). Esperado, **exactamente**
+(la semilla es fija):
+- **P50 11/08/2027**, **P80 24/08/2027**, **P90 31/08/2027**, y el 1 % de
+  cumplir la fecha del cronograma.
+- Cinco frases: «Hay un 80 % de probabilidad de terminar el 24/08/2027 o antes
+  (143 días laborables)…»; «La fecha del cronograma (16/07/2027) solo se cumple
+  en el 1 % de los casos: parte de la diferencia viene de las convergencias…»;
+  «…una reserva de 25 días laborables…»; «El riesgo que más pesa es “Lluvias
+  intensas durante la obra gris”: sin él, el P80 se adelantaría 6 días
+  laborables»; «La actividad que más mueve la fecha de fin es “Estructura”…».
+- Histograma con dos marcas, «cronograma» (a la izquierda, casi fuera) y P80.
+- **Riesgos de plazo**: Lluvias +6, Licencia +3, Acabados +1, Ascensor 0 y
+  la oportunidad de la estructura prefabricada −1 (quitarla alarga).
+
+**Q14. La hoja «Cronograma (simulación)».** Se crea con: las cinco frases
+arriba; la tabla de fechas (cronograma, P10, P50, P80, P90), la probabilidad
+de cumplir y «P80 si no ocurriera ningún riesgo» = **09/08/2027 (133 días)**;
+la **curva S** con su **gráfico** a la derecha; la tabla de riesgos; y las 20
+actividades con criticidad, correlación y fechas P10–P90 de inicio y fin
+(las que son críticas en más del 50 % de los casos, en amarillo). Compara con
+**«Esperado (simulación)»**: P50 135, P80 143, P90 148 días, y la criticidad
+de cada actividad a ±3 puntos (el script usa otros números aleatorios, por eso
+no es exacto).
+
+**Q15. Repetir da lo mismo.** Simula otra vez: mismas fechas y la hoja se
+rehace (un solo gráfico, no dos).
+
+**Q16. Forma triangular.** Cambia la forma a **Triangular** y simula:
+P80 **07/09/2027** (más tarde: la triangular da más peso a los extremos) y
+«casi nunca se cumple (menos del 1 % de los casos)». Vuelve a PERT.
+
+**Q17. Cancelar.** Elige **50.000** iteraciones, simula y pulsa **Cancelar**
+enseguida. Esperado: se para, «Simulación cancelada: el resultado es
+parcial.», y la hoja lo dice en su segunda fila. Vuelve a 10.000.
+
+**Q18. Sin riesgos.** Cambia el nombre de la hoja «Riesgos de plazo» a
+«Riesgos X». Calcula y simula. Esperado: el texto «Sin la hoja “Riesgos de
+plazo”, solo se simula la incertidumbre de las duraciones» y **P80 09/08/2027**
+(el mismo «P80 si no ocurriera ningún riesgo» de Q14). Devuélvele el nombre.
+
+**Q19. Un riesgo mal escrito.** En «Riesgos de plazo», fila 4 (R1), cambia
+Actividades afectadas de `Obra gris` a `Obra negra`. Calcula. Esperado, en
+rojo: «Fila 4 (riesgo «R1»): «Obra negra» no es el ID de una actividad ni una
+categoría», y **Simular el plazo** desactivado. Devuélvelo.
+
+**Q20. Excel para la Web (y Mac, si tienes).** Repite Q1–Q4, Q11 y Q13 con el
+libro subido a OneDrive. Q13 debe dar las mismas fechas.
 
 ---
 

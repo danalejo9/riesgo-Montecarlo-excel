@@ -195,8 +195,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 |---|---|---|---|---|
 | P0 | P0 | Plantilla «Actividades», predecesoras `3FS+2d`, capa de capacidades por licencia, catálogo de textos, moneda configurable | Estudios QSRA + **Tú** | ✅ 30/09 (falta Excel: Q1–Q11) |
 | P1 | P1 | CPM determinista: 4 relaciones, retardos, calendarios, restricciones, avance | Estudios QSRA | 🟡 núcleo 30/09 (falta avance, más restricciones, calendario por actividad) |
-| P2 | P2 | Chequeo de salud del cronograma (DCMA‑14) con semáforo | Estudios QSRA | ⬜ |
-| P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ⬜ |
+| P2 | P2 | Chequeo de salud del cronograma (DCMA‑14) con semáforo | Estudios QSRA | ✅ 30/09 (falta Excel: Q11–Q12) |
+| P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ✅ 30/09 (falta Excel: Q13–Q20; falta repartirlo en workers) |
 | P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ⬜ |
 | P5 | P5 | Costo + plazo en la misma simulación: costos que dependen del tiempo y JCL | Estudios QSRA | ⬜ |
 | P6 | P6 | (v2) Clima, mitigación antes/después, ramificación, rangos por sector | Estudios QSRA | ⬜ |

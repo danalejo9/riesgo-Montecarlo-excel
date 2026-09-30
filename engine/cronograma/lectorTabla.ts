@@ -56,6 +56,42 @@ export function numeroDe(v: Celda): number | undefined {
   return m ? Number((m[1] as string).replace(',', '.')) : undefined;
 }
 
+/**
+ * Una tabla cualquiera con encabezado: busca en las 15 primeras filas la que
+ * tenga las columnas `obligatorias` (por prefijo normalizado) y devuelve sus
+ * filas con datos. La usan las hojas que no son «Actividades».
+ */
+export function leerHojaGenerica<C extends string>(
+  valores: readonly (readonly Celda[])[],
+  campos: Record<C, string[]>,
+  obligatorias: NoInfer<C>[],
+  primeraFila = 1,
+): { ok: true; filas: Array<{ fila: number; celda: (c: C) => Celda }> } | { ok: false; error: string } {
+  for (let f = 0; f < Math.min(15, valores.length); f++) {
+    const cols = new Map<C, number>();
+    (valores[f] ?? []).forEach((v, c) => {
+      const t = normalizar(v);
+      if (t === '') return;
+      for (const [campo, prefijos] of Object.entries(campos) as Array<[C, string[]]>) {
+        if (!cols.has(campo) && prefijos.some((p) => (p === 'id' ? t === 'id' : t.startsWith(p)))) {
+          cols.set(campo, c);
+          break;
+        }
+      }
+    });
+    if (!obligatorias.every((c) => cols.has(c))) continue;
+    const filas: Array<{ fila: number; celda: (c: C) => Celda }> = [];
+    const idCol = cols.get(obligatorias[0] as C) as number;
+    for (let g = f + 1; g < valores.length; g++) {
+      const fila = valores[g] ?? [];
+      if (vacia(fila[idCol])) continue;
+      filas.push({ fila: primeraFila + g, celda: (c) => (cols.has(c) ? fila[cols.get(c) as number] : undefined) });
+    }
+    return { ok: true, filas };
+  }
+  return { ok: false, error: `No se encuentra el encabezado: hacen falta las columnas ${obligatorias.map((c) => `«${c}»`).join(' y ')}` };
+}
+
 const vacia = (v: Celda) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 
 export interface LecturaActividades {

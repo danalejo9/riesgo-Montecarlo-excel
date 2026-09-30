@@ -353,6 +353,75 @@ function rangoSimple(ref: string) {
 
 const ajustes = new Map<string, string>();
 
+/**
+ * Hojas con rejilla de verdad, para el cronograma (bloque P): se crean con
+ * `worksheets.add` (la plantilla y los resultados) y se leen con
+ * `getUsedRangeOrNullObject`, como en Excel. Solo guardan valores: formatos,
+ * colores y gráficos se aceptan y se cuentan, no se dibujan.
+ */
+export const hojasMatriz = new Map<string, { valores: unknown[][]; graficos: number }>();
+const NOMBRES_MATRIZ = ['Actividades', 'Calendario', 'Riesgos de plazo', 'Cronograma (resultado)', 'Cronograma (simulación)'];
+
+function columnaDe(letras: string): number {
+  let n = 0;
+  for (const c of letras) n = n * 26 + (c.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+function hojaMatriz(nombre: string) {
+  const hoja = hojasMatriz.get(nombre) as { valores: unknown[][]; graficos: number };
+  const escribir = (f0: number, c0: number, v: unknown[][]) => {
+    v.forEach((fila, i) => fila.forEach((x, j) => {
+      while (hoja.valores.length <= f0 + i) hoja.valores.push([]);
+      const f = hoja.valores[f0 + i] as unknown[];
+      while (f.length <= c0 + j) f.push('');
+      f[c0 + j] = x;
+    }));
+  };
+  const zona = (f0: number, c0: number, nf: number, nc: number) => ({
+    load: () => {},
+    get values() {
+      return Array.from({ length: nf }, (_, i) => Array.from({ length: nc }, (_, j) => (hoja.valores[f0 + i] ?? [])[c0 + j] ?? ''));
+    },
+    set values(v: unknown[][]) {
+      escribir(f0, c0, v);
+    },
+    set numberFormat(_v: unknown[][]) {},
+    format: { font: {}, fill: {}, columnWidth: 0 },
+    clear: () => {
+      hoja.valores = [];
+    },
+  });
+  const graficos: Array<{ delete: () => void }> = [];
+  return {
+    name: nombre,
+    isNullObject: false,
+    load: () => {},
+    activate: () => {},
+    getRange: (ref?: string) => {
+      if (!ref) return zona(0, 0, 0, 0);
+      const m = /^([A-Z]+)(\d+)$/.exec(ref);
+      return m ? zona(Number(m[2]) - 1, columnaDe(m[1] as string), 1, 1) : zona(0, 0, 0, 0);
+    },
+    getRangeByIndexes: zona,
+    getUsedRangeOrNullObject: () => {
+      const filas = hoja.valores.length;
+      const cols = Math.max(0, ...hoja.valores.map((f) => f.length));
+      return { isNullObject: filas === 0, rowIndex: 0, columnIndex: 0, rowCount: filas, columnCount: cols, load: () => {} };
+    },
+    freezePanes: { freezeRows: () => {} },
+    charts: {
+      items: graficos,
+      load: () => {},
+      add: () => {
+        hoja.graficos += 1;
+        const g = { title: {}, legend: {}, setPosition: () => {}, delete: () => { hoja.graficos -= 1; } };
+        return g;
+      },
+    },
+  };
+}
+
 /** Instala los globales `Office` y `Excel` que espera el panel. */
 export function instalarExcelFalso(): void {
   recalcular();
@@ -445,12 +514,17 @@ export function instalarExcelFalso(): void {
       worksheets: {
         items: [hojaFalsa],
         load: () => {},
-        getItem: () => hojaFalsa,
+        getItem: (nombre?: string) => (nombre && hojasMatriz.has(nombre) ? hojaMatriz(nombre) : hojaFalsa),
         getActiveWorksheet: () => hojaFalsa,
-        getItemOrNullObject: () => ({ isNullObject: true, load: () => {}, delete: () => {} }),
+        getItemOrNullObject: (nombre?: string) =>
+          nombre && hojasMatriz.has(nombre) ? hojaMatriz(nombre) : { isNullObject: true, load: () => {}, delete: () => {} },
         // El volcado crea una hoja nueva. El banco no dibuja cuadrícula, así
         // que la recoge en `hojaVolcada` para poder comprobar qué se escribió.
         add: (nombre: string) => {
+          if (NOMBRES_MATRIZ.includes(nombre)) {
+            hojasMatriz.set(nombre, { valores: [], graficos: 0 });
+            return hojaMatriz(nombre);
+          }
           hojaVolcada.nombre = nombre;
           hojaVolcada.filas = [];
           hojaVolcada.graficos = 0;
@@ -474,7 +548,7 @@ export function instalarExcelFalso(): void {
     // También `Excel.run(contextoAnterior, fn)`, como al dejar de escuchar un evento.
     run: <T>(a: unknown, b?: (c: typeof contexto) => Promise<T>) =>
       (typeof a === 'function' ? (a as (c: typeof contexto) => Promise<T>) : (b as (c: typeof contexto) => Promise<T>))(contexto),
-    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered' },
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered', xyscatterLinesNoMarkers: 'XYScatterLinesNoMarkers' },
     BorderIndex: { edgeBottom: 'EdgeBottom' },
     BorderLineStyle: { continuous: 'Continuous' },
     ChartSeriesBy: { columns: 'Columns', rows: 'Rows' },
