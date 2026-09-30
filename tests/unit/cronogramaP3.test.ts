@@ -189,13 +189,15 @@ describe('hoja de la simulación y resumen en palabras', () => {
     const r = await simularPlazo(cron, riesgos, op);
     const imp = await impactoDeRiesgos(cron, riesgos, r, op);
     const texto = narrativaPlazo(r, imp, revisarSalud(cron.actividades, cpm.filas));
-    expect(texto).toHaveLength(6);
-    expect(texto[5]).toMatch(/^El costo tiene un 80 % de probabilidad de no pasar de US\$ [\d.]+ .* solo ocurre en el \d+ % de los casos: para un 80 % conjunto hacen falta el \d\d\/\d\d\/2027 y US\$ [\d.]+\.$/);
+    expect(texto).toHaveLength(7);
+    expect(texto[6]).toMatch(/^El costo tiene un 80 % de probabilidad de no pasar de US\$ [\d.]+ .* solo ocurre en el \d+ % de los casos: para un 80 % conjunto hacen falta el \d\d\/\d\d\/2027 y US\$ [\d.]+\.$/);
     expect(texto[0]).toMatch(/^Hay un 80 % de probabilidad de terminar el \d\d\/\d\d\/2027 o antes/);
     expect(texto[1]).toContain('convergencias');
     expect(texto[2]).toMatch(/reserva de \d+ días laborables/);
-    expect(texto[3]).toContain('«Lluvias intensas durante la obra gris»');
-    expect(texto[4]).toContain('«Estructura»');
+    // W4: la convergencia que más retrasa, con sus números.
+    expect(texto[3]).toMatch(/^En «Excavación» se juntan 2 rutas: .* es el sesgo de convergencia/);
+    expect(texto[4]).toContain('«Lluvias intensas durante la obra gris»');
+    expect(texto[5]).toContain('«Estructura»');
   });
 
   it('la hoja trae resumen, curva S con gráfico, riesgos y el Gantt probabilístico', async () => {
