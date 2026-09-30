@@ -10,7 +10,8 @@ import type { DatosInformeCronograma } from '../excel/informeCronograma.ts';
 import type { IdSeccionCronograma } from '../excel/plantillaInforme.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
-import { CurvaS, GanttImpreso, HistogramaFechas, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { COLORES_ZONA } from '../engine/cronograma/registro.ts';
+import { CurvaS, GanttImpreso, HistogramaFechas, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { miles } from './formato.ts';
 import { textosInforme as T } from './textos/es.ts';
 
@@ -76,6 +77,26 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
           </tbody>
         </table>
         <p className="tenue nota-informe">{T.riesgosNota}</p>
+      </section>
+    ),
+    registro: d.registro && (
+      <section>
+        <h2>Registro y matriz de riesgos</h2>
+        <MatrizRiesgos matriz={d.registro.matriz} />
+        {d.registro.vencidas > 0 && <p className="lectura">{T.vencidas(d.registro.vencidas)}</p>}
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>ID</th><th>{T.riesgoCol}</th><th>{T.estadoCol}</th><th>{T.responsableCol}</th><th>{T.revisionCol}</th><th>P × I</th><th>{T.respuestaCol}</th></tr></thead>
+          <tbody>
+            {d.registro.filas.map((f) => (
+              <tr key={f.id} style={f.estado === 'cerrado' ? { opacity: 0.55 } : undefined}>
+                <td>{f.id}</td><th scope="row">{f.nombre}</th><td>{T.estados[f.estado]}</td><td>{f.responsable ?? ''}</td>
+                <td style={f.vencida ? { color: COLORES_ZONA.roja, fontWeight: 600 } : undefined}>{f.revision !== undefined ? textoFecha(f.revision) : ''}</td>
+                <td><span className="punto-semaforo" style={{ background: COLORES_ZONA[f.zona] }} />{f.puntaje}</td>
+                <td>{f.respuesta ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     ),
     mitigacion: d.mitigacion && (

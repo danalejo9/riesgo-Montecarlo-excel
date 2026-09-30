@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V10: registro de riesgos completo (2026-09-30)
+
+**Añadido**
+- «Riesgos de plazo» admite **Categoría del riesgo, Estado** (Abierto, En
+  seguimiento, Cerrado, Materializado), **Fecha de revisión** e **Impacto
+  cualitativo (1–5)**, y riesgos **solo de costo** o **cualitativos**. Los
+  cerrados y los cualitativos no se simulan; los materializados, al 100 %.
+- **Matriz de probabilidad e impacto** 5 × 5 con colores en el panel, en la
+  hoja nueva «Registro de riesgos» y en el informe PDF; el impacto sale del
+  nivel que dé el usuario o de lo que el riesgo aporta al P80 (plazo o
+  costo). Aviso de revisiones vencidas.
+- Guía Q63–Q64.
+
 ### V9: exportar a MS Project y a P6 (2026-09-30)
 
 **Añadido**

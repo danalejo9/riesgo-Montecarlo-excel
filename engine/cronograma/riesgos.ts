@@ -51,6 +51,23 @@ export interface RiesgoPlazo {
    * crea dependencias.
    */
   rama?: { nombre: string; min: number; masProbable: number; max: number; despuesDe: string[]; antesDe: string[] };
+  /**
+   * Registro (V10). `cerrado` no se simula; `materializado` (ya ocurrió) se
+   * simula con probabilidad 100 %. Sin estado, abierto.
+   */
+  estado?: 'abierto' | 'seguimiento' | 'cerrado' | 'materializado';
+  /** Próxima revisión (fecha de serie). */
+  revision?: number;
+  categoriaRiesgo?: string;
+  /** Nivel de impacto 1–5 para la matriz, si el usuario lo da (si no, sale de la simulación). */
+  impactoCualitativo?: number;
+  /** Solo para el registro y la matriz: sin impacto que simular. */
+  cualitativo?: boolean;
+}
+
+/** Los riesgos que entran en la simulación (V10): sin los cerrados ni los cualitativos; los materializados, seguros. */
+export function riesgosActivos(riesgos: readonly RiesgoPlazo[]): RiesgoPlazo[] {
+  return riesgos.filter((r) => r.estado !== 'cerrado' && !r.cualitativo).map((r) => (r.estado === 'materializado' ? { ...r, probabilidad: 1 } : r));
 }
 
 /** El ID de la actividad que añade un riesgo: `R6+`. */
@@ -97,6 +114,11 @@ export function leerRiesgosPlazo(
   const hoja = HOJA_RIESGOS;
   const tabla = leerHojaGenerica(valores, {
     id: ['id'],
+    // V10: el registro (estado, revisión, categoría e impacto cualitativo).
+    estado: ['estado'],
+    revision: ['fecha de revision', 'revision', 'proxima revision'],
+    categoriaRiesgo: ['categoria del riesgo', 'tipo de riesgo', 'categoria'],
+    impactoCual: ['impacto cualitativo', 'nivel de impacto', 'impacto (1'],
     // Lo específico antes que lo general: «Probabilidad después» empieza como «Probabilidad».
     pDesp: ['probabilidad despues'],
     ramaNombre: ['actividad nueva', 'actividad que anade'],
@@ -163,16 +185,22 @@ export function leerRiesgosPlazo(
 
     const texto = String(celda('actividades') ?? '').trim();
     const sinImpacto = texto === '' && vacioC(celda('min')) && vacioC(celda('max'));
+    // V10: sin impacto en plazo ni actividad nueva, un riesgo puede ser solo de costo o cualitativo.
+    const costoPrevio = vacioC(celda('costo')) ? undefined : numeroDe(celda('costo'));
+    const cual = vacioC(celda('impactoCual')) ? undefined : numeroDe(celda('impactoCual'));
+    if (cual !== undefined && !(Number.isInteger(cual) && cual >= 1 && cual <= 5)) { error('el impacto cualitativo es un nivel de 1 a 5'); continue; }
+    const soloCosto = sinImpacto && !rama && costoPrevio !== undefined;
+    const cualitativo = sinImpacto && !rama && costoPrevio === undefined && cual !== undefined;
     let a = 0;
     let b = 0;
     let mp = 0;
     const afectadas: string[] = [];
-    if (!(rama && sinImpacto)) {
+    if (!(rama && sinImpacto) && !soloCosto && !cualitativo) {
       const a0 = fraccion(celda('min'), false);
       const b0 = fraccion(celda('max'), false);
       const mRaw = celda('mp');
       const m = vacioC(mRaw) ? undefined : fraccion(mRaw, false);
-      if (a0 === undefined || b0 === undefined) { error('faltan el impacto mínimo y el máximo'); continue; }
+      if (a0 === undefined || b0 === undefined) { error('faltan el impacto mínimo y el máximo (si no afecta al plazo: un «Costo si ocurre» o un «Impacto cualitativo» de 1 a 5)'); continue; }
       a = a0;
       b = b0;
       mp = m ?? (a + b) / 2;
@@ -196,7 +224,26 @@ export function leerRiesgosPlazo(
       id, nombre, probabilidad: p, impactoMin: a, impactoMasProbable: mp, impactoMax: b, actividades: [...new Set(afectadas)], fila,
       ...(costo !== undefined ? { costo } : {}),
       ...(rama ? { rama } : {}),
+      ...(cual !== undefined ? { impactoCualitativo: cual } : {}),
+      ...(cualitativo ? { cualitativo: true } : {}),
     };
+    // V10: estado, fecha de revisión y categoría.
+    const est = normalizar(celda('estado')).replace(/^en /, ''); // «En seguimiento»
+    if (est) {
+      const e = est.startsWith('abiert') || est.startsWith('activ') ? 'abierto'
+        : est.startsWith('seguim') || est.startsWith('monitor') || est.startsWith('vigil') ? 'seguimiento'
+          : est.startsWith('cerr') ? 'cerrado'
+            : est.startsWith('materializ') || est.startsWith('ocurri') ? 'materializado' : undefined;
+      if (!e) { error(`estado «${String(celda('estado'))}»: usa Abierto, En seguimiento, Cerrado o Materializado`); continue; }
+      riesgo.estado = e;
+    }
+    const rev = celda('revision');
+    if (!vacioC(rev)) {
+      if (typeof rev !== 'number') { error('«Fecha de revisión» debe ser una fecha'); continue; }
+      riesgo.revision = rev;
+    }
+    const catR = String(celda('categoriaRiesgo') ?? '').trim();
+    if (catR) riesgo.categoriaRiesgo = catR;
 
     // V1: la mitigación.
     const texto2 = (c: 'respuesta' | 'responsable') => String(celda(c) ?? '').trim();

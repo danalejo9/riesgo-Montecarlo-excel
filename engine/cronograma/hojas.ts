@@ -38,6 +38,8 @@ export interface HojaAEscribir {
   formatosRango?: Array<{ fila: number; col: number; filas: number; cols: number; formato: string }>;
   /** Filas (desde 0) que se resaltan en amarillo. */
   resaltar?: number[];
+  /** Celdas con color de fondo propio (V10: la matriz de riesgos). */
+  colores?: Array<{ fila: number; col: number; color: string }>;
   /**
    * Gráficos de dispersión sobre columnas contiguas: x y `series` columnas y
    * (1 si no se dice), con líneas (curva S, tendencia) o solo puntos
@@ -146,14 +148,18 @@ export function plantillaRiesgos(): HojaAEscribir {
     valores: [
       ['Riesgos de plazo — cada uno alarga a la vez todas sus actividades. Actividades: IDs (1;2) o categorías'],
       [''],
-      ['ID', 'Riesgo', 'Probabilidad', 'Impacto mínimo', 'Impacto más probable', 'Impacto máximo', 'Actividades afectadas'],
-      ['R1', 'Lluvias durante la obra', 0.3, 0.05, 0.1, 0.25, 'Obra'],
-      ['R2', 'Retraso en la aprobación del diseño', 0.2, 0.1, 0.2, 0.5, '1'],
+      [
+        'ID', 'Riesgo', 'Probabilidad', 'Impacto mínimo', 'Impacto más probable', 'Impacto máximo', 'Actividades afectadas', 'Costo si ocurre',
+        // V10: el registro. Sin impacto en plazo, un riesgo puede ser solo de costo o solo cualitativo (nivel 1–5).
+        'Categoría del riesgo', 'Estado', 'Responsable', 'Fecha de revisión', 'Impacto cualitativo (1–5)',
+      ],
+      ['R1', 'Lluvias durante la obra', 0.3, 0.05, 0.1, 0.25, 'Obra', '', 'Clima', 'Abierto', '', '', ''],
+      ['R2', 'Retraso en la aprobación del diseño', 0.2, 0.1, 0.2, 0.5, '1', '', 'Externo', 'Abierto', '', '', ''],
     ],
-    formatos: { 2: '0%', 3: '0%', 4: '0%', 5: '0%' },
+    formatos: { 2: '0%', 3: '0%', 4: '0%', 5: '0%', 11: FORMATO_FECHA },
     filaEncabezado: 2,
     primeraFilaDatos: 3,
-    anchos: [6, 40, 12, 15, 20, 15, 22],
+    anchos: [6, 40, 12, 15, 20, 15, 22, 15, 20, 16, 20, 17, 24],
   };
 }
 

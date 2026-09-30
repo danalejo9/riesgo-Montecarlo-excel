@@ -5,6 +5,7 @@
  */
 
 import { COLORES_GANTT, type VistaGantt } from '../engine/cronograma/gantt.ts';
+import { COLORES_ZONA, zonaDe } from '../engine/cronograma/registro.ts';
 import { fechaDeSerie, textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 
@@ -209,3 +210,25 @@ export function TendenciaPlazo({ puntos, titulo, nombres }: {
     </figure>
   );
 }
+
+/** V10: La matriz 5 × 5: probabilidad hacia arriba, impacto hacia la derecha; en cada casilla, los IDs. */
+export function MatrizRiesgos({ matriz }: { matriz: string[][][] }) {
+  return (
+    <table className="matriz-riesgos" style={{ borderCollapse: 'collapse', fontSize: 11, margin: '6px 0' }}>
+      <tbody>
+        {[5, 4, 3, 2, 1].map((p) => (
+          <tr key={p}>
+            <th scope="row" style={{ padding: '0 4px', fontWeight: 400 }} className="tenue">P{p}</th>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <td key={i} style={{ background: COLORES_ZONA[zonaDe(p * i)], color: '#1b1b1b', width: 46, height: 26, textAlign: 'center', border: '1px solid #fff' }}>
+                {(matriz[p - 1]?.[i - 1] ?? []).join(' ')}
+              </td>
+            ))}
+          </tr>
+        ))}
+        <tr><th />{[1, 2, 3, 4, 5].map((i) => <th key={i} style={{ fontWeight: 400 }} className="tenue">I{i}</th>)}</tr>
+      </tbody>
+    </table>
+  );
+}
+

@@ -1476,6 +1476,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     ida y vuelta con los importadores (base, calendarios, avance). Guía
     Q61–Q62. **Siguiente**: V10 (registro de riesgos completo).
 
+90. [x] **V10 (2026-09-30)**. `RiesgoPlazo.estado/revision/categoriaRiesgo/
+    impactoCualitativo/cualitativo`; riesgos solo de costo y cualitativos;
+    `riesgosActivos` (sin cerrados ni cualitativos; materializados al
+    100 %). `registro.ts`: `evaluarRegistro` (niveles P e I 1–5, impacto
+    del usuario, de la simulación —días y costo al P80— o estimado; zonas;
+    matriz; revisiones vencidas), `hojaRegistro` (matriz coloreada:
+    `HojaAEscribir.colores`). Panel `RegistroRiesgos`, `MatrizRiesgos`
+    compartida con el PDF (sección «Registro y matriz de riesgos»). Plantilla
+    y libro de pruebas con las columnas nuevas. Corregido en la prueba:
+    «En seguimiento» no se reconocía. Guía Q63–Q64. **Siguiente**: V11
+    (simulación rápida configurable).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

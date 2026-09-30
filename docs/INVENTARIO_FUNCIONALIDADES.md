@@ -210,8 +210,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | V7 | P6 | Calendarios por actividad | **Tú** | ✅ 30/09 (falta Excel: Q56–Q58) |
 | V8 | P6 | Clima probabilístico | **Tú** | ✅ 30/09 (falta Excel: Q59–Q60) |
 | V9 | P6 | Devolver resultados a MS Project y P6 | **Tú** | ✅ 30/09 (falta Excel/MSP/P6: Q61–Q62) |
-| V10 | P6 | Registro de riesgos completo (matriz, responsables, estado) | **Tú** | ⬜ siguiente |
-| V11 | P6 | Simulación rápida mientras se edita, configurable | **Tú** | ⬜ |
+| V10 | P6 | Registro de riesgos completo (matriz, responsables, estado) | **Tú** | ✅ 30/09 (falta Excel: Q63–Q64) |
+| V11 | P6 | Simulación rápida mientras se edita, configurable | **Tú** | ⬜ siguiente |
 
 ### Otros productos, fuera de este complemento (decidido el 25/09)
 

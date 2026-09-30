@@ -5,7 +5,7 @@
  */
 
 import {
-  tendencia, vistaGantt, type ComparacionMitigacion, type Instantanea, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
+  tendencia, vistaGantt, type ComparacionMitigacion, type Instantanea, type Registro, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
   type ResultadoSimulacionPlazo, type VistaGantt,
 } from '../engine/cronograma/index.ts';
 import type { PlantillaInforme } from './plantillaInforme.ts';
@@ -60,6 +60,8 @@ export interface DatosInformeCronograma {
     porRespuesta: ComparacionMitigacion['porRespuesta'];
   };
   gantt: VistaGantt & { truncado: boolean };
+  /** V10: el registro de riesgos con la matriz. */
+  registro?: Registro;
   /** V5: las últimas instantáneas de «Cronograma (seguimiento)» y la tendencia en palabras. */
   seguimiento?: { instantaneas: Instantanea[]; tendencia: string[] };
 }
@@ -74,6 +76,7 @@ export function datosInformeCronograma(e: {
   simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number } }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
   seguimiento?: readonly Instantanea[];
+  registro?: Registro;
   plantilla: PlantillaInforme;
   titulo?: string;
   libro?: string;
@@ -155,6 +158,7 @@ export function datosInformeCronograma(e: {
         .map((a) => ({ id: a.id, nombre: a.nombre, criticidad: a.criticidad, finP50: a.fin.p50, finP80: a.fin.p80 })),
     };
   }
+  if (e.registro && e.registro.filas.length > 0) datos.registro = e.registro;
   if (e.seguimiento && e.seguimiento.length > 0) {
     datos.seguimiento = { instantaneas: e.seguimiento.slice(-SEGUIMIENTO_MAXIMO), tendencia: tendencia(e.seguimiento) };
   }

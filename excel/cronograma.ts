@@ -52,6 +52,14 @@ export async function leerHojaSeguimiento(): Promise<unknown[][] | undefined> {
   return Excel.run((context) => valoresDeHoja(context, HOJA_SEGUIMIENTO));
 }
 
+/** V10: la hoja «Registro de riesgos» (la matriz y la lista), rehecha entera. */
+export async function escribirHojaRegistro(h: HojaAEscribir): Promise<string> {
+  return Excel.run(async (context) => {
+    await escribirHoja(context, h, true, false);
+    return h.nombre;
+  });
+}
+
 /** V5: reescribe «Cronograma (seguimiento)» entera (las instantáneas y el gráfico de tendencia). */
 export async function escribirHojaSeguimiento(h: HojaAEscribir): Promise<string> {
   return Excel.run(async (context) => {
@@ -61,7 +69,7 @@ export async function escribirHojaSeguimiento(h: HojaAEscribir): Promise<string>
 }
 
 /** Escribe una hoja entera. `reemplazar`: si existe, se vacía; si no, no se toca y se devuelve `false`. */
-async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, reemplazar: boolean): Promise<boolean> {
+async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, reemplazar: boolean, activar = true): Promise<boolean> {
   let hoja = context.workbook.worksheets.getItemOrNullObject(h.nombre);
   await context.sync();
   if (!hoja.isNullObject && !reemplazar) return false;
@@ -95,6 +103,7 @@ async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, ree
   }
   if (h.filaEncabezado >= 0 && !h.otrosEncabezados?.length) hoja.freezePanes.freezeRows(h.filaEncabezado + 1);
   for (const f of h.resaltar ?? []) hoja.getRangeByIndexes(f, 0, 1, ancho).format.fill.color = '#FFF2CC';
+  for (const c of h.colores ?? []) hoja.getRangeByIndexes(c.fila, c.col, 1, 1).format.fill.color = c.color;
   for (const g of h.graficos ?? []) {
     const tipo = g.tipo === 'puntos' ? Excel.ChartType.xyscatter : Excel.ChartType.xyscatterLinesNoMarkers;
     const series = g.series ?? 1;
@@ -112,7 +121,7 @@ async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, ree
   }
   hoja.getRange('A1').format.font.bold = true;
   h.anchos.forEach((w, i) => (hoja.getRangeByIndexes(0, i, 1, 1).format.columnWidth = w * 7));
-  hoja.activate();
+  if (activar) hoja.activate();
   await context.sync();
   return true;
 }

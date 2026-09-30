@@ -20,3 +20,4 @@ export * from './relojes.ts';
 export * from './cpmCalendarios.ts';
 export * from './clima.ts';
 export * from './exportar.ts';
+export * from './registro.ts';

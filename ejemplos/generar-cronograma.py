@@ -824,7 +824,9 @@ CAB_R = ["ID", "Riesgo", "Probabilidad", "Impacto mínimo", "Impacto más probab
          "Impacto más probable después", "Impacto máximo después", "Costo si ocurre después",
          # Riesgos que añaden trabajo (V2): vacías aquí; la guía (Q45) pide añadir un riesgo que las usa.
          "Actividad nueva", "Duración nueva mínima", "Duración nueva más probable", "Duración nueva máxima",
-         "Después de", "Antes de"]
+         "Después de", "Antes de",
+         # Registro (V10): vacías aquí; la guía (Q63) pide rellenarlas.
+         "Categoría del riesgo", "Estado", "Fecha de revisión", "Impacto cualitativo (1–5)"]
 for j, t in enumerate(CAB_R, start=1):
     c = rie.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO

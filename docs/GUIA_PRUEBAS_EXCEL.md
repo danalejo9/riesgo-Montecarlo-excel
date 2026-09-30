@@ -1093,6 +1093,31 @@ los calendarios de cada actividad y las dos restricciones de la actividad
 17; en el XML de MS Project, la 17 solo lleva la de inicio (el panel lo
 avisa: MS Project admite una restricción más la fecha límite).
 
+**Q63. Registro de riesgos (V10).** «Riesgos de plazo» del libro de pruebas
+trae al final cuatro columnas nuevas: Categoría del riesgo, Estado, Fecha de
+revisión e Impacto cualitativo (1–5). Pon R4 en **Cerrado**, a R2 una fecha
+de revisión ya pasada y añade una fila R8 «Mala imagen con los vecinos»,
+Probabilidad 60 %, Impacto cualitativo 3 (sin impactos ni actividades).
+Calcula y simula. Esperado:
+- En el panel, **Registro de riesgos** («5 abiertos · 1 con la revisión
+  vencida») con la **matriz 5 × 5** coloreada: R1 en P3 × I4 y R8 en
+  P4 × I3 (12, naranja), R2 y R3 en amarillo (6), R5 en verde; R4 no está en
+  la matriz y sale gris al final de la lista. Aviso «Revisión vencida: R2».
+- Hoja nueva **«Registro de riesgos»**: la matriz con los colores y la lista
+  (tipo, estado, responsable, revisión —la de R2 en rojo—, niveles, puntaje,
+  zona, de dónde sale el impacto, días y costo al P80, respuesta).
+- R4 cerrado **no se simula** (el P80 baja respecto a Q13) y R8, cualitativo,
+  tampoco. Con R1 en **Materializado**, se simula como seguro (100 %).
+- Informe PDF: sección «Registro y matriz de riesgos».
+
+**Q64. Riesgo solo de costo y errores.** Añade R9 «Multa por ruido»,
+Probabilidad 25 %, Costo si ocurre 8.000, sin impactos ni actividades: las
+fechas no cambian y el costo P80 sube (ocurre en ≈ 25 % de las iteraciones).
+Errores: Estado «Dormido» → «usa Abierto, En seguimiento, Cerrado o
+Materializado»; Impacto cualitativo 7 → «nivel de 1 a 5»; una fila sin
+impactos, sin costo y sin nivel → «faltan el impacto mínimo y el máximo (si
+no afecta al plazo: …)». Al terminar, deshaz los cambios.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

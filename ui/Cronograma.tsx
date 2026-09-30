@@ -14,6 +14,7 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
+  riesgosActivos, evaluarRegistro, hojaRegistro, COLORES_ZONA, type Registro,
   leerRangosTipo, agregarInstantanea, hojaSeguimiento, exportarMspdi, exportarXer, aWindows1252, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
@@ -21,7 +22,7 @@ import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
 import {
   escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
-  escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma, escribirPlantillaRangosTipo,
+  escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma, escribirPlantillaRangosTipo, escribirHojaRegistro,
 } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
@@ -31,7 +32,7 @@ import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { descargarDirecto, esEscritorio, type ArchivoDescarga } from './descarga.ts';
-import { HistogramaFechas, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
+import { HistogramaFechas, MatrizRiesgos, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
@@ -58,7 +59,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const [problemas, setProblemas] = useState<ProblemaCronograma[]>([]);
   const [resultado, setResultado] = useState<Calculado | null>(null);
   const [salud, setSalud] = useState<InformeSalud | null>(null);
-  const [datos, setDatos] = useState<{ cron: ModeloCronograma; riesgos: RiesgoPlazo[] } | null>(null);
+  const [datos, setDatos] = useState<{ cron: ModeloCronograma; riesgos: RiesgoPlazo[]; todos: RiesgoPlazo[] } | null>(null);
+  const [registro, setRegistro] = useState<Registro | null>(null);
   const [simulado, setSimulado] = useState<Simulado | null>(null);
   const [nota, setNota] = useState<string | null>(null);
   const [iteraciones, setIteraciones] = useState(OPCIONES_PLAZO_POR_DEFECTO.iteraciones);
@@ -107,7 +109,14 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       setProblemas([...lectura.problemas, ...r.avisos, ...riesgos.problemas]);
       setResultado({ ...r, hoja });
       setSalud(revisarSalud(cron.actividades, r.filas));
-      setDatos(riesgos.problemas.some((p) => p.gravedad === 'error') ? null : { cron, riesgos: riesgos.riesgos });
+      const bien = !riesgos.problemas.some((p) => p.gravedad === 'error');
+      // V10: se simulan los activos; el registro los enseña todos.
+      setDatos(bien ? { cron, riesgos: riesgosActivos(riesgos.riesgos), todos: riesgos.riesgos } : null);
+      if (bien && riesgos.riesgos.length > 0) {
+        const reg = evaluarRegistro({ riesgos: riesgos.riesgos, actividades: cron.actividades, dias: r.duracionProyecto, hoy: serieLocal(new Date()) });
+        setRegistro(reg);
+        await escribirHojaRegistro(hojaRegistro(reg));
+      } else setRegistro(null);
     } catch (e) {
       alFallar(e);
     } finally {
@@ -159,6 +168,14 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r, datos.cron.fechaCorte);
         await escribirHojaGantt(hojaGantt(vista));
         ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
+      }
+      if (impacto && datos.todos.length > 0) {
+        const reg = evaluarRegistro({
+          riesgos: datos.todos, actividades: datos.cron.actividades, impacto: impacto.porRiesgo, dias: r.determinista.dias,
+          ...(r.costos ? { costo: r.costos.determinista } : {}), hoy: serieLocal(new Date()),
+        });
+        setRegistro(reg);
+        await escribirHojaRegistro(hojaRegistro(reg));
       }
       setSimulado({
         r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1, escenario: escenario === 'despues' ? 'despues' : 'antes',
@@ -244,6 +261,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         salud,
         ...(simulado ? { simulado } : {}),
         ...(simulado?.comparacion ? { comparacion: simulado.comparacion } : {}),
+        ...(registro ? { registro } : {}),
         seguimiento,
         plantilla: await plantillaDelLibro(),
       });
@@ -377,6 +395,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       )}
 
       {salud && <Salud informe={salud} />}
+      {registro && <RegistroRiesgos r={registro} />}
       {salud && salud.comprobaciones.some((c) => (c.codigo === 'incertidumbre' || c.codigo === 'optimismo') && c.estado !== 'verde') && (
         <p title={T.rellenarAyuda}>
           <button type="button" onClick={rellenar} disabled={ocupado !== null}>{T.rellenarRangos}</button>{' '}
@@ -575,6 +594,31 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
     max = Math.max(max, f);
   }
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
+}
+
+/** V10: la matriz de probabilidad e impacto y lo que pide atención. */
+function RegistroRiesgos({ r }: { r: Registro }) {
+  const abiertos = r.filas.filter((f) => f.estado !== 'cerrado');
+  const rojos = abiertos.filter((f) => f.zona === 'roja').length;
+  return (
+    <Plegable id="cronograma-registro" abierta={rojos > 0 || r.vencidas > 0} titulo={T.registro} resumen={T.registroResumen(abiertos.length, rojos, r.vencidas)}>
+      <MatrizRiesgos matriz={r.matriz} />
+      {r.vencidas > 0 && <p className="aviso-linea">{T.vencidas(r.filas.filter((f) => f.vencida).map((f) => f.id).join(', '))}</p>}
+      <table>
+        <thead><tr><th>ID</th><th>{T.riesgoCol}</th><th>{T.estadoCol}</th><th>{T.puntajeCol}</th><th>{T.responsableCol}</th></tr></thead>
+        <tbody>
+          {r.filas.slice(0, 12).map((f) => (
+            <tr key={f.id} style={f.estado === 'cerrado' ? { opacity: 0.55 } : undefined}>
+              <td>{f.id}</td><td>{f.nombre}</td><td>{T.estados[f.estado]}</td>
+              <td><span style={{ background: COLORES_ZONA[f.zona], color: '#1b1b1b', padding: '0 6px', borderRadius: 3 }}>{f.puntaje}</span></td>
+              <td>{f.responsable ?? ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="tenue">{T.escritoEn('Registro de riesgos')}</p>
+    </Plegable>
+  );
 }
 
 /** V5: la tendencia de las instantáneas guardadas. */
