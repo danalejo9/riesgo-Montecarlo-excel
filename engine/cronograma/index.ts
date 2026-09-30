@@ -10,3 +10,4 @@ export * from './simulacion.ts';
 export * from './muestreo.ts';
 export * from './narrativa.ts';
 export * from './gantt.ts';
+export * from './hiloPlazo.ts';

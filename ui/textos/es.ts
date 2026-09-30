@@ -53,6 +53,7 @@ export const textosCronograma = {
   actividadCol: 'Actividad',
   histograma: 'Fecha de fin: cuántas iteraciones terminan cada día',
   marcaCronograma: 'cronograma',
+  calculadoCon: (n: number, hilos: number) => `${n.toLocaleString('es')} iteraciones en ${hilos} ${hilos === 1 ? 'hilo' : 'hilos'}.`,
 } as const;
 
 export const textosGantt = {

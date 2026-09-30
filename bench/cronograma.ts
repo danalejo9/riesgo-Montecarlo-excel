@@ -4,12 +4,15 @@
  * iteraciones. Objetivo del plan (`docs/PLAN_CRONOGRAMA_QSRA.md` §3.5):
  * menos de 10 s en Excel Web o Mac.
  *
- *     npm run bench:cronograma
+ *     npm run bench:cronograma            (un hilo)
+ *     npm run bench:cronograma -- 5000 10000 4   (actividades, iteraciones, hilos)
  */
-import { CALENDARIO_ESTANDAR, OPCIONES_PLAZO_POR_DEFECTO, simularPlazo, type Actividad } from '../engine/cronograma/index.ts';
+import { CALENDARIO_ESTANDAR, OPCIONES_PLAZO_POR_DEFECTO, simularPlazo, simularPlazoEnParalelo, type Actividad, type Cronograma } from '../engine/cronograma/index.ts';
+import { crearHilosPlazoNode } from '../tests/helpers/hilosPlazoNode.ts';
 
 const N = Number(process.argv[2] ?? 5000);
 const ITER = Number(process.argv[3] ?? 10_000);
+const HILOS = Number(process.argv[4] ?? 1);
 let semilla = 1;
 const azar = () => (semilla = (semilla * 16_807) % 2_147_483_647) / 2_147_483_647;
 
@@ -21,7 +24,11 @@ for (let i = 0; i < N; i++) {
   actividades.push({ id: String(i), nombre: `A${i}`, duracion: 5, predecesoras, tresPuntos: { min: 4, masProbable: 5, max: 9 } });
 }
 
+const cron: Cronograma = { inicio: 46_024, calendario: CALENDARIO_ESTANDAR, actividades };
+const op = { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: ITER };
+const hilos = HILOS > 1 ? crearHilosPlazoNode(HILOS) : null;
 const t0 = performance.now();
-const r = await simularPlazo({ inicio: 46_024, calendario: CALENDARIO_ESTANDAR, actividades }, [], { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: ITER });
+const r = hilos ? await simularPlazoEnParalelo(cron, [], op, hilos.para(cron, [], op), hilos.hilos) : await simularPlazo(cron, [], op);
 const ms = performance.now() - t0;
-console.log(`${N} actividades × ${ITER} iteraciones: ${(ms / 1000).toFixed(2)} s (${((ms * 1e6) / (N * ITER)).toFixed(0)} ns por actividad e iteración) · P50 ${r.dias.p50} · P80 ${r.dias.p80} días`);
+hilos?.cerrar();
+console.log(`${N} actividades × ${ITER} iteraciones, ${HILOS} hilo(s): ${(ms / 1000).toFixed(2)} s (${((ms * 1e6) / (N * ITER)).toFixed(0)} ns por actividad e iteración) · P50 ${r.dias.p50} · P80 ${r.dias.p80} días`);

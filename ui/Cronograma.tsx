@@ -9,7 +9,7 @@ import { useRef, useState } from 'react';
 
 import {
   calcularCPM, hojaGantt, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
-  simularPlazo, OPCIONES_PLAZO_POR_DEFECTO,
+  simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
 } from '../engine/cronograma/index.ts';
@@ -19,6 +19,8 @@ import { escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma,
 import { codificarJson } from '../excel/codificacion.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
+import { crearHilosPlazo } from './motor/plazoNavegador.ts';
+import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
 
 type Calculado = Extract<ResultadoCPM, { ok: true }> & { hoja: string };
@@ -27,6 +29,7 @@ interface Simulado {
   impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number; diasP80: number } };
   narrativa: string[];
   hoja: string;
+  hilos: number;
 }
 
 const ITERACIONES = [1000, 5000, 10_000, 50_000];
@@ -94,19 +97,23 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     if (!datos) return;
     cancelado.current = false;
     setOcupado(T.simulando(0, iteraciones));
+    // P3b: tantos hilos como diga la configuración; sin Web Workers, en el hilo del panel.
+    const hilos = crearHilosPlazo(hilosEfectivos(leerPreferenciaHilos()));
     try {
       const op = {
         iteraciones, forma, semilla: OPCIONES_PLAZO_POR_DEFECTO.semilla, ceder,
         debeCancelar: () => cancelado.current,
         alAvanzar: (h: number, t: number) => setOcupado(T.simulando(h, t)),
       };
-      const r = await simularPlazo(datos.cron, datos.riesgos, op);
+      const simular: typeof simularPlazo = (c, rs, o) =>
+        hilos ? simularPlazoEnParalelo(c, rs, o, hilos.para(c, rs, o), hilos.hilos) : simularPlazo(c, rs, o);
+      const r = await simular(datos.cron, datos.riesgos, op);
       let impacto: Simulado['impacto'];
       if (!r.cancelada && datos.riesgos.length > 0) {
         setOcupado(T.midiendoRiesgos(0, datos.riesgos.length + 1));
         const imp = await impactoDeRiesgos(datos.cron, datos.riesgos, r, {
           ...op, alAvanzar: (h, t) => setOcupado(T.midiendoRiesgos(h, t)),
-        });
+        }, simular);
         if (!cancelado.current) impacto = imp;
       }
       const narrativa = narrativaPlazo(r, impacto, salud ?? undefined);
@@ -116,10 +123,11 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         await escribirHojaGantt(hojaGantt(vista));
         ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       }
-      setSimulado({ r, impacto, narrativa, hoja });
+      setSimulado({ r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1 });
     } catch (e) {
       alFallar(e);
     } finally {
+      hilos?.cerrar();
       setOcupado(null);
     }
   };
@@ -292,7 +300,7 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
           </tbody>
         </table>
       </Plegable>
-      <p className="tenue">{T.escritoEn(s.hoja)}</p>
+      <p className="tenue">{T.escritoEn(s.hoja)} {T.calculadoCon(r.iteraciones, s.hilos)}</p>
     </>
   );
 }

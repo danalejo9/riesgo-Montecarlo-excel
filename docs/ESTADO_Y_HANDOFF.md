@@ -1321,6 +1321,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     botón «Ver cronograma» en `ui/Cronograma.tsx`. Visto en el banco con el
     libro de pruebas cargado en `__hojasMatriz`. **Siguiente**: P3b.
 
+75. [x] **P3b (2026-09-30)**. `simulacion.ts` partido en `prepararPlazo`,
+    `simularTramo`, `combinarAcumuladores` y `resultadoPlazo`;
+    `simularPlazoEnParalelo(…, ejecutar, hilos)`; `hiloPlazo.ts`
+    (`crearAtendedorPlazo`, `crearEjecutorPlazo`), `ui/motor/workerPlazo.ts`
+    y `plazoNavegador.ts`; `impactoDeRiesgos` acepta el simulador. En Node:
+    `tests/helpers/workerPlazo.ts` y `hilosPlazoNode.ts`. Probado que en
+    paralelo (también con `worker_threads`) da exactamente lo mismo.
+    **Siguiente**: resto de P1.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

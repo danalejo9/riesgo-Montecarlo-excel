@@ -624,6 +624,8 @@ porcentaje y luego «Midiendo cada riesgo… n de 6»). Esperado, **exactamente*
   intensas durante la obra gris”: sin él, el P80 se adelantaría 6 días
   laborables»; «La actividad que más mueve la fecha de fin es “Estructura”…».
 - Histograma con dos marcas, «cronograma» (a la izquierda, casi fuera) y P80.
+- Debajo: «10.000 iteraciones en N hilos» (N = los hilos de Configuración).
+  Cambia los hilos en ⚙ a 1 y vuelve a simular: **las mismas fechas**.
 - **Riesgos de plazo**: Lluvias +6, Licencia +3, Acabados +1, Ascensor 0 y
   la oportunidad de la estructura prefabricada −1 (quitarla alarga).
 

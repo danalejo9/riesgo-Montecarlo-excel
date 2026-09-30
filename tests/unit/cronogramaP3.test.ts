@@ -7,10 +7,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CALENDARIO_ESTANDAR, calcularCPM, hojaSimulacionPlazo, impactoDeRiesgos, leerActividades, leerCronograma, leerPredecesoras, leerRiesgosPlazo,
-  narrativaPlazo, plantillaActividades, plantillaRiesgos,
+  narrativaPlazo, nuevoAcumulador, plantillaActividades, plantillaRiesgos, prepararPlazo, simularPlazoEnParalelo, simularTramo,
   muestreadorDuracion, revisarSalud, simularPlazo, OPCIONES_PLAZO_POR_DEFECTO,
-  type Actividad, type Cronograma,
+  type Actividad, type Cronograma, type RiesgoPlazo,
 } from '../../engine/cronograma/index.ts';
+import { crearHilosPlazoNode } from '../helpers/hilosPlazoNode.ts';
 import { streamOf } from '../../engine/random/philox.ts';
 import { leerHojaComoMatriz } from '../helpers/leerHoja.ts';
 
@@ -200,5 +201,57 @@ describe('hoja de la simulación y resumen en palabras', () => {
     const { riesgos: rs, problemas } = leerRiesgosPlazo(plantillaRiesgos().valores, a);
     expect(problemas).toEqual([]);
     expect(rs.map((x) => x.actividades)).toEqual([['2'], ['1']]);
+  });
+});
+
+describe('simulación en varios hilos (P3b)', () => {
+  const riesgos = leerRiesgosPlazo(hoja('Riesgos de plazo'), cron.actividades).riesgos;
+  const op = { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: 7_777 };
+
+  it('repartida en tramos da exactamente lo mismo que en un hilo', async () => {
+    const uno = await simularPlazo(cron, riesgos, op);
+    const ejecutar = async (t: { desde: number; hasta: number }) => {
+      const p = prepararPlazo(cron, riesgos, op);
+      const acc = nuevoAcumulador(p);
+      simularTramo(p, acc, t.desde, t.hasta);
+      return acc;
+    };
+    const varios = await simularPlazoEnParalelo(cron, riesgos, op, ejecutar, 3);
+    expect(Array.from(varios.finProyecto)).toEqual(Array.from(uno.finProyecto));
+    expect(varios.actividades).toEqual(uno.actividades);
+    expect(varios.riesgos).toEqual(uno.riesgos);
+    expect(varios.fechas).toEqual(uno.fechas);
+    expect(varios.cancelada).toBe(false);
+  });
+
+  it('con hilos reales (worker_threads) también, e impacto de riesgos incluido', async () => {
+    const hilos = crearHilosPlazoNode(2);
+    try {
+      const simular = (c: Cronograma, r: readonly RiesgoPlazo[], o: typeof op) => simularPlazoEnParalelo(c, r, o, hilos.para(c, r, o), hilos.hilos);
+      const par = await simular(cron, riesgos, op);
+      const uno = await simularPlazo(cron, riesgos, op);
+      expect(Array.from(par.finProyecto)).toEqual(Array.from(uno.finProyecto));
+      expect(par.actividades).toEqual(uno.actividades);
+      const impPar = await impactoDeRiesgos(cron, riesgos, par, op, simular);
+      const impUno = await impactoDeRiesgos(cron, riesgos, uno, op);
+      expect(impPar).toEqual(impUno);
+    } finally {
+      hilos.cerrar();
+    }
+  }, 30_000);
+
+  it('cancelar deja de lanzar tramos y combina lo terminado', async () => {
+    let tramos = 0;
+    const ejecutar = async (t: { desde: number; hasta: number }) => {
+      tramos++;
+      const p = prepararPlazo(cron, riesgos, op);
+      const acc = nuevoAcumulador(p);
+      simularTramo(p, acc, t.desde, t.hasta);
+      return acc;
+    };
+    const r = await simularPlazoEnParalelo(cron, riesgos, { ...op, iteraciones: 100_000, debeCancelar: () => tramos >= 3 }, ejecutar, 1);
+    expect(r.cancelada).toBe(true);
+    expect(r.iteraciones).toBe(r.finProyecto.length);
+    expect(r.iteraciones).toBeLessThan(100_000);
   });
 });

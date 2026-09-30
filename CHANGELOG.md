@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P3b: la simulación del plazo en varios hilos (2026-09-30)
+
+**Cambiado**
+- La simulación del plazo se reparte en Web Workers (los hilos de
+  Configuración; sin workers, en el panel como antes). El resultado es
+  **idéntico** al de un hilo: las iteraciones se numeran globalmente. El
+  panel dice con cuántos hilos se calculó.
+- Contadores de días con ventana: sumar los resultados de los hilos pasó
+  de ~1 s a ~70 ms en 5.000 actividades.
+- 5.000 actividades × 10.000 iteraciones: 12,7 s en un hilo → **6,3 s en
+  4 hilos** (contenedor de desarrollo). `npm run bench:cronograma -- 5000
+  10000 4`.
+
 ### P3c: ver el cronograma (2026-09-30)
 
 **Añadido**

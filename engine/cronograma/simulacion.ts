@@ -27,7 +27,7 @@
 import { streamOf, uniformAt } from '../random/philox.ts';
 import { IndiceLaborable } from './calendario.ts';
 import { ordenTopologico, resolverRed } from './cpm.ts';
-import { muestreadorDuracion } from './muestreo.ts';
+import { muestreadorDuracion, type Muestreador } from './muestreo.ts';
 import type { RiesgoPlazo } from './riesgos.ts';
 import type { Cronograma } from './tipos.ts';
 
@@ -95,37 +95,66 @@ export interface ResultadoSimulacionPlazo {
   riesgos: Array<{ id: string; nombre: string; probabilidad: number; ocurrio: number }>;
 }
 
-/** Cuenta cuántas veces cae cada día (entero ≥ 0). Crece solo. */
-class ContadorDias {
-  cuentas = new Uint32Array(64);
-  total = 0;
-  add(dia: number): void {
-    const d = dia < 0 ? 0 : dia;
-    if (d >= this.cuentas.length) {
-      let n = this.cuentas.length;
-      while (n <= d) n *= 2;
-      const nuevo = new Uint32Array(n);
-      nuevo.set(this.cuentas);
-      this.cuentas = nuevo;
-    }
-    this.cuentas[d] = (this.cuentas[d] as number) + 1;
-    this.total++;
+/**
+ * Cuántas veces cae cada día (entero ≥ 0). Guarda solo una **ventana** de
+ * días (`base` … `base + cuentas.length − 1`): las fechas de una actividad
+ * se mueven unas decenas de días, no miles, y así sumar los contadores de
+ * varios hilos cuesta lo que mide la ventana. Datos planos —no una clase—
+ * para poder mandarlos entre hilos.
+ */
+export interface ContadorDias {
+  base: number;
+  cuentas: Uint32Array;
+  total: number;
+}
+
+const nuevoContador = (): ContadorDias => ({ base: 0, cuentas: new Uint32Array(0), total: 0 });
+
+/** Amplía la ventana para que quepan los días [d0, d1]. */
+function abarcar(c: ContadorDias, d0: number, d1: number): void {
+  const fin = c.base + c.cuentas.length - 1;
+  if (c.cuentas.length > 0 && d0 >= c.base && d1 <= fin) return;
+  const nb = c.cuentas.length === 0 ? Math.max(0, d0 - 16) : Math.max(0, Math.min(c.base, d0 - 16));
+  const nf = c.cuentas.length === 0 ? d1 + 16 : Math.max(fin, d1 + 16);
+  // Al crecer, el doble: pocas copias aunque las fechas se vayan alejando.
+  const largo = Math.max(nf - nb + 1, c.cuentas.length * 2);
+  const nuevo = new Uint32Array(largo);
+  if (c.cuentas.length > 0) nuevo.set(c.cuentas, c.base - nb);
+  c.base = nb;
+  c.cuentas = nuevo;
+}
+
+function contar(c: ContadorDias, dia: number): void {
+  const d = dia < 0 ? 0 : dia;
+  const i = d - c.base;
+  if (i < 0 || i >= c.cuentas.length) abarcar(c, d, d);
+  c.cuentas[d - c.base] = (c.cuentas[d - c.base] as number) + 1;
+  c.total++;
+}
+
+function sumarContador(a: ContadorDias, b: ContadorDias): void {
+  if (b.total === 0) return;
+  abarcar(a, b.base, b.base + b.cuentas.length - 1);
+  const off = b.base - a.base;
+  for (let i = 0; i < b.cuentas.length; i++) a.cuentas[off + i] = (a.cuentas[off + i] as number) + (b.cuentas[i] as number);
+  a.total += b.total;
+}
+
+/** El primer día con acumulado ≥ p. */
+function cuantilDias(c: ContadorDias, p: number): number {
+  const objetivo = Math.max(1, Math.ceil(p * c.total - 1e-9));
+  let acum = 0;
+  for (let i = 0; i < c.cuentas.length; i++) {
+    acum += c.cuentas[i] as number;
+    if (acum >= objetivo) return c.base + i;
   }
-  /** El primer día con acumulado ≥ p. */
-  cuantil(p: number): number {
-    const objetivo = Math.max(1, Math.ceil(p * this.total - 1e-9));
-    let acum = 0;
-    for (let d = 0; d < this.cuentas.length; d++) {
-      acum += this.cuentas[d] as number;
-      if (acum >= objetivo) return d;
-    }
-    return this.cuentas.length - 1;
-  }
-  hasta(dia: number): number {
-    let acum = 0;
-    for (let d = 0; d <= dia && d < this.cuentas.length; d++) acum += this.cuentas[d] as number;
-    return this.total === 0 ? NaN : acum / this.total;
-  }
+  return c.base + Math.max(0, c.cuentas.length - 1);
+}
+
+function fraccionHasta(c: ContadorDias, dia: number): number {
+  let acum = 0;
+  for (let i = 0; i < c.cuentas.length && c.base + i <= dia; i++) acum += c.cuentas[i] as number;
+  return c.total === 0 ? NaN : acum / c.total;
 }
 
 /** Día (índice laborable) en que se enseña un fin temprano `f`; ver `IndiceLaborable.fechaFin`. */
@@ -135,66 +164,119 @@ const diaInicio = (s: number, d: number) => (d === 0 ? diaFin(s) : Math.floor(s 
 
 const TIPO = { FS: 0, SS: 1, FF: 2, SF: 3 } as const;
 
-export async function simularPlazo(
-  c: Cronograma,
-  riesgos: readonly RiesgoPlazo[],
-  op: OpcionesSimulacionPlazo,
-): Promise<ResultadoSimulacionPlazo> {
+type Rel = { p: number; t: number; r: number };
+type RelSal = { s: number; t: number; r: number };
+
+/** Lo que no cambia entre iteraciones: la red en arreglos planos, los muestreadores y los flujos. */
+export interface PlazoPreparado {
+  n: number;
+  orden: number[];
+  entrantes: Rel[][];
+  salientes: RelSal[][];
+  minInicio: number[];
+  dists: Array<Muestreador | null>;
+  fijas: number[];
+  duraciones: number[];
+  flujos: number[];
+  riesgos: Array<{ r: RiesgoPlazo; ocurre: number; impacto: number; dist: Muestreador | null; afectadas: number[] }>;
+  semilla: number;
+  cal: IndiceLaborable;
+  actividades: Array<{ id: string; nombre: string }>;
+  forma: FormaDuracion;
+  /** Memoria de trabajo de un bloque, reservada una vez y reutilizada. */
+  trabajo?: { dur: Float64Array; es: Float64Array; lf: Float64Array; fin: Float64Array };
+}
+
+export function prepararPlazo(c: Cronograma, riesgos: readonly RiesgoPlazo[], op: { semilla: number; forma: FormaDuracion }): PlazoPreparado {
   const acts = c.actividades;
   const n = acts.length;
   const red = resolverRed(acts);
   if (!red.ok) throw new Error(red.problemas.map((p) => p.mensaje).join('; '));
   const { orden, enCiclo } = ordenTopologico(n, red.preds);
   if (enCiclo.length > 0) throw new Error('El cronograma tiene una dependencia circular');
-
   const cal = new IndiceLaborable(c.calendario, c.inicio);
   const indice = new Map(acts.map((a, i) => [a.id, i]));
-  const N = Math.max(1, Math.floor(op.iteraciones));
-  const B = Math.max(16, Math.min(2048, Math.floor(2_000_000 / Math.max(1, n))));
-
-  // La red en arreglos planos: relaciones entrantes y salientes de cada actividad.
   const entrantes = acts.map((a) => a.predecesoras.map((r) => ({ p: indice.get(r.predecesora) as number, t: TIPO[r.tipo], r: r.retardo })));
-  const salientes: Array<Array<{ s: number; t: number; r: number }>> = acts.map(() => []);
-  entrantes.forEach((lista, s) => lista.forEach(({ p, t, r }) => (salientes[p] as Array<{ s: number; t: number; r: number }>).push({ s, t, r })));
-  const minInicio = acts.map((a) => (a.inicioNoAntesDe === undefined ? 0 : cal.indiceDesde(a.inicioNoAntesDe)));
+  const salientes: RelSal[][] = acts.map(() => []);
+  entrantes.forEach((lista, s2) => lista.forEach(({ p, t, r }) => (salientes[p] as RelSal[]).push({ s: s2, t, r })));
+  return {
+    n,
+    orden,
+    entrantes,
+    salientes,
+    minInicio: acts.map((a) => (a.inicioNoAntesDe === undefined ? 0 : cal.indiceDesde(a.inicioNoAntesDe))),
+    dists: acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null)),
+    fijas: acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion)),
+    duraciones: acts.map((a) => a.duracion),
+    flujos: acts.map((a) => streamOf(`plazo:${a.id}`)),
+    riesgos: riesgos.map((r) => ({
+      r,
+      ocurre: streamOf(`riesgo-plazo:${r.id}#ocurre`),
+      impacto: streamOf(`riesgo-plazo:${r.id}#impacto`),
+      dist: muestreadorDuracion(r.impactoMin, r.impactoMasProbable, r.impactoMax, 'pert'),
+      afectadas: r.actividades.map((id) => indice.get(id)).filter((i): i is number => i !== undefined),
+    })),
+    semilla: op.semilla,
+    cal,
+    actividades: acts.map((a) => ({ id: a.id, nombre: a.nombre })),
+    forma: op.forma,
+  };
+}
 
-  const dists = acts.map((a) => (a.tresPuntos ? muestreadorDuracion(a.tresPuntos.min, a.tresPuntos.masProbable, a.tresPuntos.max, op.forma) : null));
-  const fijas = acts.map((a) => (a.tresPuntos && !(a.tresPuntos.max > a.tresPuntos.min) ? a.tresPuntos.masProbable : a.duracion));
-  const flujos = acts.map((a) => streamOf(`plazo:${a.id}`));
+/**
+ * Lo que acumula un tramo de iteraciones. Datos planos (arreglos tipados)
+ * para mandarlo entre hilos; varios se suman con `combinarAcumuladores`.
+ */
+export interface AcumuladorPlazo {
+  hechas: number;
+  /** Fin del proyecto por iteración, con la iteración en la que empieza cada tramo. */
+  tramos: Array<{ desde: number; fin: Float64Array }>;
+  cuentaFin: ContadorDias;
+  inicios: ContadorDias[];
+  fines: ContadorDias[];
+  critica: Float64Array;
+  sx: Float64Array;
+  sxx: Float64Array;
+  sxy: Float64Array;
+  sy: number;
+  syy: number;
+  veces: number[];
+}
 
-  const rs = riesgos.map((r) => ({
-    r,
-    ocurre: streamOf(`riesgo-plazo:${r.id}#ocurre`),
-    impacto: streamOf(`riesgo-plazo:${r.id}#impacto`),
-    dist: muestreadorDuracion(r.impactoMin, r.impactoMasProbable, r.impactoMax, 'pert'),
-    afectadas: r.actividades.map((id) => indice.get(id)).filter((i): i is number => i !== undefined),
-    veces: 0,
-  }));
+export function nuevoAcumulador(p: PlazoPreparado): AcumuladorPlazo {
+  return {
+    hechas: 0,
+    tramos: [],
+    cuentaFin: nuevoContador(),
+    inicios: Array.from({ length: p.n }, nuevoContador),
+    fines: Array.from({ length: p.n }, nuevoContador),
+    critica: new Float64Array(p.n),
+    sx: new Float64Array(p.n),
+    sxx: new Float64Array(p.n),
+    sxy: new Float64Array(p.n),
+    sy: 0,
+    syy: 0,
+    veces: p.riesgos.map(() => 0),
+  };
+}
 
-  const dur = new Float64Array(n * B);
-  const es = new Float64Array(n * B);
-  const lf = new Float64Array(n * B);
-  const fin = new Float64Array(B);
-  const finProyecto = new Float64Array(N);
+/** Tamaño de bloque: cabe en ~48 MB de memoria de trabajo por hilo. */
+export const bloquePlazo = (n: number) => Math.max(16, Math.min(2048, Math.floor(2_000_000 / Math.max(1, n))));
 
-  const critica = new Float64Array(n);
-  const sx = new Float64Array(n);
-  const sxx = new Float64Array(n);
-  const sxy = new Float64Array(n);
-  let sy = 0;
-  let syy = 0;
-  const cuentaFin = new ContadorDias();
-  const iniciosAct = acts.map(() => new ContadorDias());
-  const finesAct = acts.map(() => new ContadorDias());
-  let hechas = 0;
-  let cancelada = false;
+/**
+ * Simula las iteraciones `[desde, hasta)` y las suma a `acc`. Las
+ * iteraciones se numeran globalmente: el tramo 5.000–7.500 da lo mismo lo
+ * calcule quien lo calcule, y el resultado no depende del reparto.
+ */
+export function simularTramo(p: PlazoPreparado, acc: AcumuladorPlazo, desde: number, hasta: number): void {
+  const { n, orden, entrantes, salientes, minInicio, dists, fijas, flujos, semilla } = p;
+  const B = bloquePlazo(n);
+  p.trabajo ??= { dur: new Float64Array(n * B), es: new Float64Array(n * B), lf: new Float64Array(n * B), fin: new Float64Array(B) };
+  const { dur, es, lf, fin } = p.trabajo;
+  const finTramo = new Float64Array(Math.max(0, hasta - desde));
 
-  for (let i0 = 0; i0 < N; i0 += B) {
-    if (op.debeCancelar?.()) {
-      cancelada = true;
-      break;
-    }
-    const b = Math.min(B, N - i0);
+  for (let i0 = desde; i0 < hasta; i0 += B) {
+    const b = Math.min(B, hasta - i0);
 
     // 1. Duraciones.
     for (let a = 0; a < n; a++) {
@@ -202,30 +284,29 @@ export async function simularPlazo(
       const dist = dists[a];
       if (dist) {
         const flujo = flujos[a] as number;
-        for (let k = 0; k < b; k++) dur[base + k] = dist.muestra(op.semilla, flujo, i0 + k);
+        for (let k = 0; k < b; k++) dur[base + k] = dist.muestra(semilla, flujo, i0 + k);
       } else {
         const v = fijas[a] as number;
         for (let k = 0; k < b; k++) dur[base + k] = v;
       }
     }
     // 2. Riesgos de plazo: un sorteo por riesgo e iteración, el mismo para todas sus actividades.
-    for (const x of rs) {
+    p.riesgos.forEach((x, j) => {
       for (let k = 0; k < b; k++) {
-        if (uniformAt(op.semilla, x.ocurre, i0 + k) >= x.r.probabilidad) continue;
-        x.veces++;
-        const f = 1 + (x.dist ? x.dist.muestra(op.semilla, x.impacto, i0 + k) : x.r.impactoMasProbable);
+        if (uniformAt(semilla, x.ocurre, i0 + k) >= x.r.probabilidad) continue;
+        acc.veces[j] = (acc.veces[j] as number) + 1;
+        const f = 1 + (x.dist ? x.dist.muestra(semilla, x.impacto, i0 + k) : x.r.impactoMasProbable);
         for (const a of x.afectadas) dur[a * B + k] = (dur[a * B + k] as number) * f;
       }
-    }
-    // 3. Adelante.
+    });
+    // 3. Adelante. El tipo de relación, fuera del bucle interno: cuatro bucles planos.
     fin.fill(0);
-    for (const s of orden) {
-      const bs = s * B;
-      const m0 = minInicio[s] as number;
+    for (const s2 of orden) {
+      const bs = s2 * B;
+      const m0 = minInicio[s2] as number;
       for (let k = 0; k < b; k++) es[bs + k] = m0;
-      // El tipo de relación, fuera del bucle interno: cuatro bucles planos.
-      for (const { p, t, r } of entrantes[s] as Array<{ p: number; t: number; r: number }>) {
-        const bp = p * B;
+      for (const { p: pr, t, r } of entrantes[s2] as Rel[]) {
+        const bp = pr * B;
         if (t === 0) {
           for (let k = 0; k < b; k++) {
             const v = (es[bp + k] as number) + (dur[bp + k] as number) + r;
@@ -255,11 +336,11 @@ export async function simularPlazo(
     }
     // 4. Atrás.
     for (let o = orden.length - 1; o >= 0; o--) {
-      const p = orden[o] as number;
-      const bp = p * B;
+      const pr = orden[o] as number;
+      const bp = pr * B;
       for (let k = 0; k < b; k++) lf[bp + k] = fin[k] as number;
-      for (const { s, t, r } of salientes[p] as Array<{ s: number; t: number; r: number }>) {
-        const bs = s * B;
+      for (const { s: s2, t, r } of salientes[pr] as RelSal[]) {
+        const bs = s2 * B;
         if (t === 0) {
           for (let k = 0; k < b; k++) {
             const v = (lf[bs + k] as number) - (dur[bs + k] as number) - r;
@@ -284,17 +365,22 @@ export async function simularPlazo(
       }
     }
     // 5. Estadísticas.
+    let sy = 0;
+    let syy = 0;
+    const cuentaFin = acc.cuentaFin;
     for (let k = 0; k < b; k++) {
       const y = fin[k] as number;
-      finProyecto[i0 + k] = y;
-      cuentaFin.add(diaFin(y));
+      finTramo[i0 - desde + k] = y;
+      contar(cuentaFin, diaFin(y));
       sy += y;
       syy += y * y;
     }
+    acc.sy += sy;
+    acc.syy += syy;
     for (let a = 0; a < n; a++) {
       const ba = a * B;
-      const ini = iniciosAct[a] as ContadorDias;
-      const fi = finesAct[a] as ContadorDias;
+      const ini = acc.inicios[a] as ContadorDias;
+      const fi = acc.fines[a] as ContadorDias;
       let crit = 0;
       let x1 = 0;
       let x2 = 0;
@@ -303,74 +389,181 @@ export async function simularPlazo(
         const d = dur[ba + k] as number;
         const e = es[ba + k] as number;
         if ((lf[ba + k] as number) - d - e < 1e-9) crit++;
-        ini.add(diaInicio(e, d));
-        fi.add(diaFin(e + d));
+        contar(ini, diaInicio(e, d));
+        contar(fi, diaFin(e + d));
         x1 += d;
         x2 += d * d;
         xy += d * (fin[k] as number);
       }
-      critica[a] = (critica[a] as number) + crit;
-      sx[a] = (sx[a] as number) + x1;
-      sxx[a] = (sxx[a] as number) + x2;
-      sxy[a] = (sxy[a] as number) + xy;
+      acc.critica[a] = (acc.critica[a] as number) + crit;
+      acc.sx[a] = (acc.sx[a] as number) + x1;
+      acc.sxx[a] = (acc.sxx[a] as number) + x2;
+      acc.sxy[a] = (acc.sxy[a] as number) + xy;
     }
-    hechas += b;
-    op.alAvanzar?.(hechas, N);
-    if (op.ceder) await op.ceder();
+    acc.hechas += b;
+  }
+  acc.tramos.push({ desde, fin: finTramo });
+}
+
+/** Suma varios acumuladores (de tramos distintos) en uno. */
+export function combinarAcumuladores(p: PlazoPreparado, partes: readonly AcumuladorPlazo[]): AcumuladorPlazo {
+  const t = nuevoAcumulador(p);
+  for (const x of partes) {
+    t.hechas += x.hechas;
+    t.tramos.push(...x.tramos);
+    sumarContador(t.cuentaFin, x.cuentaFin);
+    for (let a = 0; a < p.n; a++) {
+      sumarContador(t.inicios[a] as ContadorDias, x.inicios[a] as ContadorDias);
+      sumarContador(t.fines[a] as ContadorDias, x.fines[a] as ContadorDias);
+      t.critica[a] = (t.critica[a] as number) + (x.critica[a] as number);
+      t.sx[a] = (t.sx[a] as number) + (x.sx[a] as number);
+      t.sxx[a] = (t.sxx[a] as number) + (x.sxx[a] as number);
+      t.sxy[a] = (t.sxy[a] as number) + (x.sxy[a] as number);
+    }
+    t.sy += x.sy;
+    t.syy += x.syy;
+    x.veces.forEach((v, j) => (t.veces[j] = (t.veces[j] as number) + v));
+  }
+  return t;
+}
+
+/** Los arreglos de un acumulador, para transferirlos entre hilos sin copiar. */
+export function transferiblesDe(acc: AcumuladorPlazo): ArrayBuffer[] {
+  const out: ArrayBuffer[] = [];
+  const agregar = (x: { buffer: ArrayBufferLike }) => {
+    if (x.buffer instanceof ArrayBuffer && !out.includes(x.buffer)) out.push(x.buffer);
+  };
+  acc.tramos.forEach((t) => agregar(t.fin));
+  agregar(acc.cuentaFin.cuentas);
+  acc.inicios.forEach((c) => agregar(c.cuentas));
+  acc.fines.forEach((c) => agregar(c.cuentas));
+  [acc.critica, acc.sx, acc.sxx, acc.sxy].forEach(agregar);
+  return out;
+}
+
+export function resultadoPlazo(p: PlazoPreparado, acc: AcumuladorPlazo, cancelada: boolean): ResultadoSimulacionPlazo {
+  const M = Math.max(1, acc.hechas);
+  const fechaDia = (d: number) => p.cal.fechaDeIndice(d);
+  const cuantiles = (c: ContadorDias): FechasPercentil => ({
+    p10: fechaDia(cuantilDias(c, 0.1)), p50: fechaDia(cuantilDias(c, 0.5)), p80: fechaDia(cuantilDias(c, 0.8)), p90: fechaDia(cuantilDias(c, 0.9)),
+  });
+  const det = cpmDeterminista(p.duraciones, p.orden, p.entrantes, p.minInicio);
+
+  const finProyecto = new Float64Array(acc.hechas);
+  let k = 0;
+  for (const t of [...acc.tramos].sort((a, b) => a.desde - b.desde)) {
+    finProyecto.set(t.fin, k);
+    k += t.fin.length;
   }
 
-  const M = Math.max(1, hechas);
-  const fechaDia = (d: number) => cal.fechaDeIndice(d);
-  const cuantiles = (cont: ContadorDias): FechasPercentil => ({
-    p10: fechaDia(cont.cuantil(0.1)), p50: fechaDia(cont.cuantil(0.5)), p80: fechaDia(cont.cuantil(0.8)), p90: fechaDia(cont.cuantil(0.9)),
-  });
-
-  // Determinista, con las duraciones tal como están en la hoja.
-  const det = cpmDeterminista(acts.map((a) => a.duracion), orden, entrantes, minInicio);
-
   const histograma: ResultadoSimulacionPlazo['histograma'] = [];
-  cuentaFin.cuentas.forEach((cuenta, dia) => {
+  acc.cuentaFin.cuentas.forEach((cuenta, i) => {
+    const dia = acc.cuentaFin.base + i;
     if (cuenta > 0) histograma.push({ dia, fecha: fechaDia(dia), cuenta });
   });
 
-  const media = sy / M;
-  const varY = syy / M - media * media;
-  const actividades: ActividadSimulada[] = acts.map((a, i) => {
-    const mx = (sx[i] as number) / M;
-    const vx = (sxx[i] as number) / M - mx * mx;
-    const cov = (sxy[i] as number) / M - mx * media;
+  const media = acc.sy / M;
+  const varY = acc.syy / M - media * media;
+  const actividades: ActividadSimulada[] = p.actividades.map((a, i) => {
+    const mx = (acc.sx[i] as number) / M;
+    const vx = (acc.sxx[i] as number) / M - mx * mx;
+    const cov = (acc.sxy[i] as number) / M - mx * media;
     const correlacion = vx > 1e-12 && varY > 1e-12 ? cov / Math.sqrt(vx * varY) : NaN;
     return {
       id: a.id,
       nombre: a.nombre,
-      criticidad: (critica[i] as number) / M,
+      criticidad: (acc.critica[i] as number) / M,
       correlacion,
-      inicio: cuantiles(iniciosAct[i] as ContadorDias),
-      fin: cuantiles(finesAct[i] as ContadorDias),
+      inicio: cuantiles(acc.inicios[i] as ContadorDias),
+      fin: cuantiles(acc.fines[i] as ContadorDias),
     };
   });
 
+  const dia = (q: number) => cuantilDias(acc.cuentaFin, q);
   return {
-    iteraciones: hechas,
-    semilla: op.semilla,
-    forma: op.forma,
+    iteraciones: acc.hechas,
+    semilla: p.semilla,
+    forma: p.forma,
     cancelada,
-    finProyecto: hechas < N ? finProyecto.slice(0, hechas) : finProyecto,
-    fechas: cuantiles(cuentaFin),
-    dias: {
-      p10: cuentaFin.cuantil(0.1) + 1, p50: cuentaFin.cuantil(0.5) + 1, p80: cuentaFin.cuantil(0.8) + 1, p90: cuentaFin.cuantil(0.9) + 1,
-    },
+    finProyecto,
+    fechas: cuantiles(acc.cuentaFin),
+    dias: { p10: dia(0.1) + 1, p50: dia(0.5) + 1, p80: dia(0.8) + 1, p90: dia(0.9) + 1 },
     mediaDias: media,
     determinista: { dias: det, fecha: fechaDia(diaFin(det)) },
-    probDeterminista: cuentaFin.hasta(diaFin(det)),
+    probDeterminista: fraccionHasta(acc.cuentaFin, diaFin(det)),
     curvaS: Array.from({ length: 20 }, (_, j) => {
-      const p = (j + 1) / 20;
-      return { p, fecha: fechaDia(cuentaFin.cuantil(p)) };
+      const q = (j + 1) / 20;
+      return { p: q, fecha: fechaDia(cuantilDias(acc.cuentaFin, q)) };
     }),
     histograma,
     actividades,
-    riesgos: rs.map((x) => ({ id: x.r.id, nombre: x.r.nombre, probabilidad: x.r.probabilidad, ocurrio: x.veces / M })),
+    riesgos: p.riesgos.map((x, j) => ({ id: x.r.id, nombre: x.r.nombre, probabilidad: x.r.probabilidad, ocurrio: (acc.veces[j] as number) / M })),
   };
+}
+
+/** En un solo hilo, por bloques, cediendo entre bloques para no congelar el panel. */
+export async function simularPlazo(
+  c: Cronograma,
+  riesgos: readonly RiesgoPlazo[],
+  op: OpcionesSimulacionPlazo,
+): Promise<ResultadoSimulacionPlazo> {
+  const p = prepararPlazo(c, riesgos, op);
+  const acc = nuevoAcumulador(p);
+  const N = Math.max(1, Math.floor(op.iteraciones));
+  const B = bloquePlazo(p.n);
+  let cancelada = false;
+  for (let i0 = 0; i0 < N; i0 += B) {
+    if (op.debeCancelar?.()) {
+      cancelada = true;
+      break;
+    }
+    simularTramo(p, acc, i0, Math.min(N, i0 + B));
+    op.alAvanzar?.(acc.hechas, N);
+    if (op.ceder) await op.ceder();
+  }
+  return resultadoPlazo(p, combinarAcumuladores(p, [acc]), cancelada);
+}
+
+/**
+ * Lo mismo, repartido: `ejecutar` calcula un tramo en otro hilo (en el
+ * navegador, un Web Worker) y devuelve su acumulador. Se lanzan hasta
+ * `hilos` tramos a la vez; al cancelar, no se lanzan más y se combina lo
+ * terminado. El resultado es **idéntico** al de `simularPlazo` con la misma
+ * semilla (las iteraciones se numeran globalmente).
+ */
+export async function simularPlazoEnParalelo(
+  c: Cronograma,
+  riesgos: readonly RiesgoPlazo[],
+  op: OpcionesSimulacionPlazo,
+  ejecutar: (tramo: { desde: number; hasta: number }) => Promise<AcumuladorPlazo>,
+  hilos: number,
+): Promise<ResultadoSimulacionPlazo> {
+  const p = prepararPlazo(c, riesgos, op);
+  const N = Math.max(1, Math.floor(op.iteraciones));
+  const h = Math.max(1, Math.floor(hilos));
+  // Tramos de unas cuatro rondas por hilo: reparto parejo y progreso visible.
+  const tam = Math.max(bloquePlazo(p.n), Math.ceil(N / (h * 4)));
+  const pendientes: Array<{ desde: number; hasta: number }> = [];
+  for (let d = 0; d < N; d += tam) pendientes.push({ desde: d, hasta: Math.min(N, d + tam) });
+  const hechos: AcumuladorPlazo[] = [];
+  let hechas = 0;
+  let cancelada = false;
+  const trabajador = async () => {
+    for (;;) {
+      if (op.debeCancelar?.()) {
+        cancelada = true;
+        return;
+      }
+      const t = pendientes.shift();
+      if (!t) return;
+      const acc = await ejecutar(t);
+      hechos.push(acc);
+      hechas += acc.hechas;
+      op.alAvanzar?.(hechas, N);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(h, pendientes.length) }, trabajador));
+  return resultadoPlazo(p, combinarAcumuladores(p, hechos), cancelada || hechas < N);
 }
 
 function cpmDeterminista(
@@ -419,12 +612,14 @@ export async function impactoDeRiesgos(
   riesgos: readonly RiesgoPlazo[],
   base: ResultadoSimulacionPlazo,
   op: OpcionesSimulacionPlazo,
+  /** Cómo simular cada variante: por defecto en este hilo; el panel pasa la versión en paralelo. */
+  simular: (c: Cronograma, r: readonly RiesgoPlazo[], o: OpcionesSimulacionPlazo) => Promise<ResultadoSimulacionPlazo> = simularPlazo,
 ): Promise<{ porRiesgo: ImpactoRiesgo[]; sinRiesgos: FechasPercentil & { diasP80: number } }> {
   const opciones = { ...op, iteraciones: base.iteraciones, alAvanzar: undefined };
   const porRiesgo: ImpactoRiesgo[] = [];
   for (const r of riesgos) {
     if (op.debeCancelar?.()) break;
-    const sin = await simularPlazo(c, riesgos.filter((x) => x !== r), opciones);
+    const sin = await simular(c, riesgos.filter((x) => x !== r), opciones);
     porRiesgo.push({
       id: r.id, nombre: r.nombre, probabilidad: r.probabilidad,
       diasP80: base.dias.p80 - sin.dias.p80,
@@ -432,7 +627,7 @@ export async function impactoDeRiesgos(
     });
     op.alAvanzar?.(porRiesgo.length, riesgos.length + 1);
   }
-  const ninguno = await simularPlazo(c, [], opciones);
+  const ninguno = await simular(c, [], opciones);
   porRiesgo.sort((a, b) => b.diasP80 - a.diasP80 || b.diasP50 - a.diasP50);
   return { porRiesgo, sinRiesgos: { ...ninguno.fechas, diasP80: ninguno.dias.p80 } };
 }
