@@ -1375,6 +1375,13 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     informe PDF configurable (V3) vale para los dos frentes. **Siguiente**:
     V1.
 
+81. [x] **V1 (2026-09-30)**. `RiesgoPlazo.respuesta/responsable/
+    costoRespuesta/despues`, `riesgosDespues`, `costoRespuestas`,
+    `Cronograma.costoAdicional`; `mitigacion.ts` (`escenarioDespues`,
+    `compararMitigacion`), `hojaMitigacion`, `narrativaMitigacion`; selector
+    de escenario y `Comparacion` en el panel. Pruebas: «después» sin riesgos
+    = sin riesgos exacto; costo de respuesta suma exacta. **Siguiente**: V2.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

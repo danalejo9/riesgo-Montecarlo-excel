@@ -13,6 +13,7 @@ import { textoRelacion } from './predecesoras.ts';
 import type { Cronograma } from './tipos.ts';
 import { HOJA_RIESGOS } from './riesgos.ts';
 import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
+import type { ComparacionMitigacion } from './mitigacion.ts';
 import { HOJA_ACTIVIDADES, HOJA_CALENDARIO } from './lectorTabla.ts';
 
 export const HOJA_RESULTADO = 'Cronograma (resultado)';
@@ -366,4 +367,68 @@ export function hojaPlazoSimulado(r: ResultadoSimulacionPlazo, codigoMoneda = MO
     primeraFilaDatos: 2,
     anchos: [16, 14, 20],
   };
+}
+
+export const HOJA_MITIGACION = 'Cronograma (mitigación)';
+
+/** V1: antes y después de mitigar, lado a lado, y lo que da cada respuesta. */
+export function hojaMitigacion(cmp: ComparacionMitigacion, narrativa: string[] = [], codigoMoneda = MONEDA_POR_DEFECTO): HojaAEscribir {
+  const { antes: a, despues: d } = cmp;
+  const v: (string | number)[][] = [];
+  const zonas: NonNullable<HojaAEscribir['formatosRango']> = [];
+  const dinero = formatoMoneda(codigoMoneda);
+  v.push(['Mitigación: antes y después — lo escribe el complemento; se rehace en cada comparación']);
+  v.push([`${a.iteraciones} iteraciones · semilla ${a.semilla} · los mismos números aleatorios en los dos escenarios`]);
+  for (const l of narrativa) v.push([l]);
+  v.push(['']);
+  const enc = [v.length];
+  v.push(['', 'Antes de mitigar', 'Después de mitigar', 'Diferencia (días laborables, puntos o dinero)']);
+  const f0 = v.length;
+  v.push(['P50 del plazo', a.fechas.p50, d.fechas.p50, a.dias.p50 - d.dias.p50]);
+  v.push(['P80 del plazo', a.fechas.p80, d.fechas.p80, a.dias.p80 - d.dias.p80]);
+  v.push(['P90 del plazo', a.fechas.p90, d.fechas.p90, a.dias.p90 - d.dias.p90]);
+  zonas.push({ fila: f0, col: 1, filas: 3, cols: 2, formato: FORMATO_FECHA });
+  v.push(['Probabilidad de cumplir la fecha del cronograma', a.probDeterminista, d.probDeterminista, d.probDeterminista - a.probDeterminista]);
+  zonas.push({ fila: v.length - 1, col: 1, filas: 1, cols: 3, formato: '0%' });
+  if (a.costos && d.costos) {
+    const fc = v.length;
+    v.push(['P50 del costo (con lo que cuestan las respuestas)', a.costos.p50, d.costos.p50, a.costos.p50 - d.costos.p50]);
+    v.push(['P80 del costo (con lo que cuestan las respuestas)', a.costos.p80, d.costos.p80, a.costos.p80 - d.costos.p80]);
+    v.push(['Costo de las respuestas', 0, cmp.costoRespuestas, -cmp.costoRespuestas]);
+    zonas.push({ fila: fc, col: 1, filas: 3, cols: 3, formato: dinero });
+    v.push(['Probabilidad conjunta plazo y costo P80 (JCL, con los P80 de antes)', a.costos.jclP80, jclCon(d, a.dias.p80, a.costos.p80), '']);
+    zonas.push({ fila: v.length - 1, col: 1, filas: 1, cols: 2, formato: '0%' });
+  }
+  v.push(['']);
+  enc.push(v.length);
+  v.push(['ID', 'Riesgo', 'Respuesta', 'Responsable', 'Costo de la respuesta', 'Días de P80 que ahorra', 'Ahorro en el P80 del costo', 'Retorno por unidad invertida']);
+  const fr = v.length;
+  for (const x of cmp.porRespuesta) {
+    v.push([x.id, x.nombre, x.respuesta, x.responsable ?? '', x.costoRespuesta, x.diasP80, x.ahorroCostoP80 ?? '', x.retorno === undefined ? '' : Math.round(x.retorno * 100) / 100]);
+  }
+  if (cmp.porRespuesta.length > 0) {
+    zonas.push({ fila: fr, col: 4, filas: cmp.porRespuesta.length, cols: 1, formato: dinero });
+    zonas.push({ fila: fr, col: 6, filas: cmp.porRespuesta.length, cols: 1, formato: dinero });
+  }
+  return {
+    nombre: HOJA_MITIGACION,
+    valores: v,
+    formatos: {},
+    filaEncabezado: enc[0] as number,
+    otrosEncabezados: enc.slice(1),
+    primeraFilaDatos: v.length,
+    anchos: [8, 44, 40, 22, 20, 20, 24, 24],
+    formatosRango: zonas,
+  };
+}
+
+/** Fracción de iteraciones con plazo ≤ `diasMax` (días laborables) y costo ≤ `costoMax`. */
+function jclCon(r: ResultadoSimulacionPlazo, diasMax: number, costoMax: number): number {
+  const c = r.costos;
+  if (!c) return NaN;
+  let n = 0;
+  for (let i = 0; i < r.finProyecto.length; i++) {
+    if (Math.ceil((r.finProyecto[i] as number) - 1e-9) <= diasMax && (c.porIteracion[i] as number) <= costoMax + 1e-9) n++;
+  }
+  return n / r.finProyecto.length;
 }

@@ -832,6 +832,35 @@ con «mínimo − 10 %» y «máximo + 25 %». Púlsalo. Esperado: «Rangos aña
 simular: **P50 23/07/2027, P80 28/07/2027, P90 29/07/2027** (sin hoja de
 riesgos). Cambia un rango a mano y vuelve a pulsar: esa fila no se toca.
 
+**Q42. Mitigación: los datos (V1).** En `cronograma-prueba.xlsx`, «Riesgos de
+plazo» tiene columnas nuevas (I a P): Respuesta, Responsable, Costo de la
+respuesta, Probabilidad después, Impacto mínimo/más probable/máximo después
+y Costo si ocurre después. Hay respuestas para las lluvias (cubiertas y
+bombeo, US$ 15.000), la licencia (gestor de trámites, US$ 5.000) y el
+ascensor (pedido con anticipo, US$ 8.000). Calcula: en la simulación aparece
+un desplegable nuevo, **Riesgos**, con «Antes de mitigar», «Después de
+mitigar» y «Comparar antes y después».
+
+**Q43. Comparar.** Elige **Comparar antes y después** y simula (10.000,
+PERT). Esperado, en la sección **Mitigación: antes y después**:
+- «Aplicar las 3 respuestas (US$ 28.000) adelanta el P80 del 24/08/2027 al
+  13/08/2027 (6 días laborables) y baja el P80 del costo de US$ 1.343.353 a
+  US$ 1.337.365, ya pagadas las respuestas.»
+- «La que más rinde es “Contratar un gestor de trámites”: cada US$ 1
+  invertido ahorra US$ 1,51 del P80 del costo y adelanta 2 días el P80.»
+- La tabla de respuestas: gestor −2 días y 1,51 ×; cubiertas −3 días y
+  1,15 ×; anticipo 0 días y 1,05 ×.
+- Hoja nueva **«Cronograma (mitigación)»** con antes, después y diferencia
+  (P50/P80/P90, probabilidad de cumplir, costos, costo de las respuestas,
+  JCL) y la tabla de respuestas con su responsable.
+El resto de resultados (cifras, histograma, riesgos) son los de «antes».
+
+**Q44. Solo después.** Elige **Después de mitigar** y simula: P80
+**13/08/2027**, el primer párrafo dice «Escenario: después de mitigar…», y
+el costo P80 es **US$ 1.337.365** (ya incluye los US$ 28.000). Vuelve a
+«Antes de mitigar»: P80 24/08/2027 otra vez. Si borras todas las columnas I–P,
+el desplegable desaparece.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

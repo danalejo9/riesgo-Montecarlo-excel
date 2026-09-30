@@ -8,6 +8,7 @@ import { textoFecha } from '../modelo/fechas.ts';
 import { MONEDA_POR_DEFECTO, textoMoneda } from '../modelo/moneda.ts';
 import type { InformeSalud } from './salud.ts';
 import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
+import type { ComparacionMitigacion } from './mitigacion.ts';
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 const dias = (n: number) => `${Math.round(n)} ${Math.round(n) === 1 ? 'día laborable' : 'días laborables'}`;
@@ -53,5 +54,32 @@ export function narrativaPlazo(
     if (c.conjunto80 && c.jclP80 < 0.8) frase += `: para un 80 % conjunto hacen falta el ${textoFecha(c.conjunto80.fecha)} y ${dinero(c.conjunto80.costo)}`;
     out.push(`${frase}.`);
   }
+  return out;
+}
+
+/** V1: la comparación antes/después en palabras. */
+export function narrativaMitigacion(cmp: ComparacionMitigacion, codigoMoneda = MONEDA_POR_DEFECTO): string[] {
+  const { antes: a, despues: d } = cmp;
+  const dinero = (x: number) => textoMoneda(x, codigoMoneda);
+  const n = cmp.porRespuesta.length;
+  const out: string[] = [];
+  let frase = `Aplicar ${n === 1 ? 'la respuesta' : `las ${n} respuestas`}${cmp.costoRespuestas > 0 ? ` (${dinero(cmp.costoRespuestas)})` : ''} `;
+  const dias = a.dias.p80 - d.dias.p80;
+  frase += dias > 0
+    ? `adelanta el P80 del ${textoFecha(a.fechas.p80)} al ${textoFecha(d.fechas.p80)} (${dias} ${dias === 1 ? 'día laborable' : 'días laborables'})`
+    : `no adelanta el P80 del plazo (${textoFecha(a.fechas.p80)})`;
+  if (a.costos && d.costos) {
+    const ahorro = a.costos.p80 - d.costos.p80;
+    frase += ahorro >= 0
+      ? ` y baja el P80 del costo de ${dinero(a.costos.p80)} a ${dinero(d.costos.p80)}, ya pagadas las respuestas`
+      : ` pero sube el P80 del costo de ${dinero(a.costos.p80)} a ${dinero(d.costos.p80)}: las respuestas cuestan más de lo que ahorran`;
+  }
+  out.push(`${frase}.`);
+  const mejor = cmp.porRespuesta.find((x) => x.retorno !== undefined);
+  if (mejor && mejor.retorno !== undefined) {
+    out.push(`La que más rinde es «${mejor.respuesta || mejor.nombre}»: cada ${dinero(1)} invertido ahorra ${textoMoneda(mejor.retorno, codigoMoneda, 2)} del P80 del costo${mejor.diasP80 > 0 ? ` y adelanta ${mejor.diasP80} días el P80` : ''}.`);
+  }
+  const malas = cmp.porRespuesta.filter((x) => x.retorno !== undefined && x.retorno < 1 && x.diasP80 <= 0);
+  if (malas.length > 0) out.push(`No se pagan solas: ${malas.map((x) => `«${x.respuesta || x.nombre}»`).join(', ')} (ahorran menos de lo que cuestan y no adelantan el P80).`);
   return out;
 }

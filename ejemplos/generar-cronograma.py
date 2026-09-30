@@ -218,6 +218,14 @@ COSTO_FIJO = {"5": 18000, "6": 65000, "7": 140000, "8": 95000, "9": 30000, "10":
 COSTO_INDIRECTO_DIA = 1800
 COSTO_RIESGO = {"R2": 12000, "R3": 20000}
 
+# Mitigación (V1): respuesta, responsable, costo de la respuesta y el riesgo
+# después (probabilidad, impactos mínimo, más probable y máximo, costo si ocurre).
+MITIGACION = {
+    "R1": ("Cubiertas provisionales y bombeo", "Residente de obra", 15000, 0.50, 0.03, 0.06, 0.12, None),
+    "R2": ("Contratar un gestor de trámites", "Director del proyecto", 5000, 0.10, 0.10, 0.20, 0.30, None),
+    "R3": ("Pedido con anticipo y penalidad al proveedor", "Compras", 8000, 0.15, 0.05, 0.10, 0.20, 5000),
+}
+
 
 def afectadas(texto):
     ids = {a[0] for a in ACTIVIDADES}
@@ -465,7 +473,10 @@ rie = wb.create_sheet("Riesgos de plazo")
 rie["A1"] = "Riesgos de plazo — cada uno alarga a la vez todas sus actividades (AACE 57R-09)"
 rie["A1"].font = TITULO
 CAB_R = ["ID", "Riesgo", "Probabilidad", "Impacto mínimo", "Impacto más probable", "Impacto máximo",
-         "Actividades afectadas", "Costo si ocurre"]
+         "Actividades afectadas", "Costo si ocurre",
+         # Mitigación (V1): opcional.
+         "Respuesta", "Responsable", "Costo de la respuesta", "Probabilidad después", "Impacto mínimo después",
+         "Impacto más probable después", "Impacto máximo después", "Costo si ocurre después"]
 for j, t in enumerate(CAB_R, start=1):
     c = rie.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -477,7 +488,14 @@ for i, r in enumerate(RIESGOS, start=4):
 for i, r in enumerate(RIESGOS, start=4):
     if r[0] in COSTO_RIESGO:
         rie.cell(row=i, column=8, value=COSTO_RIESGO[r[0]]).number_format = DINERO
-for j, w in enumerate([6, 44, 12, 15, 20, 15, 22, 15], start=1):
+for i, r in enumerate(RIESGOS, start=4):
+    if r[0] in MITIGACION:
+        for j, v in enumerate(MITIGACION[r[0]], start=9):
+            if v is None:
+                continue
+            c = rie.cell(row=i, column=j, value=v)
+            c.number_format = DINERO if j in (11, 16) else ("0%" if j >= 12 else "General")
+for j, w in enumerate([6, 44, 12, 15, 20, 15, 22, 15, 40, 20, 18, 18, 20, 24, 20, 22], start=1):
     rie.column_dimensions[get_column_letter(j)].width = w
 
 sal = wb.create_sheet("Esperado (salud)")

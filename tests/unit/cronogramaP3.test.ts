@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CALENDARIO_ESTANDAR, calcularCPM, hojaSimulacionPlazo, impactoDeRiesgos, leerActividades, leerCronograma, leerPredecesoras, leerRiesgosPlazo,
-  hojaPlazoSimulado, narrativaPlazo, nuevoAcumulador, plantillaActividades, plantillaRiesgos, prepararPlazo, simularPlazoEnParalelo, simularTramo,
+  compararMitigacion, escenarioDespues, hojaPlazoSimulado, narrativaPlazo, riesgosDespues, nuevoAcumulador, plantillaActividades, plantillaRiesgos, prepararPlazo, simularPlazoEnParalelo, simularTramo,
   muestreadorDuracion, revisarSalud, simularPlazo, OPCIONES_PLAZO_POR_DEFECTO,
   type Actividad, type Cronograma, type RiesgoPlazo,
 } from '../../engine/cronograma/index.ts';
@@ -305,5 +305,50 @@ describe('del cronograma al modelo de costos (P5)', () => {
     // Y RIESGO.EMPIRICA los acepta tal cual.
     const e = empiricaDesdeLista(dias);
     expect(typeof e === 'string' ? e : e.media).toBeCloseTo(media, 6);
+  });
+});
+
+describe('mitigación antes y después (V1)', () => {
+  const riesgos = leerRiesgosPlazo(hoja('Riesgos de plazo'), cron.actividades).riesgos;
+  const op = { ...OPCIONES_PLAZO_POR_DEFECTO, iteraciones: 4000 };
+
+  it('lee respuesta, responsable, costo y los valores «después» (lo que no se dice queda igual)', () => {
+    const r2 = riesgos.find((r) => r.id === 'R2')!;
+    expect(r2).toMatchObject({ respuesta: 'Contratar un gestor de trámites', responsable: 'Director del proyecto', costoRespuesta: 5000 });
+    expect(r2.despues).toEqual({ probabilidad: 0.1, impactoMin: 0.1, impactoMasProbable: 0.2, impactoMax: 0.3 });
+    expect(riesgos.find((r) => r.id === 'R3')!.despues!.costo).toBe(5000);
+    expect(riesgos.find((r) => r.id === 'R4')!.despues).toBeUndefined();
+    expect(riesgosDespues(riesgos).find((r) => r.id === 'R2')).toMatchObject({ probabilidad: 0.1, costo: 12000 });
+  });
+
+  it('si después ningún riesgo ocurre, «después» es la simulación sin riesgos (mismos números)', async () => {
+    const nulos = riesgos.map((r) => ({ ...r, despues: { probabilidad: 0, impactoMin: 0, impactoMasProbable: 0, impactoMax: 0 } }));
+    const e = escenarioDespues(cron, nulos);
+    const despues = await simularPlazo(e.cronograma, e.riesgos, op);
+    const sin = await simularPlazo(cron, [], op);
+    expect(Array.from(despues.finProyecto)).toEqual(Array.from(sin.finProyecto));
+  });
+
+  it('el costo de una respuesta se suma entero a cada iteración, y no mueve el plazo', async () => {
+    const con = riesgos.map((r) => (r.id === 'R4' ? { ...r, costoRespuesta: 1000 } : r));
+    const e = escenarioDespues(cron, con, 'R4');
+    const a = await simularPlazo(cron, riesgos, op);
+    const b = await simularPlazo(e.cronograma, e.riesgos, op);
+    expect(Array.from(b.finProyecto)).toEqual(Array.from(a.finProyecto));
+    b.costos!.porIteracion.forEach((x, i) => expect(x - a.costos!.porIteracion[i]!).toBeCloseTo(1000, 6));
+  });
+
+  it('comparar: después es mejor, y cada respuesta dice días, ahorro y retorno', async () => {
+    const cmp = await compararMitigacion(cron, riesgos, op);
+    expect(cmp.despues.dias.p80).toBeLessThan(cmp.antes.dias.p80);
+    expect(cmp.costoRespuestas).toBe(28000);
+    expect(cmp.porRespuesta.map((x) => x.id).sort()).toEqual(['R1', 'R2', 'R3']);
+    for (const x of cmp.porRespuesta) {
+      expect(x.diasP80).toBeGreaterThanOrEqual(0);
+      expect(x.retorno).toBeCloseTo(x.ahorroCostoP80! / x.costoRespuesta, 10);
+    }
+    // Ordenadas por retorno.
+    const ret = cmp.porRespuesta.map((x) => x.retorno!);
+    expect([...ret].sort((a, b) => b - a)).toEqual(ret);
   });
 });

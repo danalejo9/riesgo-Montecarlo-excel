@@ -8,7 +8,8 @@
 import { useRef, useState } from 'react';
 
 import {
-  calcularCPM, completarRangos, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
+  calcularCPM, compararMitigacion, completarRangos, escenarioDespues, hojaMitigacion, narrativaMitigacion, tieneMitigacion,
+  type ComparacionMitigacion, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
   type CronogramaImportado, type Verificacion, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
@@ -32,6 +33,7 @@ interface Simulado {
   narrativa: string[];
   hoja: string;
   hilos: number;
+  comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
 }
 
 const ITERACIONES = [1000, 5000, 10_000, 50_000];
@@ -55,6 +57,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const archivo = useRef<HTMLInputElement>(null);
   const [pctMenos, setPctMenos] = useState(10);
   const [pctMas, setPctMas] = useState(25);
+  const [escenario, setEscenario] = useState<'antes' | 'despues' | 'comparar'>('antes');
 
   if (!tieneCapacidad('cronograma')) {
     return <section><p className="aviso-linea">{T.sinCapacidad}</p></section>;
@@ -113,23 +116,38 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       };
       const simular: typeof simularPlazo = (c, rs, o) =>
         hilos ? simularPlazoEnParalelo(c, rs, o, hilos.para(c, rs, o), hilos.hilos) : simularPlazo(c, rs, o);
-      const r = await simular(datos.cron, datos.riesgos, op);
+      // V1: el escenario de riesgos. «Comparar» enseña el de antes y añade la comparación.
+      const usado = escenario === 'despues' ? escenarioDespues(datos.cron, datos.riesgos) : { cronograma: datos.cron, riesgos: datos.riesgos };
+      const r = await simular(usado.cronograma, usado.riesgos, op);
       let impacto: Simulado['impacto'];
-      if (!r.cancelada && datos.riesgos.length > 0) {
-        setOcupado(T.midiendoRiesgos(0, datos.riesgos.length + 1));
-        const imp = await impactoDeRiesgos(datos.cron, datos.riesgos, r, {
+      if (!r.cancelada && usado.riesgos.length > 0) {
+        setOcupado(T.midiendoRiesgos(0, usado.riesgos.length + 1));
+        const imp = await impactoDeRiesgos(usado.cronograma, usado.riesgos, r, {
           ...op, alAvanzar: (h, t) => setOcupado(T.midiendoRiesgos(h, t)),
         }, simular);
         if (!cancelado.current) impacto = imp;
       }
-      const narrativa = narrativaPlazo(r, impacto, salud ?? undefined);
+      let comparacion: Simulado['comparacion'];
+      if (escenario === 'comparar' && !r.cancelada && !cancelado.current) {
+        setOcupado(T.comparando(0, 1));
+        const cmp = await compararMitigacion(datos.cron, datos.riesgos, { ...op, alAvanzar: (h, t) => setOcupado(T.comparando(h, t)) }, simular, r);
+        if (!cancelado.current) {
+          const texto = narrativaMitigacion(cmp);
+          await escribirHojaSimulacion(hojaMitigacion(cmp, texto));
+          comparacion = { cmp, narrativa: texto };
+        }
+      }
+      const narrativa = [
+        ...(escenario === 'despues' ? [T.escenarioDespuesAviso] : []),
+        ...narrativaPlazo(r, impacto, salud ?? undefined),
+      ];
       const hoja = await escribirHojaSimulacion(hojaSimulacionPlazo(r, impacto, narrativa), r.cancelada ? undefined : hojaPlazoSimulado(r));
       if (resultado) {
         const vista = vistaGantt(datos.cron.actividades, resultado.filas, resultado.fechaFinProyecto, r, datos.cron.fechaCorte);
         await escribirHojaGantt(hojaGantt(vista));
         ventanaAbierta(PAGINA_GANTT)?.enviar(vista);
       }
-      setSimulado({ r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1 });
+      setSimulado({ r, impacto, narrativa, hoja, hilos: hilos?.hilos ?? 1, ...(comparacion ? { comparacion } : {}) });
     } catch (e) {
       alFallar(e);
     } finally {
@@ -280,6 +298,17 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
                 {ITERACIONES.map((n) => <option key={n} value={n}>{n.toLocaleString('es')}</option>)}
               </select>
             </label>{' '}
+            {datos && datos.riesgos.some(tieneMitigacion) && (
+              <>
+                <label>{T.escenario}{' '}
+                  <select value={escenario} onChange={(e) => setEscenario(e.target.value as 'antes' | 'despues' | 'comparar')} disabled={ocupado !== null}>
+                    <option value="antes">{T.escenarios.antes}</option>
+                    <option value="despues">{T.escenarios.despues}</option>
+                    <option value="comparar">{T.escenarios.comparar}</option>
+                  </select>
+                </label>{' '}
+              </>
+            )}
             <label>{T.forma}{' '}
               <select value={forma} onChange={(e) => setForma(e.target.value as FormaDuracion)} disabled={ocupado !== null}>
                 <option value="pert">{T.formas.pert}</option>
@@ -352,6 +381,7 @@ function ResultadoPlazo({ s }: { s: Simulado }) {
         </div>
       )}
       {s.narrativa.map((l) => <p key={l}>{l}</p>)}
+      {s.comparacion && <Comparacion c={s.comparacion} />}
       <Histograma r={r} />
       {r.costos && <Nube r={r} />}
       {impacto && impacto.porRiesgo.length > 0 && (
@@ -494,5 +524,36 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
         <text x={W} y={H + 12} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(r.cal(x1))}</text>
       </svg>
     </figure>
+  );
+}
+
+/** V1: antes y después de mitigar, y lo que rinde cada respuesta. */
+function Comparacion({ c }: { c: { cmp: ComparacionMitigacion; narrativa: string[] } }) {
+  const { antes: a, despues: d } = c.cmp;
+  return (
+    <Plegable id="cronograma-mitigacion" abierta titulo={T.mitigacion}>
+      {c.narrativa.map((l) => <p key={l}>{l}</p>)}
+      <table>
+        <thead><tr><th /><th>{T.escenarios.antes}</th><th>{T.escenarios.despues}</th></tr></thead>
+        <tbody>
+          <tr><td>P80</td><td>{textoFecha(a.fechas.p80)}</td><td>{textoFecha(d.fechas.p80)}</td></tr>
+          {a.costos && d.costos && <tr><td>{T.costoP80}</td><td>{textoMoneda(a.costos.p80)}</td><td>{textoMoneda(d.costos.p80)}</td></tr>}
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>{T.respuestaCol}</th><th>{T.costoCol}</th><th>{T.diasP80}</th><th>{T.retornoCol}</th></tr></thead>
+        <tbody>
+          {c.cmp.porRespuesta.map((x) => (
+            <tr key={x.id}>
+              <td>{x.respuesta || x.nombre}</td>
+              <td>{textoMoneda(x.costoRespuesta)}</td>
+              <td>{x.diasP80 > 0 ? `−${x.diasP80}` : '0'}</td>
+              <td>{x.retorno === undefined ? '—' : `${x.retorno.toFixed(2).replace('.', ',')} ×`}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="tenue">{T.escritoEn('Cronograma (mitigación)')}</p>
+    </Plegable>
   );
 }

@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V1: mitigación antes y después (2026-09-30)
+
+**Añadido**
+- «Riesgos de plazo» admite la **respuesta** de cada riesgo: texto,
+  responsable, costo de la respuesta y el riesgo **después** (probabilidad,
+  impactos, costo si ocurre); lo que no se dice queda como antes.
+- En la simulación, **Riesgos: antes de mitigar / después de mitigar /
+  comparar**. Comparar simula los dos escenarios con los mismos números
+  aleatorios y cada respuesta por separado: días de P80 que ahorra, ahorro
+  en el P80 del costo y **retorno por unidad invertida**; lo resume en
+  palabras y escribe la hoja «Cronograma (mitigación)».
+- Libro de pruebas: tres respuestas en «Riesgos de plazo». Guía: Q42–Q44.
+
 ### Rellenar los rangos vacíos (2026-09-30)
 
 **Añadido**
