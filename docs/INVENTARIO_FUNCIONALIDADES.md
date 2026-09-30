@@ -199,7 +199,7 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | P3 | P3 | Monte Carlo del cronograma: *risk drivers*, 3 puntos por categoría, curva S, P80, criticidad, tornado en días, Gantt probabilístico | Estudios QSRA | ✅ 30/09 (falta Excel: Q13–Q20) |
 | P3b | P3b | Simulación del plazo repartida en varios núcleos (Web Workers) | Plan | ✅ 30/09 (6,3 s para 5.000 × 10.000 en 4 hilos) |
 | P3c | P3c | **Ver el cronograma**: ventana con Gantt interactivo (flechas, zoom, criticidad, P10–P90) y hoja «Cronograma (Gantt)» para compartir | **Tú** (30/09) | ✅ 30/09 (falta Excel: Q21–Q25) |
-| P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ⬜ |
+| P4 | P4 | Importar MS Project (XML) y Primavera P6 (XER), con verificación de fechas | **Tú** | ✅ 30/09 (falta Excel: Q31–Q35, y tus cronogramas reales) |
 | P5 | P5 | Costo + plazo en la misma simulación: costos que dependen del tiempo y JCL | Estudios QSRA | ⬜ |
 | P6 | P6 | (v2) Clima, mitigación antes/después, ramificación, rangos por sector | Estudios QSRA | ⬜ |
 

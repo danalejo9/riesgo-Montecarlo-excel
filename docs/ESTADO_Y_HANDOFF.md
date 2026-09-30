@@ -1339,6 +1339,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     restricciones duras. Gantt: gris y línea de corte. Falta: calendarios
     por actividad (aplazado tras P4/P5). **Siguiente**: P4.
 
+77. [x] **P4 (2026-09-30)**. `engine/cronograma/importar/` (`comun.ts`:
+    `CronogramaImportado`, `verificarContraFuente`, `textoDeArchivo`;
+    `mspdi.ts`: regex sobre el texto, sin DOMParser, resumen → hojas,
+    campo personalizado «Categoría»; `xer.ts`: `tablasXer`,
+    `calendarioDeClndr` con el separador 127 de P6), `hojaActividadesDe`
+    y `hojaCalendarioDe`, `escribirCronogramaImportado`, recuadro de
+    importación en `ui/Cronograma.tsx`. Verificado 20/20 con los dos
+    archivos de ejemplo y en el banco. **Siguiente**: P5 (JCL).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

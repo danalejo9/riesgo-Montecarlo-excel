@@ -510,6 +510,114 @@ hoja_esperado("Esperado (con avance)",
               "CPM esperado con el escenario de «Avance (prueba)» (fecha de corte 15/03/2027), calculado por el script",
               ES2, EF2, LS2, LF2, FIN2, DUR2, ESTADO2)
 
+
+# ---------------------------------------------------------------------------
+# El mismo proyecto como lo exportarían MS Project (XML) y Primavera P6 (XER),
+# con las fechas de «Esperado» como las que calculó el programa de origen.
+# Sirven para probar la importación (P4) de punta a punta.
+# ---------------------------------------------------------------------------
+from xml.sax.saxutils import escape
+
+TIPO_MSP = {"FS": 1, "SS": 3, "FF": 0, "SF": 2}
+TIPO_P6 = {"FS": "PR_FS", "SS": "PR_SS", "FF": "PR_FF", "SF": "PR_SF"}
+FIELD_TEXT1 = "188743731"
+
+
+def iso(d, hora):
+    return f"{d.isoformat()}T{hora}:00"
+
+
+def generar_xml():
+    x = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+         '<Project xmlns="http://schemas.microsoft.com/project">',
+         "<SaveVersion>14</SaveVersion><Name>demo-cronograma.xml</Name><Title>Centro comunitario</Title>",
+         f"<StartDate>{iso(INICIO, '08:00')}</StartDate><MinutesPerDay>480</MinutesPerDay><CalendarUID>1</CalendarUID>",
+         "<ExtendedAttributes><ExtendedAttribute>"
+         f"<FieldID>{FIELD_TEXT1}</FieldID><FieldName>Text1</FieldName><Alias>Categoría</Alias>"
+         "</ExtendedAttribute></ExtendedAttributes>",
+         "<Calendars><Calendar><UID>1</UID><Name>Estándar</Name><IsBaseCalendar>1</IsBaseCalendar><WeekDays>"]
+    for dia in range(1, 8):  # 1 = domingo
+        trabaja = 1 if dia in (2, 3, 4, 5, 6) else 0
+        x.append(f"<WeekDay><DayType>{dia}</DayType><DayWorking>{trabaja}</DayWorking></WeekDay>")
+    x.append("</WeekDays><Exceptions>")
+    for f, nombre in FESTIVOS:
+        x.append(f"<Exception><TimePeriod><FromDate>{iso(f, '00:00')}</FromDate><ToDate>{iso(f, '23:59')}</ToDate>"
+                 f"</TimePeriod><Name>{escape(nombre)}</Name><DayWorking>0</DayWorking></Exception>")
+    x.append("</Exceptions></Calendar></Calendars><Tasks>")
+    x.append("<Task><UID>0</UID><ID>0</ID><Name>Centro comunitario</Name><OutlineLevel>0</OutlineLevel><Summary>1</Summary></Task>")
+    for a in ACTIVIDADES:
+        k, d = a[0], a[2]
+        ini, fin = fecha_inicio(ES[k], d), fecha_fin(EF[k], d)
+        partes = [f"<Task><UID>{k}</UID><ID>{k}</ID><Name>{escape(a[1])}</Name><OutlineLevel>1</OutlineLevel>",
+                  f"<Summary>0</Summary><Milestone>{1 if d == 0 else 0}</Milestone>",
+                  f"<Start>{iso(ini, '08:00')}</Start><Finish>{iso(fin, '17:00')}</Finish>",
+                  f"<Duration>PT{int(d * 8)}H0M0S</Duration><DurationFormat>7</DurationFormat>"]
+        if a[9]:
+            partes.append(f"<ConstraintType>4</ConstraintType><ConstraintDate>{iso(a[9], '08:00')}</ConstraintDate>")
+        else:
+            partes.append("<ConstraintType>0</ConstraintType>")
+        for p_, t_, r_ in leer_preds(a[3]):
+            partes.append(f"<PredecessorLink><PredecessorUID>{p_}</PredecessorUID><Type>{TIPO_MSP[t_]}</Type>"
+                          f"<CrossProject>0</CrossProject><LinkLag>{int(r_ * 4800)}</LinkLag><LagFormat>7</LagFormat></PredecessorLink>")
+        partes.append(f"<ExtendedAttribute><FieldID>{FIELD_TEXT1}</FieldID><Value>{escape(a[7])}</Value></ExtendedAttribute>")
+        partes.append("</Task>")
+        x.append("".join(partes))
+    x.append("</Tasks></Project>")
+    with open("ejemplos/demo-cronograma.xml", "w", encoding="utf-8") as f:
+        f.write("\n".join(x))
+
+
+def generar_xer():
+    fecha = lambda d, h: f"{d.isoformat()} {h}"
+    dia_serie = lambda d: (d - dt.date(1899, 12, 30)).days
+    # P6 guarda los saltos de línea de clndr_data como el carácter 127 (DEL).
+    semana = []
+    for dia in range(1, 8):
+        if dia in (2, 3, 4, 5, 6):
+            semana.append(f"    (0||{dia}()(\x7f\x7f      (0||0(s|08:00|f|12:00)())\x7f\x7f      (0||1(s|13:00|f|17:00)())))")
+        else:
+            semana.append(f"    (0||{dia}()())")
+    excepciones = [f"    (0||{i}(d|{dia_serie(f)})())" for i, (f, _) in enumerate(FESTIVOS)]
+    clndr = ("(0||CalendarData()(\x7f\x7f  (0||DaysOfWeek()(\x7f\x7f" + "\x7f\x7f".join(semana) + "))\x7f\x7f"
+             "  (0||VIEW(ShowTotal|Y)())\x7f\x7f  (0||Exceptions()(\x7f\x7f" + "\x7f\x7f".join(excepciones) + "))))")
+    L = ["ERMHDR\t19.12\t2027-01-15\tProject\tADMIN\tdbxDatabaseNoName\tProject Management\tUSD"]
+    def tabla(nombre, campos, filas):
+        L.append(f"%T\t{nombre}")
+        L.append("%F\t" + "\t".join(campos))
+        for f in filas:
+            L.append("%R\t" + "\t".join(str(v) for v in f))
+    tabla("CALENDAR", ["clndr_id", "default_flag", "clndr_name", "day_hr_cnt", "clndr_data"],
+          [[1, "Y", "Estándar 5x8", 8, clndr]])
+    tabla("PROJECT", ["proj_id", "proj_short_name", "plan_start_date", "last_recalc_date", "clndr_id"],
+          [[100, "CENTRO-COM", fecha(INICIO, "08:00"), fecha(INICIO, "08:00"), 1]])
+    cats = sorted({a[7] for a in ACTIVIDADES})
+    wbs = {c: 200 + i for i, c in enumerate(cats)}
+    tabla("PROJWBS", ["wbs_id", "proj_id", "proj_node_flag", "wbs_short_name", "wbs_name", "parent_wbs_id"],
+          [[199, 100, "Y", "CENTRO-COM", "Centro comunitario", ""]] + [[wbs[c], 100, "N", c[:8].upper(), c, 199] for c in cats])
+    filas = []
+    for a in ACTIVIDADES:
+        k, d = a[0], a[2]
+        ini, fin = fecha_inicio(ES[k], d), fecha_fin(EF[k], d)
+        tipo = "TT_Mile" if d == 0 and not a[3] else ("TT_FinMile" if d == 0 else "TT_Task")
+        filas.append([1000 + int(k), 100, wbs[a[7]], 1, f"A{int(k) * 10}", a[1], tipo, "TK_NotStart",
+                      d * 8, d * 8, fecha(ini, "08:00"), fecha(fin, "17:00"), "", "",
+                      "CS_MSOA" if a[9] else "", fecha(a[9], "08:00") if a[9] else ""])
+    tabla("TASK", ["task_id", "proj_id", "wbs_id", "clndr_id", "task_code", "task_name", "task_type", "status_code",
+                   "target_drtn_hr_cnt", "remain_drtn_hr_cnt", "early_start_date", "early_end_date",
+                   "act_start_date", "act_end_date", "cstr_type", "cstr_date"], filas)
+    preds = []
+    for a in ACTIVIDADES:
+        for p_, t_, r_ in leer_preds(a[3]):
+            preds.append([5000 + len(preds), 1000 + int(a[0]), 1000 + int(p_), 100, 100, TIPO_P6[t_], r_ * 8])
+    tabla("TASKPRED", ["task_pred_id", "task_id", "pred_task_id", "proj_id", "pred_proj_id", "pred_type", "lag_hr_cnt"], preds)
+    L.append("%E")
+    with open("ejemplos/demo-cronograma.xer", "w", encoding="utf-8", newline="") as f:
+        f.write("\r\n".join(L) + "\r\n")
+
+
+generar_xml()
+generar_xer()
+
 wb.save("ejemplos/demo-cronograma.xlsx")
 print(f"ejemplos/demo-cronograma.xlsx — fin {fecha_fin(FIN, 1)}, {FIN:g} días; con avance {fecha_fin(FIN2, 1)} ({FIN2:g}); "
       f"P50 {PCT[0.5] + 1} · P80 {PCT[0.8] + 1} · P90 {PCT[0.9] + 1} días; salud {SALUD}")

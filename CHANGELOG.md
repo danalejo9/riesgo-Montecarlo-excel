@@ -5,6 +5,25 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### P4: importar de MS Project y Primavera P6 (2026-09-30)
+
+**Añadido**
+- **Importar de MS Project o P6** en la pestaña Cronograma: XML de MS Project
+  (MSPDI) y XER de Primavera P6, leídos en TypeScript (funcionan en Windows,
+  Mac y Web). Tareas, relaciones con retardo, calendario del proyecto
+  (días laborables y festivos; en P6, desde `clndr_data`), hitos,
+  restricciones, fechas límite, avance (fechas reales, restante, fecha de
+  estado o de datos) y categoría (campo personalizado «Categoría» o resumen
+  de primer nivel en Project; WBS en P6). Relaciones con tareas de resumen
+  trasladadas a sus hijas; LOE, «lo más tarde posible», varios proyectos o
+  calendarios: se avisa.
+- **Comprobación de fechas**: nuestro CPM contra las fechas que calculó el
+  programa de origen, actividad por actividad, con la lista de diferencias.
+- Escribe «Actividades» y «Calendario» (pide confirmación si ya hay un
+  cronograma) y calcula. `.mpp`: explica cómo guardarlo como XML.
+- Libro de pruebas: `ejemplos/demo-cronograma.xml` y `.xer`, generados por
+  el script. Guía: Q31–Q35.
+
 ### Resto de P1: avance real y más restricciones (2026-09-30)
 
 **Añadido**

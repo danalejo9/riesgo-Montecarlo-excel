@@ -744,6 +744,40 @@ corte» (la movilización). Devuélvela a 15/03/2027. (c) Escribe `40 %` o
 
 Para volver al escenario base, vacía las columnas K–Q y Calendario!B2.
 
+**Q31. Importar de MS Project (P4).** En un libro **en blanco**: panel →
+Cronograma → **Importar de MS Project o P6** → elige
+`ejemplos\demo-cronograma.xml`. Esperado, en un recuadro: «MS Project ·
+“Centro comunitario”: 20 actividades y 27 relaciones» y, en verde,
+«Comprobación de fechas: Las 20 actividades dan las mismas fechas que en MS
+Project. Fin: 16/07/2027.». Pulsa **Escribir en «Actividades» y
+«Calendario»**: se crean las dos hojas (con los 5 festivos, la categoría de
+cada actividad desde el campo personalizado «Categoría» de Project y la
+restricción del paisajismo) y se calcula solo: **16/07/2027**, 118 días,
+12 / 20 críticas. El mínimo, más probable y máximo quedan vacíos (Project no
+los trae): la salud avisa en «Incertidumbre en las duraciones».
+
+**Q32. Importar de Primavera P6.** Mismo libro: importa
+`ejemplos\demo-cronograma.xer`. Esperado: «Primavera P6 · “CENTRO-COM”…»,
+20 de 20 con las mismas fechas. Al escribir, como ya hay un cronograma,
+aparece «Ya hay un cronograma en “Actividades”: se reemplazará…» con
+**Reemplazar** y **Cancelar**; reemplaza. Los IDs son ahora los códigos de
+P6 (A10, A20…, predecesoras `A30FC+5`, `A70CC+10`), la categoría es la WBS
+y el resultado vuelve a ser 16/07/2027.
+
+**Q33. Tu propio cronograma.** Si tienes uno real: en MS Project, Archivo →
+Guardar como → **XML**; en P6, Exportar → XER. Impórtalo y apunta: cuántas
+actividades, qué avisos salen y cuántas coinciden en la comprobación de
+fechas (las diferencias se listan: suelen venir de calendarios distintos por
+actividad, horas sueltas o «lo más tarde posible», que aquí se simplifican).
+**Este es el dato más útil de toda la ronda Q.**
+
+**Q34. Errores de importación.** Intenta importar un `.mpp`: «Los archivos
+.mpp no se pueden leer… Guardar como → Formato XML». Un `.txt` cualquiera:
+«No se reconoce el archivo…». **Cancelar** en el recuadro no toca nada.
+
+**Q35. Web y Mac.** Repite Q31 en Excel para la Web (el selector de archivos
+del navegador).
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

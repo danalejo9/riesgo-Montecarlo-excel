@@ -1,0 +1,70 @@
+ERMHDR	19.12	2027-01-15	Project	ADMIN	dbxDatabaseNoName	Project Management	USD
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	day_hr_cnt	clndr_data
+%R	1	Y	Estándar 5x8	8	(0||CalendarData()(  (0||DaysOfWeek()(    (0||1()())    (0||2()(      (0||0(s|08:00|f|12:00)())      (0||1(s|13:00|f|17:00)())))    (0||3()(      (0||0(s|08:00|f|12:00)())      (0||1(s|13:00|f|17:00)())))    (0||4()(      (0||0(s|08:00|f|12:00)())      (0||1(s|13:00|f|17:00)())))    (0||5()(      (0||0(s|08:00|f|12:00)())      (0||1(s|13:00|f|17:00)())))    (0||6()(      (0||0(s|08:00|f|12:00)())      (0||1(s|13:00|f|17:00)())))    (0||7()())))  (0||VIEW(ShowTotal|Y)())  (0||Exceptions()(    (0||0(d|46471)())    (0||1(d|46472)())    (0||2(d|46508)())    (0||3(d|46588)())    (0||4(d|46615)())))))
+%T	PROJECT
+%F	proj_id	proj_short_name	plan_start_date	last_recalc_date	clndr_id
+%R	100	CENTRO-COM	2027-02-01 08:00	2027-02-01 08:00	1
+%T	PROJWBS
+%F	wbs_id	proj_id	proj_node_flag	wbs_short_name	wbs_name	parent_wbs_id
+%R	199	100	Y	CENTRO-COM	Centro comunitario	
+%R	200	100	N	ACABADOS	Acabados	199
+%R	201	100	N	DISEÑO	Diseño	199
+%R	202	100	N	EXTERIOR	Exteriores	199
+%R	203	100	N	HITOS	Hitos	199
+%R	204	100	N	INSTALAC	Instalaciones	199
+%R	205	100	N	OBRA GRI	Obra gris	199
+%R	206	100	N	SUMINIST	Suministros	199
+%R	207	100	N	TRÁMITES	Trámites	199
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	task_code	task_name	task_type	status_code	target_drtn_hr_cnt	remain_drtn_hr_cnt	early_start_date	early_end_date	act_start_date	act_end_date	cstr_type	cstr_date
+%R	1001	100	203	1	A10	Inicio del proyecto	TT_Mile	TK_NotStart	0	0	2027-02-01 08:00	2027-02-01 17:00				
+%R	1002	100	207	1	A20	Permisos y licencias	TT_Task	TK_NotStart	120	120	2027-02-01 08:00	2027-02-19 17:00				
+%R	1003	100	201	1	A30	Diseño detallado	TT_Task	TK_NotStart	160	160	2027-02-01 08:00	2027-02-26 17:00				
+%R	1004	100	205	1	A40	Movilización de obra	TT_Task	TK_NotStart	40	40	2027-02-22 08:00	2027-02-26 17:00				
+%R	1005	100	205	1	A50	Excavación	TT_Task	TK_NotStart	80	80	2027-03-01 08:00	2027-03-12 17:00				
+%R	1006	100	205	1	A60	Cimentación	TT_Task	TK_NotStart	120	120	2027-03-15 08:00	2027-04-06 17:00				
+%R	1007	100	205	1	A70	Estructura	TT_Task	TK_NotStart	240	240	2027-04-07 08:00	2027-05-18 17:00				
+%R	1008	100	206	1	A80	Fabricación del ascensor	TT_Task	TK_NotStart	360	360	2027-03-08 08:00	2027-05-11 17:00				
+%R	1009	100	205	1	A90	Cubierta	TT_Task	TK_NotStart	96	96	2027-05-19 08:00	2027-06-03 17:00				
+%R	1010	100	204	1	A100	Instalaciones eléctricas	TT_Task	TK_NotStart	160	160	2027-04-21 08:00	2027-05-18 17:00				
+%R	1011	100	204	1	A110	Instalaciones hidráulicas	TT_Task	TK_NotStart	144	144	2027-04-21 08:00	2027-05-14 17:00				
+%R	1012	100	205	1	A120	Mampostería	TT_Task	TK_NotStart	160	160	2027-05-12 08:00	2027-06-08 17:00				
+%R	1013	100	206	1	A130	Montaje del ascensor	TT_Task	TK_NotStart	64	64	2027-06-04 08:00	2027-06-15 17:00				
+%R	1014	100	200	1	A140	Acabados interiores	TT_Task	TK_NotStart	200	200	2027-06-09 08:00	2027-07-13 17:00				
+%R	1015	100	200	1	A150	Fachada	TT_Task	TK_NotStart	120	120	2027-06-04 08:00	2027-06-24 17:00				
+%R	1016	100	204	1	A160	Pruebas de instalaciones	TT_Task	TK_NotStart	48	48	2027-05-14 08:00	2027-05-21 17:00				
+%R	1017	100	202	1	A170	Paisajismo	TT_Task	TK_NotStart	80	80	2027-06-28 08:00	2027-07-09 17:00			CS_MSOA	2027-06-28 08:00
+%R	1018	100	200	1	A180	Limpieza final	TT_Task	TK_NotStart	24	24	2027-07-14 08:00	2027-07-16 17:00				
+%R	1019	100	203	1	A190	Entrega al cliente	TT_FinMile	TK_NotStart	0	0	2027-07-16 08:00	2027-07-16 17:00				
+%R	1020	100	205	1	A200	Vigilancia hasta la entrega	TT_Task	TK_NotStart	80	80	2027-07-05 08:00	2027-07-16 17:00				
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt
+%R	5000	1002	1001	100	100	PR_FS	0.0
+%R	5001	1003	1001	100	100	PR_FS	0.0
+%R	5002	1004	1002	100	100	PR_FS	0.0
+%R	5003	1005	1003	100	100	PR_FS	0.0
+%R	5004	1005	1004	100	100	PR_FS	0.0
+%R	5005	1006	1005	100	100	PR_FS	0.0
+%R	5006	1007	1006	100	100	PR_FS	0.0
+%R	5007	1008	1003	100	100	PR_FS	40.0
+%R	5008	1009	1007	100	100	PR_FS	0.0
+%R	5009	1010	1007	100	100	PR_SS	80.0
+%R	5010	1011	1007	100	100	PR_SS	80.0
+%R	5011	1012	1007	100	100	PR_FS	-40.0
+%R	5012	1013	1008	100	100	PR_FS	0.0
+%R	5013	1013	1009	100	100	PR_FS	0.0
+%R	5014	1014	1010	100	100	PR_FS	0.0
+%R	5015	1014	1011	100	100	PR_FS	0.0
+%R	5016	1014	1012	100	100	PR_FS	0.0
+%R	5017	1015	1009	100	100	PR_FS	0.0
+%R	5018	1016	1010	100	100	PR_FF	24.0
+%R	5019	1016	1011	100	100	PR_FF	24.0
+%R	5020	1017	1015	100	100	PR_FS	0.0
+%R	5021	1018	1013	100	100	PR_FS	0.0
+%R	5022	1018	1014	100	100	PR_FS	0.0
+%R	5023	1018	1016	100	100	PR_FS	0.0
+%R	5024	1018	1017	100	100	PR_FS	0.0
+%R	5025	1019	1018	100	100	PR_FS	0.0
+%R	5026	1020	1019	100	100	PR_SF	0.0
+%E

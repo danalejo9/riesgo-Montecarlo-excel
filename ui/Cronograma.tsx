@@ -8,14 +8,15 @@
 import { useRef, useState } from 'react';
 
 import {
-  calcularCPM, hojaGantt, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
+  calcularCPM, hojaGantt, importarCronograma, verificarContraFuente,
+  type CronogramaImportado, type Verificacion, hojaSimulacionPlazo, vistaGantt, impactoDeRiesgos, leerCronograma, leerRiesgosPlazo, narrativaPlazo, revisarSalud,
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
-import { escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
+import { escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
@@ -49,6 +50,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const [iteraciones, setIteraciones] = useState(OPCIONES_PLAZO_POR_DEFECTO.iteraciones);
   const [forma, setForma] = useState<FormaDuracion>(OPCIONES_PLAZO_POR_DEFECTO.forma);
   const cancelado = useRef(false);
+  const [importado, setImportado] = useState<{ imp: CronogramaImportado; ver: Verificacion; confirmar: boolean } | null>(null);
+  const archivo = useRef<HTMLInputElement>(null);
 
   if (!tieneCapacidad('cronograma')) {
     return <section><p className="aviso-linea">{T.sinCapacidad}</p></section>;
@@ -150,6 +153,39 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  const leerArchivo = async (f: File) => {
+    setNota(null);
+    try {
+      const imp = importarCronograma(f.name, new Uint8Array(await f.arrayBuffer()));
+      setImportado({ imp, ver: verificarContraFuente(imp), confirmar: false });
+    } catch (e) {
+      setImportado(null);
+      alFallar(e);
+    } finally {
+      if (archivo.current) archivo.current.value = '';
+    }
+  };
+
+  const escribirImportado = async (forzar: boolean) => {
+    if (!importado) return;
+    try {
+      if (!forzar) {
+        const hojas = await leerHojasCronograma();
+        const hayDatos = (hojas.actividades?.length ?? 0) > 3;
+        if (hayDatos) {
+          setImportado({ ...importado, confirmar: true });
+          return;
+        }
+      }
+      await escribirCronogramaImportado(importado.imp);
+      setImportado(null);
+      await calcular();
+      setNota(T.importadoEscrito);
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
   const plantilla = async () => {
     try {
       setNota(T.plantillaCreada(await escribirPlantillaCronograma()));
@@ -169,8 +205,12 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
       <p className="tenue">{T.intro}</p>
       <p>
         <button type="button" onClick={calcular} disabled={ocupado !== null}>{ocupado === T.calculando ? T.calculando : T.calcular}</button>{' '}
-        <button type="button" onClick={plantilla} title={T.plantillaAyuda} disabled={ocupado !== null}>{T.plantilla}</button>
+        <button type="button" onClick={plantilla} title={T.plantillaAyuda} disabled={ocupado !== null}>{T.plantilla}</button>{' '}
+        <button type="button" onClick={() => archivo.current?.click()} title={T.importarAyuda} disabled={ocupado !== null}>{T.importar}</button>
+        <input ref={archivo} type="file" accept=".xml,.xer,.mpp" style={{ display: 'none' }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void leerArchivo(f); }} />
       </p>
+      {importado && <Importado i={importado} alEscribir={escribirImportado} alCancelar={() => setImportado(null)} />}
       {nota && <p className="aviso-ok">{nota}</p>}
 
       {errores.length > 0 && (
@@ -344,5 +384,41 @@ function Histograma({ r }: { r: ResultadoSimulacionPlazo }) {
         <text x={W} y={H + 12} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(h[h.length - 1]!.fecha)}</text>
       </svg>
     </figure>
+  );
+}
+
+function Importado({ i, alEscribir, alCancelar }: {
+  i: { imp: CronogramaImportado; ver: Verificacion; confirmar: boolean };
+  alEscribir: (forzar: boolean) => void;
+  alCancelar: () => void;
+}) {
+  const { imp, ver } = i;
+  const relaciones = imp.cronograma.actividades.reduce((n, a) => n + a.predecesoras.length, 0);
+  const bien = ver.total > 0 && ver.coinciden === ver.total;
+  return (
+    <div className="importado" style={{ border: '1px solid var(--borde)', borderRadius: 4, padding: '8px 10px', margin: '8px 0' }}>
+      <p><strong>{T.importado(imp.fuente, imp.proyecto, imp.cronograma.actividades.length, relaciones)}</strong></p>
+      {imp.avisos.length > 0 && <ul className="aviso-linea">{imp.avisos.map((a) => <li key={a}>{a}</li>)}</ul>}
+      <p className={bien ? 'aviso-ok' : 'aviso-linea'}>{T.verificacion}: {ver.resumen}</p>
+      {ver.diferencias.length > 0 && (
+        <ul className="tenue">
+          {ver.diferencias.slice(0, 10).map((d) => (
+            <li key={`${d.id}-${d.campo}`}>{T.diferencia(d.id, d.nombre, d.campo, textoFecha(d.fuente), textoFecha(d.calculado))}</li>
+          ))}
+        </ul>
+      )}
+      {i.confirmar ? (
+        <p className="aviso-linea">
+          {T.reemplazarAviso}{' '}
+          <button type="button" onClick={() => alEscribir(true)}>{T.reemplazar}</button>{' '}
+          <button type="button" onClick={alCancelar}>{T.cancelarImportar}</button>
+        </p>
+      ) : (
+        <p>
+          <button type="button" onClick={() => alEscribir(false)}>{T.escribirImportado}</button>{' '}
+          <button type="button" onClick={alCancelar}>{T.cancelarImportar}</button>
+        </p>
+      )}
+    </div>
   );
 }

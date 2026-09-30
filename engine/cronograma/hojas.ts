@@ -9,6 +9,8 @@
 
 import { formatoMoneda, MONEDA_POR_DEFECTO } from '../modelo/moneda.ts';
 import type { ResultadoCPM } from './cpm.ts';
+import { textoRelacion } from './predecesoras.ts';
+import type { Cronograma } from './tipos.ts';
 import { HOJA_RIESGOS } from './riesgos.ts';
 import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
 import { HOJA_ACTIVIDADES, HOJA_CALENDARIO } from './lectorTabla.ts';
@@ -223,5 +225,56 @@ export function hojaSimulacionPlazo(
     formatosRango: [{ fila: fa, col: 0, filas: r.actividades.length, cols: 1, formato: '@' }, ...fechas],
     resaltar: r.actividades.map((a, i) => (a.criticidad >= 0.5 ? fa + i : -1)).filter((x) => x >= 0),
     grafico,
+  };
+}
+
+/**
+ * Un cronograma (importado de MS Project o P6) escrito como hoja
+ * «Actividades»: las mismas columnas que la plantilla, para que el usuario
+ * lo revise y añada la incertidumbre (mínimo, más probable, máximo), que
+ * esos programas no traen.
+ */
+export function hojaActividadesDe(c: Cronograma, titulo: string, codigoMoneda = MONEDA_POR_DEFECTO): HojaAEscribir {
+  const base = plantillaActividades(codigoMoneda);
+  const vacio = (v: number | undefined) => (v === undefined ? '' : v);
+  return {
+    ...base,
+    valores: [
+      [titulo],
+      [''],
+      ENCABEZADO_ACTIVIDADES,
+      ...c.actividades.map((a) => [
+        a.id, a.nombre, a.duracion, a.predecesoras.map(textoRelacion).join('; '),
+        vacio(a.tresPuntos?.min), vacio(a.tresPuntos?.masProbable), vacio(a.tresPuntos?.max),
+        a.categoria ?? '', vacio(a.costoPorDia), vacio(a.inicioNoAntesDe),
+        vacio(a.inicioReal), vacio(a.finReal), vacio(a.completado), vacio(a.restante),
+        vacio(a.inicioNoDespuesDe), vacio(a.terminarNoAntesDe), vacio(a.terminarNoDespuesDe),
+      ]),
+    ],
+  };
+}
+
+const NOMBRES_DIAS: Array<[string, number]> = [
+  ['Lunes', 1], ['Martes', 2], ['Miércoles', 3], ['Jueves', 4], ['Viernes', 5], ['Sábado', 6], ['Domingo', 0],
+];
+
+/** El calendario de un cronograma como hoja «Calendario». */
+export function hojaCalendarioDe(c: Cronograma): HojaAEscribir {
+  const festivos = [...c.calendario.festivos].sort((a, b) => a - b);
+  return {
+    nombre: HOJA_CALENDARIO,
+    valores: [
+      ['Inicio del proyecto', c.inicio],
+      ['Fecha de corte', c.fechaCorte ?? '', 'Solo si registras avance (inicio o fin real): el día desde el que se cuenta lo que queda'],
+      ['Días laborables', ''],
+      ...NOMBRES_DIAS.map(([n, d]) => [n, c.calendario.laborables[d] ? 'Sí' : 'No']),
+      [''],
+      ['Festivos', festivos.length === 0 ? 'Escribe las fechas debajo, una por fila' : ''],
+      ...festivos.map((f) => [f]),
+    ],
+    formatos: { 0: FORMATO_FECHA, 1: FORMATO_FECHA },
+    filaEncabezado: -1,
+    primeraFilaDatos: 0,
+    anchos: [20, 40],
   };
 }

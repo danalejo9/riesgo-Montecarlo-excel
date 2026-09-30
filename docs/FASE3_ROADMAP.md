@@ -177,7 +177,7 @@ Lo que sí entra en el MVP es el **informe de compatibilidad**: si un modelo no 
 | E10 | Producto: hosting, i18n, licencia, privacidad | 8–12 d | ⬜ no empezada |
 | E11 | Validación y publicación en AppSource | 5–8 d | ⬜ no empezada |
 | E12 | Diferenciadores: depurador de escenarios, conversor de @RISK, narrativa local | 8–12 d | ⬜ después de la v1.0 (§1.2) |
-| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, P1 ✅ (salvo calendarios por actividad), P2 ✅, P3 ✅, P3c ✅, P3b ✅ (30/09; libro de pruebas propio y bloque Q1–Q25). Orden:, resto de P1, P4, P5 (§E13) |
+| **P** | **Módulo Cronograma (QSRA)**: CPM, chequeo de salud, *risk drivers*, importadores XML/XER, JCL costo‑plazo (P0–P5; P6 en la v2) | 35–45 d | 🟡 P0 ✅, P1 ✅ (salvo calendarios por actividad), P2 ✅, P3 ✅, P3c ✅, P3b ✅, P4 ✅ (30/09; libro de pruebas propio y bloque Q1–Q35). Orden: P5, calendarios por actividad (§E13) |
 
 **Dónde estamos de verdad**: el ciclo completo funciona —marcar entradas y
 salidas (o escribir `RIESGO.*`), distribuciones, correlaciones, simular por el

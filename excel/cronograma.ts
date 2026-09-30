@@ -7,7 +7,8 @@
 
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
-  plantillaRiesgos, HOJA_GANTT, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
+  plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe,
+  type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
 
@@ -171,5 +172,16 @@ export async function escribirHojaGantt(h: HojaGantt): Promise<string> {
     hoja.activate();
     await context.sync();
     return HOJA_GANTT;
+  });
+}
+
+/**
+ * P4: escribe un cronograma importado en «Actividades» y «Calendario»,
+ * reemplazándolas. «Riesgos de plazo» no se toca.
+ */
+export async function escribirCronogramaImportado(imp: CronogramaImportado, codigoMoneda?: string): Promise<void> {
+  await Excel.run(async (context) => {
+    await escribirHoja(context, hojaCalendarioDe(imp.cronograma), true);
+    await escribirHoja(context, hojaActividadesDe(imp.cronograma, `Cronograma importado de ${imp.fuente}: ${imp.proyecto}. Añade mínimo, más probable y máximo para simular.`, codigoMoneda), true);
   });
 }
