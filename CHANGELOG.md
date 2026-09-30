@@ -5,6 +5,24 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V7: calendarios por actividad (2026-09-30)
+
+**Añadido**
+- Hoja **«Calendarios»** (días de la semana, festivos del proyecto sí o
+  no, festivos propios) y columna **«Calendario»** en «Actividades»: cada
+  actividad trabaja solo sus días. El CPM y la simulación usan un eje de
+  días naturales; los retardos cuentan en el calendario de la predecesora
+  y la holgura en el de la actividad. Sin calendarios propios, todo sigue
+  exactamente igual.
+- Importar de MS Project (XML) y P6 (XER) trae el calendario de cada tarea.
+- Libro de pruebas: «Calendarios (prueba)» y «Esperado (calendarios)»;
+  guía Q56–Q58.
+
+**Cambiado**
+- En la simulación, «Terminar/Inicio no después de» se aplica dentro de la
+  pasada atrás (como en el CPM determinista): la criticidad de las
+  predecesoras de una actividad con fecha límite lo refleja.
+
 ### V6: rangos por tipo y ayudas para estimar (2026-09-30)
 
 **Añadido**

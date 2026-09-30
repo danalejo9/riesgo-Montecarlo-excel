@@ -1011,6 +1011,43 @@ rango de menos del 15 %», con sus IDs. Si todas las actividades tienen el
 mismo % (como tras Q53 sin la hoja «Rangos por tipo»), sale en **info**:
 «todas con el mismo porcentaje (10 % por debajo, 25 % por encima)».
 
+**Q56. Calendarios por actividad (V7).** Pulsa «Plantilla de cronograma»
+en un libro nuevo: además de las hojas de siempre aparece **«Calendarios»**
+con dos de ejemplo («6 días» y «Continuo») y «Actividades» tiene al final la
+columna **«Calendario»**. En el libro de pruebas: crea una hoja
+«Calendarios» y copia en ella, desde A3, la tabla de **«Calendarios
+(prueba)»** (tres calendarios: 6 días, Continuo y Proveedor, este sin los
+festivos del proyecto y con dos propios). Escribe en la columna «Calendario»
+de «Actividades» lo que dice la lista de abajo de esa hoja (Cimentación y
+Estructura: 6 días; Fabricación del ascensor: Proveedor; Vigilancia:
+Continuo). Calcula. Esperado (compara con **«Esperado (calendarios)»**):
+- Fin del proyecto **14/07/2027** (antes 16/07/2027) y, en la cifra de
+  duración, **164 días naturales** (con varios calendarios no hay un día
+  laborable común; lo dice la etiqueta).
+- Cimentación **13/03/2027 (sábado) → 01/04/2027**; Estructura 02/04 →
+  07/05/2027 (antes 07/04 → 18/05); Vigilancia 05/07 → 14/07 (trabaja
+  también el fin de semana). Fila a fila, las fechas, la holgura y «Crítica»
+  iguales a «Esperado (calendarios)».
+- La ruta crítica cambia: Paisajismo, Limpieza final, Entrega y Vigilancia.
+
+**Q57. Simular con calendarios.** Simula (10.000, PERT). Esperado, frente al
+Monte Carlo en Python de «Esperado (calendarios)» (columnas L–N): P50 ≈
+02/08/2027, P80 ≈ **12/08/2027**, P90 ≈ 19/08/2027 (±1 día), costo P80 ≈
+US$ 1.328.785 (±1 %), JCL ≈ 76 % (±3 puntos) y las criticidades de la
+columna M (±3 puntos). El texto dice «… días naturales». El costo indirecto
+se sigue cobrando por día laborable del calendario del proyecto.
+
+**Q58. Errores e importación.** En «Actividades», escribe «Nocturno» como
+calendario de una actividad → «el calendario “Nocturno” no está en la hoja
+“Calendarios”». En «Calendarios», «quizá» en un día → «escribe Sí o No»;
+un festivo «31/02/2027» → «festivos que no son fechas dd/mm/aaaa». Escribir
+«Proyecto» en la columna equivale a dejarla vacía. Importa un XML de MS
+Project o un XER de P6 en el que alguna tarea tenga otro calendario: se crea
+la hoja «Calendarios» con él (por su nombre en el programa) y la columna
+«Calendario» de esas tareas; la verificación de fechas contra el archivo
+debería coincidir mejor que antes. Al terminar, vacía la columna
+«Calendario» para volver a las cifras de las demás pruebas.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

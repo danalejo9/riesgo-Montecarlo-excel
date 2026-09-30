@@ -72,6 +72,8 @@ export interface Actividad {
   completado?: number;
   /** Días laborables que quedan; si falta, `duracion × (1 − completado)`. */
   restante?: number;
+  /** V7: nombre del calendario de la actividad (de `Cronograma.calendarios`); sin él, el del proyecto. */
+  calendario?: string;
   /** Fila de la hoja de la que salió, para los mensajes. */
   fila?: number;
 }
@@ -87,6 +89,8 @@ export interface Cronograma {
   /** Fecha de inicio del proyecto (serie de Excel). */
   inicio: number;
   calendario: Calendario;
+  /** V7: otros calendarios, por nombre, para las actividades que no siguen el del proyecto. */
+  calendarios?: Record<string, Calendario>;
   actividades: Actividad[];
   /** Fecha de corte (*data date*): el trabajo que queda empieza ese día o después. */
   fechaCorte?: number;

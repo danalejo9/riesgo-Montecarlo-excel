@@ -24,6 +24,7 @@
  */
 
 import type { IndiceLaborable } from './calendario.ts';
+import type { Reloj } from './relojes.ts';
 import type { Cronograma } from './tipos.ts';
 
 export type EstadoAvance = 'pendiente' | 'en curso' | 'terminada';
@@ -98,3 +99,24 @@ export function parametrosRed(c: Cronograma, cal: IndiceLaborable): ParametrosRe
 /** La duración que usa el CPM determinista. */
 export const duracionEfectiva = (p: ParametrosRed, i: number, duracion: number) =>
   (p.transcurrido[i] as number) + duracion * (p.escala[i] as number);
+
+/**
+ * V7, con calendarios por actividad: los mismos parámetros en el eje de días
+ * naturales (`eje`, un `IndiceLaborable` continuo), salvo lo ya trabajado
+ * (`transcurrido`), que se cuenta en días laborables del calendario de cada
+ * actividad, como su duración.
+ */
+export function parametrosRedEje(c: Cronograma, eje: IndiceLaborable, relojes: readonly Reloj[]): ParametrosRed {
+  const p = parametrosRed(c, eje);
+  c.actividades.forEach((a, i) => {
+    const r = relojes[i] as Reloj;
+    const ini = p.minInicio[i] as number;
+    if (p.estado[i] === 'terminada') {
+      p.transcurrido[i] = r.W(ini + (p.transcurrido[i] as number)) - r.W(ini);
+    } else if (p.estado[i] === 'en curso') {
+      const restante = a.restante ?? a.duracion * (1 - (a.completado ?? 0));
+      p.transcurrido[i] = r.W(Math.max(p.corte, ini)) - r.W(ini) + (a.duracion === 0 && restante > 0 ? restante : 0);
+    }
+  });
+  return p;
+}

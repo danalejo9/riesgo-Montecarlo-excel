@@ -1433,6 +1433,25 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `leerRangosTipo`, `tipoDe`), que usa «Rellenar los rangos vacíos».
     Guía Q53–Q55. **Siguiente**: V7 (calendarios por actividad).
 
+87. [x] **V7 (2026-09-30)**. `relojes.ts` (`Reloj`: W, avanzar, alinear,
+    retroFin/retroInicio sobre el eje de días naturales; `relojesDe`, que
+    devuelve `null` si todas usan el calendario del proyecto → camino de
+    siempre, intacto), `cpmCalendarios.ts` (`cpmConRelojes`,
+    `inicioPorRelacion`, `finPorRelacion`), `parametrosRedEje`; en la
+    simulación, `adelanteConRelojes`/`atrasConRelojes` (con `ef`/`ls`),
+    `unidad` en los resultados. Retardos en el calendario de la predecesora
+    (P6), holgura en el de la actividad, indirecto por día laborable del
+    proyecto. Además, las restricciones tardías del Monte Carlo se aplican
+    dentro de la pasada atrás (se propagan, como en el CPM determinista).
+    Hoja «Calendarios» (`leerCalendarios`, `hojaCalendarios`), columna
+    «Calendario»; MSPDI (`<CalendarUID>`) y XER (`clndr_id`) importan los
+    calendarios de las tareas. Oráculo Python con relojes: «Calendarios
+    (prueba)» y «Esperado (calendarios)» (CPM exacto y Monte Carlo).
+    Pruebas de equivalencia: con calendarios iguales, relojes = camino de
+    siempre, iteración a iteración. Benchmark: 5.000 × 10.000 con
+    calendarios, 19,2 s en 1 hilo (13,3 sin), 7,2 s en 4. Guía Q56–Q58.
+    **Siguiente**: V8 (clima probabilístico, sobre V7).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):

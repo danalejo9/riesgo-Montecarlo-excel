@@ -8,6 +8,7 @@
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
   plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO, HOJA_RANGOS_TIPO, plantillaRangosTipo,
+  HOJA_CALENDARIOS, hojaCalendarios,
   type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
@@ -28,7 +29,7 @@ async function valoresDeHoja(context: Excel.RequestContext, nombre: string): Pro
 }
 
 export async function leerHojasCronograma(): Promise<{
-  actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][];
+  actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][]; rangosTipo?: unknown[][]; calendarios?: unknown[][];
 }> {
   return Excel.run(async (context) => ({
     actividades: await valoresDeHoja(context, HOJA_ACTIVIDADES),
@@ -36,6 +37,7 @@ export async function leerHojasCronograma(): Promise<{
     riesgos: await valoresDeHoja(context, HOJA_RIESGOS),
     seguimiento: await valoresDeHoja(context, HOJA_SEGUIMIENTO),
     rangosTipo: await valoresDeHoja(context, HOJA_RANGOS_TIPO),
+    calendarios: await valoresDeHoja(context, HOJA_CALENDARIOS),
   }));
 }
 
@@ -120,6 +122,7 @@ export async function escribirPlantillaCronograma(codigoMoneda?: string): Promis
     const creadas: string[] = [];
     if (await escribirHoja(context, plantillaCalendario(serieDeDate(new Date())), false)) creadas.push(HOJA_CALENDARIO);
     if (await escribirHoja(context, plantillaRiesgos(), false)) creadas.push(HOJA_RIESGOS);
+    if (await escribirHoja(context, hojaCalendarios(), false)) creadas.push(HOJA_CALENDARIOS);
     if (await escribirHoja(context, plantillaActividades(codigoMoneda), false)) creadas.push(HOJA_ACTIVIDADES);
     await context.sync();
     return creadas;
@@ -213,6 +216,10 @@ export async function escribirHojaGantt(h: HojaGantt): Promise<string> {
 export async function escribirCronogramaImportado(imp: CronogramaImportado, codigoMoneda?: string): Promise<void> {
   await Excel.run(async (context) => {
     await escribirHoja(context, hojaCalendarioDe(imp.cronograma), true);
+    // V7: los calendarios de las tareas que no usan el del proyecto.
+    if (imp.cronograma.calendarios && Object.keys(imp.cronograma.calendarios).length > 0) {
+      await escribirHoja(context, hojaCalendarios(imp.cronograma.calendarios, imp.cronograma.calendario), true);
+    }
     await escribirHoja(context, hojaActividadesDe(imp.cronograma, `Cronograma importado de ${imp.fuente}: ${imp.proyecto}. Añade mínimo, más probable y máximo para simular.`, codigoMoneda), true);
   });
 }

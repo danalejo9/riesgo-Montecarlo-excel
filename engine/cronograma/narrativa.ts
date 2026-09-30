@@ -11,7 +11,11 @@ import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
 import type { ComparacionMitigacion } from './mitigacion.ts';
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
-const dias = (n: number) => `${Math.round(n)} ${Math.round(n) === 1 ? 'día laborable' : 'días laborables'}`;
+/** «n días laborables» o, con calendarios por actividad (V7), «n días naturales». */
+const diasEn = (unidad: 'laborables' | 'naturales') => (n: number) => {
+  const k = Math.round(n);
+  return `${k} ${k === 1 ? 'día' : 'días'} ${unidad === 'naturales' ? (k === 1 ? 'natural' : 'naturales') : (k === 1 ? 'laborable' : 'laborables')}`;
+};
 
 export function narrativaPlazo(
   r: ResultadoSimulacionPlazo,
@@ -20,6 +24,7 @@ export function narrativaPlazo(
   codigoMoneda = MONEDA_POR_DEFECTO,
 ): string[] {
   const out: string[] = [];
+  const dias = diasEn(r.unidad);
   const det = r.determinista.dias;
   const reserva = r.dias.p80 - Math.ceil(det - 1e-9);
   out.push(`Hay un 80 % de probabilidad de terminar el ${textoFecha(r.fechas.p80)} o antes (${dias(r.dias.p80)}); la mitad de los casos termina hacia el ${textoFecha(r.fechas.p50)}.`);
@@ -72,7 +77,7 @@ export function narrativaMitigacion(cmp: ComparacionMitigacion, codigoMoneda = M
   let frase = `Aplicar ${n === 1 ? 'la respuesta' : `las ${n} respuestas`}${cmp.costoRespuestas > 0 ? ` (${dinero(cmp.costoRespuestas)})` : ''} `;
   const dias = a.dias.p80 - d.dias.p80;
   frase += dias > 0
-    ? `adelanta el P80 del ${textoFecha(a.fechas.p80)} al ${textoFecha(d.fechas.p80)} (${dias} ${dias === 1 ? 'día laborable' : 'días laborables'})`
+    ? `adelanta el P80 del ${textoFecha(a.fechas.p80)} al ${textoFecha(d.fechas.p80)} (${diasEn(a.unidad)(dias)})`
     : `no adelanta el P80 del plazo (${textoFecha(a.fechas.p80)})`;
   if (a.costos && d.costos) {
     const ahorro = a.costos.p80 - d.costos.p80;

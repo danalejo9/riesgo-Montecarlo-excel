@@ -16,7 +16,7 @@
  * - PROJWBS: la categoría de cada actividad es el nombre de su WBS.
  */
 
-import type { Actividad, Relacion, TipoRelacion } from '../tipos.ts';
+import type { Actividad, Calendario, Relacion, TipoRelacion } from '../tipos.ts';
 import { serieDeIso, type CronogramaImportado } from './comun.ts';
 
 type Fila = Record<string, string>;
@@ -93,8 +93,20 @@ export function leerXer(texto: string): CronogramaImportado {
     if (c.laborables && c.laborables.some(Boolean)) laborables = c.laborables;
     c.festivos.forEach((d) => festivos.add(d));
   }
-  const usados = new Set(tareasTodas.filter((x) => x.proj_id === projId).map((x) => x.clndr_id));
-  if (usados.size > 1) avisos.push(`Las actividades usan ${usados.size} calendarios; se usa el del proyecto («${calProyecto?.clndr_name ?? '?'}») para todas.`);
+  // V7: los calendarios de las actividades que no usan el del proyecto, por su nombre en P6.
+  const otrosCal = new Map<string, { nombre: string; calendario: Calendario }>();
+  const calendarioDeTarea = (clndrId: string | undefined): string | undefined => {
+    if (!clndrId || clndrId === calProyecto?.clndr_id) return undefined;
+    const ya = otrosCal.get(clndrId);
+    if (ya) return ya.nombre;
+    const c = calendarios.get(clndrId);
+    if (!c) return undefined;
+    const d = calendarioDeClndr(c.clndr_data ?? '');
+    let nombre = c.clndr_name ?? `Calendario ${clndrId}`;
+    while ([...otrosCal.values()].some((x) => x.nombre === nombre)) nombre += ` (${clndrId})`;
+    otrosCal.set(clndrId, { nombre, calendario: { laborables: d.laborables && d.laborables.some(Boolean) ? d.laborables : laborables, festivos: new Set(d.festivos) } });
+    return nombre;
+  };
 
   const wbs = new Map((t.get('PROJWBS') ?? []).map((w) => [w.wbs_id ?? '', w]));
   const tareas = tareasTodas.filter((x) => x.proj_id === projId);
@@ -136,6 +148,8 @@ export function leerXer(texto: string): CronogramaImportado {
       duracion: hito ? 0 : Math.round((Number(x.target_drtn_hr_cnt ?? 0) / hd) * 1000) / 1000,
       predecesoras: entrantes.get(id) ?? [],
     };
+    const calT = calendarioDeTarea(x.clndr_id);
+    if (calT) a.calendario = calT;
     const w = wbs.get(x.wbs_id ?? '');
     if (w && w.proj_node_flag !== 'Y' && w.wbs_name) a.categoria = w.wbs_name;
     const fr = serieDeIso(x.cstr_date);
@@ -176,6 +190,7 @@ export function leerXer(texto: string): CronogramaImportado {
     cronograma: {
       inicio,
       calendario: { laborables, festivos },
+      ...(otrosCal.size > 0 ? { calendarios: Object.fromEntries([...otrosCal.values()].map((x) => [x.nombre, x.calendario])) } : {}),
       actividades,
       ...(conAvance && corte !== undefined ? { fechaCorte: corte } : {}),
     },

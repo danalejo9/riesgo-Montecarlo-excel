@@ -14,7 +14,8 @@ import type { Cronograma } from './tipos.ts';
 import { HOJA_RIESGOS } from './riesgos.ts';
 import type { ImpactoRiesgo, ResultadoSimulacionPlazo } from './simulacion.ts';
 import type { ComparacionMitigacion } from './mitigacion.ts';
-import { HOJA_ACTIVIDADES, HOJA_CALENDARIO } from './lectorTabla.ts';
+import { HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_CALENDARIOS } from './lectorTabla.ts';
+import type { Calendario } from './tipos.ts';
 
 export const HOJA_RESULTADO = 'Cronograma (resultado)';
 export const FORMATO_FECHA = 'dd/mm/yyyy';
@@ -56,6 +57,8 @@ export const ENCABEZADO_ACTIVIDADES = [
   'Inicio real', 'Fin real', '% completado', 'Duración restante', 'Inicio no después de', 'Terminar no antes de', 'Terminar no después de',
   // Costo fijo (P5) y la incertidumbre de los costos (V4): el valor de «Costo fijo» / «Costo por día» es el más probable.
   'Costo fijo', 'Costo fijo mínimo', 'Costo fijo máximo', 'Costo por día mínimo', 'Costo por día máximo',
+  // V7: el calendario de la actividad (de la hoja «Calendarios»); vacío, el del proyecto.
+  'Calendario',
 ];
 
 /** La plantilla: tres actividades de ejemplo que el usuario sobrescribe. */
@@ -78,7 +81,7 @@ export function plantillaActividades(codigoMoneda = MONEDA_POR_DEFECTO): HojaAEs
     },
     filaEncabezado: 2,
     primeraFilaDatos: 3,
-    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19],
+    anchos: [6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19, 16],
   };
 }
 
@@ -116,7 +119,7 @@ export function hojaResultadoCPM(r: Extract<ResultadoCPM, { ok: true }>): HojaAE
     valores: [
       ['Cronograma determinista (sin incertidumbre) — lo escribe el complemento; se rehace en cada cálculo'],
       ['Fin del proyecto', r.fechaFinProyecto],
-      ['Duración (días laborables)', r.duracionProyecto],
+      [r.unidad === 'naturales' ? 'Duración (días naturales; hay calendarios por actividad)' : 'Duración (días laborables)', r.duracionProyecto],
       ['Actividades críticas', criticas],
       ENCABEZADO_RESULTADO,
       ...r.filas.map((f) => [
@@ -179,7 +182,7 @@ export function hojaSimulacionPlazo(
   v.push(['']);
 
   encabezados.push(v.length);
-  v.push(['', 'Fecha de fin', 'Días laborables']);
+  v.push(['', 'Fecha de fin', r.unidad === 'naturales' ? 'Días naturales' : 'Días laborables']);
   const f0 = v.length;
   v.push(['Fecha del cronograma (sin incertidumbre)', r.determinista.fecha, r.determinista.dias]);
   v.push(['P10', r.fechas.p10, r.dias.p10]);
@@ -232,7 +235,7 @@ export function hojaSimulacionPlazo(
     v.push(['Probabilidad de cumplir a la vez la fecha y el costo del cronograma', c.jclPlan]);
     pctEn(v.length - 1, 1);
     if (c.conjunto80) {
-      v.push(['Para un 80 % conjunto: fecha', c.conjunto80.fecha, `${c.conjunto80.dias} días laborables`]);
+      v.push(['Para un 80 % conjunto: fecha', c.conjunto80.fecha, `${c.conjunto80.dias} días ${r.unidad}`]);
       fechaEn(v.length - 1, 1);
       v.push(['… y presupuesto', c.conjunto80.costo, `(percentil ${Math.round(c.conjunto80.q * 1000) / 10} de cada uno)`]);
       enDinero(v.length - 1, 1);
@@ -313,7 +316,7 @@ export function hojaActividadesDe(c: Cronograma, titulo: string, codigoMoneda = 
         vacio(a.inicioReal), vacio(a.finReal), vacio(a.completado), vacio(a.restante),
         vacio(a.inicioNoDespuesDe), vacio(a.terminarNoAntesDe), vacio(a.terminarNoDespuesDe),
         vacio(a.costoFijo), vacio(a.costoFijoRango?.min), vacio(a.costoFijoRango?.max),
-        vacio(a.costoPorDiaRango?.min), vacio(a.costoPorDiaRango?.max),
+        vacio(a.costoPorDiaRango?.min), vacio(a.costoPorDiaRango?.max), a.calendario ?? '',
       ]),
     ],
   };
@@ -341,6 +344,50 @@ export function hojaCalendarioDe(c: Cronograma): HojaAEscribir {
     filaEncabezado: -1,
     primeraFilaDatos: 0,
     anchos: [20, 40],
+  };
+}
+
+export const ENCABEZADO_CALENDARIOS = [
+  'Calendario', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Festivos del proyecto', 'Festivos propios (dd/mm/aaaa; …)',
+];
+
+const NOMBRES_SEMANA: Array<[number]> = [[1], [2], [3], [4], [5], [6], [0]];
+
+/** Dos fechas de serie como «dd/mm/aaaa». */
+function textoDia(serie: number): string {
+  const f = new Date(Date.UTC(1899, 11, 30) + serie * 86_400_000);
+  return `${String(f.getUTCDate()).padStart(2, '0')}/${String(f.getUTCMonth() + 1).padStart(2, '0')}/${f.getUTCFullYear()}`;
+}
+
+/**
+ * V7: la hoja «Calendarios» (los que no son el del proyecto). Sin
+ * calendarios, dos de ejemplo que no se usan hasta que una actividad los
+ * nombre en su columna «Calendario».
+ */
+export function hojaCalendarios(calendarios?: Record<string, Calendario>, proyecto?: Calendario): HojaAEscribir {
+  const siNo = (x: boolean | undefined) => (x ? 'Sí' : 'No');
+  const filas = calendarios && Object.keys(calendarios).length > 0
+    ? Object.entries(calendarios).map(([nombre, c]) => {
+        const delProyecto = proyecto !== undefined && [...proyecto.festivos].every((f) => c.festivos.has(f)) && proyecto.festivos.size > 0;
+        const propios = [...c.festivos].filter((f) => !(delProyecto && proyecto?.festivos.has(f))).sort((a, b) => a - b);
+        return [nombre, ...NOMBRES_SEMANA.map(([d]) => siNo(c.laborables[d])), siNo(delProyecto), propios.map(textoDia).join('; ')];
+      })
+    : [
+        ['6 días', 'Sí', 'Sí', 'Sí', 'Sí', 'Sí', 'Sí', 'No', 'Sí', ''],
+        ['Continuo', 'Sí', 'Sí', 'Sí', 'Sí', 'Sí', 'Sí', 'Sí', 'No', ''],
+      ];
+  return {
+    nombre: HOJA_CALENDARIOS,
+    valores: [
+      ['Calendarios de las actividades que no siguen el del proyecto (hoja «Calendario»). Escribe su nombre en la columna «Calendario» de «Actividades».'],
+      [''],
+      ENCABEZADO_CALENDARIOS,
+      ...filas,
+    ],
+    formatos: { 9: '@' },
+    filaEncabezado: 2,
+    primeraFilaDatos: 3,
+    anchos: [22, 8, 8, 10, 8, 8, 8, 9, 20, 36],
   };
 }
 
@@ -378,7 +425,7 @@ export function hojaPlazoSimulado(r: ResultadoSimulacionPlazo, codigoMoneda = MO
     nombre: HOJA_PLAZO_SIMULADO,
     valores: [
       [`Plazo simulado (${r.iteraciones} iteraciones): 1.000 valores representativos. Úsalo en el modelo de costos con =RIESGO.EMPIRICA('Plazo simulado'!A3:A1002)`],
-      ['Días laborables', 'Fecha de fin', ...(costos ? ['Costo del cronograma'] : [])],
+      [r.unidad === 'naturales' ? 'Días naturales' : 'Días laborables', 'Fecha de fin', ...(costos ? ['Costo del cronograma'] : [])],
       ...filas,
     ],
     formatos: costos ? { 1: FORMATO_FECHA, 2: formatoMoneda(codigoMoneda) } : { 1: FORMATO_FECHA },
@@ -401,7 +448,7 @@ export function hojaMitigacion(cmp: ComparacionMitigacion, narrativa: string[] =
   for (const l of narrativa) v.push([l]);
   v.push(['']);
   const enc = [v.length];
-  v.push(['', 'Antes de mitigar', 'Después de mitigar', 'Diferencia (días laborables, puntos o dinero)']);
+  v.push(['', 'Antes de mitigar', 'Después de mitigar', `Diferencia (días ${cmp.antes.unidad}, puntos o dinero)`]);
   const f0 = v.length;
   v.push(['P50 del plazo', a.fechas.p50, d.fechas.p50, a.dias.p50 - d.dias.p50]);
   v.push(['P80 del plazo', a.fechas.p80, d.fechas.p80, a.dias.p80 - d.dias.p80]);

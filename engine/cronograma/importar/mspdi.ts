@@ -24,7 +24,7 @@
  *   primer nivel que la contiene.
  */
 
-import type { Actividad, Relacion, TipoRelacion } from '../tipos.ts';
+import type { Actividad, Calendario, Relacion, TipoRelacion } from '../tipos.ts';
 import { desescaparXml, serieDeIso, type CronogramaImportado } from './comun.ts';
 
 function campo(xml: string, nombre: string): string | undefined {
@@ -73,6 +73,7 @@ interface TareaMsp {
   restriccion: string;
   fechaRestriccion?: number;
   limite?: number;
+  calendarioUid?: string;
 }
 
 export function leerMspdi(xml: string): CronogramaImportado {
@@ -93,31 +94,23 @@ export function leerMspdi(xml: string): CronogramaImportado {
     .find((d) => ['categoria', 'frente', 'category'].includes(normal(campo(d, 'Alias'))) || ['categoria', 'frente'].includes(normal(campo(d, 'FieldName'))));
   const idCategoria = defCategoria ? campo(defCategoria, 'FieldID') : undefined;
 
-  // Calendario del proyecto.
-  const laborables = [false, true, true, true, true, true, false];
-  const festivos = new Set<number>();
+  // Calendarios: el del proyecto y, V7, los de las tareas que tienen otro (<CalendarUID> distinto de −1).
   const calendarios = bloques(xml, 'Calendar');
-  const cal = calendarios.find((c) => campo(sinBloques(c, ['WeekDays', 'Exceptions', 'WorkWeeks']), 'UID') === calUid) ?? calendarios[0];
-  if (cal) {
-    for (const wd of bloques(cal, 'WeekDay')) {
-      const tipo = Number(campo(wd, 'DayType'));
-      const trabaja = campo(wd, 'DayWorking') === '1';
-      if (tipo >= 1 && tipo <= 7) laborables[tipo - 1] = trabaja;
-      else if (tipo === 0 && !trabaja) {
-        // Formato antiguo: una excepción como WeekDay de tipo 0 con su periodo.
-        añadirPeriodo(festivos, campo(wd, 'FromDate'), campo(wd, 'ToDate'));
-      }
-    }
-    for (const ex of bloques(cal, 'Exception')) {
-      if (campo(ex, 'DayWorking') === '1') {
-        avisos.push('El calendario tiene días de excepción laborables (p. ej. un sábado trabajado): se ignoran.');
-        continue;
-      }
-      añadirPeriodo(festivos, campo(ex, 'FromDate'), campo(ex, 'ToDate'));
-    }
-    const otros = calendarios.filter((c) => c !== cal && campo(c, 'IsBaseCalendar') === '1').length;
-    if (otros > 0) avisos.push(`El archivo tiene ${otros + 1} calendarios base; se usa el del proyecto para todas las actividades.`);
-  }
+  const uidDe = (c: string) => campo(sinBloques(c, ['WeekDays', 'Exceptions', 'WorkWeeks']), 'UID');
+  const cal = calendarios.find((c) => uidDe(c) === calUid) ?? calendarios[0];
+  const { laborables, festivos } = cal ? calendarioMsp(cal, avisos) : { laborables: [false, true, true, true, true, true, false], festivos: new Set<number>() };
+  const otrosCal = new Map<string, { nombre: string; calendario: Calendario }>();
+  const calendarioDeTarea = (uid: string | undefined): string | undefined => {
+    if (uid === undefined || uid === '-1' || uid === calUid || !cal) return undefined;
+    const ya = otrosCal.get(uid);
+    if (ya) return ya.nombre;
+    const c = calendarios.find((x) => uidDe(x) === uid);
+    if (!c) return undefined;
+    let nombre = campo(sinBloques(c, ['WeekDays', 'Exceptions', 'WorkWeeks']), 'Name') ?? `Calendario ${uid}`;
+    while ([...otrosCal.values()].some((x) => x.nombre === nombre)) nombre += ` (${uid})`;
+    otrosCal.set(uid, { nombre, calendario: calendarioMsp(c, avisos) });
+    return nombre;
+  };
 
   // Tareas.
   const tareas: TareaMsp[] = [];
@@ -151,6 +144,7 @@ export function leerMspdi(xml: string): CronogramaImportado {
       restriccion: campo(directo, 'ConstraintType') ?? '0',
       fechaRestriccion: serieDeIso(campo(directo, 'ConstraintDate')),
       limite: serieDeIso(campo(directo, 'Deadline')),
+      calendarioUid: campo(directo, 'CalendarUID'),
     });
   }
   const validas = tareas.filter((t) => !t.nula);
@@ -217,6 +211,8 @@ export function leerMspdi(xml: string): CronogramaImportado {
     const a: Actividad = { id: t.id, nombre: t.nombre, duracion, predecesoras: entrantes.get(t.uid) ?? [] };
     const cat = t.categoria ?? categoriaDe(t.uid);
     if (cat) a.categoria = cat;
+    const calT = calendarioDeTarea(t.calendarioUid);
+    if (calT) a.calendario = calT;
     const fr = t.fechaRestriccion;
     switch (t.restriccion) {
       case '1': alap++; break;
@@ -250,12 +246,37 @@ export function leerMspdi(xml: string): CronogramaImportado {
     cronograma: {
       inicio: inicioProyecto,
       calendario: { laborables, festivos },
+      ...(otrosCal.size > 0 ? { calendarios: Object.fromEntries([...otrosCal.values()].map((x) => [x.nombre, x.calendario])) } : {}),
       actividades,
       ...(conAvance && fechaEstado !== undefined ? { fechaCorte: fechaEstado } : {}),
     },
     fechasFuente,
     avisos,
   };
+}
+
+/** Días laborables y excepciones no laborables de un <Calendar>. */
+function calendarioMsp(cal: string, avisos: string[]): Calendario {
+  const laborables = [false, true, true, true, true, true, false];
+  const festivos = new Set<number>();
+  for (const wd of bloques(cal, 'WeekDay')) {
+    const tipo = Number(campo(wd, 'DayType'));
+    const trabaja = campo(wd, 'DayWorking') === '1';
+    if (tipo >= 1 && tipo <= 7) laborables[tipo - 1] = trabaja;
+    else if (tipo === 0 && !trabaja) {
+      // Formato antiguo: una excepción como WeekDay de tipo 0 con su periodo.
+      añadirPeriodo(festivos, campo(wd, 'FromDate'), campo(wd, 'ToDate'));
+    }
+  }
+  for (const ex of bloques(cal, 'Exception')) {
+    if (campo(ex, 'DayWorking') === '1') {
+      const aviso = 'Un calendario tiene días de excepción laborables (p. ej. un sábado trabajado): se ignoran.';
+      if (!avisos.includes(aviso)) avisos.push(aviso);
+      continue;
+    }
+    añadirPeriodo(festivos, campo(ex, 'FromDate'), campo(ex, 'ToDate'));
+  }
+  return { laborables, festivos };
 }
 
 function añadirPeriodo(festivos: Set<number>, desde: string | undefined, hasta: string | undefined): void {

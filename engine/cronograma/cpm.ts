@@ -26,7 +26,9 @@
  */
 
 import { IndiceLaborable } from './calendario.ts';
+import { cpmConRelojes } from './cpmCalendarios.ts';
 import { duracionEfectiva, parametrosRed, type EstadoAvance } from './red.ts';
+import { relojesDe } from './relojes.ts';
 import type { Actividad, Cronograma, ProblemaCronograma } from './tipos.ts';
 
 export interface FilaCPM {
@@ -59,6 +61,12 @@ export type ResultadoCPM =
       /** IDs en orden topológico. */
       orden: string[];
       avisos: ProblemaCronograma[];
+      /**
+       * En qué se cuentan `duracionProyecto` y los índices: días laborables
+       * del calendario del proyecto o, con calendarios por actividad (V7),
+       * días naturales desde el inicio.
+       */
+      unidad: 'laborables' | 'naturales';
     }
   | { ok: false; problemas: ProblemaCronograma[] };
 
@@ -139,7 +147,7 @@ export function resolverRed(actividades: readonly Actividad[]):
   return problemas.length > 0 ? { ok: false, problemas } : { ok: true, preds };
 }
 
-export function calcularCPM(c: Cronograma): ResultadoCPM {
+export function calcularCPM(c: Cronograma, opciones: { forzarRelojes?: boolean } = {}): ResultadoCPM {
   const acts = c.actividades;
   const n = acts.length;
   if (n === 0) return { ok: false, problemas: [{ gravedad: 'error', mensaje: 'El cronograma no tiene actividades' }] };
@@ -156,6 +164,14 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
         mensaje: `Hay una dependencia circular entre: ${ids.join(', ')}. Una actividad no puede depender, directa o indirectamente, de sí misma`,
       }],
     };
+  }
+
+  // V7: con calendarios por actividad, el CPM de los relojes (`cpmCalendarios.ts`).
+  const conRelojes = relojesDe(c, opciones.forzarRelojes);
+  if (conRelojes) {
+    const { red: _red, ...r } = cpmConRelojes(c, orden, conRelojes.relojes);
+    void _red;
+    return r;
   }
 
   const cal = new IndiceLaborable(c.calendario, c.inicio);
@@ -253,6 +269,7 @@ export function calcularCPM(c: Cronograma): ResultadoCPM {
     fechaFinProyecto: cal.fechaFin(finProyecto, finProyecto === 0 ? 0 : 1),
     orden: orden.map((i) => (acts[i] as Actividad).id),
     avisos,
+    unidad: 'laborables',
   };
 }
 

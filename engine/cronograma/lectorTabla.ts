@@ -16,6 +16,8 @@ import type { Actividad, Calendario, Cronograma, ProblemaCronograma } from './ti
 
 export const HOJA_ACTIVIDADES = 'Actividades';
 export const HOJA_CALENDARIO = 'Calendario';
+/** V7: la hoja con los calendarios que no son el del proyecto. */
+export const HOJA_CALENDARIOS = 'Calendarios';
 
 type Celda = unknown;
 
@@ -25,7 +27,7 @@ export function normalizar(s: unknown): string {
 }
 
 type Campo = 'id' | 'nombre' | 'duracion' | 'predecesoras' | 'min' | 'masProbable' | 'max' | 'categoria' | 'costoPorDia' | 'costoFijo' | 'inicioNoAntesDe'
-  | 'costoFijoMin' | 'costoFijoMax' | 'costoPorDiaMin' | 'costoPorDiaMax' | 'p10' | 'p90'
+  | 'costoFijoMin' | 'costoFijoMax' | 'costoPorDiaMin' | 'costoPorDiaMax' | 'p10' | 'p90' | 'calendario'
   | 'inicioNoDespuesDe' | 'terminarNoAntesDe' | 'terminarNoDespuesDe' | 'inicioReal' | 'finReal' | 'completado' | 'restante';
 
 /** Cada campo con los encabezados que lo identifican (normalizados, por prefijo). */
@@ -40,6 +42,7 @@ const ENCABEZADOS: Array<[Campo, string[]]> = [
   ['min', ['minim', 'min ', 'min', 'optimista']],
   ['max', ['maxim', 'max ', 'max', 'pesimista']],
   ['categoria', ['categoria', 'frente']],
+  ['calendario', ['calendario']],
   // V6: estimar con P10 y P90 en vez de mínimo y máximo.
   ['p10', ['p10', 'percentil 10']],
   ['p90', ['p90', 'percentil 90']],
@@ -224,6 +227,7 @@ export function leerActividades(valores: readonly (readonly Celda[])[], primeraF
     }
 
     if (!vacia(col(fila, 'categoria'))) act.categoria = String(col(fila, 'categoria')).trim();
+    if (!vacia(col(fila, 'calendario'))) act.calendario = String(col(fila, 'calendario')).trim();
     let costoMal = false;
     for (const [campo, texto] of [['costoPorDia', 'el costo por día'], ['costoFijo', 'el costo fijo']] as const) {
       const costo = col(fila, campo);
@@ -418,6 +422,7 @@ export function leerCalendario(valores: readonly (readonly Celda[])[] | undefine
 export function leerCronograma(
   actividades: readonly (readonly Celda[])[] | undefined,
   calendario: readonly (readonly Celda[])[] | undefined,
+  calendarios?: readonly (readonly Celda[])[],
 ): { cronograma?: Cronograma; problemas: ProblemaCronograma[] } {
   if (!actividades) {
     return { problemas: [{ gravedad: 'error', hoja: HOJA_ACTIVIDADES, mensaje: 'Falta la hoja «Actividades». Crea una con «Plantilla de cronograma»' }] };
@@ -425,6 +430,22 @@ export function leerCronograma(
   const a = leerActividades(actividades);
   const c = leerCalendario(calendario);
   const problemas = [...c.problemas, ...a.problemas];
+  // V7: los calendarios de las actividades, por su nombre en «Calendarios» (sin distinguir mayúsculas ni tildes).
+  const cs = leerCalendarios(calendarios, c.calendario);
+  problemas.push(...cs.problemas);
+  const porNombre = new Map(Object.keys(cs.calendarios).map((k) => [normalizar(k), k]));
+  for (const x of a.actividades) {
+    if (x.calendario === undefined) continue;
+    const k = porNombre.get(normalizar(x.calendario));
+    if (k !== undefined) x.calendario = k;
+    else if (normalizar(x.calendario) === 'proyecto' || normalizar(x.calendario) === 'del proyecto') delete x.calendario;
+    else {
+      problemas.push({
+        gravedad: 'error', hoja: HOJA_ACTIVIDADES, fila: x.fila, actividad: x.id,
+        mensaje: `Fila ${x.fila} («${x.id}»): el calendario «${x.calendario}» no está en la hoja «${HOJA_CALENDARIOS}»`,
+      });
+    }
+  }
   const conAvance = a.actividades.filter((x) => x.inicioReal !== undefined || x.finReal !== undefined);
   if (conAvance.length > 0 && c.fechaCorte === undefined) {
     problemas.push({ gravedad: 'error', hoja: HOJA_CALENDARIO, mensaje: 'Hay fechas reales en «Actividades» pero falta la «Fecha de corte» en «Calendario» (el día desde el que se cuenta lo que queda)' });
@@ -444,10 +465,85 @@ export function leerCronograma(
     cronograma: {
       inicio: c.inicio,
       calendario: c.calendario,
+      ...(Object.keys(cs.calendarios).length > 0 ? { calendarios: cs.calendarios } : {}),
       actividades: a.actividades,
       ...(c.fechaCorte !== undefined ? { fechaCorte: c.fechaCorte } : {}),
       ...(c.costoIndirectoDia !== undefined ? { costoIndirectoDia: c.costoIndirectoDia } : {}),
     },
     problemas,
   };
+}
+
+/** Fechas escritas como texto «dd/mm/aaaa» (separadas por «;», «,» o saltos), como números de serie. */
+function fechasDeTexto(v: Celda): { fechas: number[]; malas: string[] } {
+  if (typeof v === 'number') return { fechas: [Math.floor(v)], malas: [] };
+  const fechas: number[] = [];
+  const malas: string[] = [];
+  for (const t of String(v ?? '').split(/[;,\n]+/).map((x) => x.trim()).filter(Boolean)) {
+    const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(t);
+    if (!m) {
+      malas.push(t);
+      continue;
+    }
+    const [d, mes, a] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const f = new Date(Date.UTC(a, mes - 1, d));
+    if (f.getUTCDate() !== d || f.getUTCMonth() !== mes - 1) malas.push(t);
+    else fechas.push(Math.round((f.getTime() - Date.UTC(1899, 11, 30)) / 86_400_000));
+  }
+  return { fechas, malas };
+}
+
+/**
+ * V7: la hoja «Calendarios», una fila por calendario: nombre, Sí/No para
+ * cada día de la semana, si usa los festivos del proyecto (Sí si se deja
+ * vacío) y festivos propios («dd/mm/aaaa; dd/mm/aaaa»).
+ */
+export function leerCalendarios(
+  valores: readonly (readonly Celda[])[] | undefined,
+  proyecto: Calendario,
+  primeraFila = 1,
+): { calendarios: Record<string, Calendario>; problemas: ProblemaCronograma[] } {
+  const hoja = HOJA_CALENDARIOS;
+  if (!valores || valores.length === 0) return { calendarios: {}, problemas: [] };
+  const t = leerHojaGenerica(valores, {
+    nombre: ['calendario', 'nombre'],
+    lunes: ['lunes'], martes: ['martes'], miercoles: ['miercoles'], jueves: ['jueves'], viernes: ['viernes'], sabado: ['sabado'], domingo: ['domingo'],
+    delProyecto: ['festivos del proyecto', 'usa los festivos'],
+    propios: ['festivos propios', 'otros festivos', 'festivos'],
+  }, ['nombre', 'lunes'], primeraFila);
+  if (!t.ok) return { calendarios: {}, problemas: [{ gravedad: 'error', hoja, mensaje: `«${hoja}»: ${t.error}` }] };
+  const calendarios: Record<string, Calendario> = {};
+  const problemas: ProblemaCronograma[] = [];
+  for (const f of t.filas) {
+    const nombre = String(f.celda('nombre')).trim();
+    const error = (m: string) => problemas.push({ gravedad: 'error', hoja, fila: f.fila, mensaje: `«${hoja}», fila ${f.fila} («${nombre}»): ${m}` });
+    if (Object.keys(calendarios).some((k) => normalizar(k) === normalizar(nombre))) {
+      error('el nombre está repetido');
+      continue;
+    }
+    const laborables: boolean[] = [];
+    let mal = false;
+    for (const [campo, i] of [['domingo', 0], ['lunes', 1], ['martes', 2], ['miercoles', 3], ['jueves', 4], ['viernes', 5], ['sabado', 6]] as const) {
+      const v = siNo(f.celda(campo));
+      if (v === undefined) {
+        error(`«${String(f.celda(campo))}» en ${campo} — escribe Sí o No`);
+        mal = true;
+        break;
+      }
+      laborables[i] = v;
+    }
+    if (mal) continue;
+    if (!laborables.some(Boolean)) {
+      error('ningún día de la semana es laborable');
+      continue;
+    }
+    const usa = vacia(f.celda('delProyecto')) ? true : siNo(f.celda('delProyecto'));
+    const propios = fechasDeTexto(f.celda('propios'));
+    if (propios.malas.length > 0) {
+      error(`festivos que no son fechas dd/mm/aaaa: ${propios.malas.join(', ')}`);
+      continue;
+    }
+    calendarios[nombre] = { laborables, festivos: new Set([...(usa !== false ? proyecto.festivos : []), ...propios.fechas]) };
+  }
+  return { calendarios, problemas };
 }

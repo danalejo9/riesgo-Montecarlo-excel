@@ -29,7 +29,7 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
         <h2>Resumen ejecutivo</h2>
         <div className="cifras-informe">
           <div><strong>{textoFecha(d.determinista.fin)}</strong><span>{T.finCronograma}</span></div>
-          <div><strong>{miles(d.determinista.dias)}</strong><span>{T.dias}</span></div>
+          <div><strong>{miles(d.determinista.dias)}</strong><span>{d.determinista.unidad === 'naturales' ? T.diasNaturales : T.dias}</span></div>
           <div><strong>{d.determinista.criticas} / {d.determinista.total}</strong><span>{T.criticas}</span></div>
           {s && <div><strong>{textoFecha(s.fechas.p50)}</strong><span>P50</span></div>}
           {s && <div><strong>{textoFecha(s.fechas.p80)}</strong><span>P80</span></div>}

@@ -23,7 +23,7 @@ export interface DatosInformeCronograma {
   generado: string;
   libro?: string;
   plantilla: PlantillaInforme;
-  determinista: { fin: number; dias: number; criticas: number; total: number; rutaCritica: string[]; fechaCorte?: number };
+  determinista: { fin: number; dias: number; unidad?: 'laborables' | 'naturales'; criticas: number; total: number; rutaCritica: string[]; fechaCorte?: number };
   salud?: InformeSalud;
   simulacion?: {
     escenario: 'antes' | 'despues';
@@ -69,6 +69,7 @@ export function datosInformeCronograma(e: {
   filas: readonly FilaCPM[];
   fechaFinProyecto: number;
   duracionProyecto: number;
+  unidad?: 'laborables' | 'naturales';
   salud?: InformeSalud | null;
   simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number } }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
@@ -98,6 +99,7 @@ export function datosInformeCronograma(e: {
     determinista: {
       fin: e.fechaFinProyecto,
       dias: e.duracionProyecto,
+      ...(e.unidad === 'naturales' ? { unidad: 'naturales' as const } : {}),
       criticas: criticas.length,
       total: e.filas.length,
       rutaCritica: criticas.map((f) => f.nombre),

@@ -198,6 +198,175 @@ def fecha_inicio(i, d):
 ES, EF, LS, LF, FIN, _, ESTADO = cpm()
 ES2, EF2, LS2, LF2, FIN2, DUR2, ESTADO2 = cpm(AVANCE, CORTE)
 
+
+# ---------------------------------------------------------------------------
+# V7: calendarios por actividad. Eje de días naturales (0 = INICIO); cada
+# actividad avanza con el «reloj» de su calendario. Retardos en el calendario
+# de la predecesora; holgura en días del calendario de la actividad. Mismas
+# reglas que engine/cronograma/relojes.ts y cpmCalendarios.ts, escritas aparte.
+# ---------------------------------------------------------------------------
+FESTIVOS_PROYECTO = {f for f, _ in FESTIVOS}
+# nombre: (días laborables como weekday() de Python, usa los festivos del proyecto, festivos propios)
+CALENDARIOS_V7 = {
+    "6 días": ({0, 1, 2, 3, 4, 5}, True, []),
+    "Continuo": ({0, 1, 2, 3, 4, 5, 6}, False, []),
+    "Proveedor": ({0, 1, 2, 3, 4}, False, [dt.date(2027, 5, 31), dt.date(2027, 7, 5)]),
+}
+ASIGNACION_V7 = {"6": "6 días", "7": "6 días", "8": "Proveedor", "20": "Continuo"}
+
+
+class RelojPy:
+    def __init__(self, laborables, festivos):
+        self.lab = []
+        self.acum = [0]
+        self.pos = []
+        self.laborables, self.festivos = laborables, set(festivos)
+        self._hasta(4000)
+
+    def _hasta(self, n):
+        while len(self.lab) < n:
+            k = len(self.lab)
+            d = INICIO + dt.timedelta(days=k)
+            es = d.weekday() in self.laborables and d not in self.festivos
+            self.lab.append(es)
+            self.acum.append(self.acum[-1] + (1 if es else 0))
+            if es:
+                self.pos.append(k)
+
+    def W(self, t):
+        if t <= 0:
+            return 0.0
+        k = math.floor(t)
+        return self.acum[k] + (t - k if self.lab[k] else 0)
+
+    def fin(self, w):
+        if w <= 0:
+            return 0.0
+        j = math.ceil(w - 1e-12) - 1
+        return self.pos[j] + (w - j)
+
+    def comienzo(self, w):
+        x = max(0.0, w)
+        j = math.floor(x + 1e-12)
+        return self.pos[j] + max(0.0, x - j)
+
+    def alinear_inicio(self, t):
+        return self.comienzo(self.W(t))
+
+    def alinear_fin(self, t):
+        w = self.W(t)
+        return self.fin(w) if w > 0 else 0.0
+
+    def avanzar(self, t, x):
+        if x > 0:
+            return self.fin(self.W(t) + x)
+        if x < 0:
+            return self.comienzo(self.W(t) + x)
+        return t
+
+    def retro_fin(self, t, x):
+        if x == 0:
+            return t
+        w = self.W(t) - x
+        return self.fin(w) if w > 0 else 0.0
+
+    def retro_inicio(self, t, x):
+        return t if x == 0 else self.comienzo(self.W(t) - x)
+
+    def inicio_para_fin(self, f, d):
+        return self.comienzo(self.W(f) - d) if d > 0 else f
+
+
+RELOJ_PROYECTO = RelojPy(LABORABLES, FESTIVOS_PROYECTO)
+RELOJES_V7 = {n: RelojPy(lab, (FESTIVOS_PROYECTO if usa else set()) | set(propios))
+              for n, (lab, usa, propios) in CALENDARIOS_V7.items()}
+
+
+def reloj_de(k):
+    return RELOJES_V7[ASIGNACION_V7[k]] if k in ASIGNACION_V7 else RELOJ_PROYECTO
+
+
+def orden_y_sucesoras():
+    preds = {a[0]: leer_preds(a[3]) for a in ACTIVIDADES}
+    orden, hecho = [], set()
+    while len(orden) < len(ACTIVIDADES):
+        for a in ACTIVIDADES:
+            if a[0] not in hecho and all(p in hecho for p, _, _ in preds[a[0]]):
+                orden.append(a[0])
+                hecho.add(a[0])
+    sucs = {a[0]: [] for a in ACTIVIDADES}
+    for s_ in orden:
+        for p, t, r in preds[s_]:
+            sucs[p].append((s_, t, r))
+    return preds, orden, sucs
+
+
+def adelante_cal(dur, preds, orden, min_ini):
+    es, ef = {}, {}
+    for s_ in orden:
+        rs, d = reloj_de(s_), dur[s_]
+        v = min_ini[s_]
+        for p, t, r in preds[s_]:
+            rp = reloj_de(p)
+            if t == "FS":
+                x = rp.avanzar(ef[p], r)
+            elif t == "SS":
+                x = rp.avanzar(es[p], r)
+            elif t == "FF":
+                x = rs.inicio_para_fin(rp.avanzar(ef[p], r), d)
+            else:
+                x = rs.inicio_para_fin(rp.avanzar(es[p], r), d)
+            v = max(v, x)
+        if d > 0:
+            v = rs.alinear_inicio(v)
+        es[s_], ef[s_] = v, rs.avanzar(v, d)
+    return es, ef
+
+
+def atras_cal(dur, orden, sucs, es, ef, fin):
+    ls, lf = {}, {}
+    for p in reversed(orden):
+        rp, d = reloj_de(p), dur[p]
+        v = fin
+        for s_, t, r in sucs[p]:
+            if t == "FS":
+                x = rp.retro_fin(ls[s_], r)
+            elif t == "SS":
+                x = rp.avanzar(rp.retro_inicio(ls[s_], r), d)
+            elif t == "FF":
+                x = rp.retro_fin(lf[s_], r)
+            else:
+                x = rp.avanzar(rp.retro_inicio(lf[s_], r), d)
+            v = min(v, x)
+        if d > 0:
+            v = rp.alinear_fin(v)
+        lf[p], ls[p] = v, rp.inicio_para_fin(v, d)
+    return ls, lf
+
+
+def min_inicio_cal():
+    return {a[0]: ((a[9] - INICIO).days if a[9] is not None else 0) for a in ACTIVIDADES}
+
+
+def cpm_cal():
+    preds, orden, sucs = orden_y_sucesoras()
+    dur = {a[0]: a[2] for a in ACTIVIDADES}
+    es, ef = adelante_cal(dur, preds, orden, min_inicio_cal())
+    fin = max(ef.values())
+    ls, lf = atras_cal(dur, orden, sucs, es, ef, fin)
+    return es, ef, ls, lf, fin
+
+
+def fecha_eje_fin(f, d):
+    return INICIO + dt.timedelta(days=max(0, math.ceil(f - 1e-9) - 1)) if (d > 0 or f > 0) else INICIO
+
+
+def fecha_eje_inicio(i, d):
+    return fecha_eje_fin(i, 0) if d == 0 else INICIO + dt.timedelta(days=int(math.floor(i + 1e-9)))
+
+
+ES7, EF7, LS7, LF7, FIN7 = cpm_cal()
+
 # ---------------------------------------------------------------------------
 # Riesgos de plazo (risk drivers, AACE 57R-09): probabilidad, impacto en % de
 # la duración y actividades afectadas (por ID o por categoría).
@@ -311,6 +480,43 @@ def monte_carlo(rangos=None):
             costo_pct, jcl)
 
 
+def monte_carlo_cal():
+    """V7: el mismo Monte Carlo (PERT + riesgos) con el reloj de cada actividad."""
+    import random
+    rng = random.Random(20270707)
+    acts = {a[0]: a for a in ACTIVIDADES}
+    preds, orden, sucs = orden_y_sucesoras()
+    min_ini = min_inicio_cal()
+    riesgos = [(r, afectadas(r[6])) for r in RIESGOS]
+    fines, crit, costos = [], {a[0]: 0 for a in ACTIVIDADES}, []
+    fijo = sum(COSTO_FIJO.values())
+    for _ in range(ITERACIONES_MC):
+        d = {a[0]: (pert_muestra(rng, a[4], a[5], a[6]) if a[4] is not None else a[2]) for a in ACTIVIDADES}
+        costo = fijo
+        for (rid, _, p, lo, mp, hi, _), ids in riesgos:
+            if rng.random() < p:
+                f = 1 + pert_muestra(rng, lo, mp, hi)
+                for i in ids:
+                    d[i] *= f
+                costo += COSTO_RIESGO.get(rid, 0)
+        es, ef = adelante_cal(d, preds, orden, min_ini)
+        fin = max(ef.values())
+        ls, lf = atras_cal(d, orden, sucs, es, ef, fin)
+        for k in d:
+            r = reloj_de(k)
+            if r.W(ls[k]) - r.W(es[k]) < 1e-9:
+                crit[k] += 1
+        fines.append(max(0, math.ceil(fin - 1e-9) - 1))  # día natural de fin
+        costos.append(costo + sum(acts[k][8] * d[k] for k in d) + COSTO_INDIRECTO_DIA * RELOJ_PROYECTO.W(fin))
+    fines_ord, costos_ord = sorted(fines), sorted(costos)
+    def cuantil(lista, p):
+        return lista[max(1, math.ceil(p * len(lista) - 1e-9)) - 1]
+    d80, c80 = cuantil(fines_ord, 0.8), cuantil(costos_ord, 0.8)
+    jcl = sum(1 for f, c in zip(fines, costos) if f <= d80 and c <= c80) / len(fines)
+    return ({p: INICIO + dt.timedelta(days=cuantil(fines_ord, p)) for p in (0.1, 0.5, 0.8, 0.9)},
+            {k: v / ITERACIONES_MC for k, v in crit.items()}, {p: cuantil(costos_ord, p) for p in (0.1, 0.5, 0.8, 0.9)}, jcl)
+
+
 def optimismo(tareas):
     """V6: rangos estrechos (ancho < 15 % del más probable), sesgados a acortar
     (más margen por debajo que por encima) o todos con el mismo porcentaje."""
@@ -365,6 +571,7 @@ COSTO_RANGOS = {
     "10": (None, None, 1600, 2400),        # instalaciones eléctricas
 }
 COSTO_PCT_V4, JCL_V4, P80_SIN_RANGOS_V4, MEDIA_V4 = monte_carlo(COSTO_RANGOS)
+PCT7, CRIT7, COSTO_PCT7, JCL7 = monte_carlo_cal()
 COSTO_DET = (sum(COSTO_FIJO.values()) + sum(a[8] * a[2] for a in ACTIVIDADES) + COSTO_INDIRECTO_DIA * FIN)
 SALUD = salud()
 
@@ -401,6 +608,8 @@ LINEAS = [
     ("p", "% completado, duración restante y restricciones de fin, con su resultado esperado."),
     ("p", "«Costos inciertos (prueba)» y «Esperado (costos inciertos)»: mínimo y máximo de algunos costos (V4)"),
     ("p", "y el Monte Carlo de referencia con ellos."),
+    ("p", "«Calendarios (prueba)» y «Esperado (calendarios)»: tres calendarios (6 días, continuo, proveedor"),
+    ("p", "extranjero) para cuatro actividades, con su CPM y su Monte Carlo de referencia (V7)."),
     ("", ""),
     ("h", "Cómo se usa"),
     ("p", "Panel → pestaña Cronograma → «Calcular cronograma». Escribe la hoja «Cronograma (resultado)»."),
@@ -430,7 +639,9 @@ CABECERA = ["ID", "Actividad", "Duración (días)", "Predecesoras", "Mínimo", "
             "Inicio real", "Fin real", "% completado", "Duración restante",
             "Inicio no después de", "Terminar no antes de", "Terminar no después de", "Costo fijo",
             # V4: incertidumbre de los costos (vacías en el escenario base; ver «Costos inciertos (prueba)»).
-            "Costo fijo mínimo", "Costo fijo máximo", "Costo por día mínimo", "Costo por día máximo"]
+            "Costo fijo mínimo", "Costo fijo máximo", "Costo por día mínimo", "Costo por día máximo",
+            # V7: vacía en el escenario base (todas con el calendario del proyecto); ver «Calendarios (prueba)».
+            "Calendario"]
 for j, t in enumerate(CABECERA, start=1):
     c = act.cell(row=3, column=j, value=t)
     c.font, c.fill = CAB, FONDO
@@ -448,7 +659,7 @@ for i, a in enumerate(ACTIVIDADES, start=4):
 for i in range(4, 4 + len(ACTIVIDADES)):
     for j in (19, 20, 21, 22):
         act.cell(row=i, column=j).number_format = DINERO
-for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19], start=1):
+for j, w in enumerate([6, 32, 15, 16, 10, 13, 10, 15, 14, 18, 12, 12, 13, 17, 19, 19, 21, 13, 17, 17, 19, 19, 14], start=1):
     act.column_dimensions[get_column_letter(j)].width = w
 for i in range(4, 4 + len(ACTIVIDADES)):
     for j in (11, 12, 15, 16, 17):
@@ -645,6 +856,71 @@ for i, (nombre, v) in enumerate([("Determinista (exacto; con los más probables)
     ev.cell(row=i, column=2, value=round(v, 4) if nombre.startswith("JCL") else round(v, 2)).number_format = "0%" if nombre.startswith("JCL") else DINERO
 ev.column_dimensions["A"].width = 46
 ev.column_dimensions["B"].width = 16
+
+# V7: calendarios por actividad.
+cp = wb.create_sheet("Calendarios (prueba)")
+cp["A1"] = ("V7: copia la tabla de abajo en una hoja nueva «Calendarios» (desde A3) y escribe el calendario de cada "
+            "actividad en la columna «Calendario» de «Actividades» (las demás, vacías: calendario del proyecto).")
+cp["A1"].font = H
+CAB_CP = ["Calendario", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
+          "Festivos del proyecto", "Festivos propios (dd/mm/aaaa; …)"]
+for j, t in enumerate(CAB_CP, start=1):
+    c = cp.cell(row=3, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, (nombre, (lab, usa, propios)) in enumerate(CALENDARIOS_V7.items(), start=4):
+    fila = [nombre] + ["Sí" if w in lab else "No" for w in (0, 1, 2, 3, 4, 5, 6)] + \
+           ["Sí" if usa else "No", "; ".join(f.strftime("%d/%m/%Y") for f in propios)]
+    for j, v in enumerate(fila, start=1):
+        cp.cell(row=i, column=j, value=v)
+cp["A9"], cp["B9"] = "ID", "Calendario"
+for c in (cp["A9"], cp["B9"]):
+    c.font, c.fill = CAB, FONDO
+for i, (k, n) in enumerate(ASIGNACION_V7.items(), start=10):
+    cp.cell(row=i, column=1, value=k)
+    cp.cell(row=i, column=2, value=n)
+for j, w in enumerate([14, 8, 8, 10, 8, 8, 8, 9, 20, 36], start=1):
+    cp.column_dimensions[get_column_letter(j)].width = w
+
+ec = wb.create_sheet("Esperado (calendarios)")
+ec["A1"] = ("CPM esperado con «Calendarios (prueba)», calculado por el script: eje de días naturales; retardos en el "
+            "calendario de la predecesora; holgura en días del calendario de cada actividad.")
+ec["A1"].font = H
+ec["A2"], ec["B2"] = "Fin del proyecto", fecha_eje_fin(FIN7, 1)
+ec["B2"].number_format = FECHA
+ec["A3"], ec["B3"] = "Duración (días naturales)", FIN7
+for j, t in enumerate(["ID", "Actividad", "Duración", "Inicio", "Fin", "Inicio tardío", "Fin tardío",
+                       "Holgura total", "Crítica", "Estado"], start=1):
+    c = ec.cell(row=5, column=j, value=t)
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=6):
+    k, d = a[0], a[2]
+    r = reloj_de(k)
+    holgura = r.W(LS7[k]) - r.W(ES7[k])
+    fila = [k, a[1], d, fecha_eje_inicio(ES7[k], d), fecha_eje_fin(EF7[k], d), fecha_eje_inicio(max(0, LS7[k]), d),
+            fecha_eje_fin(LF7[k], d), 0 if abs(holgura) < 1e-9 else round(holgura, 6), "Sí" if holgura < 1e-9 else "No", "Pendiente"]
+    for j, v in enumerate(fila, start=1):
+        c = ec.cell(row=i, column=j, value=v)
+        if 4 <= j <= 7:
+            c.number_format = FECHA
+        if j == 9 and v == "Sí":
+            c.fill = AMARILLO
+ec["L5"], ec["M5"], ec["N5"] = "Monte Carlo (Python)", "Fecha", "Costo"
+for c in (ec["L5"], ec["M5"], ec["N5"]):
+    c.font, c.fill = CAB, FONDO
+for i, p in enumerate((0.1, 0.5, 0.8, 0.9), start=6):
+    ec.cell(row=i, column=12, value=f"P{int(p * 100)}")
+    ec.cell(row=i, column=13, value=PCT7[p]).number_format = FECHA
+    ec.cell(row=i, column=14, value=round(COSTO_PCT7[p], 2)).number_format = DINERO
+ec.cell(row=10, column=12, value="JCL")
+ec.cell(row=10, column=13, value=round(JCL7, 4)).number_format = "0%"
+ec["L12"], ec["M12"] = "ID", "Criticidad"
+for c in (ec["L12"], ec["M12"]):
+    c.font, c.fill = CAB, FONDO
+for i, a in enumerate(ACTIVIDADES, start=13):
+    ec.cell(row=i, column=12, value=a[0])
+    ec.cell(row=i, column=13, value=round(CRIT7[a[0]], 3)).number_format = "0%"
+for j, w in enumerate([6, 32, 10, 12, 12, 13, 12, 13, 8, 11, 3, 20, 12, 14], start=1):
+    ec.column_dimensions[get_column_letter(j)].width = w
 
 
 # ---------------------------------------------------------------------------

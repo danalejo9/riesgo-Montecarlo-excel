@@ -81,7 +81,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     try {
       const hojas = await leerHojasCronograma();
       setSeguimiento(leerSeguimiento(hojas.seguimiento));
-      const lectura = leerCronograma(hojas.actividades, hojas.calendario);
+      const lectura = leerCronograma(hojas.actividades, hojas.calendario, hojas.calendarios);
       const cron = lectura.cronograma;
       if (!cron) {
         setProblemas(lectura.problemas);
@@ -212,6 +212,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         filas: resultado.filas,
         fechaFinProyecto: resultado.fechaFinProyecto,
         duracionProyecto: resultado.duracionProyecto,
+        unidad: resultado.unidad,
         salud,
         ...(simulado ? { simulado } : {}),
         ...(simulado?.comparacion ? { comparacion: simulado.comparacion } : {}),
@@ -332,7 +333,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         <>
           <div className="cifras fechas">
             <div><span className="cifra">{textoFecha(resultado.fechaFinProyecto)}</span><span className="cifra-nombre">{T.finProyecto}</span></div>
-            <div><span className="cifra">{resultado.duracionProyecto}</span><span className="cifra-nombre">{T.dias}</span></div>
+            <div><span className="cifra">{resultado.duracionProyecto}</span><span className="cifra-nombre">{resultado.unidad === 'naturales' ? T.diasNaturales : T.dias}</span></div>
             <div><span className="cifra">{criticas.length} / {resultado.filas.length}</span><span className="cifra-nombre">{T.criticas}</span></div>
           </div>
           <p className="tenue">{T.rutaCritica}: {criticas.map((f) => f.nombre).join(' → ')}</p>
