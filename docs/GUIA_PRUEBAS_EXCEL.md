@@ -947,6 +947,34 @@ máximo → «…falta el costo fijo (el valor más probable)». Deshaz los
 cambios al terminar (y borra las columnas S–V para volver a las cifras de
 las demás pruebas).
 
+**Q51. Seguimiento en el tiempo (V5).** Con el libro de pruebas sin
+cambios, pon en «Calendario»!B2 la fecha de corte **01/02/2027** (el inicio:
+no cambia nada). Calcula, simula («Antes de mitigar», 10.000, PERT) y pulsa
+**Guardar instantánea** (bajo los resultados) → «Instantánea guardada en
+“Cronograma (seguimiento)” (1 en total).». La hoja nueva tiene una fila: P80
+24/08/2027, prob. de cumplir 1 %, costo P80 US$ 1.343.353. Ahora copia
+«Avance (prueba)» en «Actividades» **salvo la columna «Terminar no después
+de»** (esa fecha límite pone la salud en rojo y no deja simular) y su
+fecha de corte (15/03/2027) en B2. Calcula, simula y guarda otra vez.
+Esperado:
+- «Instantánea guardada… (2 en total).» y, en **Seguimiento en el
+  tiempo**: «Desde el corte del 01/02/2027, el P80 se ha adelantado 4 días
+  de calendario: del 24/08/2027 al 20/08/2027.», «La probabilidad de cumplir
+  el cronograma subió del 1 % al 5 %.» y «El P80 del costo bajó US$ 5.284, a
+  US$ 1.338.069.», con el gráfico de las tres líneas.
+- En la hoja, dos filas y un **gráfico de líneas** (Cronograma, P50, P80)
+  con fechas en los ejes (en Excel antiguo, números de serie: anótalo).
+- Escribe algo en la columna «Nota» de la primera fila y vuelve a pulsar
+  Guardar instantánea: «Reemplazada la instantánea del corte del
+  15/03/2027…», siguen siendo dos filas y **tu nota sigue ahí**.
+- El informe PDF (Q47) tiene la sección «Seguimiento en el tiempo» con el
+  gráfico, las frases y la tabla (con la nota).
+
+**Q52. Sin fecha de corte.** Deja B2 vacía (sin avance) y guarda una
+instantánea: el panel avisa «Sin fecha de corte…, se guarda con la fecha de
+hoy», y cada vez que guardes se añade una fila nueva. Al terminar, borra la
+hoja «Cronograma (seguimiento)» y deshaz el avance.
+
 ---
 
 ## A. Lo básico, en la hoja «Modelo»

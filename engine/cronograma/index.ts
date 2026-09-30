@@ -15,3 +15,4 @@ export * from './red.ts';
 export * from './importar/index.ts';
 export * from './rangos.ts';
 export * from './mitigacion.ts';
+export * from './seguimiento.ts';

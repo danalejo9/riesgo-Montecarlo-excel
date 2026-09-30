@@ -165,3 +165,47 @@ export function GanttImpreso({ vista }: { vista: VistaGantt }) {
     </svg>
   );
 }
+
+/** V5: la tendencia de las instantáneas: fin del cronograma, P50 y P80 en cada fecha de referencia. */
+export function TendenciaPlazo({ puntos, titulo, nombres }: {
+  puntos: ReadonlyArray<{ referencia: number; finCronograma: number; p50: number; p80: number }>;
+  titulo: string;
+  nombres: { cronograma: string; p50: string; p80: string };
+}) {
+  if (puntos.length < 2) return null;
+  const W = 300;
+  const H = 130;
+  const IZQ = 44;
+  const xs = puntos.map((p) => p.referencia);
+  const ys = puntos.flatMap((p) => [p.finCronograma, p.p50, p.p80]).filter(Number.isFinite);
+  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const px = (v: number) => IZQ + ((v - x0) / Math.max(1, x1 - x0)) * (W - IZQ - 8);
+  const py = (v: number) => H - 6 - ((v - y0) / Math.max(1, y1 - y0)) * (H - 16);
+  const serie = (clave: 'finCronograma' | 'p50' | 'p80') =>
+    puntos.filter((p) => Number.isFinite(p[clave])).map((p, i) => `${i === 0 ? 'M' : 'L'}${px(p.referencia)},${py(p[clave])}`).join(' ');
+  const estilos = [
+    { clave: 'finCronograma' as const, color: 'var(--tenue, #888)', guion: '4 3', nombre: nombres.cronograma },
+    { clave: 'p50' as const, color: 'var(--serie-1, #2a78d6)', guion: undefined, nombre: nombres.p50 },
+    { clave: 'p80' as const, color: 'var(--acento)', guion: undefined, nombre: nombres.p80 },
+  ];
+  return (
+    <figure style={{ margin: '8px 0' }}>
+      <figcaption className="tenue" style={{ fontSize: 12 }}>{titulo}</figcaption>
+      <svg viewBox={`0 0 ${W} ${H + 28}`} width="100%" role="img" aria-label={titulo}>
+        <text x={0} y={py(y1) + 3} fontSize="9" fill="currentColor">{textoFecha(y1)}</text>
+        <text x={0} y={py(y0) + 3} fontSize="9" fill="currentColor">{textoFecha(y0)}</text>
+        {estilos.map((e) => <path key={e.clave} d={serie(e.clave)} fill="none" stroke={e.color} strokeWidth={e.clave === 'p80' ? 2 : 1.5} strokeDasharray={e.guion} />)}
+        {puntos.map((p) => <circle key={p.referencia} cx={px(p.referencia)} cy={py(p.p80)} r={2.2} fill="var(--acento)" />)}
+        <text x={IZQ} y={H + 10} fontSize="9" fill="currentColor">{textoFecha(x0)}</text>
+        <text x={W - 8} y={H + 10} fontSize="9" fill="currentColor" textAnchor="end">{textoFecha(x1)}</text>
+        {estilos.map((e, i) => (
+          <g key={e.clave} transform={`translate(${IZQ + i * 85},${H + 22})`}>
+            <line x1={0} x2={14} y1={-3} y2={-3} stroke={e.color} strokeWidth={2} strokeDasharray={e.guion} />
+            <text x={18} y={0} fontSize="9" fill="currentColor">{e.nombre}</text>
+          </g>
+        ))}
+      </svg>
+    </figure>
+  );
+}

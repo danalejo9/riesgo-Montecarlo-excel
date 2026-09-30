@@ -14,11 +14,15 @@ import {
   simularPlazo, simularPlazoEnParalelo, OPCIONES_PLAZO_POR_DEFECTO,
   type Cronograma as ModeloCronograma, type FormaDuracion, type ImpactoRiesgo, type InformeSalud, type ProblemaCronograma,
   type ResultadoCPM, type ResultadoSimulacionPlazo, type RiesgoPlazo, type Semaforo,
+  agregarInstantanea, hojaSeguimiento, instantaneaDe, leerSeguimiento, serieLocal, tendencia, type Instantanea,
 } from '../engine/cronograma/index.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
 import { tieneCapacidad } from '../engine/licencia/capacidades.ts';
-import { escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSimulacion, escribirPlantillaCronograma, escribirResultadoCPM, leerHojasCronograma } from '../excel/cronograma.ts';
+import {
+  escribirCeldasActividades, escribirCronogramaImportado, escribirHojaGantt, escribirHojaSeguimiento, escribirHojaSimulacion, escribirPlantillaCronograma,
+  escribirResultadoCPM, leerHojaSeguimiento, leerHojasCronograma,
+} from '../excel/cronograma.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import { datosInformeCronograma } from '../excel/informeCronograma.ts';
@@ -26,7 +30,7 @@ import { codificarInforme } from '../excel/informeImprimible.ts';
 import { abrirVentana, ventanaAbierta } from '../excel/ventana.ts';
 import { Plegable } from './Plegable.tsx';
 import { abrirEnNavegador } from './Resultados.tsx';
-import { HistogramaFechas, NubeCostoPlazo } from './graficosCronograma.tsx';
+import { HistogramaFechas, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { crearHilosPlazo } from './motor/plazoNavegador.ts';
 import { hilosEfectivos, leerPreferenciaHilos } from './motor/preferencias.ts';
 import { textosCronograma as T } from './textos/es.ts';
@@ -64,6 +68,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
   const [pctMenos, setPctMenos] = useState(10);
   const [pctMas, setPctMas] = useState(25);
   const [escenario, setEscenario] = useState<'antes' | 'despues' | 'comparar'>('antes');
+  const [seguimiento, setSeguimiento] = useState<Instantanea[]>([]);
 
   if (!tieneCapacidad('cronograma')) {
     return <section><p className="aviso-linea">{T.sinCapacidad}</p></section>;
@@ -75,6 +80,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     setSimulado(null);
     try {
       const hojas = await leerHojasCronograma();
+      setSeguimiento(leerSeguimiento(hojas.seguimiento));
       const lectura = leerCronograma(hojas.actividades, hojas.calendario);
       const cron = lectura.cronograma;
       if (!cron) {
@@ -183,6 +189,20 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
     }
   };
 
+  /** V5: guarda la última simulación como instantánea (una por fecha de corte y escenario). */
+  const guardarInstantanea = async () => {
+    if (!simulado || !datos) return;
+    try {
+      const nueva = instantaneaDe(simulado.r, { fechaCorte: datos.cron.fechaCorte, escenario: simulado.escenario, ahora: serieLocal(new Date()) });
+      const { lista, reemplazada } = agregarInstantanea(leerSeguimiento(await leerHojaSeguimiento()), nueva);
+      await escribirHojaSeguimiento(hojaSeguimiento(lista));
+      setSeguimiento(lista);
+      setNota(reemplazada && nueva.fechaCorte !== undefined ? T.instantaneaReemplazada(textoFecha(nueva.fechaCorte)) : T.instantaneaGuardada(lista.length));
+    } catch (e) {
+      alFallar(e);
+    }
+  };
+
   /** V3: el informe PDF, con la plantilla del libro y lo último calculado y simulado. */
   const abrirInforme = async () => {
     if (!resultado || !datos) return;
@@ -195,6 +215,7 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         salud,
         ...(simulado ? { simulado } : {}),
         ...(simulado?.comparacion ? { comparacion: simulado.comparacion } : {}),
+        seguimiento,
         plantilla: await plantillaDelLibro(),
       });
       abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${await codificarInforme(d)}`);
@@ -352,6 +373,13 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
           </p>
           {salud.bloquea && <p className="aviso-linea">{T.saludBloquea}</p>}
           {simulado && <ResultadoPlazo s={simulado} />}
+          {simulado && !simulado.r.cancelada && (
+            <p title={T.seguimientoAyuda}>
+              <button type="button" onClick={guardarInstantanea} disabled={ocupado !== null}>{T.guardarInstantanea}</button>{' '}
+              {datos?.cron.fechaCorte === undefined && <span className="tenue">{T.sinCorteAviso}</span>}
+            </p>
+          )}
+          {seguimiento.length > 0 && <Seguimiento lista={seguimiento} />}
         </>
       )}
     </section>
@@ -500,6 +528,17 @@ function Nube({ r }: { r: ResultadoSimulacionPlazo }) {
     max = Math.max(max, f);
   }
   return <NubeCostoPlazo puntos={puntos} p80Dias={r.dias.p80} p80Costo={c.p80} fechaMin={r.cal(min)} fechaMax={r.cal(max)} titulo={T.nube} />;
+}
+
+/** V5: la tendencia de las instantáneas guardadas. */
+function Seguimiento({ lista }: { lista: Instantanea[] }) {
+  return (
+    <Plegable id="cronograma-seguimiento" abierta titulo={T.seguimiento} resumen={lista.length === 1 ? T.unaInstantanea : T.instantaneas(lista.length)}>
+      {lista.length === 1 && <p className="tenue">{T.unaInstantanea}</p>}
+      {tendencia(lista).map((l) => <p key={l}>{l}</p>)}
+      <TendenciaPlazo puntos={lista} titulo={T.tendencia} nombres={{ cronograma: T.serieCronograma, p50: 'P50', p80: 'P80' }} />
+    </Plegable>
+  );
 }
 
 /** V1: antes y después de mitigar, y lo que rinde cada respuesta. */

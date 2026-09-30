@@ -360,7 +360,7 @@ const ajustes = new Map<string, string>();
  * colores y gráficos se aceptan y se cuentan, no se dibujan.
  */
 export const hojasMatriz = new Map<string, { valores: unknown[][]; graficos: number }>();
-const NOMBRES_MATRIZ = ['Actividades', 'Calendario', 'Riesgos de plazo', 'Cronograma (resultado)', 'Cronograma (simulación)', 'Cronograma (Gantt)', 'Plazo simulado', 'Cronograma (mitigación)'];
+const NOMBRES_MATRIZ = ['Actividades', 'Calendario', 'Riesgos de plazo', 'Cronograma (resultado)', 'Cronograma (simulación)', 'Cronograma (Gantt)', 'Plazo simulado', 'Cronograma (mitigación)', 'Cronograma (seguimiento)'];
 
 function columnaDe(letras: string): number {
   let n = 0;

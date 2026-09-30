@@ -7,7 +7,7 @@
 
 import {
   HOJA_ACTIVIDADES, HOJA_CALENDARIO, HOJA_RIESGOS, FORMATO_FECHA, hojaResultadoCPM, plantillaActividades, plantillaCalendario,
-  plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe,
+  plantillaRiesgos, HOJA_GANTT, hojaActividadesDe, hojaCalendarioDe, HOJA_SEGUIMIENTO,
   type CronogramaImportado, type HojaAEscribir, type HojaGantt, type ResultadoCPM,
 } from '../engine/cronograma/index.ts';
 import { serieDeDate } from '../engine/cronograma/calendario.ts';
@@ -27,12 +27,26 @@ async function valoresDeHoja(context: Excel.RequestContext, nombre: string): Pro
   return rango.values as unknown[][];
 }
 
-export async function leerHojasCronograma(): Promise<{ actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][] }> {
+export async function leerHojasCronograma(): Promise<{ actividades?: unknown[][]; calendario?: unknown[][]; riesgos?: unknown[][]; seguimiento?: unknown[][] }> {
   return Excel.run(async (context) => ({
     actividades: await valoresDeHoja(context, HOJA_ACTIVIDADES),
     calendario: await valoresDeHoja(context, HOJA_CALENDARIO),
     riesgos: await valoresDeHoja(context, HOJA_RIESGOS),
+    seguimiento: await valoresDeHoja(context, HOJA_SEGUIMIENTO),
   }));
+}
+
+/** V5: la hoja «Cronograma (seguimiento)» tal como está (para añadirle una instantánea). */
+export async function leerHojaSeguimiento(): Promise<unknown[][] | undefined> {
+  return Excel.run((context) => valoresDeHoja(context, HOJA_SEGUIMIENTO));
+}
+
+/** V5: reescribe «Cronograma (seguimiento)» entera (las instantáneas y el gráfico de tendencia). */
+export async function escribirHojaSeguimiento(h: HojaAEscribir): Promise<string> {
+  return Excel.run(async (context) => {
+    await escribirHoja(context, h, true);
+    return h.nombre;
+  });
 }
 
 /** Escribe una hoja entera. `reemplazar`: si existe, se vacía; si no, no se toca y se devuelve `false`. */
@@ -72,9 +86,17 @@ async function escribirHoja(context: Excel.RequestContext, h: HojaAEscribir, ree
   for (const f of h.resaltar ?? []) hoja.getRangeByIndexes(f, 0, 1, ancho).format.fill.color = '#FFF2CC';
   for (const g of h.graficos ?? []) {
     const tipo = g.tipo === 'puntos' ? Excel.ChartType.xyscatter : Excel.ChartType.xyscatterLinesNoMarkers;
-    const grafico = hoja.charts.add(tipo, hoja.getRangeByIndexes(g.fila, g.col, g.filas, 2), Excel.ChartSeriesBy.columns);
+    const series = g.series ?? 1;
+    const grafico = hoja.charts.add(tipo, hoja.getRangeByIndexes(g.fila, g.col, g.filas, 1 + series), Excel.ChartSeriesBy.columns);
     grafico.title.text = g.titulo;
-    grafico.legend.visible = false;
+    grafico.legend.visible = series > 1 && g.encabezado === true;
+    // V5: fechas en los ejes (ExcelApi 1.8); sin ella, el eje enseña números de serie, que es lo de antes.
+    if ((g.formatoX || g.formatoY) && typeof Office !== 'undefined' && Office.context?.requirements?.isSetSupported('ExcelApi', '1.8')) {
+      // `axes` falta en el banco de pruebas (su Excel falso no tiene ejes).
+      const ejes = grafico.axes as Excel.ChartAxes | undefined;
+      if (ejes && g.formatoX) ejes.categoryAxis.numberFormat = g.formatoX;
+      if (ejes && g.formatoY) ejes.valueAxis.numberFormat = g.formatoY;
+    }
     grafico.setPosition(hoja.getRangeByIndexes(g.anclaFila, g.anclaCol, 1, 1), hoja.getRangeByIndexes(g.anclaFila + 16, g.anclaCol + 5, 1, 1));
   }
   hoja.getRange('A1').format.font.bold = true;

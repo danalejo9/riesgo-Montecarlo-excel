@@ -5,7 +5,7 @@
  */
 
 import {
-  vistaGantt, type ComparacionMitigacion, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
+  tendencia, vistaGantt, type ComparacionMitigacion, type Instantanea, type Cronograma, type FilaCPM, type ImpactoRiesgo, type InformeSalud,
   type ResultadoSimulacionPlazo, type VistaGantt,
 } from '../engine/cronograma/index.ts';
 import type { PlantillaInforme } from './plantillaInforme.ts';
@@ -13,6 +13,8 @@ import type { PlantillaInforme } from './plantillaInforme.ts';
 /** Barras del Gantt que caben en un informe; si hay más, las más críticas. */
 export const GANTT_MAXIMO = 80;
 const NUBE_MAXIMO = 400;
+/** Instantáneas que van al informe (las últimas). */
+const SEGUIMIENTO_MAXIMO = 24;
 
 export interface DatosInformeCronograma {
   version: 1;
@@ -58,6 +60,8 @@ export interface DatosInformeCronograma {
     porRespuesta: ComparacionMitigacion['porRespuesta'];
   };
   gantt: VistaGantt & { truncado: boolean };
+  /** V5: las últimas instantáneas de «Cronograma (seguimiento)» y la tendencia en palabras. */
+  seguimiento?: { instantaneas: Instantanea[]; tendencia: string[] };
 }
 
 export function datosInformeCronograma(e: {
@@ -68,6 +72,7 @@ export function datosInformeCronograma(e: {
   salud?: InformeSalud | null;
   simulado?: { r: ResultadoSimulacionPlazo; impacto?: { porRiesgo: ImpactoRiesgo[]; sinRiesgos: { p80: number } }; narrativa: string[]; hilos: number; escenario: 'antes' | 'despues' };
   comparacion?: { cmp: ComparacionMitigacion; narrativa: string[] };
+  seguimiento?: readonly Instantanea[];
   plantilla: PlantillaInforme;
   titulo?: string;
   libro?: string;
@@ -147,6 +152,9 @@ export function datosInformeCronograma(e: {
         .slice(0, 15)
         .map((a) => ({ id: a.id, nombre: a.nombre, criticidad: a.criticidad, finP50: a.fin.p50, finP80: a.fin.p80 })),
     };
+  }
+  if (e.seguimiento && e.seguimiento.length > 0) {
+    datos.seguimiento = { instantaneas: e.seguimiento.slice(-SEGUIMIENTO_MAXIMO), tendencia: tendencia(e.seguimiento) };
   }
   if (e.comparacion) {
     const { cmp, narrativa } = e.comparacion;

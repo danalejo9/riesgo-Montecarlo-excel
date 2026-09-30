@@ -5,6 +5,20 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V5: seguimiento en el tiempo (2026-09-30)
+
+**Añadido**
+- **Guardar instantánea** tras simular: la simulación queda como una fila
+  de la hoja «Cronograma (seguimiento)» con su fecha de corte (fin del
+  cronograma, P50/P80/P90, probabilidad de cumplir, reserva, costos, JCL,
+  escenario y una columna «Nota» que se conserva). Una por fecha de corte:
+  volver a guardar la reemplaza.
+- La hoja lleva un **gráfico de tendencia** (cronograma, P50 y P80) y el
+  panel la resume en palabras: cuánto se movió el P80 desde el corte
+  anterior, la probabilidad de cumplir, el costo y las rachas.
+- El informe PDF gana la sección «Seguimiento en el tiempo».
+- Guía Q51–Q52.
+
 ### V4: incertidumbre en los costos de cada actividad (2026-09-30)
 
 **Añadido**

@@ -205,8 +205,8 @@ complemento**, no como producto aparte. Las pruebas N van primero.
 | V2 | P6 | Riesgos que añaden trabajo (ramificación probabilística) | **Tú** | ✅ 30/09 (falta Excel: Q45) |
 | V3 | P6 | Informe ejecutivo PDF configurable, costos y cronograma (título, logo, pie, secciones) | **Tú** | ✅ 30/09 (falta Excel: Q46–Q48) |
 | V4 | P6 | Incertidumbre en los costos de cada actividad | **Tú** | ✅ 30/09 (falta Excel: Q49–Q50) |
-| V5 | P6 | Seguimiento en el tiempo (instantáneas y tendencia del P80) | **Tú** | ⬜ siguiente |
-| V6 | P6 | Rangos por sector y ayudas para estimar (P10/P90, avisos de optimismo) | **Tú** | ⬜ |
+| V5 | P6 | Seguimiento en el tiempo (instantáneas y tendencia del P80) | **Tú** | ✅ 30/09 (falta Excel: Q51–Q52) |
+| V6 | P6 | Rangos por sector y ayudas para estimar (P10/P90, avisos de optimismo) | **Tú** | ⬜ siguiente |
 | V7 | P6 | Calendarios por actividad | **Tú** | ⬜ |
 | V8 | P6 | Clima probabilístico | **Tú** | ⬜ |
 | V9 | P6 | Devolver resultados a MS Project y P6 | **Tú** | ⬜ |

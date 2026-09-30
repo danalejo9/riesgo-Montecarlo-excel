@@ -37,8 +37,16 @@ export interface HojaAEscribir {
   formatosRango?: Array<{ fila: number; col: number; filas: number; cols: number; formato: string }>;
   /** Filas (desde 0) que se resaltan en amarillo. */
   resaltar?: number[];
-  /** Gráficos de dispersión sobre dos columnas contiguas (x, y): con líneas (curva S) o solo puntos (costo–plazo). */
-  graficos?: Array<{ titulo: string; fila: number; col: number; filas: number; anclaFila: number; anclaCol: number; tipo: 'lineas' | 'puntos' }>;
+  /**
+   * Gráficos de dispersión sobre columnas contiguas: x y `series` columnas y
+   * (1 si no se dice), con líneas (curva S, tendencia) o solo puntos
+   * (costo–plazo). Con `encabezado`, la primera fila del rango son los
+   * nombres de las series (y hay leyenda).
+   */
+  graficos?: Array<{
+    titulo: string; fila: number; col: number; filas: number; anclaFila: number; anclaCol: number; tipo: 'lineas' | 'puntos';
+    series?: number; encabezado?: boolean; formatoX?: string; formatoY?: string;
+  }>;
 }
 
 export const ENCABEZADO_ACTIVIDADES = [

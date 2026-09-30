@@ -10,7 +10,7 @@ import type { DatosInformeCronograma } from '../excel/informeCronograma.ts';
 import type { IdSeccionCronograma } from '../excel/plantillaInforme.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 import { textoMoneda } from '../engine/modelo/moneda.ts';
-import { CurvaS, GanttImpreso, HistogramaFechas, NubeCostoPlazo } from './graficosCronograma.tsx';
+import { CurvaS, GanttImpreso, HistogramaFechas, NubeCostoPlazo, TendenciaPlazo } from './graficosCronograma.tsx';
 import { miles } from './formato.ts';
 import { textosInforme as T } from './textos/es.ts';
 
@@ -106,6 +106,26 @@ export function SeccionesCronograma({ datos: d }: { datos: DatosInformeCronogram
             </tbody>
           </table>
         )}
+      </section>
+    ),
+    seguimiento: d.seguimiento && (
+      <section>
+        <h2>Seguimiento en el tiempo</h2>
+        {d.seguimiento.tendencia.map((l) => <p key={l} className="lectura">{l}</p>)}
+        <TendenciaPlazo puntos={d.seguimiento.instantaneas} titulo={T.tendencia} nombres={{ cronograma: T.serieCronograma, p50: 'P50', p80: 'P80' }} />
+        <table className="comparacion tabla-informe">
+          <thead><tr><th>{T.referenciaCol}</th><th>{T.finCronograma}</th><th>P50</th><th>P80</th><th>{T.probCumplir}</th>{d.seguimiento.instantaneas.some((x) => x.costoP80 !== undefined) && <th>{T.costoP80}</th>}<th>{T.notaCol}</th></tr></thead>
+          <tbody>
+            {d.seguimiento.instantaneas.map((x) => (
+              <tr key={`${x.referencia}-${x.guardada}`}>
+                <td>{textoFecha(x.referencia)}</td><td>{textoFecha(x.finCronograma)}</td><td>{textoFecha(x.p50)}</td><td>{textoFecha(x.p80)}</td>
+                <td>{Number.isFinite(x.probCumplir) ? pct(x.probCumplir) : ''}</td>
+                {d.seguimiento!.instantaneas.some((y) => y.costoP80 !== undefined) && <td>{x.costoP80 === undefined ? '' : textoMoneda(x.costoP80)}</td>}
+                <td>{x.nota ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     ),
     costos: s?.costos && (

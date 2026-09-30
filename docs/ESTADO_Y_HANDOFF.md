@@ -1414,6 +1414,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     (prueba)» y «Esperado (costos inciertos)». Guía Q49–Q50.
     **Siguiente**: V5 (seguimiento en el tiempo).
 
+85. [x] **V5 (2026-09-30)**. `engine/cronograma/seguimiento.ts`
+    (`Instantanea`, `instantaneaDe`, `leerSeguimiento`, `agregarInstantanea`
+    —una por fecha de corte y escenario, conserva la nota—, `hojaSeguimiento`
+    con gráfico de tres series y fechas en los ejes, `tendencia` en palabras
+    con la racha). Hoja «Cronograma (seguimiento)» como almacén; botón
+    «Guardar instantánea», sección en el panel (`TendenciaPlazo`) y en el
+    PDF (sección nueva «Seguimiento en el tiempo»). `graficos` admite varias
+    series. Guía Q51–Q52. **Siguiente**: V6 (rangos por sector y ayudas).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
