@@ -23,6 +23,11 @@ import {
 } from '../../engine/cronograma/index.ts';
 import { triangular } from '../../engine/distributions/triangular.ts';
 import { leerHojaComoMatriz } from '../helpers/leerHoja.ts';
+import { compilarPlan } from '../../engine/compiler/plan.ts';
+import { simularPorBloques } from '../../engine/executor/index.ts';
+import { claveDeReferencia, construirGrafo, type FormulaCelda } from '../../engine/graph/index.ts';
+import { aplicarReescrituras, modeloVacio, prepararEntradas } from '../../engine/modelo/index.ts';
+import { entradasDeFunciones, resolverConFunciones } from '../../excel/entradasRiesgo.ts';
 
 export interface Comprobacion {
   magnitud: string;
@@ -263,6 +268,128 @@ export async function casosContraPython(libro = 'ejemplos/demo-cronograma.xlsx')
   return casos;
 }
 
+/**
+ * Casos publicados por la GAO que se pueden reproducir con los datos que
+ * publica (ver `docs/VALIDACION_CRONOGRAMA.md`, «Casos publicados»). Los que
+ * no traen la red completa no se convierten en comprobaciones numéricas.
+ */
+export async function casosPublicados(): Promise<CasoValidacion[]> {
+  const casos: CasoValidacion[] = [];
+
+  // GAO-16-89G, mejor práctica 8, «Merge Bias and Schedule Underestimation» (fig. 36).
+  {
+    // Cada ruta: 10 días fijos y un riesgo propio del 40 % que la alarga un 50 %: llega a tiempo con 60 % exacto.
+    const ruta = (k: number) => act(`R${k}`, 10);
+    const riesgos = (n: number) => Array.from({ length: n }, (_, i) => riesgo(`Retraso ${i + 1}`, 0.4, 0.5, [`R${i + 1}`]));
+    const aTiempo = (r: { finProyecto: Float64Array }) => r.finProyecto.filter((x) => x <= 10 + 1e-9).length / r.finProyecto.length;
+    const dos = await simularPlazo(red([ruta(1), ruta(2), act('Hito', 0, ['R1', 'R2'])]), riesgos(2), op());
+    const tres = await simularPlazo(red([ruta(1), ruta(2), ruta(3), act('Hito', 0, ['R1', 'R2', 'R3'])]), riesgos(3), op());
+    casos.push({
+      id: 'G-01', titulo: 'GAO: sesgo de convergencia con rutas del 60 %',
+      fundamento: 'GAO‑16‑89G, mejor práctica 8, «Merge Bias and Schedule Underestimation» (figura 36): dos rutas independientes que llegan a tiempo con 60 % cada una dejan el hito a tiempo con 0,6 × 0,6 = 36 %; con tres rutas, 0,6³ ≈ 22 %.',
+      planteamiento: `Cada ruta: una actividad de 10 días con un riesgo propio del 40 % que la alarga un 50 % (llega a tiempo con 60 %). Las rutas convergen en un hito. ${N.toLocaleString('es')} iteraciones.`,
+      comprobaciones: [
+        cerca('P(hito a tiempo), 2 rutas', 0.36, aTiempo(dos), 0.005),
+        cerca('P(hito tarde), 2 rutas (24 % + 24 % + 16 %)', 0.64, 1 - aTiempo(dos), 0.005),
+        cerca('P(hito a tiempo), 3 rutas', 0.216, aTiempo(tres), 0.005),
+      ],
+    });
+  }
+
+  // GAO-16-89G, apéndice IV (tabla 9, figuras 51-56): pasada adelante y atrás.
+  {
+    const c: Cronograma = {
+      inicio: 42_031, // martes 27/01/2015
+      calendario: CALENDARIO_ESTANDAR,
+      actividades: [
+        act('M1', 1), act('M2', 1), act('M3', 1),
+        act('T1', 2, ['M1']), act('T2', 1, ['M1', 'M2']), act('T3', 2, ['M2', 'M3']),
+        act('FIN', 0, ['T1', 'T2', 'T3']),
+      ],
+    };
+    const r = calcularCPM(c);
+    const fila = (id: string) => (r.ok ? r.filas.find((x) => x.id === id) : undefined);
+    const dia = (serie: number | undefined) => (serie === undefined ? '—' : new Date(Date.UTC(1899, 11, 30) + serie * 86_400_000).toISOString().slice(5, 10).split('-').reverse().join('/'));
+    casos.push({
+      id: 'G-02', titulo: 'GAO: pasada adelante y atrás (arranque y pruebas de una casa)',
+      fundamento: 'GAO‑16‑89G, apéndice IV «The Forward and Backward Pass», tabla 9 y figuras 51 a 56: inicios y fines tempranos y tardíos publicados, día a día.',
+      planteamiento: 'Tres medidores de un día (M1 electricidad, M2 gas, M3 agua) y tres pruebas: T1 (2 días, tras M1), T2 (1 día, tras M1 y M2) y T3 (2 días, tras M2 y M3), que acaban en un hito. Todas fin‑comienzo, lunes a viernes, inicio el martes 27 de enero.',
+      comprobaciones: [
+        exacto('Inicio temprano de M1, M2 y M3', '27/01, 27/01, 27/01', ['M1', 'M2', 'M3'].map((x) => dia(fila(x)?.fechaInicio)).join(', ')),
+        exacto('T1: inicio y fin tempranos', '28/01 – 29/01', `${dia(fila('T1')?.fechaInicio)} – ${dia(fila('T1')?.fechaFin)}`),
+        exacto('T3: inicio y fin tempranos', '28/01 – 29/01', `${dia(fila('T3')?.fechaInicio)} – ${dia(fila('T3')?.fechaFin)}`),
+        exacto('T2: inicio temprano e inicio tardío', '28/01 – 29/01', `${dia(fila('T2')?.fechaInicio)} – ${dia(fila('T2')?.fechaInicioTardio)}`),
+        exacto('T2: holgura total (días)', 1, fila('T2')?.holguraTotal ?? '—'),
+        exacto('T3: inicio tardío', '28/01', dia(fila('T3')?.fechaInicioTardio)),
+        exacto('M2: fin tardío', '27/01', dia(fila('M2')?.fechaFinTardio)),
+        exacto('Hito de fin', '29/01', dia(fila('FIN')?.fechaFin)),
+      ],
+    });
+  }
+
+  // GAO-20-195G, tabla 12 y figura 15: costo del vehículo aéreo no tripulado (UAV), tres puntos.
+  {
+    const elementos: Array<[string, number, number, number]> = [
+      ['Airframe', 17_955, 19_645, 21_785], ['Propulsion', 8_500, 10_553, 13_000], ['Communications', 4_000, 4_306, 5_100],
+      ['Navigation', 4_100, 4_305, 4_650], ['Central Computer', 550, 600, 650], ['Software', 32_300, 35_547, 52_500],
+      ['Integration, assembly, test and check-out', 1_950, 2_136, 2_600],
+    ];
+    const x = await simularCosto(
+      Object.fromEntries([
+        ...elementos.map(([, a, m, b], i) => [`A${i + 1}`, `RIESGO.TRIANGULAR(${a},${m},${b})`]),
+        ['B1', `32*SUM(A1:A${elementos.length})`],
+      ]),
+      'B1', N,
+    );
+    const puntual = 32 * elementos.reduce((sum, e) => sum + e[2], 0);
+    const mediaExacta = 32 * elementos.reduce((sum, [, a, m, b]) => sum + (a + m + b) / 3, 0);
+    const desvExacta = 32 * Math.sqrt(elementos.reduce((sum, [, a, m, b]) => sum + (a * a + m * m + b * b - a * m - a * b - m * b) / 18, 0));
+    const mm = (v: number) => v / 1e6; // miles de dólares → miles de millones
+    const relativo = (magnitud: string, esperado: number, obtenido: number, tol: number): Comprobacion => ({
+      magnitud, esperado: f(mm(esperado), 3), obtenido: f(mm(obtenido), 3), tolerancia: `± ${f(tol * 100, 1)} %`, ok: Math.abs(obtenido / esperado - 1) <= tol,
+    });
+    casos.push({
+      id: 'G-03', titulo: 'GAO: costo de 32 vehículos aéreos no tripulados, con tres puntos',
+      fundamento: 'GAO‑20‑195G (*Cost Estimating and Assessment Guide*), tabla 12 y figura 15: estimación puntual de 2,47 mil millones de dólares, P50 de 2,61, P80 de 2,79 y «cerca de un 15 %» de terminar en la estimación puntual o por debajo. La media y la desviación de una suma de triangulares independientes se conocen exactas.',
+      planteamiento: `Siete elementos triangulares (miles de dólares por vehículo), sumados y multiplicados por 32 vehículos (el costo por vehículo se sortea una vez: los 32 son iguales). Con el motor de costos, ${N.toLocaleString('es')} iteraciones. Cifras en miles de millones de dólares.`,
+      comprobaciones: [
+        exacto('Estimación puntual (miles de millones)', '2,467', f(mm(puntual), 3)),
+        relativo('Media (exacta)', mediaExacta, media(x), 0.002),
+        relativo('Desviación típica (exacta)', desvExacta, desviacion(x), 0.01),
+        relativo('P50 (publicado 2,61)', 2.61e6, cuantil(x, 0.5), 0.01),
+        relativo('P80 (publicado 2,79)', 2.79e6, cuantil(x, 0.8), 0.02),
+        cerca('P(costo ≤ estimación puntual) (publicado «cerca del 15 %»)', 0.15, x.filter((v) => v <= puntual).length / x.length, 0.03),
+      ],
+    });
+  }
+  return casos;
+}
+
+/** Todo el camino del modelo de costos (como el panel, sin Excel): las muestras de la salida. */
+async function simularCosto(formulas: Record<string, string>, salida: string, n: number): Promise<Float64Array> {
+  const H = 'Costos';
+  const pos = (ref: string) => {
+    const m = /^([A-Z]+)(\d+)$/.exec(ref) as RegExpExecArray;
+    return { col: [...(m[1] as string)].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0), fila: Number(m[2]) };
+  };
+  const fs: FormulaCelda[] = Object.entries(formulas).map(([ref, formula]) => ({ hoja: H, ...pos(ref), formula }));
+  const { grafo } = construirGrafo(fs, []);
+  const clave = claveDeReferencia(H, salida);
+  const d = entradasDeFunciones(fs, grafo, [], [clave]);
+  if (d.errores.length > 0) throw new Error(d.errores.join('; '));
+  aplicarReescrituras(grafo, d);
+  const base = modeloVacio();
+  const semilla = 20_270_201;
+  const modelo = { ...base, inputs: d.entradas, outputs: [{ id: 's', name: salida, ref: clave }], settings: { ...base.settings, iterations: n, seed: semilla } };
+  const p = prepararEntradas(modelo, resolverConFunciones((ref) => ref, d), semilla);
+  if (!p.ok) throw new Error(p.errores.join('; '));
+  const c = compilarPlan(grafo, new Set(d.claves), [clave]);
+  if (!c.ok) throw new Error(c.error.motivo);
+  const r = await simularPorBloques(grafo, c.plan, p.entradas, semilla, n, { retenerMuestra: n });
+  if (!r.ok) throw new Error(r.error.motivo);
+  return r.porSalida.get(clave)!.muestra!;
+}
+
 export async function todosLosCasos(): Promise<CasoValidacion[]> {
-  return [...(await casosAnaliticos()), ...(await casosContraPython())];
+  return [...(await casosAnaliticos()), ...(await casosContraPython()), ...(await casosPublicados())];
 }

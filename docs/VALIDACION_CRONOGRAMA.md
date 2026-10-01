@@ -3,7 +3,7 @@
 > Documento generado por `npm run validacion:cronograma` a partir de `tests/validacion/casos.ts`;
 > los mismos casos se comprueban en cada `npm test`. No se edita a mano.
 
-**Resultado:** 31 de 31 comprobaciones dentro de su tolerancia, en 12 casos.
+**Resultado:** 48 de 48 comprobaciones dentro de su tolerancia, en 15 casos.
 
 ## Cómo se valida
 
@@ -163,11 +163,68 @@ da exactamente los mismos resultados en cualquier equipo, con uno o con varios h
 | Costo P80 | 1.343.194 | 1.342.925 | ± 1 % | Sí |
 | JCL | 76 % | 76,2 % | ± 3 puntos | Sí |
 
+## Casos publicados (GAO)
+
+Ejemplos de las guías de la GAO (*Schedule Assessment Guide*, GAO‑16‑89G, y *Cost Estimating and
+Assessment Guide*, GAO‑20‑195G, versiones web en guides.gaoinnovations.gov) que traen todos los datos
+necesarios para reproducirlos. Las cifras que la GAO da como «cerca de» se comparan con una tolerancia
+mayor: no se sabe con qué herramienta ni cuántas iteraciones se calcularon.
+
+### G-01 · GAO: sesgo de convergencia con rutas del 60 %
+
+**Planteamiento.** Cada ruta: una actividad de 10 días con un riesgo propio del 40 % que la alarga un 50 % (llega a tiempo con 60 %). Las rutas convergen en un hito. 100.000 iteraciones.
+
+**Respuesta esperada.** GAO‑16‑89G, mejor práctica 8, «Merge Bias and Schedule Underestimation» (figura 36): dos rutas independientes que llegan a tiempo con 60 % cada una dejan el hito a tiempo con 0,6 × 0,6 = 36 %; con tres rutas, 0,6³ ≈ 22 %.
+
+| Magnitud | Esperado | Motor | Tolerancia | ¿Pasa? |
+|---|---|---|---|---|
+| P(hito a tiempo), 2 rutas | 0,36 | 0,358 | ± 0,005 | Sí |
+| P(hito tarde), 2 rutas (24 % + 24 % + 16 %) | 0,64 | 0,642 | ± 0,005 | Sí |
+| P(hito a tiempo), 3 rutas | 0,216 | 0,216 | ± 0,005 | Sí |
+
+### G-02 · GAO: pasada adelante y atrás (arranque y pruebas de una casa)
+
+**Planteamiento.** Tres medidores de un día (M1 electricidad, M2 gas, M3 agua) y tres pruebas: T1 (2 días, tras M1), T2 (1 día, tras M1 y M2) y T3 (2 días, tras M2 y M3), que acaban en un hito. Todas fin‑comienzo, lunes a viernes, inicio el martes 27 de enero.
+
+**Respuesta esperada.** GAO‑16‑89G, apéndice IV «The Forward and Backward Pass», tabla 9 y figuras 51 a 56: inicios y fines tempranos y tardíos publicados, día a día.
+
+| Magnitud | Esperado | Motor | Tolerancia | ¿Pasa? |
+|---|---|---|---|---|
+| Inicio temprano de M1, M2 y M3 | 27/01, 27/01, 27/01 | 27/01, 27/01, 27/01 | exacto | Sí |
+| T1: inicio y fin tempranos | 28/01 – 29/01 | 28/01 – 29/01 | exacto | Sí |
+| T3: inicio y fin tempranos | 28/01 – 29/01 | 28/01 – 29/01 | exacto | Sí |
+| T2: inicio temprano e inicio tardío | 28/01 – 29/01 | 28/01 – 29/01 | exacto | Sí |
+| T2: holgura total (días) | 1 | 1 | exacto | Sí |
+| T3: inicio tardío | 28/01 | 28/01 | exacto | Sí |
+| M2: fin tardío | 27/01 | 27/01 | exacto | Sí |
+| Hito de fin | 29/01 | 29/01 | exacto | Sí |
+
+### G-03 · GAO: costo de 32 vehículos aéreos no tripulados, con tres puntos
+
+**Planteamiento.** Siete elementos triangulares (miles de dólares por vehículo), sumados y multiplicados por 32 vehículos (el costo por vehículo se sortea una vez: los 32 son iguales). Con el motor de costos, 100.000 iteraciones. Cifras en miles de millones de dólares.
+
+**Respuesta esperada.** GAO‑20‑195G (*Cost Estimating and Assessment Guide*), tabla 12 y figura 15: estimación puntual de 2,47 mil millones de dólares, P50 de 2,61, P80 de 2,79 y «cerca de un 15 %» de terminar en la estimación puntual o por debajo. La media y la desviación de una suma de triangulares independientes se conocen exactas.
+
+| Magnitud | Esperado | Motor | Tolerancia | ¿Pasa? |
+|---|---|---|---|---|
+| Estimación puntual (miles de millones) | 2,467 | 2,467 | exacto | Sí |
+| Media (exacta) | 2,632 | 2,632 | ± 0,2 % | Sí |
+| Desviación típica (exacta) | 0,147 | 0,147 | ± 1 % | Sí |
+| P50 (publicado 2,61) | 2,61 | 2,611 | ± 1 % | Sí |
+| P80 (publicado 2,79) | 2,79 | 2,765 | ± 2 % | Sí |
+| P(costo ≤ estimación puntual) (publicado «cerca del 15 %») | 0,15 | 0,125 | ± 0,03 | Sí |
+
 ## Pendiente
 
-- Reproducir los ejemplos numéricos publicados en la guía GAO‑16‑89G (*Schedule Assessment Guide*) y en
-  la AACE 57R‑09 (*Integrated Cost and Schedule Risk Analysis Using Risk Drivers*), cuando se tengan los
-  documentos (la de AACE es de pago). El formato de esta página ya los admite: cada caso con su
-  planteamiento, su respuesta publicada y la del motor.
+- **Los demás ejemplos de la GAO‑16‑89G** (la casa con tres puntos, con *risk drivers*, con ramificación
+  y con correlación: tablas 2 a 5, figuras 37 a 44) no publican la red completa (predecesoras,
+  calendario, a qué actividades afecta cada riesgo). Sin ella no se pueden reproducir los números, solo
+  los efectos que describen, que ya comprueban los casos analíticos: la causa común que ensancha la cola
+  (V‑03) y la ramificación (V‑04). La priorización «quitar un riesgo y volver a simular» de su tabla 5 es
+  la que usa el panel para el impacto de cada riesgo.
+- **GAO‑20‑195G con *risk drivers*** (tablas 13 y 14): no publica a qué elementos se aplica cada riesgo.
+- **Hulett (1996)**, *Schedule Risk Analysis Simplified*: faltan los rangos de varias actividades, que
+  solo están en las figuras del artículo.
+- **AACE 57R‑09 y 64R‑11**: de pago; no se ha podido leer qué ejemplos numéricos traen.
 - Más comprobaciones en el libro de pruebas (avance, calendarios, clima, hitos) están en
   `tests/unit/cronograma*.test.ts`.
