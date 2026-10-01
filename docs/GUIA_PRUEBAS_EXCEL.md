@@ -1204,6 +1204,10 @@ columna C (B3 a B8). Esperado, antes de simular:
 - `=RIESGO.CRONOGRAMA("99")` da #N/A con «No hay ninguna actividad…»;
   `=RIESGO.CRONOGRAMA("19";"peso")`, «La medida… no existe».
 - `=RIESGO.CRONOGRAMA("19";"fecha";46600)` enseña 46600 (el valor fijo).
+- El plan queda guardado en el libro: guarda el archivo, ciérralo y ábrelo
+  (mejor en otro equipo o en Excel para la Web). Al abrir el panel, B4, B6 y
+  B7 vuelven a enseñar 118, 0 y 16/07/2027 sin pulsar «Calcular cronograma».
+  Antes de abrir el panel pueden enseñar #N/A: es lo esperado.
 
 **Q71. Costo y plazo en la misma iteración (W5).** Marca B8 («Costo total»,
 ya declarada con RIESGO.SALIDA) y B7 como salidas y simula 20.000

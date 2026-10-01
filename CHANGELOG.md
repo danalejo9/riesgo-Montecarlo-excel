@@ -5,6 +5,27 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Validación con casos publicados, plan en el libro y prueba de humo (2026-10-01)
+
+**Añadido**
+- Tres casos publicados por la GAO en la validación del motor
+  (`docs/VALIDACION_CRONOGRAMA.md`, ahora 48 de 48 comprobaciones): el
+  sesgo de convergencia con rutas del 60 % (GAO‑16‑89G, figura 36), la
+  pasada adelante y atrás del apéndice IV (exacta, fecha a fecha) y el
+  costo de 32 vehículos aéreos con tres puntos (GAO‑20‑195G, tabla 12: P50
+  de 2,611 frente a 2,61 publicado). Lo que la investigación no pudo
+  reproducir queda anotado con el motivo.
+- `npm run humo`: abre el panel en un navegador sobre el banco, recorre las
+  pestañas, simula costos y un cronograma de ejemplo y falla ante cualquier
+  error de la página. Forma parte de `npm run check` (se omite con un aviso
+  si no hay Playwright).
+
+**Cambiado**
+- El plan del cronograma que enseña `RIESGO.CRONOGRAMA` fuera de la
+  simulación se guarda **en el libro**: viaja con el archivo y se recupera
+  al abrir el panel en cualquier equipo. Las celdas que habían dicho
+  «calcula el cronograma» se refrescan solas.
+
 ### W7: escenarios «¿qué pasa si?» (2026-09-30)
 
 **Añadido**

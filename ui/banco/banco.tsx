@@ -11,7 +11,8 @@ import { createRoot } from 'react-dom/client';
 
 import { Panel } from '../Panel.tsx';
 import '../estilos.css';
-import { avisarSeleccion, CELDAS, hojasMatriz, hojaVolcada, instalarExcelFalso, rellenos, seleccion, avisarCambioHoja } from './excelFalso.ts';
+import { ajustes, avisarSeleccion, CELDAS, hojasMatriz, hojaVolcada, instalarExcelFalso, rellenos, seleccion, avisarCambioHoja } from './excelFalso.ts';
+import { restaurarPlanDelLibro } from '../../excel/almacenPlanCronograma.ts';
 import { pedirAlPanel } from '../acciones.ts';
 
 instalarExcelFalso();
@@ -25,6 +26,9 @@ instalarExcelFalso();
 (globalThis as unknown as Record<string, unknown>).__hojasMatriz = hojasMatriz;
 // V11: simular que el usuario editó una hoja (la vista previa del plazo lo escucha).
 (globalThis as unknown as Record<string, unknown>).__cambiarHoja = avisarCambioHoja;
+// Lo que el libro guarda en sus ajustes, y restaurar el plan del cronograma como al abrir el panel (W5).
+(globalThis as unknown as Record<string, unknown>).__ajustesLibro = ajustes;
+(globalThis as unknown as Record<string, unknown>).__restaurarPlan = restaurarPlanDelLibro;
 
 function Banco() {
   const [celda, setCelda] = useState(seleccion.ref);

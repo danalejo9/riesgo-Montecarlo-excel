@@ -7,7 +7,7 @@
 
 import { useRef, useState } from 'react';
 
-import { guardarPlanCronograma } from '../excel/planCronograma.ts';
+import { guardarPlanEnLibro } from '../excel/almacenPlanCronograma.ts';
 import {
   calcularCPM, compararMitigacion, completarRangos, escenarioDespues, hojaMitigacion, narrativaMitigacion, tieneMitigacion,
   type ComparacionMitigacion, hojaGantt, hojaPlazoSimulado, importarCronograma, verificarContraFuente,
@@ -114,8 +114,8 @@ export function Cronograma({ alFallar }: { alFallar: (e: unknown) => void }) {
         return;
       }
       const riesgos = leerRiesgosPlazo(hojas.riesgos, cron.actividades);
-      // W5: el plan, para lo que enseña RIESGO.CRONOGRAMA en el modelo de costos.
-      void guardarPlanCronograma(publicarPlan(cron)).catch(() => undefined);
+      // W5: el plan, para lo que enseña RIESGO.CRONOGRAMA en el modelo de costos; queda guardado en el libro.
+      void guardarPlanEnLibro(publicarPlan(cron)).catch(() => undefined);
       const hoja = await escribirResultadoCPM(r);
       const vista = vistaGantt(cron.actividades, r.filas, r.fechaFinProyecto, undefined, cron.fechaCorte);
       await escribirHojaGantt(hojaGantt(vista));

@@ -55,6 +55,7 @@ import { escenarioActivo } from '../excel/escenarios.ts';
 import { abrirEnNavegador } from './Resultados.tsx';
 import { marcarSeleccion } from './marcar.ts';
 import { celdasParaRefrescar, publicarRestaurados, publicarResultados, refrescarCeldas } from '../excel/almacenResultadosHoja.ts';
+import { restaurarPlanDelLibro } from '../excel/almacenPlanCronograma.ts';
 import { aplicarModo, leerModoGuardado } from '../excel/modoLibro.ts';
 import { guardarRitmo, leerRitmo, type RitmoGuardado } from '../excel/ritmo.ts';
 import {
@@ -149,6 +150,11 @@ export function Panel() {
         // puede estimar el tiempo del modo compatible.
       }
     })();
+
+    // W5: el plan del cronograma guardado en el libro, para RIESGO.CRONOGRAMA (aunque no haya modelo de costos).
+    void restaurarPlanDelLibro().catch(() => {
+      // Sin plan guardado legible, la función dirá «calcula el cronograma»: nada más.
+    });
 
     void (async () => {
       try {

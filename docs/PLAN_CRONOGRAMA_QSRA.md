@@ -299,7 +299,7 @@ calculada aparte cuando haya números) y su bloque en la guía.
 
 ## 6. Verificación del módulo
 
-- `npm run check` (build + lint + tests) al cerrar cada etapa.
+- `npm run check` (build + lint + tests + prueba de humo del panel en el navegador) al cerrar cada etapa.
 - Tests unitarios del CPM: 4 relaciones, retardos negativos, calendarios con excepciones, ciclos y avance.
 - Prueba estadística del *merge bias*: dos rutas paralelas iguales dan un P50 más tarde que una sola, y coincide con el máximo de dos normales calculado analíticamente.
 - Fidelidad: fechas deterministas contra archivos XML de MSP y XER de ejemplo en `tests/fixtures/`.

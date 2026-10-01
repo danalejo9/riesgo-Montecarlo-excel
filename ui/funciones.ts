@@ -221,8 +221,11 @@ asociar(FUNCION_CRONOGRAMA.id, (async (...args: unknown[]) => {
   const [hito, medida, fijo] = args;
   if (typeof fijo === 'number') return fijo;
   const texto = (x: unknown) => (x === null || x === undefined || typeof x === 'object' ? '' : String(x));
-  const v = valorDelPlan(await leerPlanCronograma(), texto(hito), texto(medida));
+  const plan = await leerPlanCronograma();
+  const v = valorDelPlan(plan, texto(hito), texto(medida));
   if (typeof v === 'number') return v;
+  // Sin plan todavía: el panel refrescará esta celda cuando lo tenga (al calcular o al abrir el libro).
+  if (!plan) anotarCeldaPendiente(celdaDe(args));
   throw new CustomFunctions.Error(CustomFunctions.ErrorCode.notAvailable, v);
 }) as (...args: never[]) => Promise<number>);
 

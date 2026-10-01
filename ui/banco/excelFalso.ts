@@ -357,7 +357,7 @@ function rangoSimple(ref: string) {
   };
 }
 
-const ajustes = new Map<string, string>();
+export const ajustes = new Map<string, string>();
 
 /**
  * Hojas con rejilla de verdad, para el cronograma (bloque P): se crean con

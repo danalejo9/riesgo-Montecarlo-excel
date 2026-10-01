@@ -1609,6 +1609,28 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Q74–Q75. **Con esto el bloque W queda completo** (W1–W7); H e I
     siguen aplazados.
 
+101. [x] **Casos publicados (2026-10-01)**. La investigación del usuario
+    (`docs/fuentes/casos_publicados_SRA.md`) trajo 11 casos; tres se pueden
+    reproducir con lo publicado y están en `casosPublicados()`
+    (`tests/validacion/casos.ts`): G‑01 merge bias 60 % (36 % y 21,6 %),
+    G‑02 CPM del apéndice IV de GAO‑16‑89G (exacto) y G‑03 el UAV de
+    GAO‑20‑195G con el motor de costos (P50 2,611 frente a 2,61; P80 2,765
+    frente a 2,79; P(≤ puntual) 12,5 % frente a «cerca del 15 %»; la
+    lectura correcta es que el costo por vehículo se sortea una vez para
+    los 32). El resto no publica la red completa (casa GAO), las
+    asignaciones de riesgos (UAV con risk drivers) o los rangos (Hulett
+    1996); AACE es de pago. `docs/VALIDACION_CRONOGRAMA.md`: 48 de 48.
+
+102. [x] **Plan en el libro y prueba de humo (2026-10-01)**.
+    `excel/almacenPlanCronograma.ts`: el plan de `RIESGO.CRONOGRAMA` se
+    guarda en `workbook.settings` al calcular y se restaura al abrir el
+    panel (`Panel.tsx`), refrescando las celdas que dijeron #N/A (la
+    función las apunta). `bench/humo.ts` (`npm run humo`, dentro de
+    `npm run check`): el panel en Chromium sobre el banco, seis pasos
+    (carga, pestañas, simulación de costos, ejemplo de cronograma, su
+    simulación, plan guardado y recuperado). Comprobado que habría cazado
+    el import roto de W6.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 0. **Plan unificado del 30/09** ([`PLAN_CRONOGRAMA_QSRA.md`](PLAN_CRONOGRAMA_QSRA.md) §4):
