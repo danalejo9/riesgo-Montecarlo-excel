@@ -96,6 +96,12 @@ export interface SalidaRiskModel {
    * salidas que no son números. Opcional.
    */
   valueOfInterest?: string;
+  /**
+   * V1: si la salida es un coste o un plazo (malo si sube) o un beneficio
+   * (malo si baja). Cambia cómo se lee la contingencia. Opcional: sin él, el
+   * panel propone uno por el nombre.
+   */
+  kind?: 'cost' | 'benefit';
 }
 
 export interface UmbralRiskModel {
@@ -373,11 +379,16 @@ function validarSalida(v: unknown, ctx: string, errores: string[]): SalidaRiskMo
     errores.push(`${ctx}.valueOfInterest debe ser un texto de hasta 200 caracteres.`);
     ok = false;
   }
+  if (s.kind !== undefined && s.kind !== 'cost' && s.kind !== 'benefit') {
+    errores.push(`${ctx}.kind debe ser "cost" o "benefit".`);
+    ok = false;
+  }
   if (!ok) return undefined;
   return {
     id: s.id as string, name: s.name as string, ref: s.ref as string,
     ...(threshold ? { threshold } : {}),
     ...(typeof s.valueOfInterest === 'string' ? { valueOfInterest: s.valueOfInterest } : {}),
+    ...(s.kind === 'cost' || s.kind === 'benefit' ? { kind: s.kind } : {}),
   };
 }
 

@@ -5,6 +5,22 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V1 y V2: contingencia y matriz de probabilidad e impacto (2026-10-03)
+
+**Añadido**
+- **Contingencia** en cada salida numérica: el **valor base** (lo que enseña
+  la hoja sin incertidumbre, leído al simular con el libro en «Valores
+  fijos»), la probabilidad de cumplirlo y, para un 50, 80 y 90 % de
+  confianza, el percentil y la diferencia con el base: en un coste o plazo,
+  la **reserva** (P80 − base); en un beneficio, lo que se obtiene (P20) y
+  cuánto queda por debajo. Cada salida se marca como coste o beneficio (se
+  propone por el nombre y se guarda en el modelo). También en la hoja volcada
+  y en el informe PDF. En «Aleatorio» no hay valor base y se dice.
+- **Matriz de probabilidad e impacto** del registro de riesgos: la
+  cuadrícula 5 × 5 con cada riesgo en su casilla y el color de su severidad
+  (baja, media, alta, crítica), en el panel, en la hoja volcada (con la
+  severidad de cada riesgo y las casillas coloreadas) y en el informe PDF.
+
 ### U3.5 y U3.6: clic derecho y Detener (2026-09-29)
 
 **Añadido**

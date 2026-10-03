@@ -33,6 +33,12 @@ import type { EntradaMuestreada } from './entradasMuestreadas.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 import type { EstadisticasLectura } from './tiposLectura.ts';
+import { claseSugerida, contingencia, type NivelContingencia } from './contingencia.ts';
+import { matrizDeRiesgos, NIVELES_IMPACTO, NIVELES_PROBABILIDAD, NOMBRE_SEVERIDAD, severidad, type Severidad } from './matrizRiesgos.ts';
+
+/** Los colores de la severidad en la hoja volcada (los mismos tonos claros del panel). */
+const COLOR_SEVERIDAD: Record<Severidad, string> = { baja: '#D9EAD3', media: '#FFF2CC', alta: '#F9CB9C', critica: '#EA9999' };
+
 
 export interface AvanceSimulacion {
   fase: 'resolviendo' | 'leyendo' | 'analizando' | 'simulando';
@@ -92,6 +98,8 @@ export interface ResultadoSalida {
    * no se pueden contar iteraciones.
    */
   muestraReducida?: boolean;
+  /** V1: lo que enseñaba la celda antes de simular, con el libro en «Valores fijos». */
+  valorBase?: number;
   /** Gráfico de araña: media de la salida por décimo de cada entrada, de mayor a menor efecto. */
   arana?: CurvaAranaPanel[];
   /** Qué parte de la variación explican las entradas juntas (regresión sobre rangos, 0..1). */
@@ -294,6 +302,12 @@ export interface SimulacionCompletada {
   decisiones?: import('./decisiones.ts').ResultadoDecisiones;
   /** Los `RIESGO.EVENTO` del libro con su valor esperado (T8). */
   registroRiesgos?: import('./registroRiesgos.ts').FilaRiesgo[];
+  /**
+   * V1: de dónde sale el valor base. `fijo`: con qué valor enseñaban las
+   * funciones RIESGO la hoja («la media»). `aleatorio`: el libro estaba en
+   * «Aleatorio» y no hay valor base.
+   */
+  base?: { fijo: string } | { aleatorio: true };
   /** Cuántos hilos calcularon (motor rápido). 1 = en el hilo del panel. */
   hilos?: number;
   /**
@@ -348,6 +362,8 @@ export interface Informe {
   cabeceras: Zona[];
   /** Formatos numéricos de Excel por zona (`#,##0`, `0.0%`…). */
   formatos: Array<Zona & { formato: string }>;
+  /** Rellenos de color por zona (la matriz de riesgos, V2). */
+  rellenos: Array<Zona & { color: string }>;
   graficos: GraficoInforme[];
   curvas: { nombre: string; filaInicio: number; puntos: number }[];
   histogramas: { nombre: string; filaInicio: number; barras: number }[];
@@ -411,6 +427,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   const bandas: number[] = [];
   const cabeceras: Zona[] = [];
   const formatos: Informe['formatos'] = [];
+  const rellenos: Informe['rellenos'] = [];
   const graficos: GraficoInforme[] = [];
   const curvas: Informe['curvas'] = [];
   const histogramas: Informe['histogramas'] = [];
@@ -503,14 +520,19 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   const registro = resultado.registroRiesgos ?? [];
   if (registro.length > 0) {
     titulo('REGISTRO DE RIESGOS');
-    cabecera(['Riesgo', 'Celda', 'Impacto', 'Probabilidad', 'Esperado', 'Del total', 'Desviación']);
+    cabecera(['Riesgo', 'Celda', 'Impacto', 'Probabilidad', 'Esperado', 'Del total', 'Desviación', 'Severidad']);
     const total = registro.reduce((t, r) => t + (r.valorEsperado ?? 0), 0);
+    const matriz = matrizDeRiesgos(registro);
+    const sevDe = new Map(matriz.ubicados.map((u) => [u.celda + u.nombre, u.severidad] as const));
     const i0 = fila;
     for (const r of registro) {
+      const sev = sevDe.get(r.celda + r.nombre);
       linea([
         r.nombre, r.celda, r.impacto, r.probabilidad ?? 'variable', r.valorEsperado ?? '',
         r.valorEsperado !== null && total !== 0 ? r.valorEsperado / total : '', r.desviacion ?? '',
+        sev ? NOMBRE_SEVERIDAD[sev] : 'sin casilla',
       ]);
+      if (sev) rellenos.push({ fila: fila - 1, col: 7, filas: 1, cols: 1, color: COLOR_SEVERIDAD[sev] });
     }
     formato({ fila: i0, col: 3, filas: registro.length, cols: 1 }, FORMATO_PORCENTAJE);
     formato({ fila: i0, col: 4, filas: registro.length, cols: 1 }, Math.abs(total) >= 100 ? FORMATO_ENTERO : '#,##0.00');
@@ -519,6 +541,38 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     linea(['Total', '', '', '', total]);
     formato({ fila: fila - 1, col: 4, filas: 1, cols: 1 }, Math.abs(total) >= 100 ? FORMATO_ENTERO : '#,##0.00');
     tenue('Esperado: probabilidad × impacto medio, lo que aporta cada riesgo de media (ocurra o no). Lo que pesa en cada salida, en su tornado.');
+    fila++;
+
+    // V2: la matriz de probabilidad e impacto, con el número de cada riesgo (su orden en la tabla de arriba).
+    if (matriz.ubicados.length > 0) {
+      linea(['Probabilidad e impacto (números: el orden en la tabla de arriba)']);
+      const orden = new Map(registro.map((r, k) => [r.celda + r.nombre, k + 1] as const));
+      for (const ni of [4, 3, 2, 1, 0]) {
+        linea([NIVELES_IMPACTO[ni] as string, ...[0, 1, 2, 3, 4].map((np) => (matriz.casillas[ni]?.[np] ?? []).map((u) => orden.get(u.celda + u.nombre)).join(' '))]);
+        for (let np = 0; np < 5; np++) rellenos.push({ fila: fila - 1, col: 1 + np, filas: 1, cols: 1, color: COLOR_SEVERIDAD[severidad(np, ni)] });
+      }
+      linea(['Impacto ↑ · Probabilidad →', ...NIVELES_PROBABILIDAD]);
+      tenue(`Probabilidad: < 10 %, 10–30 %, 30–50 %, 50–70 %, ≥ 70 %. Impacto medio frente al mayor del registro (${redondear(matriz.mayorImpacto)}): ≥ 1/16, 1/8, 1/4, 1/2.`);
+      fila++;
+    }
+  }
+
+  // V1: contingencia frente al valor base (la hoja sin incertidumbre).
+  const conBase = resultado.salidas.filter((s) => s.valorBase !== undefined && s.muestraOrdenada && s.muestraOrdenada.length > 1 && !esSalidaDeTexto(s));
+  if (conBase.length > 0) {
+    titulo('CONTINGENCIA FRENTE AL VALOR BASE');
+    cabecera(['Salida', 'Es', 'Valor base', 'Prob. de cumplirlo', 'Con 50 %', 'Con 80 %', 'Con 90 %', 'Diferencia al 80 %', 'Diferencia al 90 %']);
+    for (const s of conBase) {
+      const clase = modelo.outputs.find((o) => o.id === s.id)?.kind ?? claseSugerida(s.nombre);
+      const c = contingencia(s.muestraOrdenada as Float64Array, s.valorBase as number, clase);
+      if (!c) continue;
+      const [n50, n80, n90] = c.niveles as [NivelContingencia, NivelContingencia, NivelContingencia];
+      formato({ fila, col: 2, filas: 1, cols: 1 }, formatoSalida(s));
+      formato({ fila, col: 3, filas: 1, cols: 1 }, FORMATO_PORCENTAJE);
+      formato({ fila, col: 4, filas: 1, cols: 5 }, formatoSalida(s));
+      linea([s.nombre, clase === 'cost' ? 'coste o plazo' : 'beneficio', c.base, c.probabilidadBase, n50.valor, n80.valor, n90.valor, n80.diferencia, n90.diferencia]);
+    }
+    tenue('Valor base: lo que daba la hoja sin incertidumbre (Valores fijos). En un coste, «con 80 %» es el P80 y la diferencia, la reserva sobre el base; en un beneficio, el P20 y cuánto queda por debajo del base.');
     fila++;
   }
 
@@ -762,5 +816,5 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   const anchos = Array.from({ length: ancho }, (_, c) =>
     c === 0 ? 34 : c < COL_GRAFICOS ? 16 : c < COL_DATOS ? 10 : c === COL_DATOS ? 28 : 14,
   );
-  return { filas, titulos, tenues, bandas, cabeceras, formatos, graficos, curvas, histogramas, anchos };
+  return { filas, titulos, tenues, bandas, cabeceras, formatos, rellenos, graficos, curvas, histogramas, anchos };
 }

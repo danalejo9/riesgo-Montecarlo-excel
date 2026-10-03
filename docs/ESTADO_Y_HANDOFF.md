@@ -1267,6 +1267,18 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `estadoSimulando` en `excel/cinta.ts`. Banco: detener a los 60 ms deja
     la simulación «cancelada». **Siguiente**: la ronda del usuario (N1–N39).
 
+71. [x] **V1 y V2 (2026-10-03)**, elegidas por el usuario. V1: el valor
+    base se lee de la hoja antes de simular (`leerNumeros` en
+    `excel/formatoCeldas.ts`, solo con el libro en «Valores fijos»;
+    `ResultadoSalida.valorBase`, `SimulacionCompletada.base`); `contingencia`
+    y `claseSugerida` (`excel/contingencia.ts`), clase guardada en
+    `SalidaRiskModel.kind` (validada, no entra en la huella). V2:
+    `matrizDeRiesgos` (`excel/matrizRiesgos.ts`; impacto frente al mayor, en
+    escala que se duplica), `MatrizRiesgosTabla` (panel y PDF), volcado con
+    columna de severidad y `Informe.rellenos`. Probado en
+    `contingenciaMatrizV.test.ts` e `informeImprimible.test.ts`, y en el
+    banco. **Siguiente**: la ronda del usuario (N1–N41); V3–V5 si las elige.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

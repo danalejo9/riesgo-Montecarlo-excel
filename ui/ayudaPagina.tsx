@@ -23,6 +23,8 @@ const TITULOS: Record<TemaAyuda, string> = {
   decisiones: 'Comparar decisiones',
   registro: 'Registro de riesgos',
   correlaciones: 'Correlaciones',
+  contingencia: 'Contingencia y valor base',
+  matriz: 'Matriz de probabilidad e impacto',
   comparar: 'Comparar salidas',
 };
 

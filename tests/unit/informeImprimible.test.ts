@@ -69,3 +69,36 @@ describe('registro de riesgos en el PDF y en la hoja volcada (T8)', () => {
     expect(construirInforme(m, r).filas.some((f) => f[0] === 'REGISTRO DE RIESGOS')).toBe(false);
   });
 });
+
+describe('contingencia y matriz en la hoja volcada y el PDF (V1, V2)', () => {
+  it('la salida con valor base lleva su contingencia; la hoja, su sección', () => {
+    const { m, r } = caso();
+    // Muestra −300 … 699; base 0; VAN se lee como beneficio por su nombre.
+    const conBase = { ...r, base: { fijo: 'la media' }, salidas: r.salidas.map((s) => ({ ...s, valorBase: 0 })) } as SimulacionCompletada;
+    const d = datosDelInforme(m, conBase);
+    expect(d.baseFija).toBe('la media');
+    expect(d.salidas[0]?.contingencia).toMatchObject({ base: 0, clase: 'benefit' });
+    expect(d.salidas[0]?.contingencia?.probabilidadBase).toBeCloseTo(0.7, 2);
+
+    const inf = construirInforme(m, conBase);
+    const i = inf.filas.findIndex((f) => f[0] === 'CONTINGENCIA FRENTE AL VALOR BASE');
+    expect(i).toBeGreaterThan(0);
+    expect(inf.filas[i + 2]?.slice(0, 4)).toEqual(['VAN', 'beneficio', 0, expect.closeTo(0.7, 2)]);
+    expect(construirInforme(m, r).filas.some((f) => f[0] === 'CONTINGENCIA FRENTE AL VALOR BASE')).toBe(false);
+  });
+
+  it('el registro lleva la severidad y la matriz 5 × 5 con sus colores', () => {
+    const { m, r } = caso();
+    const registro = [
+      { celda: 'R!B2', nombre: 'Avería', probabilidad: 0.1, impacto: '500', impactoMedio: 500, impactoDesviacion: 0, valorEsperado: 50, desviacion: 150 },
+      { celda: 'R!B3', nombre: 'Retraso', probabilidad: 0.6, impacto: '100', impactoMedio: 100, impactoDesviacion: 0, valorEsperado: 60, desviacion: 49 },
+    ];
+    const inf = construirInforme(m, { ...r, registroRiesgos: registro });
+    const i = inf.filas.findIndex((f) => f[0] === 'REGISTRO DE RIESGOS');
+    expect(inf.filas[i + 2]?.[7]).toBe('Alta'); // probabilidad baja (2) × impacto muy alto (5) = 10
+    expect(inf.filas[i + 3]?.[7]).toBe('Alta'); // probabilidad alta (4) × impacto medio, 1/5 del mayor (3) = 12
+    const j = inf.filas.findIndex((f) => typeof f[0] === 'string' && f[0].startsWith('Probabilidad e impacto'));
+    expect(inf.filas[j + 1]?.slice(0, 6)).toEqual(['Muy alto', '', '1', '', '', '']);
+    expect(inf.rellenos.length).toBe(2 + 25);
+  });
+});

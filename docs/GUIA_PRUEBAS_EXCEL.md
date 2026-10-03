@@ -42,7 +42,7 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N39** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N41** (sección N, justo después de la 0).
 >   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
@@ -512,6 +512,39 @@ la cinta **Entradas y salidas** (grupo Análisis).
   Detener: la simulación para y Resultados dice «cancelada». Al terminar,
   vuelven como estaban. (Si no se activan o desactivan, apúntalo: depende de
   tu versión de Excel, y Detener funciona igual pulsándolo.)
+
+**N40. Contingencia** (V1, nuevo). Con el libro en **Valores fijos**, simula
+la demo (hoja «Modelo»). En Resultados, en la salida, sección
+**«Contingencia»** (abierta).
+- Esperado: «Valor base X»: el número que enseñaba la celda de la salida
+  antes de simular (compruébalo en la hoja). La probabilidad de cumplirlo y
+  una tabla con 50 %, 80 % y 90 % de confianza.
+- Arriba, **coste o plazo / beneficio**: se propone por el nombre (un VAN o
+  unos ingresos, beneficio; un coste o una fecha de fin, coste). Cámbialo: la
+  tabla pasa de «Reserva sobre el base» (P50, P80, P90) a «Por debajo del
+  base» (P50, P20, P10). Cierra y abre el panel: la elección se mantiene.
+- En la hoja «Pruebas», con «Coste total» (C49) y los riesgos de las filas
+  57–59: es el caso típico de presupuesto. Marca C59 como salida: dime si la
+  reserva al P80 te parece razonable.
+- Pon **Aleatorio** y simula: la sección dice que no hay valor base.
+  Vuelve a **Valores fijos**.
+- **Volcar a una hoja**: sección «CONTINGENCIA FRENTE AL VALOR BASE».
+  **Informe PDF**: la misma tabla en cada salida.
+
+**N41. Matriz de probabilidad e impacto** (V2, nuevo). En «Pruebas», con
+los riesgos de las filas 57–58 (T10), marca C59 como salida y simula. En
+Resultados → **Registro de riesgos**, debajo de la tabla, **«Probabilidad e
+impacto»**:
+- Esperado: una cuadrícula 5 × 5 de colores (verde, amarillo, naranja,
+  rojo). «Retraso de permisos» (30 %, impacto medio 30.000) en **Media ×
+  Muy alto**; «Avería grave» (10 %, 50.000) en **Baja × Muy alto**. Los dos,
+  severidad **Alta**.
+- **Volcar a una hoja**: en el registro, una columna «Severidad» coloreada y
+  la cuadrícula con los números de cada riesgo. **Informe PDF**: la misma
+  matriz.
+- Dime si las bandas (probabilidad < 10 %, 10–30 %…; impacto frente al mayor
+  del registro) encajan con cómo clasificas los riesgos en tu trabajo, o si
+  prefieres fijar los umbrales de impacto en pesos.
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

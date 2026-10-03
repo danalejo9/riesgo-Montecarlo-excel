@@ -510,6 +510,11 @@ Estimaciones en días de trabajo efectivo.
   - **U3.4 Lista de entradas y salidas** ✅ 29/09 (pestaña «Entradas y salidas» de la ventana del explorador: Excel solo admite una ventana por complemento; `listaDelModelo`) en ventana flotante (tipo «ventana del modelo»): todas, con su distribución o su resultado, y clic para ir a la celda o abrirla en el explorador.
   - **U3.5 Menú del clic derecho** ✅ 29/09 (confirmado por el usuario): Marcar entrada / salida, Ver distribución. **U3.6 Botón Detener** ✅ 29/09 en la cinta, activo solo mientras simula.
   - **No se hace** (decidido): un botón por cada análisis; más distribuciones «por tenerlas»; campos de texto en la cinta (la plataforma no lo permite). **Ya existe, solo hacerlo visible**: administrador de escenarios y comparación con referencia (E7), cajas, curvas superpuestas y abanico (D2–D4).
+- **V. Valor para riesgo de costes y plazos** *(propuesto el 29/09 y elegido por el usuario el 03/10 de cinco mejoras: contingencia, matriz, comparar distribuciones en el explorador, asistente de juicio experto, atajos de teclado)*:
+  - **V1. Contingencia y probabilidad de cumplir el valor base** ✅ 03/10 (`excel/contingencia.ts`, `SeccionContingencia` en Resultados, volcado y PDF; `SalidaRiskModel.kind`).
+  - **V2. Matriz de probabilidad e impacto** ✅ 03/10 (`excel/matrizRiesgos.ts`, `MatrizRiesgosTabla`, volcado con rellenos y PDF).
+  - **V3. Comparar distribuciones en el explorador**, **V4. Asistente de juicio experto**, **V5. Atajos de teclado**: propuestos, sin decidir.
+  - **Quizá, más adelante** (no ahora): optimizador tipo RiskOptimizer, más distribuciones, API para macros.
 - **U2. Legibilidad del panel** ✅ 29/09 en Resultados (cifras clave, secciones plegables que se recuerdan, menos texto; el resto del panel, según lo que diga el usuario en N11) *(usuario, ronda del 29/09: «está muy difícil
   de leer toda la información, en general el panel lateral»)*. Primer paso
   hecho el 29/09: las acciones secundarias son botones con borde (antes

@@ -525,3 +525,36 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .catalogo-ficha.elegida { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
 .catalogo-ficha .tenue { font-size: 12px; line-height: 1.35; }
 .miniatura path, .miniatura rect { fill: var(--serie-1); opacity: 0.8; }
+
+/* V1: qué es la salida (coste o beneficio) en la contingencia. */
+.clase-salida { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 8px; }
+.clase-salida label { display: inline-flex; align-items: center; gap: 4px; }
+
+/*
+ * V2: la matriz de probabilidad e impacto. El color dice la severidad
+ * (baja → crítica): es un dato, no decoración. Validados con texto encima.
+ */
+:root {
+  --sev-baja: #d9ead3;
+  --sev-media: #fff2cc;
+  --sev-alta: #f9cb9c;
+  --sev-critica: #ea9999;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sev-baja: #274e13;
+    --sev-media: #7f6000;
+    --sev-alta: #783f04;
+    --sev-critica: #660000;
+  }
+}
+.matriz-riesgos { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
+.matriz-riesgos td { width: 44px; height: 32px; text-align: center; font-weight: 600; border-radius: 3px; }
+.matriz-riesgos th { font-weight: 400; font-size: 11px; color: var(--tenue); padding: 0 4px; text-align: right; white-space: nowrap; }
+.matriz-riesgos .ejes th { text-align: center; white-space: normal; vertical-align: top; }
+.sev-baja { background: var(--sev-baja); }
+.sev-media { background: var(--sev-media); }
+.sev-alta { background: var(--sev-alta); }
+.sev-critica { background: var(--sev-critica); }
+.lista-matriz { margin: 8px 0; padding-left: 20px; }
+.etiqueta-sev { font-size: 11px; padding: 0 6px; border-radius: 3px; margin-left: 4px; }

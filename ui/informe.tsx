@@ -11,7 +11,8 @@ import { createRoot } from 'react-dom/client';
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
 import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
-  MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
+  MatrizRiesgosTabla, MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
+import type { Contingencia } from '../excel/contingencia.ts';
 import { Abanico, CajasSalidas, CurvasSuperpuestas, TornadoCambio } from './Graficos.tsx';
 import './estilos.css';
 import './informe.css';
@@ -83,7 +84,7 @@ function Informe() {
 
       {datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />}
 
-      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} />)}
+      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} {...(datos.baseFija ? { baseFija: datos.baseFija } : {})} />)}
 
       {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
         <section className="salida-informe">
@@ -131,11 +132,36 @@ function RegistroImpreso({ filas }: { filas: NonNullable<DatosInforme['registroR
         Esperado: probabilidad × impacto medio, lo que aporta cada riesgo de media (ocurra o no). Lo que pesa cada uno
         en una salida, en su gráfico «Qué la mueve más».
       </p>
+      <h3>Probabilidad e impacto</h3>
+      <MatrizRiesgosTabla filas={filas} />
     </section>
   );
 }
 
-function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInforme; referencia?: string; primera: boolean }) {
+/** V1: la contingencia frente al valor base, en el informe. */
+function ContingenciaImpresa({ c, fecha, baseFija }: { c: Contingencia; fecha?: boolean; baseFija?: string }) {
+  const f = formatoDe(fecha);
+  const coste = c.clase === 'cost';
+  return (
+    <>
+      <h3>Contingencia frente al valor base</h3>
+      <p>
+        Valor base {f.valor(c.base)} (la hoja sin incertidumbre{baseFija ? `, con las funciones RIESGO en ${baseFija}` : ''}).
+        Probabilidad de {coste ? 'no pasarse de él' : 'alcanzarlo'}: <strong>{porcentajeTexto(c.probabilidadBase)}</strong>.
+      </p>
+      <table className="comparacion tabla-informe">
+        <thead><tr><th>Confianza</th><th>Percentil</th><th>Valor</th><th>{coste ? 'Reserva sobre el base' : 'Por debajo del base'}</th></tr></thead>
+        <tbody>
+          {c.niveles.map((n) => (
+            <tr key={n.confianza}><td>{porcentajeTexto(n.confianza)}</td><td>p{Math.round(n.percentil * 100)}</td><td>{f.valor(n.valor)}</td><td>{f.dispersion(n.diferencia)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function SalidaImpresa({ salida: s, referencia, primera, baseFija }: { salida: SalidaInforme; referencia?: string; primera: boolean; baseFija?: string }) {
   if (esSalidaDeTexto(s)) {
     // Salida de texto o de sí/no (T2): frecuencias, qué la decide y cruce.
     const objetivo = s.categorias?.[0]?.valor;
@@ -208,6 +234,8 @@ function SalidaImpresa({ salida: s, referencia, primera }: { salida: SalidaInfor
           ))}
         </dl>
       </div>
+
+      {s.contingencia && <ContingenciaImpresa c={s.contingencia} fecha={s.fecha} baseFija={baseFija} />}
 
       {s.precision && <PrecisionSalida precision={s.precision} n={s.resumen.n} formato={formatoDe(s.fecha)} />}
 

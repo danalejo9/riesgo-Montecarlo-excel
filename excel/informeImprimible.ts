@@ -20,6 +20,7 @@ import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
 import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
 import type { FilaRiesgo } from './registroRiesgos.ts';
+import { claseSugerida, contingencia, type Contingencia } from './contingencia.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
@@ -30,6 +31,8 @@ export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' |
   cdfReferencia?: ResultadoSalida['cdf'];
   /** La lectura en palabras (C7). */
   lectura?: string[];
+  /** V1: la contingencia frente al valor base, ya calculada (la muestra no viaja). */
+  contingencia?: Contingencia;
 }
 
 export interface DatosInforme {
@@ -50,6 +53,8 @@ export interface DatosInforme {
   };
   entradas: { nombre: string; ref: string; distribucion: string; correlaciones: string }[];
   referencia?: string;
+  /** V1: con qué valor fijo enseñaba la hoja el valor base («la media»). */
+  baseFija?: string;
   /** El registro de riesgos (T8), si el libro tiene `RIESGO.EVENTO`. */
   registroRiesgos?: FilaRiesgo[];
   salidas: SalidaInforme[];
@@ -93,6 +98,7 @@ export function datosDelInforme(
     ],
     ...(ref ? { referencia: ref.etiqueta } : {}),
     ...(resultado.registroRiesgos && resultado.registroRiesgos.length > 0 ? { registroRiesgos: resultado.registroRiesgos } : {}),
+    ...(resultado.base && 'fijo' in resultado.base ? { baseFija: resultado.base.fijo } : {}),
     salidas: resultado.salidas.map(({ muestraOrdenada, ...conTexto }) => {
       // La muestra de textos (hasta 100.000) no viaja: el informe no la enseña.
       const s = { ...conTexto };
@@ -109,8 +115,11 @@ export function datosDelInforme(
           ...s,
           ...(umbral && probabilidad !== undefined ? { umbral: { valor: umbral.value, sentido: umbral.direction, probabilidad } } : {}),
         });
+      const clase = modelo.outputs.find((o) => o.id === s.id)?.kind ?? claseSugerida(s.nombre);
+      const cont = s.valorBase !== undefined && muestraOrdenada && !esSalidaDeTexto(s) ? contingencia(muestraOrdenada, s.valorBase, clase) : null;
       return {
         ...s,
+        ...(cont ? { contingencia: cont } : {}),
         ...(lectura.length > 0 ? { lectura } : {}),
         ...(umbral && muestraOrdenada && muestraOrdenada.length > 0
           ? {

@@ -96,6 +96,8 @@ export async function volcarResultados(
       r.format.font.bold = true;
       r.format.borders.getItem(Excel.BorderIndex.edgeBottom).style = Excel.BorderLineStyle.continuous;
     }
+    // V2: las casillas de la matriz de probabilidad e impacto, con el color de su severidad.
+    for (const r of bloques.rellenos) zona(r).format.fill.color = r.color;
     for (const fila of bloques.tenues) {
       hoja.getRangeByIndexes(fila, 0, 1, 1).format.font.color = GRIS;
     }

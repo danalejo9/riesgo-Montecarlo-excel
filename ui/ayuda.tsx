@@ -28,6 +28,10 @@ export const AYUDA = {
     'Cada RIESGO.EVENTO con su probabilidad, su impacto y su valor esperado (probabilidad × impacto medio): lo que aporta de media al total, ocurra o no. Sirve para priorizar qué riesgos mitigar primero.',
   correlaciones:
     'Una correlación dice que dos entradas se mueven juntas (positiva) o al revés (negativa). Olvidarla suele subestimar el riesgo: los malos escenarios de una variable ya no se compensan con los buenos de la otra.',
+  contingencia:
+    'El valor base es lo que da la hoja sin incertidumbre: la estimación de siempre. En un coste o un plazo, la probabilidad de no pasarse de él y la reserva (P80 menos el valor base) que haría falta para tener un 80 % de confianza; en un beneficio, la probabilidad de alcanzarlo y lo que se obtiene con esa confianza (el P20). Elige arriba si la salida es un coste o un beneficio.',
+  matriz:
+    'Cada riesgo del registro en su casilla: la probabilidad en horizontal y el impacto medio en vertical, comparado con el mayor del registro. El color es la severidad (probabilidad × impacto): baja, media, alta o crítica. Los de arriba a la derecha son los primeros que hay que mitigar.',
   comparar:
     'Caja y bigotes, curvas acumuladas y abanico de todas las salidas numéricas en un mismo eje. Tiene sentido cuando están en las mismas unidades, como el flujo de caja de cada año.',
 } as const;

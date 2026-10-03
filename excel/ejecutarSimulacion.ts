@@ -46,7 +46,9 @@ import {
   type ResultadoSimulacionPanel,
 } from './informe.ts';
 import { aplicarCorrelacionesDeFunciones, leerDeclaraciones, PREFIJO_SALIDA_FUNCION, sustituirDeclaraciones } from './declaracionesEnGrafo.ts';
-import { celdasConFormatoFecha } from './formatoCeldas.ts';
+import { celdasConFormatoFecha, leerNumeros } from './formatoCeldas.ts';
+import { modoLibroEnMemoria } from './modoLibroCompartido.ts';
+import { textoEstadistico } from './contingencia.ts';
 import { registroDeRiesgos } from './registroRiesgos.ts';
 import { combinaciones, etiquetaCombinacion, fijarCombinacion, leerDecisiones, type ResultadoDecisiones, type SalidaEnOpcion } from './decisiones.ts';
 import type { IteracionesSimuladas } from './iteraciones.ts';
@@ -264,6 +266,10 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const dirEntradas = modelo.inputs.map((e, i) =>
     esTodaLaFormula(deFunciones, e.id) ? direccionDe(deFunciones.celdaDeEntrada.get(e.id) ?? (clavesEntrada[i] as string)) : '');
   const fechas = await celdasConFormatoFecha([...new Set([...dirSalidas, ...dirEntradas])].filter(Boolean)).catch(() => new Set<string>());
+  // V1: el valor base de cada salida, lo que enseña la hoja sin incertidumbre.
+  // Solo en «Valores fijos»: en «Aleatorio» la hoja enseña un sorteo, no una estimación.
+  const modoLibro = modoLibroEnMemoria();
+  const bases = modoLibro.modo === 'fijo' ? await leerNumeros(dirSalidas).catch(() => null) : null;
   // H6 y H7: avisos de coherencia y por dónde llega cada entrada a cada salida.
   const avisosCoherencia = avisosDeCoherencia(grafo, modelo.inputs, clavesEntrada, clavesSalida, direccionDe);
   const trazado = trazarDependencias(grafo, modelo.inputs, clavesEntrada, modelo.outputs.map((s, i) => ({ nombre: s.name, clave: clavesSalida[i] as string })), direccionDe);
@@ -272,6 +278,8 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     if (!f.ok) return f;
     return {
       ...f,
+      salidas: f.salidas.map((s, i) => (bases && typeof bases[i] === 'number' ? { ...s, valorBase: bases[i] as number } : s)),
+      base: bases ? { fijo: textoEstadistico(modoLibro.fijo) } : { aleatorio: true as const },
       ...(registro.length > 0 ? { registroRiesgos: registro } : {}),
       ...(avisosCoherencia.length > 0 ? { avisosCoherencia } : {}),
       trazado,

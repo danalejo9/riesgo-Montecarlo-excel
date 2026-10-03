@@ -40,6 +40,8 @@ import { esSalidaDeTexto, probabilidadDeValor, type PorCategoria } from '../exce
 import { lecturaDeSalida, lecturaDeTexto } from '../excel/lectura.ts';
 import { claveComparable, escucharSeleccion } from '../excel/seleccionActiva.ts';
 import { volcarResultados } from '../excel/volcarResultados.ts';
+import { claseSugerida, contingencia, type ClaseSalida, type NivelContingencia } from '../excel/contingencia.ts';
+import { matrizDeRiesgos, NIVELES_IMPACTO, NIVELES_PROBABILIDAD, NOMBRE_SEVERIDAD, severidad } from '../excel/matrizRiesgos.ts';
 import { exportarIteraciones } from '../excel/exportarIteraciones.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
@@ -360,6 +362,16 @@ export function Resultados({
                   return copia;
                 })
               }
+            />
+          )}
+
+          {/* V1: contingencia frente al valor base (la hoja sin incertidumbre). */}
+          {salida.muestraOrdenada && salida.muestraOrdenada.length > 1 && (salida.valorBase !== undefined || (resultado.base && 'aleatorio' in resultado.base)) && (
+            <SeccionContingencia
+              salida={salida}
+              base={resultado.base}
+              clase={modelo.outputs.find((o) => o.id === salida.id)?.kind ?? claseSugerida(salida.nombre)}
+              alCambiarClase={(kind) => cambiarSalida(salida, (o) => ({ ...o, kind }))}
             />
           )}
 
@@ -1056,6 +1068,136 @@ function TablaDecisiones({ decisiones, idSalida, formato }: { decisiones: Result
 }
 
 /**
+ * V1: la contingencia de una salida frente a su valor base —lo que da la hoja
+ * sin incertidumbre—: la probabilidad de cumplirlo y, en un coste, la reserva
+ * para el P50, P80 y P90 (en un beneficio, lo que se obtiene con esa
+ * confianza). Ver `excel/contingencia.ts`.
+ */
+function SeccionContingencia({
+  salida,
+  base,
+  clase,
+  alCambiarClase,
+}: {
+  salida: ResultadoSalida;
+  base: SimulacionCompletada['base'];
+  clase: ClaseSalida;
+  alCambiarClase: (c: ClaseSalida) => void;
+}) {
+  const f = formatoDe(salida.fecha);
+  if (base && 'aleatorio' in base) {
+    return (
+      <Plegable id="contingencia" titulo="Contingencia" resumen="sin valor base">
+        <p className="tenue">
+          El libro estaba en «Aleatorio» al simular, así que la hoja no enseñaba una estimación sino un sorteo.
+          Pon «Valores fijos» en la cinta y vuelve a simular para ver la contingencia frente al valor base.
+        </p>
+      </Plegable>
+    );
+  }
+  const c = salida.muestraOrdenada && salida.valorBase !== undefined ? contingencia(salida.muestraOrdenada, salida.valorBase, clase) : null;
+  if (!c) return null;
+  const coste = clase === 'cost';
+  const p80 = c.niveles.find((n) => n.confianza === 0.8) as NivelContingencia;
+  const resumen = coste
+    ? `${pctCorto(c.probabilidadBase)} de no pasarse · reserva P80 ${f.dispersion(Math.max(0, p80.diferencia))}`
+    : `${pctCorto(c.probabilidadBase)} de alcanzarlo · P20 ${f.valor(p80.valor)}`;
+  return (
+    <Plegable id="contingencia" titulo="Contingencia" abierta resumen={resumen}>
+      <div className="clase-salida" role="radiogroup" aria-label="Qué es esta salida">
+        <label><input type="radio" checked={coste} onChange={() => alCambiarClase('cost')} /> Un coste o un plazo (malo si sube)</label>
+        <label><input type="radio" checked={!coste} onChange={() => alCambiarClase('benefit')} /> Un beneficio (malo si baja)</label>
+      </div>
+      <p>
+        Valor base <strong>{f.valor(c.base)}</strong>
+        <span className="tenue"> (lo que da la hoja sin incertidumbre{base && 'fijo' in base ? `, con las funciones RIESGO en ${base.fijo}` : ''})</span>.
+        {' '}Probabilidad de {coste ? 'no pasarse de él' : 'alcanzarlo'}: <strong>{pctCorto(c.probabilidadBase)}</strong>.
+      </p>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead>
+            <tr><th>Confianza</th><th>Percentil</th><th>Valor</th><th>{coste ? 'Reserva sobre el base' : 'Por debajo del base'}</th><th>% del base</th></tr>
+          </thead>
+          <tbody>
+            {c.niveles.map((n) => (
+              <tr key={n.confianza}>
+                <td>{pctCorto(n.confianza)}</td>
+                <td>p{Math.round(n.percentil * 100)}</td>
+                <td>{f.valor(n.valor)}</td>
+                <td>{f.dispersion(n.diferencia)}</td>
+                <td>{n.relativa === null || salida.fecha ? '' : pctCorto(n.relativa)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="tenue">
+        {coste
+          ? p80.diferencia > 0
+            ? `Para tener un 80 % de confianza de no pasarse hace falta una reserva de ${f.dispersion(p80.diferencia)} sobre el valor base (el P80, ${f.valor(p80.valor)}).`
+            : `El valor base ya cubre un 80 % de confianza: el P80 (${f.valor(p80.valor)}) no lo supera.`
+          : `Con un 80 % de confianza se obtiene al menos ${f.valor(p80.valor)}${p80.diferencia > 0 ? `: ${f.dispersion(p80.diferencia)} menos que el valor base` : ', por encima del valor base'}.`}
+      </p>
+      <Ayuda tema="contingencia" />
+    </Plegable>
+  );
+}
+
+/**
+ * V2: la matriz de probabilidad e impacto (5 × 5): la probabilidad en
+ * horizontal, el impacto en vertical (el mayor arriba) y el color de la
+ * severidad. Cada riesgo, numerado como en la lista de debajo.
+ */
+export function MatrizRiesgosTabla({ filas }: { filas: readonly FilaRiesgo[] }) {
+  const m = matrizDeRiesgos(filas);
+  const numeroDe = new Map(m.ubicados.map((r, i) => [r, i + 1] as const));
+  return (
+    <>
+      <div className="tabla-desplazable">
+        <table className="matriz-riesgos" aria-label="Matriz de probabilidad e impacto">
+          <tbody>
+            {[4, 3, 2, 1, 0].map((i) => (
+              <tr key={i}>
+                <th scope="row">{NIVELES_IMPACTO[i]}</th>
+                {[0, 1, 2, 3, 4].map((p) => {
+                  const riesgos = m.casillas[i]?.[p] ?? [];
+                  const sev = severidad(p, i);
+                  return (
+                    <td key={p} className={`sev-${sev}`} title={`${NIVELES_PROBABILIDAD[p]} probabilidad · impacto ${NIVELES_IMPACTO[i]?.toLowerCase()} · severidad ${NOMBRE_SEVERIDAD[sev].toLowerCase()}${riesgos.length ? `: ${riesgos.map((r) => r.nombre).join(', ')}` : ''}`}>
+                      {riesgos.map((r) => numeroDe.get(r)).join(' ')}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            <tr className="ejes">
+              <th scope="row" className="tenue">Impacto ↑ · Probabilidad →</th>
+              {NIVELES_PROBABILIDAD.map((n) => <th key={n} scope="col">{n}</th>)}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ol className="lista-matriz">
+        {m.ubicados.map((r) => (
+          <li key={r.celda + r.nombre}>
+            {r.nombre} <span className={`etiqueta-sev sev-${r.severidad}`}>{NOMBRE_SEVERIDAD[r.severidad]}</span>
+          </li>
+        ))}
+      </ol>
+      {m.sinUbicar.length > 0 && (
+        <p className="tenue">Sin casilla (su probabilidad o su impacto cambian en cada iteración): {m.sinUbicar.join(', ')}.</p>
+      )}
+      <p className="tenue">
+        Probabilidad: muy baja &lt; 10 %, baja 10–30 %, media 30–50 %, alta 50–70 %, muy alta ≥ 70 %. Impacto medio
+        frente al mayor del registro ({numero(m.mayorImpacto)}): muy alto ≥ 1/2, alto ≥ 1/4, medio ≥ 1/8, bajo ≥ 1/16.
+      </p>
+    </>
+  );
+}
+
+const pctCorto = (x: number) => `${(x * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`;
+
+/**
  * El registro de riesgos (T8): cada `RIESGO.EVENTO` con su probabilidad, su
  * impacto y su valor esperado (p × impacto medio), de más a menos, y cuánto
  * es del total. Lo que pesa cada uno en una salida concreta, en el tornado.
@@ -1098,6 +1240,9 @@ function RegistroRiesgos({ filas }: { filas: readonly FilaRiesgo[] }) {
           Entre todos, {numero(total)}. Lo que pesa cada uno en una salida concreta, y su incertidumbre,
           lo dice «Qué la mueve más» (sus entradas «ocurre» e «impacto»).
         </p>
+        <h3>Probabilidad e impacto</h3>
+        <MatrizRiesgosTabla filas={filas} />
+        <Ayuda tema="matriz" />
       </Plegable>
     </section>
   );
