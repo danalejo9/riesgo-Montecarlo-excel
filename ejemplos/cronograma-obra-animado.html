@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Demostración animada del cronograma de obra (la misma de la plantilla «Cronograma de obra»). Se abre con doble clic en cualquier navegador. -->
+<title>Cronograma de obra incierto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Retícula: cabecera y cifras arriba; el cronograma y el histograma comparten el mismo eje de fechas, uno sobre otro. */
+  :root {
+    --fondo: #EEF0EC;      /* niebla */
+    --superficie: #FFFFFF;
+    --texto: #1E2124;      /* asfalto */
+    --texto-2: #55585A;
+    --linea: #B9B7B0;      /* concreto */
+    --rejilla: #DCDDD8;
+    --identidad: #4F5E3A;  /* musgo: ruta crítica, acción */
+    --no-critica: #B9B7B0;
+    --tarde: #A87C00;      /* señal oscurecida para marcas sobre claro */
+    --senal: #E8B90F;
+    --sobre-senal: #1E2124;
+    --plan: #1E2124;
+    --fuente: 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --curva: cubic-bezier(0.2, 0, 0, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --fondo: #1E2124; --superficie: #2A2E31; --texto: #EEF0EC; --texto-2: #B9B7B0; --linea: #5A5F62; --rejilla: #3A3F42;
+      --identidad: #9DAF7E; --no-critica: #6B7073; --tarde: #E8B90F; --plan: #EEF0EC; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --fondo: #1E2124; --superficie: #2A2E31; --texto: #EEF0EC; --texto-2: #B9B7B0; --linea: #5A5F62; --rejilla: #3A3F42;
+    --identidad: #9DAF7E; --no-critica: #6B7073; --tarde: #E8B90F; --plan: #EEF0EC; color-scheme: dark;
+  }
+  body { background: var(--fondo); color: var(--texto); font-family: var(--fuente); font-size: 15px; line-height: 1.5; }
+  .pagina { max-width: 1120px; margin: 0 auto; padding-block: 32px 48px; padding-inline: 24px; display: grid; gap: 24px; }
+  @media (max-width: 640px) { .pagina { padding-inline: 16px; padding-block: 24px 32px; } }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+  h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+  p { margin: 0; }
+  .secundario { color: var(--texto-2); }
+  .pequeno { font-size: 13px; }
+  .intro { max-width: 68ch; color: var(--texto-2); }
+
+  .controles { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  button, select, input { font-family: inherit; font-size: 14px; }
+  .boton { min-height: 36px; padding: 6px 16px; border-radius: 6px; border: 1px solid var(--identidad); background: var(--identidad); color: var(--superficie); font-weight: 500; cursor: pointer; transition: transform 120ms var(--curva), background 120ms var(--curva); }
+  .boton:hover { filter: brightness(1.1); }
+  .boton:active { transform: scale(0.97); }
+  .boton:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--identidad); outline-offset: 2px; }
+  .boton.secundario-b { background: transparent; color: var(--identidad); }
+  .campo { display: inline-flex; align-items: center; gap: 8px; color: var(--texto-2); font-size: 13px; }
+  select { min-height: 36px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--linea); background: var(--superficie); color: var(--texto); }
+  input[type="range"] { accent-color: var(--identidad); width: 180px; max-width: 40vw; }
+
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px 24px; }
+  .cifra b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .cifra span { font-size: 13px; color: var(--texto-2); }
+  .estado { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 6px; }
+  .estado.ok { background: var(--identidad); color: var(--superficie); }
+  .estado.tarde { background: var(--senal); color: var(--sobre-senal); }
+
+  .panel { background: var(--superficie); border-radius: 10px; padding: 24px; display: grid; gap: 16px; min-width: 0; }
+  @media (max-width: 640px) { .panel { padding: 16px; } }
+  .panel-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+  .leyenda { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--texto-2); }
+  .leyenda i { display: inline-block; width: 16px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+  /* Filas del cronograma: nombre | pista con eje compartido | criticidad. */
+  .gantt { display: grid; grid-template-columns: minmax(110px, 200px) minmax(0, 1fr) 64px; column-gap: 16px; row-gap: 6px; align-items: center; }
+  @media (max-width: 640px) { .gantt { grid-template-columns: 96px minmax(0, 1fr) 44px; column-gap: 8px; } }
+  .gantt .nombre { font-size: 14px; line-height: 1.25; min-width: 0; }
+  .gantt .nombre small { display: block; font-size: 12px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+  .gantt .crit { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--texto-2); }
+  .gantt .cab { font-size: 12px; color: var(--texto-2); }
+  .pista { position: relative; height: 26px; }
+  .pista .plan { position: absolute; top: 3px; height: 20px; border: 1.5px dashed var(--plan); border-radius: 4px; opacity: 0.35; }
+  .pista .barra { position: absolute; top: 5px; height: 16px; border-radius: 4px; background: var(--no-critica); transition: left 380ms var(--curva), width 380ms var(--curva), background 200ms var(--curva); }
+  .pista .barra.critica { background: var(--identidad); }
+  .pista .barra.lluvia { background: var(--senal); }
+  .pista .barra[hidden] { display: none; }
+  .rapido .pista .barra { transition: none; }
+
+  .eje { position: relative; height: 20px; font-size: 12px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+  .eje span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .contenedor-eje { grid-column: 2; position: relative; }
+
+  /* Las líneas verticales cruzan cronograma e histograma. */
+  .zona { position: relative; overflow-x: clip; }
+  .rejilla-v { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--rejilla); pointer-events: none; }
+  .marca-v { position: absolute; top: 0; bottom: 0; width: 2px; pointer-events: none; transition: left 380ms var(--curva); }
+  .rapido .marca-v { transition: none; }
+  .marca-v.entrega { background: var(--identidad); }
+  .marca-v.plazo { background: var(--tarde); }
+  .marca-v .etq { position: absolute; top: -2px; left: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; color: var(--texto); background: var(--superficie); padding: 0 4px; border-radius: 4px; }
+  .marca-v.plazo .etq { top: 20px; }
+  .marca-v.izquierda .etq { left: auto; right: 6px; }
+
+  .hist-fila { display: grid; grid-template-columns: minmax(110px, 200px) minmax(0, 1fr) 64px; column-gap: 16px; }
+  @media (max-width: 640px) { .hist-fila { grid-template-columns: 96px minmax(0, 1fr) 44px; column-gap: 8px; } }
+  .hist { position: relative; height: 160px; grid-column: 2; border-bottom: 1px solid var(--linea); }
+  .hist .bin { position: absolute; bottom: 0; border-radius: 3px 3px 0 0; background: var(--identidad); transition: height 200ms var(--curva); }
+  .hist .bin.tarde { background: var(--tarde); }
+  .hist .bin.actual { outline: 2px solid var(--texto); outline-offset: 1px; }
+  .hist .bin:hover { filter: brightness(1.15); }
+  .hist-lado { font-size: 13px; color: var(--texto-2); align-self: end; }
+  .percentil { position: absolute; bottom: -22px; transform: translateX(-50%); font-size: 12px; font-weight: 500; color: var(--texto); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .percentil.abajo { bottom: -38px; }
+  .percentil::before { content: ''; position: absolute; left: 50%; top: -8px; width: 1px; height: 7px; background: var(--texto); }
+
+  .tip { position: fixed; z-index: 10; pointer-events: none; background: var(--texto); color: var(--fondo); font-size: 13px; padding: 6px 10px; border-radius: 6px; max-width: 260px; box-shadow: 0 2px 8px rgba(0,0,0,0.18); font-variant-numeric: tabular-nums; }
+  .notas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 32px; font-size: 14px; color: var(--texto-2); }
+  .notas b { color: var(--texto); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pista .barra, .marca-v, .hist .bin, .boton { transition: none !important; }
+  }
+</style>
+</head>
+<body style="margin:0">
+
+<div class="pagina" id="pagina">
+  <header>
+    <h1>Cronograma de obra incierto</h1>
+    <p class="intro">Una edificación de nueve actividades encadenadas. Cada una dura entre un mínimo y un máximo, con un valor más probable (distribución triangular), y la estructura puede retrasarse por lluvias. En cada iteración se sortean las duraciones, se recalcula el cronograma y la fecha de entrega se mueve. Abajo, sobre el mismo eje de fechas, se acumulan todas las entregas posibles.</p>
+  </header>
+
+  <div class="controles" role="group" aria-label="Controles de la simulación">
+    <button class="boton" id="reproducir" type="button">Pausar</button>
+    <button class="boton secundario-b" id="paso" type="button">Una iteración</button>
+    <button class="boton secundario-b" id="reiniciar" type="button">Empezar de cero</button>
+    <label class="campo" for="velocidad">Velocidad
+      <select id="velocidad">
+        <option value="1100">Lenta</option>
+        <option value="450" selected>Normal</option>
+        <option value="60">Rápida</option>
+      </select>
+    </label>
+    <label class="campo" for="plazo">Plazo comprometido
+      <input type="range" id="plazo" min="180" max="300" step="1" value="217">
+      <b id="plazo-texto" style="color: var(--texto); font-weight: 500"></b>
+    </label>
+  </div>
+
+  <section class="cifras" aria-live="polite">
+    <div class="cifra"><b id="c-iter">0</b><span>iteraciones</span></div>
+    <div class="cifra"><b id="c-actual">–</b><span>entrega en esta iteración</span><br><span id="c-actual-estado" class="estado ok">a tiempo</span></div>
+    <div class="cifra"><b id="c-p50">–</b><span>P50 · la mitad de las veces antes</span></div>
+    <div class="cifra"><b id="c-p80">–</b><span>P80 · fecha con 80 % de confianza</span></div>
+    <div class="cifra"><b id="c-prob">–</b><span>probabilidad de cumplir el plazo</span></div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-gantt">
+    <div class="panel-cabecera">
+      <h2 id="t-gantt">Cronograma de esta iteración</h2>
+      <div class="leyenda">
+        <span><i style="background: var(--identidad)"></i>Ruta crítica</span>
+        <span><i style="background: var(--no-critica)"></i>Con holgura</span>
+        <span><i style="background: var(--senal)"></i>Retraso por lluvias</span>
+        <span><i style="border: 1.5px dashed var(--plan); opacity: .5"></i>Plan (duraciones más probables)</span>
+      </div>
+    </div>
+    <div class="zona" id="zona">
+      <div id="capa-v" aria-hidden="true"></div>
+      <div class="gantt" id="gantt">
+        <div class="cab">Actividad · días (mín · más prob. · máx)</div>
+        <div class="contenedor-eje"><div class="eje" id="eje-arriba"></div></div>
+        <div class="cab" style="text-align:right" title="Porcentaje de iteraciones en que la actividad estuvo en la ruta crítica">Crítica</div>
+      </div>
+      <div class="hist-fila" style="margin-top: 16px">
+        <div class="hist-lado">Fechas de entrega posibles<br><span class="pequeno">cada barra: una semana</span></div>
+        <div class="hist" id="hist" role="img" aria-label="Histograma de las fechas de entrega simuladas"></div>
+        <div></div>
+      </div>
+      <div class="hist-fila" style="margin-top: 40px">
+        <div></div>
+        <div class="contenedor-eje" style="grid-column: 2"><div class="eje" id="eje-abajo"></div></div>
+        <div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notas">
+    <p><b>Por qué el plan casi nunca se cumple.</b> Con las duraciones más probables la obra termina el <span id="n-plan"></span>. Pero las actividades tienden a alargarse más de lo que se acortan, y donde dos ramas confluyen (instalaciones y fachada) manda la más lenta. Por eso la entrega simulada suele quedar a la derecha del plan.</p>
+    <p><b>Qué mirar.</b> La columna «Crítica» dice cuántas veces cada actividad estuvo en la ruta crítica: la licencia y la estructura son las que más deciden la fecha. Mueve el plazo comprometido para ver qué fecha podrías prometer con un 80 % de confianza.</p>
+  </section>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+  // Las actividades: [nombre, mínimo, más probable, máximo, predecesoras]
+  const ACT = [
+    { id: 'dis', nombre: 'Diseño y estudios', t: [20, 25, 35], pre: [] },
+    { id: 'lic', nombre: 'Licencia de construcción', t: [30, 45, 90], pre: ['dis'] },
+    { id: 'ter', nombre: 'Adecuación del terreno', t: [10, 14, 20], pre: ['dis'] },
+    { id: 'cim', nombre: 'Cimentación', t: [20, 25, 40], pre: ['lic', 'ter'] },
+    { id: 'est', nombre: 'Estructura', t: [40, 50, 70], pre: ['cim'] },
+    { id: 'ins', nombre: 'Instalaciones', t: [25, 30, 45], pre: ['est'] },
+    { id: 'fac', nombre: 'Mampostería y fachada', t: [30, 35, 50], pre: ['est'] },
+    { id: 'aca', nombre: 'Acabados', t: [25, 30, 45], pre: ['ins', 'fac'] },
+    { id: 'ent', nombre: 'Pruebas y entrega', t: [5, 7, 12], pre: ['aca'] },
+  ];
+  const LLUVIA = { prob: 0.35, t: [10, 15, 25] }; // se suma a la estructura
+  const INICIO = new Date(2027, 1, 1); // 1 de febrero de 2027
+  const DIA = 86400000;
+
+  // Generador con semilla: la misma página da siempre la misma secuencia.
+  let semilla = 20270201;
+  const azar = () => { semilla |= 0; semilla = (semilla + 0x6D2B79F5) | 0; let t = Math.imul(semilla ^ (semilla >>> 15), 1 | semilla); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const triangular = ([a, m, b]) => { const u = azar(), f = (m - a) / (b - a); return u < f ? a + Math.sqrt(u * (b - a) * (m - a)) : b - Math.sqrt((1 - u) * (b - a) * (b - m)); };
+
+  // Ruta crítica: hacia delante (inicio temprano) y hacia atrás (holgura).
+  function calcular(dur, extraLluvia) {
+    const ini = {}, fin = {};
+    for (const a of ACT) {
+      ini[a.id] = a.pre.length ? Math.max(...a.pre.map((p) => fin[p])) : 0;
+      fin[a.id] = ini[a.id] + dur[a.id] + (a.id === 'est' ? extraLluvia : 0);
+    }
+    const total = fin.ent;
+    const tarde = {};
+    for (let i = ACT.length - 1; i >= 0; i--) {
+      const a = ACT[i];
+      const sucesores = ACT.filter((s) => s.pre.includes(a.id));
+      tarde[a.id] = sucesores.length ? Math.min(...sucesores.map((s) => tarde[s.id] - (dur[s.id] + (s.id === 'est' ? extraLluvia : 0)))) : total;
+    }
+    const critica = {};
+    for (const a of ACT) critica[a.id] = Math.abs(tarde[a.id] - fin[a.id]) < 1e-9;
+    return { ini, fin, total, critica };
+  }
+  function iteracion() {
+    const dur = {};
+    for (const a of ACT) dur[a.id] = triangular(a.t);
+    const lluvia = azar() < LLUVIA.prob ? triangular(LLUVIA.t) : 0;
+    return { dur, lluvia, ...calcular(dur, lluvia) };
+  }
+  const plan = calcular(Object.fromEntries(ACT.map((a) => [a.id, a.t[1]])), 0);
+
+  // El eje se fija con una tanda previa (otra semilla) para que no salte.
+  const guardada = semilla; semilla = 777;
+  const previa = Array.from({ length: 4000 }, () => iteracion().total).sort((x, y) => x - y);
+  semilla = guardada;
+  const DIA_MAX = Math.ceil(previa[Math.floor(previa.length * 0.998)] / 7) * 7 + 7;
+  const pos = (d) => (d / DIA_MAX) * 100;
+
+  const fecha = (d) => new Date(INICIO.getTime() + Math.round(d) * DIA);
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const textoFecha = (d) => { const f = fecha(d); return `${f.getDate()} ${MESES[f.getMonth()]} ${f.getFullYear()}`; };
+
+  // ---- Construcción de la página ----
+  const $ = (id) => document.getElementById(id);
+  const gantt = $('gantt');
+  const filas = {};
+  for (const a of ACT) {
+    const n = document.createElement('div'); n.className = 'nombre';
+    n.innerHTML = `${a.nombre}<small>${a.t[0]} · ${a.t[1]} · ${a.t[2]}</small>`;
+    const p = document.createElement('div'); p.className = 'pista';
+    const pl = document.createElement('div'); pl.className = 'plan';
+    pl.style.left = pos(plan.ini[a.id]) + '%'; pl.style.width = pos(plan.fin[a.id] - plan.ini[a.id]) + '%';
+    const b = document.createElement('div'); b.className = 'barra'; b.tabIndex = 0;
+    p.append(pl, b);
+    let ll = null;
+    if (a.id === 'est') { ll = document.createElement('div'); ll.className = 'barra lluvia'; ll.hidden = true; p.append(ll); }
+    const c = document.createElement('div'); c.className = 'crit'; c.textContent = '–';
+    gantt.append(n, p, c);
+    filas[a.id] = { b, ll, c };
+  }
+  // Rejilla mensual y ejes.
+  const capa = $('capa-v');
+  const ejes = [$('eje-arriba'), $('eje-abajo')];
+  const zona = $('zona');
+  function colocarRejilla() {
+    capa.innerHTML = '';
+    for (const e of ejes) e.innerHTML = '';
+    const pista = gantt.querySelector('.pista');
+    const zr = zona.getBoundingClientRect(), pr = pista.getBoundingClientRect();
+    const x0 = pr.left - zr.left, ancho = pr.width;
+    capa.dataset.x0 = x0; capa.dataset.ancho = ancho;
+    const estrecho = ancho < 420;
+    let d = new Date(INICIO);
+    let k = 0;
+    while (true) {
+      const dia = (d - INICIO) / DIA;
+      if (dia > DIA_MAX) break;
+      const linea = document.createElement('div'); linea.className = 'rejilla-v';
+      linea.style.left = (x0 + ancho * dia / DIA_MAX) + 'px';
+      capa.append(linea);
+      if (!estrecho || k % 2 === 0) {
+        for (const e of ejes) {
+          const s = document.createElement('span');
+          s.style.left = pos(dia) + '%';
+          s.textContent = MESES[d.getMonth()] + (d.getMonth() === 0 || k === 0 ? ' ' + String(d.getFullYear()).slice(2) : '');
+          e.append(s);
+        }
+      }
+      d = new Date(d.getFullYear(), d.getMonth() + 1, 1); k++;
+    }
+    for (const m of [marcaEntrega, marcaPlazo]) capa.append(m);
+    moverMarcas();
+  }
+  const marcaEntrega = document.createElement('div'); marcaEntrega.className = 'marca-v entrega';
+  marcaEntrega.innerHTML = '<span class="etq"></span>';
+  const marcaPlazo = document.createElement('div'); marcaPlazo.className = 'marca-v plazo';
+  marcaPlazo.innerHTML = '<span class="etq"></span>';
+
+  // Histograma semanal.
+  const hist = $('hist');
+  const NB = Math.ceil(DIA_MAX / 7);
+  const cuentas = new Array(NB).fill(0);
+  const bins = [];
+  for (let i = 0; i < NB; i++) {
+    const b = document.createElement('div'); b.className = 'bin';
+    b.style.left = `calc(${pos(i * 7)}% + 1px)`; b.style.width = `calc(${pos(7)}% - 2px)`; b.style.height = '0';
+    b.dataset.i = i;
+    hist.append(b); bins.push(b);
+  }
+  const etqP50 = document.createElement('div'); etqP50.className = 'percentil';
+  const etqP80 = document.createElement('div'); etqP80.className = 'percentil';
+  hist.append(etqP50, etqP80);
+
+  // ---- Estado ----
+  const totales = [];
+  const vecesCritica = Object.fromEntries(ACT.map((a) => [a.id, 0]));
+  let ultima = null;
+  let plazo = Number($('plazo').value);
+
+  function registrar(it) {
+    totales.push(it.total);
+    for (const a of ACT) if (it.critica[a.id]) vecesCritica[a.id]++;
+    const i = Math.min(NB - 1, Math.floor(it.total / 7));
+    cuentas[i]++;
+    ultima = it;
+  }
+  function percentil(p) {
+    const o = [...totales].sort((x, y) => x - y);
+    return o[Math.min(o.length - 1, Math.floor(p * o.length))];
+  }
+  function moverMarcas() {
+    const x0 = Number(capa.dataset.x0 || 0), ancho = Number(capa.dataset.ancho || 0);
+    const lado = (m, d) => m.classList.toggle('izquierda', d / DIA_MAX > 0.62);
+    lado(marcaEntrega, ultima ? ultima.total : 0); lado(marcaPlazo, plazo);
+    if (ultima) {
+      marcaEntrega.style.left = (x0 + ancho * ultima.total / DIA_MAX - 1) + 'px';
+      marcaEntrega.querySelector('.etq').textContent = 'Entrega ' + textoFecha(ultima.total);
+    }
+    marcaPlazo.style.left = (x0 + ancho * plazo / DIA_MAX - 1) + 'px';
+    marcaPlazo.querySelector('.etq').textContent = 'Plazo ' + textoFecha(plazo);
+  }
+  function pintar() {
+    const n = totales.length;
+    if (ultima) {
+      for (const a of ACT) {
+        const f = filas[a.id];
+        const ini = ultima.ini[a.id], finSinLluvia = ini + ultima.dur[a.id];
+        f.b.style.left = pos(ini) + '%';
+        f.b.style.width = pos(ultima.dur[a.id]) + '%';
+        f.b.classList.toggle('critica', ultima.critica[a.id]);
+        f.b.dataset.tip = `${a.nombre}: ${textoFecha(ini)} → ${textoFecha(ultima.fin[a.id])} · ${Math.round(ultima.fin[a.id] - ini)} días${ultima.critica[a.id] ? ' · en la ruta crítica' : ' · con holgura'}`;
+        if (f.ll) {
+          f.ll.hidden = ultima.lluvia === 0;
+          f.ll.style.left = pos(finSinLluvia) + '%';
+          f.ll.style.width = pos(ultima.lluvia) + '%';
+          f.ll.dataset.tip = `Lluvias: la estructura se alarga ${Math.round(ultima.lluvia)} días (pasa en el ${Math.round(LLUVIA.prob * 100)} % de las iteraciones)`;
+        }
+        f.c.textContent = n ? Math.round(100 * vecesCritica[a.id] / n) + ' %' : '–';
+      }
+    }
+    const max = Math.max(1, ...cuentas);
+    const actual = ultima ? Math.min(NB - 1, Math.floor(ultima.total / 7)) : -1;
+    bins.forEach((b, i) => {
+      b.style.height = (cuentas[i] / max * 100) + '%';
+      b.classList.toggle('tarde', i * 7 + 3.5 > plazo);
+      b.classList.toggle('actual', i === actual);
+    });
+    $('c-iter').textContent = n.toLocaleString('es-CO');
+    if (ultima) {
+      $('c-actual').textContent = textoFecha(ultima.total);
+      const tarde = ultima.total > plazo;
+      const e = $('c-actual-estado');
+      e.textContent = tarde ? `${Math.round(ultima.total - plazo)} días tarde` : 'a tiempo';
+      e.className = 'estado ' + (tarde ? 'tarde' : 'ok');
+    }
+    if (n >= 20) {
+      const p50 = percentil(0.5), p80 = percentil(0.8);
+      $('c-p50').textContent = textoFecha(p50);
+      $('c-p80').textContent = textoFecha(p80);
+      etqP50.style.left = pos(p50) + '%'; etqP50.textContent = 'P50';
+      etqP80.style.left = pos(p80) + '%'; etqP80.textContent = 'P80';
+      etqP50.hidden = etqP80.hidden = false;
+      const separacion = (p80 - p50) / DIA_MAX * hist.getBoundingClientRect().width;
+      etqP80.classList.toggle('abajo', separacion < 40);
+      const ok = totales.filter((t) => t <= plazo).length / n;
+      $('c-prob').textContent = Math.round(ok * 100) + ' %';
+    } else { etqP50.hidden = etqP80.hidden = true; }
+    $('plazo-texto').textContent = textoFecha(plazo);
+    hist.setAttribute('aria-label', `Histograma de ${n} fechas de entrega simuladas` + (n >= 20 ? `; P50 ${textoFecha(percentil(0.5))}, P80 ${textoFecha(percentil(0.8))}` : ''));
+    moverMarcas();
+  }
+
+  // ---- Animación ----
+  const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reloj = null;
+  const pagina = $('pagina');
+  function paso() { registrar(iteracion()); pintar(); }
+  function reproducir() {
+    detener();
+    const ms = Number($('velocidad').value);
+    pagina.classList.toggle('rapido', ms < 200);
+    reloj = setInterval(() => { if (totales.length >= 5000) { detener(); return; } paso(); }, ms);
+    $('reproducir').textContent = 'Pausar';
+  }
+  function detener() { clearInterval(reloj); reloj = null; $('reproducir').textContent = 'Reproducir'; }
+  $('reproducir').addEventListener('click', () => (reloj ? detener() : reproducir()));
+  $('paso').addEventListener('click', () => { detener(); paso(); });
+  $('velocidad').addEventListener('change', () => { if (reloj) reproducir(); });
+  $('reiniciar').addEventListener('click', () => {
+    totales.length = 0; cuentas.fill(0); for (const k in vecesCritica) vecesCritica[k] = 0;
+    semilla = 20270201; paso();
+  });
+  $('plazo').addEventListener('input', (e) => { plazo = Number(e.target.value); pintar(); });
+
+  // Tooltips: barras del cronograma y del histograma.
+  const tip = $('tip');
+  function mostrarTip(texto, ev) { tip.textContent = texto; tip.hidden = false; const x = Math.min(ev.clientX + 12, window.innerWidth - tip.offsetWidth - 8); tip.style.left = x + 'px'; tip.style.top = (ev.clientY + 14) + 'px'; }
+  zona.addEventListener('pointermove', (ev) => {
+    const b = ev.target.closest('.barra, .bin');
+    if (!b) { tip.hidden = true; return; }
+    if (b.classList.contains('bin')) {
+      const i = Number(b.dataset.i), n = totales.length || 1;
+      mostrarTip(`Semana del ${textoFecha(i * 7)}: ${cuentas[i]} iteraciones (${(100 * cuentas[i] / n).toLocaleString('es-CO', { maximumFractionDigits: 1 })} %)`, ev);
+    } else if (b.dataset.tip) mostrarTip(b.dataset.tip, ev);
+  });
+  zona.addEventListener('pointerleave', () => { tip.hidden = true; });
+
+  // Estado de reposo completo: una tanda inicial ya simulada, y después se mueve.
+  $('n-plan').textContent = textoFecha(plan.total);
+  $('plazo').value = Math.round(plan.total); plazo = Math.round(plan.total);
+  $('plazo').max = String(DIA_MAX - 7);
+  for (let i = 0; i < 300; i++) registrar(iteracion());
+  colocarRejilla();
+  pintar();
+  new ResizeObserver(() => colocarRejilla()).observe(gantt);
+  if (!reducido) reproducir(); else detener();
+})();
+</script>
+</body>
+</html>

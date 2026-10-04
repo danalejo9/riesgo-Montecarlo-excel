@@ -1,5 +1,5 @@
 /**
- * Plantillas de partida (U1): tres modelos pequeños que se escriben en una
+ * Plantillas de partida (U1): cinco modelos pequeños que se escriben en una
  * hoja nueva, con las funciones RIESGO ya puestas (entradas, salidas con
  * `RIESGO.SALIDA`, un riesgo de evento y una correlación), listos para
  * simular. Sirven para aprender viendo un modelo que funciona y para empezar
@@ -29,6 +29,24 @@ export interface Plantilla {
 }
 
 const EUROS = '#,##0 "€"';
+const FECHA = 'dd/mm/yyyy';
+
+/**
+ * Las actividades del cronograma: duración (mínimo, más probable, máximo),
+ * cuándo empieza (el fin de su predecesora; con dos, la que termine más tarde)
+ * y, en palabras, de cuál depende.
+ */
+const ACTIVIDADES_CRONOGRAMA: readonly { nombre: string; dias: [number, number, number]; inicio: string; despues: string }[] = [
+  { nombre: 'Diseño y estudios', dias: [20, 25, 35], inicio: '=B3', despues: '(inicio de la obra)' },
+  { nombre: 'Licencia de construcción', dias: [30, 45, 90], inicio: '=D6', despues: 'Diseño y estudios' },
+  { nombre: 'Adecuación del terreno', dias: [10, 14, 20], inicio: '=D6', despues: 'Diseño y estudios' },
+  { nombre: 'Cimentación', dias: [20, 25, 40], inicio: '=MAX(D7,D8)', despues: 'Licencia y terreno (la última)' },
+  { nombre: 'Estructura', dias: [40, 50, 70], inicio: '=D9', despues: 'Cimentación (+ lluvias, fila 16)' },
+  { nombre: 'Instalaciones', dias: [25, 30, 45], inicio: '=D10', despues: 'Estructura' },
+  { nombre: 'Mampostería y fachada', dias: [30, 35, 50], inicio: '=D10', despues: 'Estructura' },
+  { nombre: 'Acabados', dias: [25, 30, 45], inicio: '=MAX(D11,D12)', despues: 'Instalaciones y fachada (la última)' },
+  { nombre: 'Pruebas y entrega', dias: [5, 7, 12], inicio: '=D13', despues: 'Acabados' },
+];
 const PCT = '0.0%';
 
 export const PLANTILLAS: readonly Plantilla[] = [
@@ -123,6 +141,39 @@ export const PLANTILLAS: readonly Plantilla[] = [
       { ref: 'A6', valor: 'Tipo de interés dentro de 5 años' },
       { ref: 'B6', valor: '=RIESGO.SALIDA("Tipo a 5 años")+G5', formato: '0.00%' },
       { ref: 'A8', valor: 'Simula y abre «Comparar salidas»: el abanico del precio se abre con los años; el tipo converge hacia el 4 %.' },
+    ],
+  },
+  {
+    // El mismo cronograma de la demostración animada (artefacto «Cronograma de
+    // obra incierto»): nueve actividades encadenadas y un riesgo de lluvias.
+    id: 'cronograma',
+    nombre: 'Cronograma de obra',
+    descripcion: 'Nueve actividades encadenadas con duraciones inciertas y un riesgo de lluvias; mide la fecha de entrega y la probabilidad de cumplir el plazo.',
+    hoja: 'Cronograma',
+    anchos: [30, 14],
+    celdas: [
+      { ref: 'A1', valor: 'Cronograma de obra (plantilla)', negrita: true },
+      { ref: 'A3', valor: 'Inicio de la obra' }, { ref: 'B3', valor: '=DATE(2027,2,1)', formato: FECHA },
+      { ref: 'A5', valor: 'Actividad', negrita: true }, { ref: 'B5', valor: 'Duración (días)', negrita: true },
+      { ref: 'C5', valor: 'Inicio', negrita: true }, { ref: 'D5', valor: 'Fin', negrita: true }, { ref: 'E5', valor: 'Empieza cuando termina', negrita: true },
+      ...ACTIVIDADES_CRONOGRAMA.flatMap((a, i) => {
+        const f = 6 + i;
+        return [
+          { ref: `A${f}`, valor: a.nombre },
+          { ref: `B${f}`, valor: `=RIESGO.TRIANGULAR(${a.dias.join(',')})`, formato: '0' },
+          { ref: `C${f}`, valor: a.inicio, formato: FECHA },
+          { ref: `D${f}`, valor: `=C${f}+B${f}${a.nombre === 'Estructura' ? '+B16' : ''}`, formato: FECHA },
+          { ref: `E${f}`, valor: a.despues },
+        ];
+      }),
+      { ref: 'A16', valor: 'Retraso de la estructura por lluvias (días)' },
+      { ref: 'B16', valor: '=RIESGO.EVENTO(0.35,RIESGO.TRIANGULAR(10,15,25))', formato: '0' },
+      { ref: 'A18', valor: 'Fecha de entrega', negrita: true },
+      { ref: 'B18', valor: '=RIESGO.SALIDA("Fecha de entrega")+D14', formato: FECHA, negrita: true },
+      { ref: 'A19', valor: 'Duración total (días)', negrita: true },
+      { ref: 'B19', valor: '=RIESGO.SALIDA("Duración total")+D14-B3', formato: '0', negrita: true },
+      { ref: 'A21', valor: 'Con las duraciones más probables la obra termina el 06/09/2027 (217 días). Simula: casi nunca se cumple.' },
+      { ref: 'A22', valor: 'En Resultados, pon el umbral de la fecha de entrega «por debajo de» 06/09/2027 y mira la Contingencia y el Registro de riesgos.' },
     ],
   },
 ];

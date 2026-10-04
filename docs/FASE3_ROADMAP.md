@@ -515,6 +515,7 @@ Estimaciones en días de trabajo efectivo.
   - **V2. Matriz de probabilidad e impacto** ✅ 03/10 (`excel/matrizRiesgos.ts`, `MatrizRiesgosTabla`, volcado con rellenos y PDF).
   - **V3. Comparar distribuciones en el explorador**, **V4. Asistente de juicio experto**, **V5. Atajos de teclado**: propuestos, sin decidir.
   - **Quizá, más adelante** (no ahora): optimizador tipo RiskOptimizer, más distribuciones, API para macros.
+- **U1b. Ejemplo de cronograma** ✅ 04/10 (usuario: «guárdala como un ejemplo»): plantilla `cronograma` y la demostración animada en `ejemplos/cronograma-obra-animado.html`.
 - **U2. Legibilidad del panel** ✅ 29/09 en Resultados (cifras clave, secciones plegables que se recuerdan, menos texto; el resto del panel, según lo que diga el usuario en N11) *(usuario, ronda del 29/09: «está muy difícil
   de leer toda la información, en general el panel lateral»)*. Primer paso
   hecho el 29/09: las acciones secundarias son botones con borde (antes

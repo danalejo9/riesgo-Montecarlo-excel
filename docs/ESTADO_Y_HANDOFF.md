@@ -1279,6 +1279,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `contingenciaMatrizV.test.ts` e `informeImprimible.test.ts`, y en el
     banco. **Siguiente**: la ronda del usuario (N1–N41); V3–V5 si las elige.
 
+72. [x] **Ejemplo de cronograma (2026-10-04)**. Artefacto animado
+    «Cronograma de obra incierto» para presentar, guardado también como
+    `ejemplos/cronograma-obra-animado.html`, y plantilla `cronograma` en
+    `excel/plantillas.ts` (`ACTIVIDADES_CRONOGRAMA`; ítem `ejCronograma` del
+    menú Ejemplos). Probada simulándola: media 248–251 días frente a 249,5 de
+    Python con 400.000 iteraciones. **Siguiente**: la ronda del usuario
+    (N1–N42).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -5,6 +5,19 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Ejemplo: cronograma de obra (2026-10-04)
+
+**Añadido**
+- Quinta plantilla, **Cronograma de obra** (cinta → Ejemplos ▾, o «Cómo
+  empezar» → Ejemplos): nueve actividades con duraciones triangulares,
+  inicios con `MAX` donde dos ramas confluyen, un riesgo de lluvias
+  (`RIESGO.EVENTO`) y dos salidas, la fecha de entrega y la duración total.
+  Con las duraciones más probables termina el 06/09/2027 (217 días); la
+  simulación da una media de unos 249,5 días.
+- `ejemplos/cronograma-obra-animado.html`: la demostración animada del
+  mismo cronograma (las barras, la ruta crítica y la entrega se mueven en
+  cada iteración), para presentar; se abre con doble clic.
+
 ### V1 y V2: contingencia y matriz de probabilidad e impacto (2026-10-03)
 
 **Añadido**

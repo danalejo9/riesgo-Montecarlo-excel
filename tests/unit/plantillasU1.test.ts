@@ -48,8 +48,18 @@ async function simular(p: Plantilla, n = 20_000) {
 }
 
 describe('plantillas', () => {
-  it('hay tres, con sus salidas declaradas', () => {
-    expect(PLANTILLAS.map((p) => p.id)).toEqual(['inversion', 'obra', 'cartera', 'serie']);
+  it('hay cinco, con sus salidas declaradas', () => {
+    expect(PLANTILLAS.map((p) => p.id)).toEqual(['inversion', 'obra', 'cartera', 'serie', 'cronograma']);
+  });
+
+  it('cronograma de obra: 217 días con las duraciones más probables, ≈ 249,5 de media (Python, 400.000 iteraciones)', async () => {
+    const r = await simular(PLANTILLAS[4] as Plantilla);
+    const dur = r.get('Duración total');
+    expect(dur?.n).toBe(20_000);
+    expect(dur?.media).toBeGreaterThan(248);
+    expect(dur?.media).toBeLessThan(251);
+    // La fecha de entrega es el inicio (01/02/2027, serie 46419) más la duración.
+    expect((r.get('Fecha de entrega')?.media ?? 0) - (dur?.media ?? 0)).toBeCloseTo(46419, 6);
   });
 
   it('proyecto de inversión: el VAN sale con media razonable y dispersión', async () => {

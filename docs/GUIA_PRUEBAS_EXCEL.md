@@ -42,7 +42,7 @@
 > - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
 >   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
 >   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N41** (sección N, justo después de la 0).
+> - **Seguir con N5 y de N7 a N42** (sección N, justo después de la 0).
 >   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
@@ -545,6 +545,22 @@ impacto»**:
 - Dime si las bandas (probabilidad < 10 %, 10–30 %…; impacto frente al mayor
   del registro) encajan con cómo clasificas los riesgos en tu trabajo, o si
   prefieres fijar los umbrales de impacto en pesos.
+
+**N42. Ejemplo de cronograma** (nuevo). Cinta → **Ejemplos ▾ → Cronograma
+de obra** (el manifiesto cambió: si no aparece, `npm run stop`, `npm start`
+y reabre Excel).
+- Esperado: una hoja «Cronograma» con nueve actividades (duración, inicio,
+  fin), el retraso por lluvias en la fila 16 y, abajo, «Fecha de entrega» y
+  «Duración total». Con Valores fijos, las fechas salen con las duraciones
+  medias.
+- Simula: «Duración total» con media en torno a **249 días** y «Fecha de
+  entrega» en fechas (en torno al 08/10/2027). Pon en la fecha de entrega el
+  umbral «por debajo de» **06/09/2027**: la probabilidad sale muy baja (en
+  torno al 3 %). Mira también el Registro de riesgos (lluvias) y la
+  Contingencia.
+- Para presentar: abre con doble clic
+  `ejemplos\cronograma-obra-animado.html` (la versión animada del mismo
+  cronograma).
 
 **N5. Todo lo demás sigue igual.** Repite rápido A6 (simular), F3 (RIESGO en
 «Pruebas»), T2 (ahora la **zona sale en el tornado**, en gris, y la lectura

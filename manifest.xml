@@ -604,6 +604,16 @@
                         <FunctionName>ejemploSerie</FunctionName>
                       </Action>
                     </Item>
+                    <Item id="ejCronograma">
+                      <Label resid="ejCronograma.Label" />
+                      <Supertip>
+                        <Title resid="ejCronograma.Label" />
+                        <Description resid="ejCronograma.Tooltip" />
+                      </Supertip>
+                      <Action xsi:type="ExecuteFunction">
+                        <FunctionName>ejemploCronograma</FunctionName>
+                      </Action>
+                    </Item>
                   </Items>
                 </Control>
                 <Control xsi:type="Button" id="btnDiagnostico">
@@ -746,6 +756,7 @@
         <bt:String id="ctxEntrada.Label" DefaultValue="Marcar como entrada" />
         <bt:String id="ctxSalida.Label" DefaultValue="Marcar como salida" />
         <bt:String id="ctxDistribucion.Label" DefaultValue="Ver distribución" />
+        <bt:String id="ejCronograma.Label" DefaultValue="Cronograma de obra" />
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
@@ -783,6 +794,7 @@
         <bt:String id="ctxEntrada.Tooltip" DefaultValue="Marca la celda como entrada incierta, con una distribución alrededor de su valor." />
         <bt:String id="ctxSalida.Tooltip" DefaultValue="Marca la celda como salida: lo que se quiere medir." />
         <bt:String id="ctxDistribucion.Tooltip" DefaultValue="Abre la ventana con la distribución de esta celda (tras simular)." />
+        <bt:String id="ejCronograma.Tooltip" DefaultValue="Nueve actividades encadenadas con duraciones inciertas y un riesgo de lluvias: la fecha de entrega y la probabilidad de cumplir el plazo." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
