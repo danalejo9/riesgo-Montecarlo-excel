@@ -91,16 +91,27 @@ de darlo por cumplido.
 
 - **Q0.1 Confirmar la arquitectura** de arriba (módulo de cronograma con
   motor CPM propio dentro del mismo complemento).
-- **Q0.2 Cronogramas de referencia de MS Project** (lo necesita la prueba
-  obligatoria 1 y no se puede sustituir): tres cronogramas (simple; con las
-  cuatro relaciones y desfases; con calendario y festivos de Colombia), cada
-  uno como **.xml exportado de MS Project** y su tabla de fechas calculadas.
-  Los preparo yo si el usuario tiene MS Project para recalcularlos y
-  devolverlos, como los libros de fidelidad.
-- **Q0.3 Semántica a cerrar**: días laborables frente a calendario para los
-  desfases; el calendario de qué actividad manda en un desfase (MS Project usa
-  el de la sucesora); si las duraciones simuladas se redondean a días enteros
-  (MS Project trabaja con fracciones de día).
+- **Q0.2 Validación sin MS Project** (el usuario no lo tiene, 06/10). La
+  prueba obligatoria 1 se cambia por tres fuentes independientes:
+  1. **Casos de libro con solución publicada** (redes clásicas de CPM con
+     sus fechas y holguras calculadas a mano).
+  2. **Una segunda implementación en Python**, escrita aparte del motor, que
+     calcula las mismas redes: las dos tienen que dar lo mismo, día por día.
+  3. **ProjectLibre** (gratuito y de código abierto, calcula como MS Project y
+     lee su formato XML), si el usuario puede instalarlo: preparo los
+     cronogramas en XML, los abre y me pasa las fechas.
+- **Sin cronogramas reales** del usuario: se generan cronogramas de ejemplo
+  realistas (la obra de 9 actividades; una obra mediana de unas 60 con las
+  cuatro relaciones; un proyecto de restauración y siembra con calendario de
+  lunes a sábado y festivos; uno sintético de 500 para el rendimiento).
+- **Q0.3 Reglas de calendario** (propuestas el 06/10, a confirmar):
+  duraciones en días laborables del calendario de la actividad (semana de
+  lunes a viernes o de lunes a sábado, con festivos de Colombia); desfases en
+  días laborables por defecto, con la opción de días calendario por relación
+  (el curado del concreto sigue los fines de semana); el desfase cuenta con el
+  calendario de la sucesora, como MS Project; duraciones simuladas
+  redondeadas al día entero más cercano (sin sesgo; en fechas, como un
+  cronograma real).
 - **Q0.4 Festivos de Colombia**: tabla generada por el complemento (ley
   Emiliani y festivos de Semana Santa) para los años del proyecto, editable
   en la hoja `Calendario`.
@@ -181,7 +192,8 @@ Sirven ya, sin esperar al cronograma:
 
 ## Dependencias del usuario
 
-- Confirmar la arquitectura (Q0.1) y la semántica de calendarios (Q0.3).
-- Recalcular en MS Project los tres cronogramas de referencia (Q0.2).
-- Para la importación: un .xml real de MS Project y, si lo hay, un .xer de P6
-  de algún proyecto suyo (para probar con datos de verdad).
+- Confirmar la arquitectura (Q0.1) y las reglas de calendario (Q0.3).
+- Si puede, instalar ProjectLibre para la tercera validación (Q0.2).
+- Para la importación (Q2 y Q3): sin archivos reales del usuario, se prueba
+  con los generados por ProjectLibre o escritos a mano siguiendo el formato
+  publicado de MS Project XML.
