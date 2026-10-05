@@ -378,6 +378,11 @@ function hojaMemoria(nombre: string): Record<string, unknown> {
     format: formato(),
     dataValidation: validacion(),
     select: nada,
+    // G2: insertar y borrar filas enteras desde el Gantt.
+    getEntireRow: () => ({
+      insert: () => { rejillaDe().splice(fila, 0, []); },
+      delete: () => { rejillaDe().splice(fila, 1); },
+    }),
   });
   return {
     name: nombre,
@@ -544,6 +549,8 @@ export function instalarExcelFalso(): void {
     CalculationType: { recalculate: 'Recalculate', full: 'Full' },
     RangeValueType: { double: 'Double', integer: 'Integer', boolean: 'Boolean', string: 'String', error: 'Error', empty: 'Empty' },
     SheetVisibility: { visible: 'Visible' },
+    InsertShiftDirection: { down: 'Down' },
+    DeleteShiftDirection: { up: 'Up' },
   };
 
   g.Office = {

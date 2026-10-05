@@ -8,6 +8,7 @@
 import { HOJA_RESULTADOS, HOJAS_CRONOGRAMA, hojasNuevasCronograma, type Celda, type HojaNueva, type MatrizHoja } from './cronogramaHojas.ts';
 import { HOJAS_QUE_IMPORTA } from './importarCronograma.ts';
 import type { HojaResultados } from './cronogramaResultados.ts';
+import type { CambioHoja } from './edicionGantt.ts';
 
 export const VERSION_COMPLEMENTO = '0.8.0';
 
@@ -214,6 +215,37 @@ export async function escribirResultadosCronograma(r: HojaResultados): Promise<v
       g.setPosition(hoja.getRangeByIndexes(2 + 22 * k, col, 1, 1), hoja.getRangeByIndexes(21 + 22 * k, col + 8, 1, 1));
     });
     hoja.activate();
+    await context.sync();
+  });
+}
+
+/**
+ * G2: escribe en el libro los cambios de una edición del Gantt, en orden y en
+ * un solo viaje: celdas sueltas, e insertar o borrar filas enteras (así
+ * Excel conserva las fórmulas, los formatos y las listas de lo demás).
+ */
+export async function aplicarCambiosEnLibro(cambios: readonly CambioHoja[]): Promise<void> {
+  await Excel.run(async (context) => {
+    const hojas = new Map<string, Excel.Worksheet>();
+    const hoja = (n: string) => {
+      let h = hojas.get(n);
+      if (!h) {
+        h = context.workbook.worksheets.getItem(n);
+        hojas.set(n, h);
+      }
+      return h;
+    };
+    for (const c of cambios) {
+      const h = hoja(c.hoja);
+      if (c.op === 'celda') {
+        h.getRangeByIndexes(c.fila, c.col, 1, 1).values = [[(c.valor ?? '') as string | number | boolean]];
+      } else if (c.op === 'insertar') {
+        h.getRangeByIndexes(c.fila, 0, 1, 1).getEntireRow().insert(Excel.InsertShiftDirection.down);
+        if (c.valores.length) h.getRangeByIndexes(c.fila, 0, 1, c.valores.length).values = [c.valores.map((v) => (v ?? '') as string | number | boolean)];
+      } else {
+        h.getRangeByIndexes(c.fila, 0, 1, 1).getEntireRow().delete(Excel.DeleteShiftDirection.up);
+      }
+    }
     await context.sync();
   });
 }
