@@ -27,9 +27,35 @@ export interface DatosGantt {
   orden: FilaOrden[];
   vinculosResumen: [string, string][];
   /** De la última simulación QRSA, por id: criticidad y P10/P50/P80/P90 del fin. */
-  qrsa?: Record<string, { criticidad: number; p10: number; p50: number; p80: number; p90: number }>;
+  qrsa?: Record<string, QrsaActividad>;
   /** G3: líneas base guardadas, por id (posición 0 = LB1). */
   lineasBase?: Record<string, (LineaBase | null)[]>;
+}
+
+/** De la última simulación, por actividad. */
+export interface QrsaActividad {
+  criticidad: number;
+  p10: number;
+  p50: number;
+  p80: number;
+  p90: number;
+  /** G3: en los hitos, el fin en 21 cuantiles (p0, p5 … p100) para la probabilidad de cumplir una fecha. */
+  cuantiles?: number[];
+}
+
+/** P(fin ≤ fecha), interpolando entre los cuantiles (fin de ese día incluido). */
+export function probabilidadDeCumplir(cuantiles: readonly number[], fecha: number): number {
+  const n = cuantiles.length;
+  if (n < 2) return NaN;
+  if (fecha < (cuantiles[0] as number)) return 0;
+  if (fecha >= (cuantiles[n - 1] as number)) return 1;
+  // La última posición cuyo cuantil no pasa de la fecha (las fechas son días enteros: empates frecuentes).
+  let k = 0;
+  while (k + 1 < n && (cuantiles[k + 1] as number) <= fecha) k++;
+  const a = cuantiles[k] as number;
+  const b = cuantiles[k + 1] as number;
+  const base = k / (n - 1);
+  return Math.min(1, base + (b > a ? ((fecha - a) / (b - a)) / (n - 1) : 0));
 }
 
 /** Lo que se manda al Gantt, desde una lectura de las hojas (null si tiene errores). */
@@ -81,7 +107,9 @@ export interface FilaGantt {
   fechaLimite: number | null;
   predecesoras: string;
   sucesoras: string;
-  qrsa?: { criticidad: number; p10: number; p50: number; p80: number; p90: number };
+  qrsa?: QrsaActividad;
+  /** G3: en un hito con simulación, la probabilidad de cumplir su fecha objetivo. */
+  probabilidadHito?: { fecha: number; fuente: 'fecha límite' | 'línea base' | 'fecha del cronograma'; p: number };
   /** Ids de los criterios de calidad que la señalan. */
   diagnosticos: string[];
   /** Fila de la hoja Actividades. */
@@ -248,6 +276,15 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
       sucesoras: (sucesoras.get(o.id) ?? []).join('; '),
     };
   });
+
+  // G3: probabilidad de cumplir cada hito (su fecha límite, su línea base o la del cronograma).
+  for (const f of filas) {
+    const cq = f.qrsa?.cuantiles;
+    if (f.tipo !== 'hito' || !cq) continue;
+    const [fecha, fuente] = f.fechaLimite !== null ? [f.fechaLimite, 'fecha límite' as const]
+      : f.lineaBase ? [f.lineaBase.fin, 'línea base' as const] : [f.fin, 'fecha del cronograma' as const];
+    f.probabilidadHito = { fecha, fuente, p: probabilidadDeCumplir(cq, fecha) };
+  }
 
   // Resúmenes: de la primera a la última de sus hijas.
   const jer = d.orden.map((o) => ({ id: o.id, wbs: o.wbs, resumen: o.tipo === 'resumen' }));
@@ -422,14 +459,17 @@ export function explicarCritica(v: VistaGantt, id: string): ExplicacionCritica |
 }
 
 /** Lo que el Gantt toma de la última simulación QRSA: criticidad y P10/P50/P80/P90 del fin de cada actividad. */
-export function qrsaDeSimulacion(sim: { red: RedCompilada; criticidad: Float64Array; fechas: { fin: Float32Array[] }; riesgoInsertado: boolean[] }): NonNullable<DatosGantt['qrsa']> {
+export function qrsaDeSimulacion(sim: { red: RedCompilada; criticidad: Float64Array; fechas: { fin: Float32Array[] }; riesgoInsertado: boolean[] }): Record<string, QrsaActividad> {
   const out: NonNullable<DatosGantt['qrsa']> = {};
   const q = (v: Float64Array, p: number) => v[Math.min(v.length - 1, Math.max(0, Math.ceil(p * v.length) - 1))] as number;
   for (let a = 0; a < sim.red.n; a++) {
     if (sim.riesgoInsertado[a]) continue;
     const fin = Float64Array.from(sim.fechas.fin[a] ?? []).sort();
     if (fin.length === 0) continue;
-    out[sim.red.ids[a] as string] = { criticidad: sim.criticidad[a] as number, p10: q(fin, 0.1), p50: q(fin, 0.5), p80: q(fin, 0.8), p90: q(fin, 0.9) };
+    out[sim.red.ids[a] as string] = {
+      criticidad: sim.criticidad[a] as number, p10: q(fin, 0.1), p50: q(fin, 0.5), p80: q(fin, 0.8), p90: q(fin, 0.9),
+      ...((sim.red.duracion[a] as number) === 0 ? { cuantiles: Array.from({ length: 21 }, (_, k) => (k === 0 ? fin[0] as number : q(fin, k / 20))) } : {}),
+    };
   }
   return out;
 }

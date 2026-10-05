@@ -34,7 +34,7 @@ import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
 import { abrirVentana, enviarEnTrozos, type Ventana } from '../excel/ventana.ts';
-import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT } from './gantt/controlPanel.ts';
+import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import type { RespuestaGantt } from './gantt/controlGantt.ts';
 import type { OperacionGantt } from '../excel/edicionGantt.ts';
 import { codificarJson } from '../excel/codificacion.ts';
@@ -313,6 +313,11 @@ export function Panel() {
         if (pedido.accion === 'gantt' && pedido.op) r = await controlGantt.operar(pedido.op);
         else if (pedido.accion === 'gantt-deshacer') r = await controlGantt.deshacer();
         else if (pedido.accion === 'gantt-rehacer') r = await controlGantt.rehacer();
+        else if (pedido.accion === 'gantt-qrsa') {
+          // La simulación la corre la pestaña Cronograma; al terminar, refresca el Gantt (REFRESCAR_GANTT).
+          window.dispatchEvent(new Event(SIMULAR_CRONOGRAMA));
+          r = { estadoGantt: { deshacer: controlGantt.historial.puedeDeshacer, rehacer: controlGantt.historial.puedeRehacer, mensaje: 'Simulando el cronograma en el panel… el Gantt se actualiza al terminar.', error: null, ocupado: false } };
+        }
         else r = await controlGantt.leer();
       } catch (e) {
         r = { estadoGantt: { deshacer: controlGantt.historial.puedeDeshacer, rehacer: controlGantt.historial.puedeRehacer, mensaje: null, error: `No se pudo: ${mensajeDe(e)}`, ocupado: false } };

@@ -308,6 +308,14 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
         ctx.lineWidth = 2;
         ctx.stroke();
       }
+      // G3: la probabilidad de cumplir el hito, en una etiqueta encima.
+      if (e.capas.qrsa && f.probabilidadHito) {
+        const p = f.probabilidadHito.p;
+        ctx.font = 'bold 9px "Segoe UI", system-ui, sans-serif';
+        ctx.fillStyle = p >= 0.8 ? '#3A7D44' : p >= 0.5 ? '#9C5700' : COLORES.critica;
+        ctx.fillText(`${Math.round(p * 100)} %`, c + m + 2, cy - m - 1);
+        ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+      }
     } else {
       // Línea de holgura total: del fin temprano al fin tardío.
       if (e.capas.holgura && f.holguraTotal !== null && f.holguraTotal > 1e-9 && f.finTardio > f.fin) {

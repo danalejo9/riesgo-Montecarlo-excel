@@ -20,7 +20,7 @@ import {
 import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
-import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT } from './gantt/controlPanel.ts';
+import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
@@ -205,6 +205,13 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       control.current = null;
     }
   }, [alFallar, leer]);
+
+  // G3: la ventana del Gantt pide simular («Correr QRSA»).
+  useEffect(() => {
+    const f = () => { if (ocupado === null) void simular(); };
+    window.addEventListener(SIMULAR_CRONOGRAMA, f);
+    return () => window.removeEventListener(SIMULAR_CRONOGRAMA, f);
+  }, [ocupado, simular]);
 
   // La cinta pide una acción; se atiende una vez y se avisa.
   useEffect(() => {

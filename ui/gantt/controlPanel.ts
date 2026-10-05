@@ -8,3 +8,5 @@ export const controlGantt = new ControlGantt(leerHojasCronograma, aplicarCambios
 /** Eventos entre la pestaña Cronograma y el panel (que es el dueño de la ventana). */
 export const ABRIR_GANTT = 'riesgo:abrir-gantt';
 export const REFRESCAR_GANTT = 'riesgo:refrescar-gantt';
+/** La ventana pide simular el cronograma: lo hace la pestaña Cronograma (y después refresca el Gantt). */
+export const SIMULAR_CRONOGRAMA = 'riesgo:simular-cronograma';

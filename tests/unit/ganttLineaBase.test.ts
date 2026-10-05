@@ -72,3 +72,34 @@ describe('líneas base (G3)', () => {
     expect((vuelta[H.lineasBase] ?? []).every((f) => (f as unknown[]).every((x) => x === null || x === undefined))).toBe(true);
   });
 });
+
+describe('probabilidad de cumplir los hitos (G3)', () => {
+  it('interpola sobre los cuantiles', async () => {
+    const { probabilidadDeCumplir } = await import('../../excel/gantt.ts');
+    const q = Array.from({ length: 21 }, (_, k) => 100 + k); // p0 = 100 … p100 = 120
+    expect(probabilidadDeCumplir(q, 99)).toBe(0);
+    expect(probabilidadDeCumplir(q, 110)).toBeCloseTo(0.5);
+    expect(probabilidadDeCumplir(q, 120)).toBe(1);
+    expect(probabilidadDeCumplir([5, 5, 5, 7, 7], 5)).toBeCloseTo(0.5);
+  });
+
+  it('con la simulación del ejemplo: el fin determinístico casi nunca se cumple; con fecha límite cambia la referencia', async () => {
+    const { simularCronograma } = await import('../../engine/cronograma/index.ts');
+    const { qrsaDeSimulacion } = await import('../../excel/gantt.ts');
+    const l = leerCronograma(libro());
+    const m = l.modelo!;
+    const sim = await simularCronograma({ ...m, configuracion: { ...m.configuracion, iteraciones: 2000 } });
+    const datos = datosGanttDe(l, qrsaDeSimulacion(sim))!;
+    const v = construirVista(datos);
+    const L = v.filas.find((f) => f.id === 'L')!;
+    expect(L.probabilidadHito?.fuente).toBe('fecha del cronograma');
+    // La guía del QRSA dice 5,08 % para la fecha determinística del fin (con 5.000 iteraciones).
+    expect(L.probabilidadHito!.p).toBeGreaterThan(0.01);
+    expect(L.probabilidadHito!.p).toBeLessThan(0.15);
+    expect(v.filas.find((f) => f.id === 'E')!.probabilidadHito).toBeUndefined();
+    const conLimite = construirVista({ ...datos, modelo: { ...datos.modelo, red: { ...datos.modelo.red, actividades: datos.modelo.red.actividades.map((a) => (a.id === 'L' ? { ...a, fechaLimite: serieDeFecha(2028, 3, 31) } : a)) } } });
+    const L2 = conLimite.filas.find((f) => f.id === 'L')!;
+    expect(L2.probabilidadHito?.fuente).toBe('fecha límite');
+    expect(L2.probabilidadHito!.p).toBeGreaterThan(0.9);
+  });
+});

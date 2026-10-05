@@ -27,6 +27,8 @@ interface Props {
   alRehacer: () => void;
   /** Volver a leer las hojas (cambios hechos a mano en Excel). */
   alReleer?: () => void;
+  /** G3: simular el cronograma (en el panel) y traer la criticidad y los rangos. */
+  alCorrerQrsa?: () => void;
 }
 
 const AE = 40;
@@ -39,7 +41,7 @@ const RESTRICCIONES: { tipo: TipoRestriccion; nombre: string }[] = [
 ];
 
 type IdColumna = 'diag' | 'wbs' | 'id' | 'nombre' | 'duracion' | 'inicio' | 'fin' | 'predecesoras' | 'sucesoras' | 'ht' | 'hl' | 'critica' | 'restriccion' | 'limite' | 'calendario' | 'p80' | 'criticidad'
-  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante' | 'lbInicio' | 'lbFin' | 'variacion' | 'ruta';
+  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante' | 'lbInicio' | 'lbFin' | 'variacion' | 'ruta' | 'phito';
 interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean; seguimiento?: boolean; lineaBase?: boolean }
 const COLUMNAS: Columna[] = [
   { id: 'diag', titulo: '', ancho: 24 },
@@ -68,8 +70,9 @@ const COLUMNAS: Columna[] = [
   { id: 'variacion', titulo: 'Variación (d)', ancho: 70, numero: true, lineaBase: true },
   { id: 'p80', titulo: 'P80 fin (QRSA)', ancho: 90, qrsa: true },
   { id: 'criticidad', titulo: 'Criticidad (QRSA)', ancho: 80, qrsa: true, numero: true },
+  { id: 'phito', titulo: 'P(cumplir el hito)', ancho: 80, qrsa: true, numero: true },
 ];
-const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'variacion', 'p80', 'criticidad'];
+const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'variacion', 'p80', 'criticidad', 'phito'];
 
 const num = (x: number | null, d = 1) => (x === null || !Number.isFinite(x) ? '' : x.toLocaleString('es-ES', { maximumFractionDigits: d }));
 const fecha = (s: number | null) => (s === null || !Number.isFinite(s) ? '' : textoFecha(s));
@@ -95,7 +98,7 @@ function guardarPreferencias(p: ReturnType<typeof leerPreferencias>): void {
   }
 }
 
-export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer, alReleer }: Props) {
+export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer, alReleer, alCorrerQrsa }: Props) {
   // ---------------------------------------------------------- cálculo
   const [definicion, setDefinicion] = useState<DefinicionCritica>('holgura');
   const [umbral, setUmbral] = useState(5);
@@ -682,6 +685,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
           </button>
           {!automatico && <button type="button" disabled={!pendiente} onClick={recalcular}>Recalcular (F9)</button>}
           {alReleer && <button type="button" className="secundario" onClick={alReleer} title="Leer otra vez las hojas (si las cambió en Excel)">Releer hojas</button>}
+          {alCorrerQrsa && <button type="button" className="secundario" disabled={estado.ocupado} onClick={alCorrerQrsa} title="Simula el cronograma en el panel (con sus riesgos) y trae la criticidad, el rango P10–P90 y la probabilidad de cumplir cada hito">Correr QRSA</button>}
           <details className="menu-columnas">
             <summary>Columnas y capas</summary>
             <div>
@@ -875,6 +879,7 @@ function Celda({ f, c, ancho, vista, plegado, alPlegar, editando, alEditar, alEm
     case 'variacion': contenido = f.variacion === null ? '' : <span className={f.variacion > 0 ? 'negativo' : ''}>{f.variacion > 0 ? '+' : ''}{num(f.variacion, 0)}</span>; break;
     case 'p80': contenido = f.qrsa ? fecha(f.qrsa.p80) : ''; break;
     case 'criticidad': contenido = f.qrsa ? `${num(100 * f.qrsa.criticidad, 0)} %` : ''; break;
+    case 'phito': contenido = f.probabilidadHito ? `${num(100 * f.probabilidadHito.p, 0)} %` : ''; titulo = f.probabilidadHito ? `De terminar a más tardar el ${fecha(f.probabilidadHito.fecha)} (${f.probabilidadHito.fuente})` : undefined; break;
   }
   return (
     <div className={clase} style={{ width: ancho }} title={titulo} onDoubleClick={alEmpezar}>
@@ -896,6 +901,7 @@ function TooltipFila({ f, vista, zona }: { f: FilaGantt; vista: VistaGantt; zona
       {f.fechaLimite !== null && <div>Fecha límite {fecha(f.fechaLimite)}</div>}
       {f.lineaBase && <div>Línea base {fecha(f.lineaBase.inicio)} – {fecha(f.lineaBase.fin)}{f.variacion !== null ? ` · variación ${f.variacion > 0 ? '+' : ''}${num(f.variacion, 0)} d` : ''}</div>}
       {f.estado !== 'pendiente' && <div>{f.estado === 'terminada' ? 'Terminada' : 'En curso'}{f.avance !== null ? ` · ${num(100 * f.avance, 0)} %` : ''}{f.inicioReal !== null ? ` · comenzó el ${fecha(f.inicioReal)}` : ''}{f.finReal !== null ? ` · terminó el ${fecha(f.finReal)}` : ''}{f.restante !== null ? ` · le faltan ${num(f.restante)} d` : ''}</div>}
+      {f.probabilidadHito && <div><strong>{num(100 * f.probabilidadHito.p, 0)} %</strong> de cumplir el {fecha(f.probabilidadHito.fecha)} ({f.probabilidadHito.fuente})</div>}
       {f.qrsa && <div>QRSA: fin P10 {fecha(f.qrsa.p10)} · P80 {fecha(f.qrsa.p80)} · P90 {fecha(f.qrsa.p90)} · criticidad {num(100 * f.qrsa.criticidad, 0)} %</div>}
       {alertas.map((a) => <div key={a.id} className={a.estado === 'rojo' ? 'negativo' : ''}>⚠ {a.criterio}</div>)}
       {zona && <div className="tenue">{zona === 'fin' ? 'Arrastre para cambiar la duración' : zona === 'cuerpo' ? 'Arrastre para moverla (fija «No comenzar antes de»)' : 'Arrastre hasta otra barra para vincularlas'}</div>}
