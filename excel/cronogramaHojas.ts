@@ -48,6 +48,20 @@ export interface LecturaCronograma {
   modelo: ModeloCronograma | null;
   errores: ErrorHoja[];
   avisos: string[];
+  /** Todas las filas de Actividades en su orden, también las resumen (para el Gantt). */
+  orden?: FilaOrden[];
+  /** Relaciones que tocan una actividad resumen (no se usan en el cálculo). */
+  vinculosResumen?: [string, string][];
+}
+
+/** Una fila de Actividades tal como está en la hoja. */
+export interface FilaOrden {
+  id: string;
+  nombre: string;
+  wbs: string;
+  tipo: 'tarea' | 'hito' | 'resumen';
+  /** Fila de Excel. */
+  fila: number;
 }
 
 // ------------------------------------------------------------- encabezados
@@ -356,6 +370,8 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   // actividad mal escrita no arrastra errores en cada relación que la nombra.
   const invalidas = new Set<string>();
   const info: InfoActividad[] = [];
+  const orden: FilaOrden[] = [];
+  const vinculosResumen: [string, string][] = [];
   const vistos = new Map<string, number>();
   for (const { fila, valores } of ta.filas) {
     const id = texto(valor(ta, valores, 'ID'));
@@ -364,6 +380,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     if (vistos.has(clave)) { error(H.actividades, fila, letra(ta, 'ID'), `El ID «${id}» ya está en la fila ${vistos.get(clave)}`); continue; }
     vistos.set(clave, fila);
     const tipo = normalizar(valor(ta, valores, 'Tipo'));
+    orden.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, wbs: texto(valor(ta, valores, 'WBS')), tipo: tipo.startsWith('resumen') ? 'resumen' : tipo.startsWith('hito') ? 'hito' : 'tarea', fila });
     if (tipo.startsWith('resumen')) { resumen.add(id); invalidas.add(clave); continue; }
     const esHito = tipo.startsWith('hito');
     let duracion = numero(valor(ta, valores, 'Duración (días)'));
@@ -413,6 +430,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     const s = texto(valor(tr, valores, 'Sucesora'));
     if (resumen.has(p) || resumen.has(s)) {
       avisos.push(`${H.relaciones}, fila ${fila}: la relación ${p} → ${s} toca una actividad resumen y no se usa.`);
+      vinculosResumen.push([p, s]);
       continue;
     }
     if (invalidas.has(normalizar(p)) || invalidas.has(normalizar(s))) continue;
@@ -706,8 +724,10 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     configuracion.hitos = configuracion.hitos.map((h) => porId.get(normalizar(h))?.id ?? h);
   }
 
-  if (errores.length) return { modelo: null, errores, avisos };
+  if (errores.length) return { modelo: null, errores, avisos, orden, vinculosResumen };
   return {
+    orden,
+    vinculosResumen,
     modelo: {
       red: { inicio, calendarios, calendarioProyecto, actividades },
       incertidumbre,

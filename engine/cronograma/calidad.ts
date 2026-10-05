@@ -32,6 +32,26 @@ export interface ChequeoCalidad {
 /** Umbral de la DCMA para holguras y duraciones altas (días laborables). */
 export const DIAS_UMBRAL = 44;
 
+/** Umbrales configurables del chequeo (Gantt §8); por defecto, los de la DCMA. */
+export interface UmbralesCalidad {
+  /** Proporción máxima de actividades con lógica faltante. */
+  logicaFaltante: number;
+  /** Proporción máxima de relaciones con desfase positivo. */
+  desfases: number;
+  /** Proporción mínima de relaciones fin–comienzo. */
+  relacionesFc: number;
+  /** Proporción máxima de restricciones duras. */
+  duras: number;
+  /** Días laborables a partir de los que la holgura o la duración son «altas». */
+  dias: number;
+  /** Proporción máxima de holguras o duraciones altas. */
+  proporcionDias: number;
+}
+
+export const UMBRALES_POR_DEFECTO: UmbralesCalidad = {
+  logicaFaltante: 0.05, desfases: 0.05, relacionesFc: 0.9, duras: 0.05, dias: DIAS_UMBRAL, proporcionDias: 0.05,
+};
+
 function pct(x: number): string {
   return `${Math.round(x * 100)} %`;
 }
@@ -40,7 +60,8 @@ function lista(ids: string[], max = 12): string {
   return ids.length <= max ? ids.join(', ') : `${ids.slice(0, max).join(', ')} y ${ids.length - max} más`;
 }
 
-export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
+export function chequearCalidad(modelo: ModeloCronograma, umbrales: Partial<UmbralesCalidad> = {}): ChequeoCalidad {
+  const U = { ...UMBRALES_POR_DEFECTO, ...umbrales };
   const acts = modelo.red.actividades;
   const criterios: CriterioCalidad[] = [];
   let red;
@@ -64,7 +85,7 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
   criterios.push({
     id: 'extremos',
     criterio: 'Extremos abiertos (sin predecesora o sin sucesora)',
-    estado: abiertos.length === 0 ? 'verde' : abiertos.length / n > 0.05 ? 'rojo' : 'amarillo',
+    estado: abiertos.length === 0 ? 'verde' : abiertos.length / n > U.logicaFaltante ? 'rojo' : 'amarillo',
     detalle: abiertos.length === 0
       ? 'Todas las actividades tienen predecesora y sucesora, salvo el inicio y el fin.'
       : `${sinPred.length ? `Sin predecesora: ${lista(sinPred)}. ` : ''}${sinSuc.length ? `Sin sucesora: ${lista(sinSuc)}. ` : ''}Una actividad sin sucesora no empuja el fin del proyecto aunque se retrase.`,
@@ -75,7 +96,7 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
   criterios.push({
     id: 'duras',
     criterio: 'Restricciones duras («debe comenzar / terminar el»)',
-    estado: duras.length === 0 ? 'verde' : 'amarillo',
+    estado: duras.length === 0 ? 'verde' : duras.length / n > U.duras ? 'rojo' : 'amarillo',
     detalle: duras.length === 0
       ? 'Ninguna.'
       : `${lista(duras)}: fijan la fecha y anulan la lógica, así que los retrasos no se propagan.${modelo.configuracion.ignorarRestriccionesDuras ? ' La simulación las ignora (Config).' : ' Considere ignorarlas en la simulación (Config).'}`,
@@ -96,9 +117,17 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
   criterios.push({
     id: 'desfases',
     criterio: 'Desfases positivos (no más del 5 % de las relaciones)',
-    estado: m === 0 || desfases.length / m <= 0.05 ? 'verde' : 'amarillo',
+    estado: m === 0 || desfases.length / m <= U.desfases ? 'verde' : 'amarillo',
     detalle: m === 0 ? 'No hay relaciones.' : `${desfases.length} de ${m} relaciones (${pct(desfases.length / m)}) tienen desfase. Un desfase es una espera sin incertidumbre.`,
     actividades: [...new Set(desfases.map((r) => r.suc))],
+  });
+  const noFc = rels.filter((r) => r.tipo !== 'FC');
+  criterios.push({
+    id: 'fc',
+    criterio: `Relaciones fin–comienzo (al menos el ${Math.round(U.relacionesFc * 100)} %)`,
+    estado: m === 0 || (m - noFc.length) / m >= U.relacionesFc ? 'verde' : 'amarillo',
+    detalle: m === 0 ? 'No hay relaciones.' : `${m - noFc.length} de ${m} relaciones (${pct((m - noFc.length) / m)}) son fin–comienzo.`,
+    actividades: [...new Set(noFc.map((r) => r.suc))],
   });
   const cf = rels.filter((r) => r.tipo === 'CF');
   criterios.push({
@@ -110,11 +139,11 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
   });
 
   const det = cpmDeterministico(red, { ignorarDuras: modelo.configuracion.ignorarRestriccionesDuras });
-  const holgadas = det.filas.filter((f) => f.holguraTotal > DIAS_UMBRAL).map((f) => f.id);
+  const holgadas = det.filas.filter((f) => f.holguraTotal > U.dias).map((f) => f.id);
   criterios.push({
     id: 'holgura',
-    criterio: `Holgura total mayor de ${DIAS_UMBRAL} días laborables`,
-    estado: holgadas.length === 0 ? 'verde' : holgadas.length / n > 0.05 ? 'rojo' : 'amarillo',
+    criterio: `Holgura total mayor de ${U.dias} días laborables`,
+    estado: holgadas.length === 0 ? 'verde' : holgadas.length / n > U.proporcionDias ? 'rojo' : 'amarillo',
     detalle: holgadas.length === 0 ? 'Ninguna.' : `${lista(holgadas)}: tanta holgura suele ser lógica incompleta (falta una sucesora).`,
     actividades: holgadas,
   });
@@ -126,11 +155,11 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
     detalle: negativas.length === 0 ? 'Ninguna.' : `${lista(negativas)}: el cronograma ya no cumple una fecha límite (una restricción «no terminar después de» o «debe…»).`,
     actividades: negativas,
   });
-  const largas = acts.filter((a) => a.duracion > DIAS_UMBRAL).map((a) => a.id);
+  const largas = acts.filter((a) => a.duracion > U.dias).map((a) => a.id);
   criterios.push({
     id: 'largas',
-    criterio: `Duraciones mayores de ${DIAS_UMBRAL} días laborables`,
-    estado: largas.length === 0 ? 'verde' : largas.length / n > 0.05 ? 'rojo' : 'amarillo',
+    criterio: `Duraciones mayores de ${U.dias} días laborables`,
+    estado: largas.length === 0 ? 'verde' : largas.length / n > U.proporcionDias ? 'rojo' : 'amarillo',
     detalle: largas.length === 0 ? 'Ninguna.' : `${lista(largas)}: una actividad tan larga esconde detalle; partirla da una red más fiel.`,
     actividades: largas,
   });
