@@ -61,3 +61,9 @@
 .pestanas-ventana { margin-bottom: 16px; }
 .tabla-lista tbody tr { cursor: pointer; }
 .tabla-lista td { font-variant-numeric: tabular-nums; }
+/* V3: comparar con otra distribución. */
+.comparar-con { display: flex; gap: 6px; align-items: center; margin: 6px 0; font-size: 12px; }
+.comparar-con select { max-width: 100%; }
+.tabla-comparada { margin-top: 8px; }
+.tabla-comparada th, .tabla-comparada td { text-align: right; }
+.tabla-comparada th[scope="row"] { text-align: left; }

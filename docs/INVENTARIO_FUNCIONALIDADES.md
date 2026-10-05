@@ -113,7 +113,8 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11n | Q0–Q3 | Sin empezar (05/10, plan en `docs/QRSA_PLAN.md`) **Riesgo integrado de cronograma y costo (QRSA)**: motor CPM por iteración, calendarios, relaciones FC/CC/FF/CF, criticidad, eliminación de riesgos, costos por tiempo, JCL, importación MS Project y P6 | **Tú** (especificación del 05/10) |
 | 11k | V1 | ✅ (03/10, falta Excel real) **Contingencia**: valor base (la hoja sin incertidumbre), probabilidad de cumplirlo y reserva P50/P80/P90 (coste) o lo que se obtiene (beneficio). Panel, hoja volcada y PDF | **Tú** (03/10) |
 | 11l | V2 | ✅ (03/10, falta Excel real) **Matriz de probabilidad e impacto** 5 × 5 del registro de riesgos, con severidad. Panel, hoja volcada y PDF | **Tú** (03/10) |
-| 11m | V3–V5 | Propuestas: comparar distribuciones en el explorador, asistente de juicio experto, atajos de teclado | Plan |
+| 11m | V3–V4 | Comparar distribuciones en el explorador; asistente de juicio experto | ✅ 05/10 (falta tu prueba, guía V3 y V4) |
+| 11n | V5 | Atajos de teclado | Propuesta, sin decidir |
 | 11e | C10 | ✅ (29/09, falta Excel real) **Marcas en el histograma**: media, mediana y delimitadores que se arrastran con su porcentaje | **Tú** (sugerencia) |
 
 ### Etapa 3: gráficas, exportación y ajuste (≈ 8–10 días)

@@ -519,7 +519,9 @@ Estimaciones en días de trabajo efectivo.
 - **V. Valor para riesgo de costes y plazos** *(propuesto el 29/09 y elegido por el usuario el 03/10 de cinco mejoras: contingencia, matriz, comparar distribuciones en el explorador, asistente de juicio experto, atajos de teclado)*:
   - **V1. Contingencia y probabilidad de cumplir el valor base** ✅ 03/10 (`excel/contingencia.ts`, `SeccionContingencia` en Resultados, volcado y PDF; `SalidaRiskModel.kind`).
   - **V2. Matriz de probabilidad e impacto** ✅ 03/10 (`excel/matrizRiesgos.ts`, `MatrizRiesgosTabla`, volcado con rellenos y PDF).
-  - **V3. Comparar distribuciones en el explorador**, **V4. Asistente de juicio experto**, **V5. Atajos de teclado**: propuestos, sin decidir.
+  - **V3. Comparar distribuciones en el explorador** ✅ 05/10 (elegida por el usuario): «Comparar con» otra salida de la simulación o la misma salida en un escenario guardado; línea en el histograma, curva punteada en la acumulada y tabla de diferencias (`comparablesPara`, `conteosDesdeCdf`).
+  - **V4. Asistente de juicio experto** ✅ 05/10 (elegida por el usuario): mínimo, máximo, más probable (o «no sé») y confianza en los extremos → PERT, uniforme o Trigen P5/P95 o P10/P90, con la forma antes de usarla (`engine/modelo/juicioExperto.ts`, `AsistenteExperto`).
+  - **V5. Atajos de teclado**: propuesto, sin decidir (cambia el manifiesto).
   - **Quizá, más adelante** (no ahora): optimizador tipo RiskOptimizer, más distribuciones, API para macros.
 - **U1b. Ejemplo de cronograma** ✅ 04/10 (usuario: «guárdala como un ejemplo»): plantilla `cronograma` y la demostración animada en `ejemplos/cronograma-obra-animado.html`.
 - **U2. Legibilidad del panel** ✅ 29/09 en Resultados (cifras clave, secciones plegables que se recuerdan, menos texto; el resto del panel, según lo que diga el usuario en N11) *(usuario, ronda del 29/09: «está muy difícil

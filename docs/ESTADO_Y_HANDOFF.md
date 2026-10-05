@@ -1335,6 +1335,15 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     300 × 20 × 5.000: 3,8 s. **Siguiente**: el usuario recorre Q5–Q26 (y
     Q1–Q4 en ProjectLibre). Pendientes pequeños: Higham y convergencia
     automática en el motor de fórmulas.
+77. [x] **V3 y V4 (2026-10-05)**, elegidas por el usuario. V4:
+    `engine/modelo/juicioExperto.ts` (`proponerDistribucion`: PERT con
+    extremos firmes, uniforme sin más probable, Trigen P5/P95 o P10/P90) y
+    `AsistenteExperto` en `ui/EditorDistribucion.tsx`. V3: `comparablesPara`
+    y `conteosDesdeCdf` en `excel/explorador.ts`; el panel manda los
+    comparables (otras salidas y la misma salida en cada escenario) y la
+    ventana los superpone (`ui/explorador.tsx`, `TablaComparada`). Probado
+    en el banco. **Siguiente**: el usuario prueba V3 y V4 (guía) con el
+    resto de la ronda.
 
 **Siguiente acción al retomar**, en orden de valor:
 

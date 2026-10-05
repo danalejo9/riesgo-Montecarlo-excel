@@ -1610,6 +1610,7 @@ export function Histograma({
   barras,
   umbral,
   esperado,
+  etiquetaEsperado = 'la distribución esperaba',
   etiqueta = 'Histograma de la salida',
   marcas,
   muestraOrdenada,
@@ -1619,6 +1620,8 @@ export function Histograma({
   umbral?: UmbralRiskModel;
   /** Lo que esperaba la distribución teórica en cada barra (C9): una línea encima. */
   esperado?: readonly number[];
+  /** Cómo se lee la línea de `esperado` al pasar el ratón (V3: «Base tendría»). */
+  etiquetaEsperado?: string;
   etiqueta?: string;
   /** Media, mediana y delimitadores fijos (C10). */
   marcas?: MarcasHistograma;
@@ -1760,7 +1763,7 @@ export function Histograma({
       <figcaption className="tenue">
         {b
           ? `Entre ${formato.valor(b.x0)} y ${formato.valor(b.x1)}: ${miles(b.count)} iteraciones (${((b.count / total) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)` +
-            (esperado && cerca !== null && esperado[cerca] !== undefined ? `; la distribución esperaba ${miles(Math.round(esperado[cerca]))}` : '')
+            (esperado && cerca !== null && esperado[cerca] !== undefined ? `; ${etiquetaEsperado} ${miles(Math.round(esperado[cerca]))}` : '')
           : tramos
             ? `Entre ${formato.valor(tramos.desde)} y ${formato.valor(tramos.hasta)} queda el ${pct(tramos.pEntre)}; por debajo, el ${pct(tramos.pDebajo)}; por encima, el ${pct(tramos.pEncima)}.` +
               (lim ? ' Arrastra las líneas o escribe los límites.' : '')

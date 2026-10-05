@@ -5,6 +5,18 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### V3 y V4: comparar en el explorador y asistente de juicio experto (2026-10-05)
+
+**Añadido**
+- **Asistente de juicio experto** en el editor de una entrada: mínimo,
+  máximo, más probable (o «no lo sé») y qué tan seguro se está de los
+  extremos; propone la PERT, la uniforme o la Trigen que corresponde, con su
+  forma y una explicación, antes de usarla.
+- **Comparar con** en el explorador de distribución: otra salida de la
+  simulación o la misma salida en un escenario guardado, superpuesta en el
+  histograma y en la curva acumulada, con una tabla de diferencias.
+- Guía de pruebas: V3 y V4.
+
 ### QRSA Q2 y Q3: costo, mitigación, importación y lo avanzado (2026-10-05)
 
 **Añadido**

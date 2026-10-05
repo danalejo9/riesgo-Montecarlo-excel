@@ -111,3 +111,4 @@ export {
   type ModoLibro,
 } from './valorFijo.ts';
 export { esFormatoFecha, fechaDeSerie, leerFecha, serieDeFecha, textoFecha } from './fechas.ts';
+export { proponerDistribucion, TEXTO_CONFIANZA, type ConfianzaExtremos, type PropuestaExperto, type RespuestasExperto } from './juicioExperto.ts';

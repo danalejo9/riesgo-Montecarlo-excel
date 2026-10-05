@@ -234,3 +234,90 @@ export function listaDelModelo(
     : modelo.outputs.map((o) => ({ nombre: o.name, ref: o.ref, detalle: '', origen: 'panel' as const }));
   return { entradas, salidas, conSimulacion: resultado !== null };
 }
+
+/**
+ * V3: otra distribución para superponer en el explorador: otra salida de la
+ * misma simulación o la misma salida en un escenario guardado. Viaja
+ * resumida (curva acumulada de ~100 puntos y percentiles), no la muestra.
+ */
+export interface Comparable {
+  id: string;
+  titulo: string;
+  origen: 'salida' | 'escenario';
+  cdf: PuntoCDF[];
+  media: number;
+  desviacion: number;
+  /** p1, p5, p10, p25, p50, p75, p90, p95, p99 (en ese orden). */
+  percentiles: number[];
+}
+
+const MAX_COMPARABLES = 12;
+
+function reducirCdf(cdf: readonly PuntoCDF[], max = 101): PuntoCDF[] {
+  if (cdf.length <= max) return cdf.map((p) => ({ x: recortar(p.x), p: recortar(p.p) }));
+  const r: PuntoCDF[] = [];
+  for (let k = 0; k < max; k++) {
+    const q = cdf[Math.round((k * (cdf.length - 1)) / (max - 1))] as PuntoCDF;
+    r.push({ x: recortar(q.x), p: recortar(q.p) });
+  }
+  return r;
+}
+
+function comparableDe(s: ResultadoSalida, id: string, titulo: string, origen: Comparable['origen']): Comparable | null {
+  if ((s.categorias && s.categorias.length > 0) || s.cdf.length < 2) return null;
+  return {
+    id, titulo, origen,
+    cdf: reducirCdf(s.cdf),
+    media: s.resumen.media,
+    desviacion: s.resumen.desviacion,
+    percentiles: PERCENTILES_EXPLORADOR.map((p) => s.resumen.percentiles[`p${Math.round(p * 100)}`] ?? NaN),
+  };
+}
+
+/**
+ * Con qué se puede comparar la salida que enseña el explorador: la misma
+ * salida en cada escenario guardado (primero, que es lo más útil) y las demás
+ * salidas numéricas de la simulación con el mismo tipo (fecha o número).
+ */
+export function comparablesPara(
+  vista: VistaExplorador,
+  resultado: SimulacionCompletada | null,
+  escenarios: readonly { etiqueta: string; resultado: SimulacionCompletada }[] = [],
+): Comparable[] {
+  if (vista.tipo !== 'salida') return [];
+  const normal = (d: string) => claveComparable(d)?.toLowerCase() ?? d.toLowerCase();
+  const esta = (s: ResultadoSalida) => normal(s.ref) === normal(vista.ref) || (s.clave !== undefined && normal(s.clave) === normal(vista.ref));
+  const r: Comparable[] = [];
+  for (const e of escenarios) {
+    const s = e.resultado.salidas.find((x) => esta(x)) ?? e.resultado.salidas.find((x) => x.nombre === vista.titulo);
+    const c = s ? comparableDe(s, `esc:${e.etiqueta}`, `${vista.titulo} en el escenario «${e.etiqueta}»`, 'escenario') : null;
+    if (c) r.push(c);
+  }
+  for (const s of resultado?.salidas ?? []) {
+    if (esta(s) || Boolean(s.fecha) !== Boolean(vista.fecha)) continue;
+    const c = comparableDe(s, `sal:${s.ref}`, s.nombre, 'salida');
+    if (c) r.push(c);
+  }
+  return r.slice(0, MAX_COMPARABLES);
+}
+
+/** Lo que tendría la distribución comparada en cada barra del histograma (para su línea encima). */
+export function conteosDesdeCdf(barras: readonly BinHistograma[], cdf: readonly PuntoCDF[]): number[] {
+  const total = barras.reduce((t, b) => t + b.count, 0);
+  const F = (x: number): number => {
+    if (cdf.length === 0) return NaN;
+    if (x <= (cdf[0] as PuntoCDF).x) return 0;
+    if (x >= (cdf[cdf.length - 1] as PuntoCDF).x) return 1;
+    let lo = 0;
+    let hi = cdf.length - 1;
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if ((cdf[m] as PuntoCDF).x <= x) lo = m;
+      else hi = m;
+    }
+    const a = cdf[lo] as PuntoCDF;
+    const b = cdf[hi] as PuntoCDF;
+    return b.x === a.x ? b.p : a.p + ((x - a.x) / (b.x - a.x)) * (b.p - a.p);
+  };
+  return barras.map((b) => Math.max(0, F(b.x1) - F(b.x0)) * total);
+}

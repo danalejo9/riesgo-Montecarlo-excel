@@ -49,6 +49,8 @@
 > - Pendientes de antes: **W6** y **W7** (Excel para la Web).
 > - **Nuevo, aparte y sin Excel**: el bloque **Q** (cronogramas de
 >   referencia en ProjectLibre, para el motor de cronograma). Cuando puedas.
+> - **Nuevo**: **V3 y V4** (comparar en el explorador y el asistente de
+>   juicio experto), justo antes del bloque A.
 > - **Nuevo, en Excel**: **Q5 a Q26**, el análisis de riesgo de cronograma
 >   y costo (grupo Cronograma de la cinta y pestaña Cronograma). El
 >   manifiesto cambió: cierra Excel y repite `npm run stop` y `npm start`.
@@ -766,6 +768,37 @@ errores con su celda (eso es lo esperado).
 **Q26. Un libro de la versión anterior.** Si tienes un libro creado con la
 0.7 (sin Costos, Correlaciones ni Ramas), el botón dice **Añadir las hojas
 que faltan**: las añade vacías y lo demás sigue igual.
+
+### V3 y V4. Comparar en el explorador y asistente de juicio experto
+
+*Añadido el 05/10.* En el libro de demostración (o cualquiera con entradas y
+salidas del panel).
+
+**V4a. El asistente.** En la pestaña Modelo, abre una entrada y pulsa
+**Asistente: dígamelo en palabras**. Escribe mínimo 1000, máximo 1600 y
+más probable 1200, con «Podría salirse de ese rango 1 de cada 10 veces».
+Esperado: «… 1.000 y 1.600 se toman como el P10 y el P90: una Trigen que en
+realidad va de 789,5 a 1.869», con la forma debajo. Pulsa **Usar esta
+distribución**: el desplegable pasa a Trigen con esos valores.
+
+**V4b. Las otras respuestas.** Con «Nunca bajaría del mínimo ni pasaría
+del máximo» propone una PERT entre 1000 y 1600. Marca «No sé cuál es lo más
+probable»: con extremos firmes propone una uniforme; con «1 de cada 10», una
+Trigen centrada en 1300 y un aviso. Con mínimo mayor que máximo, dice por
+qué no se puede.
+
+**V3a. Comparar con otra salida.** Con al menos dos salidas, simula y abre
+**Ver distribución** sobre una de ellas. Arriba del gráfico aparece
+**Comparar con**: elige la otra salida. En el histograma sale una línea
+roja con su forma (a la misma escala) y, debajo, una tabla «Esta /
+Comparada / Diferencia» con media, desviación, p5, p50 y p95. En
+**Acumulada**, las dos curvas (la comparada, punteada).
+
+**V3b. Comparar con un escenario.** En Resultados guarda la simulación como
+escenario «Base», cambia una entrada, vuelve a simular y abre el
+explorador: en **Comparar con** aparece «La misma salida en un escenario ·
+«Base»». Elígelo y selecciona otra salida en la hoja: sigue comparando con
+«Base» (ahora con esa salida).
 
 ## A. Lo básico, en la hoja «Modelo»
 

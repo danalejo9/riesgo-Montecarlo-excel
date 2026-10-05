@@ -589,3 +589,7 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .importacion { border-left: 3px solid var(--acento); padding: 6px 10px; background: color-mix(in srgb, var(--acento) 6%, transparent); }
 .rutas { padding-left: 18px; font-size: 12px; }
 .rutas li { margin-bottom: 4px; }
+/* V4: asistente de juicio experto. */
+.asistente-experto { border-left: 3px solid var(--acento); padding: 6px 10px; margin: 6px 0; background: color-mix(in srgb, var(--acento) 5%, transparent); }
+.opciones-confianza { border: 0; padding: 0; margin: 6px 0; display: grid; gap: 2px; }
+.asistente-experto .casilla { display: flex; gap: 6px; align-items: center; font-size: 12px; }

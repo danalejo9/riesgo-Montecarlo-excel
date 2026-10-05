@@ -30,6 +30,9 @@ import {
   GRUPOS_CATALOGO,
   describirDistribucion,
   problemaDeDistribucion,
+  proponerDistribucion,
+  TEXTO_CONFIANZA,
+  type ConfianzaExtremos,
   vistaPrevia,
   type DistributionSpec,
   type TipoDistribucion,
@@ -48,6 +51,7 @@ export function EditorDistribucion({
   // Lo que el usuario ha escrito y todavía no es una distribución válida.
   const [borrador, setBorrador] = useState<DistributionSpec | null>(null);
   const [conCatalogo, setConCatalogo] = useState(false);
+  const [conAsistente, setConAsistente] = useState(false);
   const actual = borrador ?? spec;
   const desc = describirDistribucion(actual.type);
   const problema = borrador ? problemaDeDistribucion(borrador) : null;
@@ -97,6 +101,20 @@ export function EditorDistribucion({
       <button type="button" className="secundario enlace-catalogo" onClick={() => setConCatalogo((v) => !v)} aria-expanded={conCatalogo}>
         {conCatalogo ? 'Ocultar el catálogo' : '¿Cuál elegir? Ver el catálogo'}
       </button>
+      {actual.type !== 'categorical' && (
+        <button type="button" className="secundario enlace-catalogo" onClick={() => setConAsistente((v) => !v)} aria-expanded={conAsistente}>
+          {conAsistente ? 'Cerrar el asistente' : 'Asistente: dígamelo en palabras'}
+        </button>
+      )}
+      {conAsistente && (
+        <AsistenteExperto
+          alUsar={(nueva) => {
+            setBorrador(null);
+            alCambiar(nueva);
+            setConAsistente(false);
+          }}
+        />
+      )}
       {conCatalogo && (
         <Catalogo
           actual={actual.type}
@@ -395,8 +413,54 @@ function conLimites(spec: DistributionSpec, t: { min?: number | undefined; max?:
   return copia;
 }
 
+/**
+ * El asistente de juicio experto (V4): cuatro preguntas en palabras y la
+ * distribución que les corresponde, con su forma, antes de usarla.
+ */
+function AsistenteExperto({ alUsar }: { alUsar: (spec: DistributionSpec) => void }) {
+  const [minimo, setMinimo] = useState<number | undefined>(undefined);
+  const [maximo, setMaximo] = useState<number | undefined>(undefined);
+  const [masProbable, setMasProbable] = useState<number | undefined>(undefined);
+  const [noSe, setNoSe] = useState(false);
+  const [confianza, setConfianza] = useState<ConfianzaExtremos>('uno-de-10');
+  const completo = minimo !== undefined && maximo !== undefined && (noSe || masProbable !== undefined);
+  const propuesta = completo
+    ? proponerDistribucion({ minimo, maximo, ...(noSe ? {} : { masProbable }), confianza })
+    : null;
+  return (
+    <section className="asistente-experto">
+      <p className="tenue">Responda como lo diría en una reunión; el complemento elige la distribución.</p>
+      <div className="parametros">
+        <CampoOpcional vacio="" etiqueta="¿Lo mínimo razonable?" valor={minimo} alCambiar={setMinimo} />
+        <CampoOpcional vacio="" etiqueta="¿Lo máximo razonable?" valor={maximo} alCambiar={setMaximo} />
+        {!noSe && <CampoOpcional vacio="" etiqueta="¿Lo más probable?" valor={masProbable} alCambiar={setMasProbable} />}
+      </div>
+      <label className="casilla">
+        <input type="checkbox" checked={noSe} onChange={(e) => setNoSe(e.target.checked)} /> No sé cuál es lo más probable
+      </label>
+      <fieldset className="opciones-confianza">
+        <legend className="tenue">¿Qué tan seguro está de esos extremos?</legend>
+        {(Object.keys(TEXTO_CONFIANZA) as ConfianzaExtremos[]).map((c) => (
+          <label key={c} className="casilla">
+            <input type="radio" name="confianza-experto" checked={confianza === c} onChange={() => setConfianza(c)} /> {TEXTO_CONFIANZA[c]}
+          </label>
+        ))}
+      </fieldset>
+      {typeof propuesta === 'string' && <p className="aviso-linea" role="alert">{propuesta}</p>}
+      {propuesta && typeof propuesta !== 'string' && (
+        <>
+          <p>{propuesta.explicacion}</p>
+          {propuesta.avisos.map((a, i) => <p key={i} className="tenue">{a}</p>)}
+          <VistaPreviaDistribucion spec={propuesta.spec} />
+          <button type="button" onClick={() => alUsar(propuesta.spec)}>Usar esta distribución</button>
+        </>
+      )}
+    </section>
+  );
+}
+
 /** Un número que puede quedar vacío (un límite opcional). */
-function CampoOpcional({ etiqueta, valor, alCambiar }: { etiqueta: string; valor: number | undefined; alCambiar: (v: number | undefined) => void }) {
+function CampoOpcional({ etiqueta, valor, alCambiar, vacio = 'sin límite' }: { etiqueta: string; valor: number | undefined; alCambiar: (v: number | undefined) => void; vacio?: string }) {
   const [texto, setTexto] = useState(numeroEditable(valor));
   useEffect(() => setTexto(numeroEditable(valor)), [valor]);
   return (
@@ -405,7 +469,7 @@ function CampoOpcional({ etiqueta, valor, alCambiar }: { etiqueta: string; valor
       <input
         type="text"
         inputMode="decimal"
-        placeholder="sin límite"
+        placeholder={vacio}
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={() => {

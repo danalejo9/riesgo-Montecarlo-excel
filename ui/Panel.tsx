@@ -36,11 +36,13 @@ import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
 import { abrirVentana, type Ventana } from '../excel/ventana.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { Cronograma, type PedidoCronograma } from './Cronograma.tsx';
-import { listaDelModelo, vistaDeCelda, vistaPorDefecto, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
+import { comparablesPara, listaDelModelo, vistaDeCelda, vistaPorDefecto, type Comparable, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
 
 /** Lo que el panel manda al explorador (U3.1, U3.4). */
 interface MensajeExplorador {
   vista?: VistaExplorador;
+  /** V3: con qué se puede comparar la vista. */
+  comparables?: Comparable[];
   motivo?: string;
   lista?: ListaModelo;
   pestana?: 'distribucion' | 'lista';
@@ -286,14 +288,15 @@ export function Panel() {
   // sigue mientras está abierto (y la vuelve a mandar tras cada simulación).
   const explorador = useRef<{ ventana: Ventana; dejar?: () => Promise<void>; direccion: string } | null>(null);
   const mensajeExplorador = useCallback((direccion: string): MensajeExplorador => {
-    const { resultado: r, modelo: m } = ultimo.current;
+    const { resultado: r, modelo: m, escenarios: esc } = ultimo.current;
     const umbrales = new Map((m?.outputs ?? []).filter((o) => o.threshold).map((o) => [o.id, o.threshold as { value: number; direction: 'below' | 'above' }]));
     const v = vistaDeCelda(direccion, r?.ok ? r : null, umbrales);
+    const comparables = v.ok ? comparablesPara(v.vista, r?.ok ? r : null, esc.escenarios) : [];
     const lista = m ? listaDelModelo(m, r?.ok ? r : null, (id) => {
       const e = m.inputs.find((x) => x.id === id);
       return e ? resumirDistribucion(e.dist) : '';
     }) : undefined;
-    return { ...(v.ok ? { vista: v.vista } : { motivo: v.motivo }), ...(lista ? { lista } : {}) };
+    return { ...(v.ok ? { vista: v.vista, comparables } : { motivo: v.motivo }), ...(lista ? { lista } : {}) };
   }, []);
   const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' = 'distribucion') => {
     let direccion = '';
@@ -306,7 +309,10 @@ export function Panel() {
     let mensaje = mensajeExplorador(direccion);
     if (!mensaje.vista) {
       const porDefecto = vistaPorDefecto(r?.ok ? r : null);
-      if (porDefecto.ok) mensaje = { ...(mensaje.lista ? { lista: mensaje.lista } : {}), vista: porDefecto.vista };
+      if (porDefecto.ok) {
+        const comparables = comparablesPara(porDefecto.vista, r?.ok ? r : null, ultimo.current.escenarios.escenarios);
+        mensaje = { ...(mensaje.lista ? { lista: mensaje.lista } : {}), vista: porDefecto.vista, comparables };
+      }
     }
     mensaje = { ...mensaje, pestana: pestanaVentana };
     const abierta = explorador.current;

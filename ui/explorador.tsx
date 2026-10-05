@@ -10,7 +10,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarJson } from '../excel/codificacion.ts';
-import { PERCENTILES_EXPLORADOR, VERSION_EXPLORADOR, type FilaLista, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
+import { conteosDesdeCdf, PERCENTILES_EXPLORADOR, VERSION_EXPLORADOR, type Comparable, type FilaLista, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
 import { escucharAlPanel, hablarAlPanel } from '../excel/ventana.ts';
 import { formatoDe, miles } from './formato.ts';
 import { CurvaAcumulada, Histograma } from './Resultados.tsx';
@@ -23,6 +23,7 @@ import './explorador.css';
  */
 interface Mensaje {
   vista?: VistaExplorador;
+  comparables?: Comparable[];
   motivo?: string;
   lista?: ListaModelo;
   pestana?: 'distribucion' | 'lista';
@@ -33,7 +34,7 @@ function comoMensaje(d: unknown): Mensaje | null {
   if (!m || typeof m !== 'object') return null;
   const vistaValida = m.vista && m.vista.version === VERSION_EXPLORADOR && Array.isArray(m.vista.barras);
   return {
-    ...(vistaValida ? { vista: m.vista } : {}),
+    ...(vistaValida ? { vista: m.vista, comparables: Array.isArray(m.comparables) ? m.comparables : [] } : {}),
     ...(typeof m.motivo === 'string' ? { motivo: m.motivo } : {}),
     ...(m.lista && Array.isArray(m.lista.entradas) ? { lista: m.lista } : {}),
     ...(m.pestana === 'lista' || m.pestana === 'distribucion' ? { pestana: m.pestana } : {}),
@@ -46,6 +47,9 @@ function Explorador() {
   const [modo, setModo] = useState<'histograma' | 'acumulada'>('histograma');
   const [lista, setLista] = useState<ListaModelo | null>(null);
   const [pestana, setPestana] = useState<'distribucion' | 'lista'>('distribucion');
+  const [comparables, setComparables] = useState<Comparable[]>([]);
+  /** V3: la distribución superpuesta (su id); se conserva al cambiar de celda si sigue disponible. */
+  const [comparar, setComparar] = useState<string>('');
 
   useEffect(() => {
     const aplicar = (m: Mensaje | null) => {
@@ -55,6 +59,7 @@ function Explorador() {
       if (m.vista) {
         const v = m.vista;
         setVista(v);
+        setComparables(m.comparables ?? []);
         setAviso(null);
         document.title = `${v.titulo} — explorador`;
       } else if (m.motivo) {
@@ -98,6 +103,9 @@ function Explorador() {
   const f = formatoDe(vista.fecha);
   const e = vista.estadisticas;
   const muestra = vista.muestra.length > 1 ? vista.muestra : undefined;
+  // El id de un escenario es su nombre: al cambiar de salida se sigue comparando con el mismo escenario.
+  const otra = comparables.find((c) => c.id === comparar);
+  const esperadoComparado = otra ? conteosDesdeCdf(vista.barras, otra.cdf) : undefined;
   return (
     <main className="explorador">
       {pestanas}
@@ -119,11 +127,29 @@ function Explorador() {
               </button>
             ))}
           </div>
+          {comparables.length > 0 && (
+            <label className="comparar-con">
+              <span className="tenue">Comparar con</span>
+              <select value={otra ? otra.id : ''} onChange={(ev) => setComparar(ev.target.value)}>
+                <option value="">Nada</option>
+                {comparables.some((c) => c.origen === 'escenario') && (
+                  <optgroup label="La misma salida en un escenario">
+                    {comparables.filter((c) => c.origen === 'escenario').map((c) => <option key={c.id} value={c.id}>{c.titulo.replace(`${vista.titulo} en el escenario `, '')}</option>)}
+                  </optgroup>
+                )}
+                {comparables.some((c) => c.origen === 'salida') && (
+                  <optgroup label="Otra salida de esta simulación">
+                    {comparables.filter((c) => c.origen === 'salida').map((c) => <option key={c.id} value={c.id}>{c.titulo}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            </label>
+          )}
           {modo === 'histograma' ? (
             <Histograma
-              key={`${vista.tipo}:${vista.ref}`}
+              key={`${vista.tipo}:${vista.ref}:${otra?.id ?? ''}`}
               barras={vista.barras}
-              {...(vista.esperado ? { esperado: vista.esperado } : {})}
+              {...(esperadoComparado ? { esperado: esperadoComparado, etiquetaEsperado: `«${otra?.titulo}» tendría` } : vista.esperado ? { esperado: vista.esperado } : {})}
               {...(vista.umbral ? { umbral: { value: vista.umbral.valor, direction: vista.umbral.sentido } } : {})}
               marcas={{ media: e.media, ...(e.percentiles[4] !== undefined ? { mediana: e.percentiles[4] } : {}) }}
               {...(muestra ? { muestraOrdenada: muestra } : {})}
@@ -131,8 +157,10 @@ function Explorador() {
               formato={f}
             />
           ) : (
-            <CurvaAcumulada puntos={vista.cdf} formato={f} />
+            <CurvaAcumulada puntos={vista.cdf} formato={f} {...(otra ? { referencia: otra.cdf, etiquetaReferencia: otra.titulo } : {})} />
           )}
+          {otra && modo === 'histograma' && <p className="tenue">La línea es «{otra.titulo}», a la misma escala.</p>}
+          {otra && <TablaComparada vista={vista} otra={otra} />}
           {modo === 'histograma' && muestra && (
             <p className="tenue">Arrastra los dos delimitadores: arriba se lee qué parte de las iteraciones queda a cada lado y entre ellos.</p>
           )}
@@ -181,6 +209,33 @@ function Explorador() {
       </div>
       <footer className="tenue">Selecciona otra entrada o salida en la hoja y esta ventana la enseña.</footer>
     </main>
+  );
+}
+
+/** V3: las cifras de las dos distribuciones, lado a lado, con la diferencia. */
+function TablaComparada({ vista, otra }: { vista: VistaExplorador; otra: Comparable }) {
+  const f = formatoDe(vista.fecha);
+  const e = vista.estadisticas;
+  const filas: [string, number, number, boolean][] = [
+    ['Media', e.media, otra.media, false],
+    ['Desviación', e.desviacion, otra.desviacion, true],
+    ...([1, 4, 7] as const).map((i): [string, number, number, boolean] => [`p${Math.round((PERCENTILES_EXPLORADOR[i] as number) * 100)}`, e.percentiles[i] ?? NaN, otra.percentiles[i] ?? NaN, false]),
+  ];
+  const dif = (a: number, b: number, disp: boolean) => {
+    const d = a - b;
+    if (!Number.isFinite(d)) return '—';
+    const t = disp || vista.fecha ? f.dispersion(Math.abs(d)) : f.valor(Math.abs(d));
+    return `${d > 0 ? '+' : d < 0 ? '−' : ''}${t}`;
+  };
+  return (
+    <table className="tabla-estadisticas tabla-comparada">
+      <thead><tr><th /><th>Esta</th><th>Comparada</th><th>Diferencia</th></tr></thead>
+      <tbody>
+        {filas.map(([n, a, b, disp]) => (
+          <tr key={n}><th scope="row">{n}</th><td>{disp ? f.dispersion(a) : f.valor(a)}</td><td>{disp ? f.dispersion(b) : f.valor(b)}</td><td>{dif(a, b, disp)}</td></tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
