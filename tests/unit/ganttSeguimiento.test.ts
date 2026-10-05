@@ -116,6 +116,8 @@ describe('seguimiento en las hojas, la vista y la edición', async () => {
     expect(v.filas.find((f) => f.id === 'C')!.inicio).toBeGreaterThanOrEqual(d(1, 3));
     expect(v.calidad.find((c) => c.id === 'fechas-invalidas')!.estado).toBe('verde');
     expect(v.calidad.find((c) => c.id === 'fuera-secuencia')!.estado).toBe('verde');
+    // Las terminadas no cuentan como «holgura total mayor de 44 días».
+    expect(v.calidad.find((c) => c.id === 'holgura')!.actividades).not.toContain('A');
     // El resumen S1 está en curso, con el avance ponderado por duración.
     const S1 = v.filas.find((f) => f.id === 'S1')!;
     expect(S1.estado).toBe('en curso');

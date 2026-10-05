@@ -89,6 +89,8 @@ export default defineConfig({
         informe: resolve(__dirname, 'ui/informe.html'),
         // QRSA Q3.7: el resumen ejecutivo del cronograma.
         informeCronograma: resolve(__dirname, 'ui/informeCronograma.html'),
+        // G3: el Gantt paginado para imprimir y las descargas.
+        ganttImpreso: resolve(__dirname, 'ui/ganttImpreso.html'),
         // U3.1: el explorador de distribución, en una ventana flotante (displayDialogAsync).
         explorador: resolve(__dirname, 'ui/explorador.html'),
         // U3.2: la ayuda de la cinta, también en ventana flotante.

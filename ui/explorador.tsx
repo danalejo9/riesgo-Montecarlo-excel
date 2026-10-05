@@ -115,7 +115,8 @@ function Explorador() {
             alDeshacer={() => pedir({ accion: 'gantt-deshacer' })}
             alRehacer={() => pedir({ accion: 'gantt-rehacer' })}
             alReleer={() => pedir({ accion: 'gantt-releer' })}
-            alCorrerQrsa={() => pedir({ accion: 'gantt-qrsa' })} />
+            alCorrerQrsa={() => pedir({ accion: 'gantt-qrsa' })}
+            alImprimir={(opciones) => pedir({ accion: 'gantt-imprimir', opciones })} />
         ) : <p className={estadoGantt.error ? 'aviso-error' : 'tenue'}>{estadoGantt.error ?? 'Leyendo el cronograma…'}</p>}
       </main>
     );

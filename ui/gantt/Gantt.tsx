@@ -29,6 +29,8 @@ interface Props {
   alReleer?: () => void;
   /** G3: simular el cronograma (en el panel) y traer la criticidad y los rangos. */
   alCorrerQrsa?: () => void;
+  /** G3: abrir el Gantt paginado en el navegador (imprimir, PDF, PNG, XML, CSV), con lo que se ve. */
+  alImprimir?: (opciones: { definicion: DefinicionCritica; lineaBase: number; capas: EscenaGantt['capas'] }) => void;
 }
 
 const AE = 40;
@@ -74,6 +76,39 @@ const COLUMNAS: Columna[] = [
 ];
 const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'variacion', 'p80', 'criticidad', 'phito'];
 
+type Filtro = 'todas' | 'critica' | 'casi' | 'hitos' | 'encurso' | 'pendientes' | 'alertas';
+type Orden = 'hoja' | 'inicio' | 'holgura' | 'ruta' | 'criticidad';
+
+/** G3: una vista guardada (en este equipo). */
+interface VistaGuardada {
+  nombre: string;
+  definicion: DefinicionCritica;
+  umbral: number;
+  filtro: Filtro;
+  nivelMax: number;
+  orden: Orden;
+  columnas: IdColumna[];
+  capas: { flechas: boolean; holgura: boolean; qrsa: boolean; etiquetas: boolean; rutas: boolean; calor: boolean };
+  lineaBase?: number;
+  px?: number;
+}
+
+function leerVistas(): VistaGuardada[] {
+  try {
+    const v = JSON.parse(localStorage.getItem('riesgo.gantt.vistas') ?? '[]') as unknown;
+    return Array.isArray(v) ? (v as VistaGuardada[]) : [];
+  } catch {
+    return [];
+  }
+}
+function guardarVistas(v: VistaGuardada[]): void {
+  try {
+    localStorage.setItem('riesgo.gantt.vistas', JSON.stringify(v));
+  } catch {
+    // sin almacenamiento: duran lo que dura la ventana
+  }
+}
+
 const num = (x: number | null, d = 1) => (x === null || !Number.isFinite(x) ? '' : x.toLocaleString('es-ES', { maximumFractionDigits: d }));
 const fecha = (s: number | null) => (s === null || !Number.isFinite(s) ? '' : textoFecha(s));
 
@@ -98,7 +133,7 @@ function guardarPreferencias(p: ReturnType<typeof leerPreferencias>): void {
   }
 }
 
-export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer, alReleer, alCorrerQrsa }: Props) {
+export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer, alReleer, alCorrerQrsa, alImprimir }: Props) {
   // ---------------------------------------------------------- cálculo
   const [definicion, setDefinicion] = useState<DefinicionCritica>('holgura');
   const [umbral, setUmbral] = useState(5);
@@ -122,22 +157,36 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const vista = 'vista' in calculo ? calculo.vista : null;
 
   // ---------------------------------------------------------- filas visibles
-  const [filtro, setFiltro] = useState<'todas' | 'critica' | 'casi'>('todas');
+  const [filtro, setFiltro] = useState<Filtro>('todas');
   const [plegados, setPlegados] = useState<Set<string>>(new Set());
+  /** G3: hasta qué nivel de esquema se ve (0 = todos) y cómo se ordena (sin cambiar el orden de la hoja). */
+  const [nivelMax, setNivelMax] = useState(0);
+  const [orden, setOrden] = useState<Orden>('hoja');
   const filas = useMemo(() => {
     if (!vista) return [] as FilaGantt[];
     const out: FilaGantt[] = [];
     const ocultos = [...plegados].map((id) => vista.filas.find((f) => f.id === id)?.wbs).filter((w): w is string => !!w).map((w) => `${w}.`);
     for (const f of vista.filas) {
       if (ocultos.some((p) => f.wbs.startsWith(p))) continue;
+      if (nivelMax > 0 && f.nivel > nivelMax) continue;
       if (filtro !== 'todas') {
         if (f.tipo === 'resumen') continue;
-        if (!(f.critica || (filtro === 'casi' && f.casiCritica))) continue;
+        if (filtro === 'critica' && !f.critica) continue;
+        if (filtro === 'casi' && !(f.critica || f.casiCritica)) continue;
+        if (filtro === 'hitos' && f.tipo !== 'hito') continue;
+        if (filtro === 'encurso' && f.estado !== 'en curso') continue;
+        if (filtro === 'pendientes' && f.estado === 'terminada') continue;
+        if (filtro === 'alertas' && f.diagnosticos.length === 0) continue;
       }
       out.push(f);
     }
+    if (orden !== 'hoja') {
+      // Un orden temporal: los resúmenes no tienen sentido fuera de su sitio, se quitan.
+      const clave = (f: FilaGantt) => (orden === 'inicio' ? f.inicio : orden === 'holgura' ? f.holguraTotal ?? Infinity : orden === 'ruta' ? (f.rutaHolgura || 99) * 1e6 + f.inicio : f.qrsa ? -f.qrsa.criticidad : 1);
+      return out.filter((f) => f.tipo !== 'resumen').sort((a, b) => clave(a) - clave(b));
+    }
     return out;
-  }, [vista, filtro, plegados]);
+  }, [vista, filtro, plegados, nivelMax, orden]);
   const indiceFila = useMemo(() => new Map(filas.map((f, k) => [f.id, k])), [filas]);
 
   // ---------------------------------------------------------- selección y resaltado
@@ -642,11 +691,31 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
           <label title="Casi crítica: holgura total hasta este número de días">
             Casi crítica ≤ <input type="number" min={0} max={100} value={umbral} onChange={(e) => setUmbral(Math.max(0, Number(e.target.value) || 0))} style={{ width: 44 }} /> d
           </label>
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value as typeof filtro)} title="Filtro">
+          <select value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} title="Filtro">
             <option value="todas">Todas las actividades</option>
             <option value="critica">Solo ruta crítica</option>
             <option value="casi">Crítica + casi crítica</option>
+            <option value="hitos">Solo hitos</option>
+            <option value="alertas">Con alertas de calidad</option>
+            {haySeguimiento && <option value="encurso">En curso</option>}
+            {haySeguimiento && <option value="pendientes">Sin terminar</option>}
           </select>
+          <select value={nivelMax} onChange={(e) => setNivelMax(Number(e.target.value))} title="Hasta qué nivel de la WBS se ve">
+            <option value={0}>Todos los niveles</option>
+            {[1, 2, 3, 4].map((n) => <option key={n} value={n}>Hasta el nivel {n}</option>)}
+          </select>
+          <select value={orden} onChange={(e) => setOrden(e.target.value as Orden)} title="Ordenar la vista (la hoja no cambia)">
+            <option value="hoja">Orden de la hoja</option>
+            <option value="inicio">Por comienzo</option>
+            <option value="holgura">Por holgura total</option>
+            <option value="ruta">Por ruta de holgura</option>
+            {hayQrsa && <option value="criticidad">Por criticidad (QRSA)</option>}
+          </select>
+          <MenuVistas actual={() => ({ definicion, umbral, filtro, nivelMax, orden, columnas: visibles, capas, ...(v.lineaBase ? { lineaBase: v.lineaBase } : {}), px: escala.px })}
+            alAplicar={(x) => {
+              setDefinicion(x.definicion); setUmbral(x.umbral); setFiltro(x.filtro); setNivelMax(x.nivelMax); setOrden(x.orden);
+              setVisibles(x.columnas); setCapas(x.capas); if (x.lineaBase !== undefined) setLineaBase(x.lineaBase); if (x.px) zoom(x.px);
+            }} />
           <label title="G3: la línea base que se dibuja debajo de cada barra">
             Línea base:{' '}
             <select value={v.lineaBase} onChange={(e) => setLineaBase(Number(e.target.value))}>
@@ -685,6 +754,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
           </button>
           {!automatico && <button type="button" disabled={!pendiente} onClick={recalcular}>Recalcular (F9)</button>}
           {alReleer && <button type="button" className="secundario" onClick={alReleer} title="Leer otra vez las hojas (si las cambió en Excel)">Releer hojas</button>}
+          {alImprimir && <button type="button" className="secundario" onClick={() => alImprimir({ definicion, lineaBase: v.lineaBase, capas })} title="Abre el Gantt paginado en el navegador: imprimir o guardar como PDF, imagen PNG, MS Project XML y CSV">Imprimir y exportar…</button>}
           {alCorrerQrsa && <button type="button" className="secundario" disabled={estado.ocupado} onClick={alCorrerQrsa} title="Simula el cronograma en el panel (con sus riesgos) y trae la criticidad, el rango P10–P90 y la probabilidad de cumplir cada hito">Correr QRSA</button>}
           <details className="menu-columnas">
             <summary>Columnas y capas</summary>
@@ -819,6 +889,35 @@ const FilaGrid = memo(function FilaGrid({ f, k, columnas, anchos, anchoTotal, vi
     </div>
   );
 });
+
+/** G3: guardar la vista actual con un nombre y volver a ella. */
+function MenuVistas({ actual, alAplicar }: { actual: () => Omit<VistaGuardada, 'nombre'>; alAplicar: (v: VistaGuardada) => void }) {
+  const [vistas, setVistas] = useState<VistaGuardada[]>(leerVistas);
+  const [nombre, setNombre] = useState('');
+  return (
+    <details className="menu-columnas">
+      <summary>Vistas</summary>
+      <div>
+        {vistas.length === 0 && <p className="tenue">Ninguna guardada todavía.</p>}
+        {vistas.map((x) => (
+          <div key={x.nombre} className="fila-vista">
+            <button type="button" className="enlace" onClick={() => alAplicar(x)}>{x.nombre}</button>
+            <button type="button" className="enlace" title="Borrar esta vista" onClick={() => { const n = vistas.filter((y) => y.nombre !== x.nombre); setVistas(n); guardarVistas(n); }}>✕</button>
+          </div>
+        ))}
+        <hr />
+        <input type="text" placeholder="Nombre de la vista" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <button type="button" className="secundario" disabled={!nombre.trim()} onClick={() => {
+          const n = [...vistas.filter((y) => y.nombre !== nombre.trim()), { nombre: nombre.trim(), ...actual() }];
+          setVistas(n);
+          guardarVistas(n);
+          setNombre('');
+        }}>Guardar la vista actual</button>
+        <p className="tenue">Se guardan en este equipo: filtros, orden, columnas, capas, línea base, escala y definición de crítica.</p>
+      </div>
+    </details>
+  );
+}
 
 function Celda({ f, c, ancho, vista, plegado, alPlegar, editando, alEditar, alEmpezar, alTerminar }: {
   f: FilaGantt; c: Columna; ancho: number; vista: VistaGantt; plegado: boolean; alPlegar: () => void;

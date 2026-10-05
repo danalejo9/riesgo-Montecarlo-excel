@@ -136,3 +136,26 @@ describe('mensajes en trozos (ventana del Gantt)', () => {
     expect(recibidos[1]).toEqual({ pequeno: true });
   });
 });
+
+describe('paginación para imprimir (prueba 9)', () => {
+  it('ninguna fila se pierde ni se repite; la escala va en cada página y la leyenda en la última', async () => {
+    const { areaPagina, paginar } = await import('../../ui/gantt/trazado.ts');
+    const a4 = areaPagina('A4', true);
+    expect(a4).toEqual({ ancho: 1046, alto: 718 });
+    const partes = { encabezado: 40, escala: 34, pie: 24, leyenda: 90, fila: 20 };
+    for (const n of [0, 1, 30, 31, 32, 200, 2000]) {
+      const p = paginar(n, a4.alto, partes);
+      // Contiguas, sin huecos ni solapes, y numeradas.
+      expect(p[0]!.desde).toBe(0);
+      p.forEach((x, i) => { expect(x.numero).toBe(i + 1); if (i > 0) expect(x.desde).toBe(p[i - 1]!.hasta); });
+      expect(p[p.length - 1]!.hasta).toBe(n);
+      // Cada página cabe: encabezado + escala + filas + pie (+ leyenda en la última).
+      p.forEach((x, i) => {
+        const alto = partes.encabezado + partes.escala + partes.pie + (x.hasta - x.desde) * partes.fila + (i === p.length - 1 ? partes.leyenda : 0);
+        expect(alto).toBeLessThanOrEqual(a4.alto);
+      });
+    }
+    // 2.000 filas en A4 horizontal: 31 por página.
+    expect(paginar(2000, a4.alto, partes)).toHaveLength(65);
+  });
+});

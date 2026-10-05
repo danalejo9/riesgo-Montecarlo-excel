@@ -139,7 +139,8 @@ export function chequearCalidad(modelo: ModeloCronograma, umbrales: Partial<Umbr
   });
 
   const det = cpmDeterministico(red, { ignorarDuras: modelo.configuracion.ignorarRestriccionesDuras });
-  const holgadas = det.filas.filter((f) => f.holguraTotal > U.dias).map((f) => f.id);
+  // Las terminadas (seguimiento, holgura infinita) ya no tienen holgura que mirar.
+  const holgadas = det.filas.filter((f) => f.holguraTotal > U.dias && Number.isFinite(f.holguraTotal)).map((f) => f.id);
   criterios.push({
     id: 'holgura',
     criterio: `Holgura total mayor de ${U.dias} días laborables`,

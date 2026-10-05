@@ -149,7 +149,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
     if (!importado) return;
     setOcupado('Importando…');
     try {
-      const escritas = await importarAlLibro(hojasImportadas(importado), importado.inicio, importado.calendarioProyecto, deCero);
+      const escritas = await importarAlLibro(hojasImportadas(importado), importado.inicio, importado.calendarioProyecto, deCero, importado.fechaCorte);
       setAviso(`Importado (${importado.formato}): ${textoResumen(importado)}. Hojas escritas: ${escritas.join(', ')}. Complete Incertidumbre y Riesgos y simule.`);
       setImportado(null);
       setEstado(VACIO);

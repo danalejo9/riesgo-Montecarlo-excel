@@ -306,14 +306,22 @@ export function Panel() {
   // le devuelve el cronograma; las peticiones se atienden de una en una.
   const ganttPendiente = useRef(false);
   const colaGantt = useRef<Promise<void>>(Promise.resolve());
-  const atenderGantt = useCallback((pedido: { accion?: string; op?: OperacionGantt }) => {
+  const atenderGantt = useCallback((pedido: { accion?: string; op?: OperacionGantt; opciones?: Record<string, unknown> }) => {
     colaGantt.current = colaGantt.current.then(async () => {
       let r: RespuestaGantt;
       try {
         if (pedido.accion === 'gantt' && pedido.op) r = await controlGantt.operar(pedido.op);
         else if (pedido.accion === 'gantt-deshacer') r = await controlGantt.deshacer();
         else if (pedido.accion === 'gantt-rehacer') r = await controlGantt.rehacer();
-        else if (pedido.accion === 'gantt-qrsa') {
+        else if (pedido.accion === 'gantt-imprimir') {
+          // G3: el Gantt paginado se abre en el navegador (allí imprimir y descargar funcionan siempre).
+          r = await controlGantt.leer();
+          if (r.gantt) {
+            const codigo = await codificarJson({ datos: r.gantt, titulo: 'Cronograma', ...pedido.opciones });
+            abrirEnNavegador(`${new URL('/ganttImpreso.html', window.location.href).href}#d=${codigo}`);
+            r = { ...r, estadoGantt: { ...r.estadoGantt, mensaje: 'Se abrió el Gantt para imprimir en el navegador.' } };
+          }
+        } else if (pedido.accion === 'gantt-qrsa') {
           // La simulación la corre la pestaña Cronograma; al terminar, refresca el Gantt (REFRESCAR_GANTT).
           window.dispatchEvent(new Event(SIMULAR_CRONOGRAMA));
           r = { estadoGantt: { deshacer: controlGantt.historial.puedeDeshacer, rehacer: controlGantt.historial.puedeRehacer, mensaje: 'Simulando el cronograma en el panel… el Gantt se actualiza al terminar.', error: null, ocupado: false } };
@@ -354,7 +362,7 @@ export function Panel() {
       alto: pestanaVentana === 'gantt' ? 90 : 75,
       ancho: pestanaVentana === 'gantt' ? 90 : 60,
       alRecibir: (texto) => {
-        let pedido: { accion?: string; ref?: string; op?: OperacionGantt } = {};
+        let pedido: { accion?: string; ref?: string; op?: OperacionGantt; opciones?: Record<string, unknown> } = {};
         try {
           pedido = JSON.parse(texto) as typeof pedido;
         } catch {

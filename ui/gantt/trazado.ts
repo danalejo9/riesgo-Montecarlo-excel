@@ -265,3 +265,49 @@ export function filasVisibles(scrollTop: number, alto: number, altoFila: number,
   const hasta = Math.min(n - 1, Math.ceil((scrollTop + alto) / altoFila) + 1);
   return [desde, hasta];
 }
+
+// ------------------------------------------------------------- impresión (G3, prueba 9)
+
+/** Papeles en milímetros (ancho × alto en vertical). */
+export const PAPELES = { A4: [210, 297], A3: [297, 420], Carta: [215.9, 279.4], Oficio: [215.9, 355.6] } as const;
+export type Papel = keyof typeof PAPELES;
+export const MARGEN_MM = 10;
+const PX_POR_MM = 96 / 25.4;
+
+/** El área útil de una página en píxeles CSS (96 por pulgada), descontados los márgenes. */
+export function areaPagina(papel: Papel, horizontal: boolean): { ancho: number; alto: number } {
+  const [a, b] = PAPELES[papel];
+  const [w, h] = horizontal ? [b, a] : [a, b];
+  return { ancho: Math.floor((w - 2 * MARGEN_MM) * PX_POR_MM), alto: Math.floor((h - 2 * MARGEN_MM) * PX_POR_MM) };
+}
+
+export interface Pagina {
+  numero: number;
+  /** Filas de la página: [desde, hasta). */
+  desde: number;
+  hasta: number;
+}
+
+/**
+ * Reparte `n` filas en páginas: en cada una caben el encabezado de la página,
+ * la escala de tiempo (que se repite) y el pie; lo demás, filas enteras. La
+ * leyenda va en el pie de la última, que por eso puede llevar menos filas.
+ */
+export function paginar(n: number, altoUtil: number, partes: { encabezado: number; escala: number; pie: number; leyenda: number; fila: number }): Pagina[] {
+  const porPagina = Math.max(1, Math.floor((altoUtil - partes.encabezado - partes.escala - partes.pie) / partes.fila));
+  const enUltima = Math.max(1, Math.floor((altoUtil - partes.encabezado - partes.escala - partes.pie - partes.leyenda) / partes.fila));
+  const paginas: Pagina[] = [];
+  let desde = 0;
+  while (desde < n || paginas.length === 0) {
+    const queda = n - desde;
+    // Si lo que queda cabe con la leyenda, es la última; si no, una página llena.
+    const cuantas = queda <= enUltima ? queda : Math.min(queda, porPagina);
+    paginas.push({ numero: paginas.length + 1, desde, hasta: desde + cuantas });
+    desde += cuantas;
+    if (cuantas === 0) break;
+  }
+  // La última no tiene sitio para la leyenda: se añade una página solo con ella.
+  const ultima = paginas[paginas.length - 1] as Pagina;
+  if (ultima.hasta - ultima.desde > enUltima) paginas.push({ numero: paginas.length + 1, desde: n, hasta: n });
+  return paginas;
+}

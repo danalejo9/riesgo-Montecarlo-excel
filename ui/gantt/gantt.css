@@ -237,3 +237,33 @@
 .gantt-herramientas label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .gantt .campos select, .gantt .campos input { width: auto; }
 .gantt-pie-titulo button.enlace { font-weight: 600; text-decoration: none; color: inherit; }
+
+/* G3: el Gantt para imprimir. */
+.barra-impreso { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--borde); }
+.barra-impreso select { width: auto; }
+.paginas-gantt { padding: 16px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; background: #e9e9e9; }
+.pagina-gantt { background: #fff; color: #262626; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; font-size: 11px; }
+.encabezado-pagina { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; border-bottom: 2px solid #217346; }
+.encabezado-pagina strong { font-size: 14px; }
+.cuerpo-pagina { display: flex; }
+.cuerpo-pagina canvas { display: block; }
+.nombres-pagina { flex: 0 0 auto; border-right: 1px solid #d4d4d4; }
+.fila-nombre { display: grid; grid-template-columns: 44px 1fr 34px 70px; align-items: center; border-bottom: 1px solid #f0f0f0; overflow: hidden; white-space: nowrap; }
+.fila-nombre > span { overflow: hidden; text-overflow: ellipsis; padding: 0 3px; }
+.fila-nombre.encabezado { background: #f3f3f3; font-weight: 600; border-bottom: 1px solid #d4d4d4; }
+.fila-nombre.resumen { font-weight: 600; }
+.fila-nombre.critica > span:nth-child(2) { color: #c00000; }
+.leyenda-pagina { display: flex; flex-wrap: wrap; gap: 4px 16px; align-content: center; padding: 6px 4px; border-top: 1px solid #d4d4d4; margin-top: auto; }
+.leyenda-pagina i { display: inline-block; width: 18px; height: 8px; vertical-align: middle; }
+.pie-pagina { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; border-top: 1px solid #d4d4d4; color: #616161; margin-top: auto; }
+.leyenda-pagina + .pie-pagina { margin-top: 0; }
+@media print {
+  .solo-pantalla { display: none !important; }
+  body { background: #fff; }
+  .paginas-gantt { padding: 0; gap: 0; background: #fff; }
+  .pagina-gantt { box-shadow: none; break-after: page; page-break-after: always; }
+  .pagina-gantt:last-child { break-after: auto; page-break-after: auto; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.fila-vista { display: flex; justify-content: space-between; gap: 8px; }
+.menu-columnas input[type='text'] { width: 100%; margin-bottom: 4px; }

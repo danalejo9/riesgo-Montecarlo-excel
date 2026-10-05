@@ -118,7 +118,7 @@ export async function crearLibroCronograma(inicio = proximoLunes()): Promise<Cre
  * fecha de inicio y el calendario en Config y añade las que falten. Lo demás
  * (incertidumbre, riesgos, costos…) no se toca, salvo con `deCero`.
  */
-export async function importarAlLibro(hojas: readonly HojaNueva[], inicio: number, calendario: string, deCero = false): Promise<string[]> {
+export async function importarAlLibro(hojas: readonly HojaNueva[], inicio: number, calendario: string, deCero = false, fechaCorte?: number): Promise<string[]> {
   const existentes = new Set((await hojasCronogramaExistentes()).map((n) => n.toLowerCase()));
   // «De cero»: también se vacían incertidumbre, riesgos, costos… (remitían a las actividades de antes).
   const reemplazar = new Set<string>((deCero ? hojas.map((h) => h.nombre).filter((n) => n !== HOJAS_CRONOGRAMA.config) : HOJAS_QUE_IMPORTA).map((n) => n.toLowerCase()));
@@ -138,6 +138,14 @@ export async function importarAlLibro(hojas: readonly HojaNueva[], inicio: numbe
       const config = context.workbook.worksheets.getItem(HOJAS_CRONOGRAMA.config);
       config.getRange('B2').values = [[inicio]];
       config.getRange('B3').values = [[calendario]];
+      // G3: la fecha de estado del archivo, si trae avance (en la fila de «Fecha de corte», si el libro la tiene).
+      if (fechaCorte !== undefined) {
+        const etiquetas = config.getRange('A1:A30');
+        etiquetas.load('values');
+        await context.sync();
+        const fila = (etiquetas.values as unknown[][]).findIndex((f) => String(f[0] ?? '').trim().toLowerCase() === 'fecha de corte');
+        if (fila >= 0) config.getRange(`B${fila + 1}`).values = [[fechaCorte]];
+      }
     }
     context.workbook.worksheets.getItem(HOJAS_CRONOGRAMA.actividades).activate();
     await context.sync();

@@ -92,6 +92,12 @@ export interface ActividadImportada {
   calendario?: string;
   restriccion?: string;
   fechaRestriccion?: number;
+  /** G3: fecha límite y avance. */
+  fechaLimite?: number;
+  inicioReal?: number;
+  finReal?: number;
+  /** 0 a 1. */
+  porcentaje?: number;
 }
 
 export interface RelacionImportada {
@@ -111,6 +117,8 @@ export interface CronogramaImportado {
   actividades: ActividadImportada[];
   relaciones: RelacionImportada[];
   avisos: string[];
+  /** G3: fecha de estado (MS Project) o de datos (P6), para la fecha de corte. */
+  fechaCorte?: number;
 }
 
 export interface ResumenImportacion {
@@ -259,6 +267,7 @@ export function importarMsProject(xml: string): CronogramaImportado {
         a.fechaRestriccion = f;
       }
     } else if (ct === '1') avisos.push(`«${a.nombre}»: «lo más tarde posible» no se usa; se calcula lo antes posible.`);
+    leerAvance(a, serieIso(txt(t, 'Deadline')), serieIso(txt(t, 'ActualStart')), serieIso(txt(t, 'ActualFinish')), txt(t, 'PercentComplete'));
     actividades.push(a);
   }
 
@@ -287,7 +296,11 @@ export function importarMsProject(xml: string): CronogramaImportado {
     }
   }
   avisarResumenes(actividades, relaciones, avisos);
-  return { formato: 'MS Project XML', nombre: txt(proyecto, 'Title') || txt(proyecto, 'Name'), inicio, calendarioProyecto: calProyecto, calendarios, actividades, relaciones, avisos };
+  const estado = serieIso(txt(proyecto, 'StatusDate'));
+  return {
+    formato: 'MS Project XML', nombre: txt(proyecto, 'Title') || txt(proyecto, 'Name'), inicio, calendarioProyecto: calProyecto, calendarios, actividades, relaciones, avisos,
+    ...(estado !== null && actividades.some((a) => a.inicioReal !== undefined) ? { fechaCorte: estado } : {}),
+  };
 }
 
 function avisarResumenes(actividades: ActividadImportada[], relaciones: RelacionImportada[], avisos: string[]): void {
@@ -424,6 +437,7 @@ export function importarXer(texto: string): CronogramaImportado {
         a.fechaRestriccion = f;
       }
     } else if (t.cstr_type === 'CS_ALAP') avisos.push(`«${a.nombre}»: «lo más tarde posible» no se usa; se calcula lo antes posible.`);
+    leerAvance(a, null, serieIso(t.act_start_date ?? ''), serieIso(t.act_end_date ?? ''), t.phys_complete_pct ?? '');
     actividades.push(a);
   }
   const relaciones: RelacionImportada[] = [];
@@ -436,7 +450,21 @@ export function importarXer(texto: string): CronogramaImportado {
     relaciones.push({ predecesora: pred, sucesora: suc, tipo: TIPO_XER[p.pred_type ?? ''] ?? 'FC', desfase: redondear(Number(p.lag_hr_cnt || 0) / hd), calendario: false });
   }
   avisarResumenes(actividades, relaciones, avisos);
-  return { formato: 'Primavera P6 XER', nombre: proyecto?.proj_short_name ?? '', inicio, calendarioProyecto: calProyecto, calendarios, actividades, relaciones, avisos };
+  const datosXer = serieIso(proyecto?.last_recalc_date ?? '');
+  return {
+    formato: 'Primavera P6 XER', nombre: proyecto?.proj_short_name ?? '', inicio, calendarioProyecto: calProyecto, calendarios, actividades, relaciones, avisos,
+    ...(datosXer !== null && actividades.some((a) => a.inicioReal !== undefined) ? { fechaCorte: datosXer } : {}),
+  };
+}
+
+/** G3: fecha límite y avance real de una actividad importada (los resúmenes no llevan avance propio). */
+function leerAvance(a: ActividadImportada, limite: number | null, inicioReal: number | null, finReal: number | null, porcentaje: string): void {
+  if (limite !== null) a.fechaLimite = limite;
+  if (a.tipo === 'Resumen') return;
+  if (inicioReal !== null) a.inicioReal = inicioReal;
+  if (finReal !== null) a.finReal = finReal;
+  const p = Number(porcentaje);
+  if (inicioReal !== null && finReal === null && Number.isFinite(p) && p > 0 && p < 100) a.porcentaje = p / 100;
 }
 
 /** Por el contenido: XML de MS Project o XER de Primavera. */
@@ -470,6 +498,7 @@ export function hojasImportadas(c: CronogramaImportado): HojaNueva[] {
         valores: h.valores.map((f) => {
           if (f[0] === 'Fecha meta' || f[0] === 'Costo meta') return [f[0], null, f[2] ?? null];
           if (f[0] === 'Calendario del proyecto') return [f[0], c.calendarioProyecto, f[2] ?? null];
+          if (f[0] === 'Fecha de corte') return [f[0], c.fechaCorte ?? null, f[2] ?? null];
           return [...f];
         }),
       };
@@ -487,7 +516,8 @@ export function hojasImportadas(c: CronogramaImportado): HojaNueva[] {
     if (h.nombre === HOJAS_CRONOGRAMA.actividades) {
       return {
         ...h,
-        valores: [h.valores[0] as Celda[], ...c.actividades.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.duracion, a.calendario ?? '', a.restriccion ?? '', a.fechaRestriccion ?? null, 'No', ''] as Celda[])],
+        valores: [h.valores[0] as Celda[], ...c.actividades.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.duracion, a.calendario ?? '', a.restriccion ?? '', a.fechaRestriccion ?? null, 'No', '',
+          a.fechaLimite ?? null, a.inicioReal ?? null, a.finReal ?? null, a.porcentaje ?? null, null] as Celda[])],
       };
     }
     if (h.nombre === HOJAS_CRONOGRAMA.relaciones) {
