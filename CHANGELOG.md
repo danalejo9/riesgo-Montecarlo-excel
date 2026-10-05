@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Diagnóstico del arranque (2026-10-06)
+
+**Añadido**
+- `npm run revisar` (`scripts/revisar-entorno.mjs`): antes de abrir Excel
+  comprueba los certificados de desarrollo y qué responde en el puerto 9090
+  (libre, el servidor del complemento u otro programa, por ejemplo un
+  servicio de Windows que contesta «The service is unavailable»).
+- Guía de pruebas, sección 0: arranque limpio paso a paso para cuando Excel
+  se cierra solo o no aparece la pestaña Riesgo.
+
 ### Gantt G3: seguimiento, líneas base, rutas de holgura, riesgo, imprimir y exportar (2026-10-06)
 
 **Añadido**

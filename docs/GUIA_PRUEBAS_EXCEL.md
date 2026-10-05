@@ -145,6 +145,33 @@ npm start
   al escribir `=RIESGO.MEDIA` Excel no la propone, cierra Excel, repite
   `npm run stop` y `npm start` y vuelve a abrir el libro.
 
+### Si Excel se cierra solo, no aparece la pestaña Riesgo o el panel dice «The service is unavailable»
+
+*Añadido el 06/10.* Arranque limpio, en este orden:
+
+1. Cierra Excel y termina los Excel que quedan ocultos:
+   `taskkill /IM EXCEL.EXE /F` (si dice que no hay ninguno, bien).
+2. `npm run stop`
+3. Borra la caché de complementos:
+   `Remove-Item "$env:LOCALAPPDATA\Microsoft\Office\16.0\Wef\*" -Recurse -Force`
+4. `npm run revisar`. Tiene que decir **OK** en las dos líneas. Si falla
+   en los certificados: `npx office-addin-dev-certs install` (acepta el
+   aviso de Windows). Si dice que el **puerto 9090 está ocupado por otro
+   programa** (por ejemplo, «The service is unavailable»), ejecuta
+   `netstat -ano | findstr :9090` y `tasklist /FI "PID eq N"` con el número
+   de la última columna, y mándame lo que salga.
+5. Arranca el servidor **solo**, en esta ventana: `npm run dev-server`.
+   Espera a `Local: https://localhost:9090/` y déjala abierta.
+6. En Edge abre `https://localhost:9090/taskpane.html`: debe verse el panel
+   (con un aviso de que falta Excel), sin aviso de certificado.
+7. Abre **otra** ventana de PowerShell, ve a la carpeta del proyecto y
+   ejecuta `npm start`. Excel se abre con la pestaña **Riesgo**.
+
+Si Excel se vuelve a cerrar en el paso 7, al abrirlo responde **No** a
+«modo seguro», ve a Archivo → Opciones → Complementos → Administrar:
+**Complementos COM** → Ir, desmarca los que no sean de Microsoft, y repite
+desde el paso 1. Anota en qué paso se rompe y qué texto sale.
+
 **P0.** En la cinta, la pestaña **Riesgo** tiene cuatro botones: Modelo,
 Resultados, Configuración y Diagnóstico. Al pulsar Modelo se abre el panel
 (no se queda en blanco).
