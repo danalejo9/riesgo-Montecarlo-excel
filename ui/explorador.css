@@ -67,3 +67,6 @@
 .tabla-comparada { margin-top: 8px; }
 .tabla-comparada th, .tabla-comparada td { text-align: right; }
 .tabla-comparada th[scope="row"] { text-align: left; }
+/* G1: el Gantt ocupa toda la ventana. */
+.explorador.ventana-gantt { max-width: none; padding: 8px 12px 12px; }
+.explorador.ventana-gantt .pestanas-ventana { margin-bottom: 8px; }

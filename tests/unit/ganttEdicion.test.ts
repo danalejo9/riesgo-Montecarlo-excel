@@ -153,3 +153,33 @@ function norm(m: MatrizHoja | undefined): unknown[][] {
     return r;
   }).filter((f, i, todas) => f.length > 0 || todas.slice(i).some((g) => g.some((v) => v !== null && v !== undefined && v !== '')));
 }
+
+describe('control del panel (leer, editar, deshacer)', () => {
+  it('escribe los cambios, deshace y rehace; si las hojas cambiaron a mano, no deshace', async () => {
+    const { ControlGantt } = await import('../../ui/gantt/controlGantt.ts');
+    let libro = ejemplo();
+    const c = new ControlGantt(async () => libro, async (cambios) => { libro = aplicarCambios(libro, cambios) as Hojas; });
+    const r0 = await c.leer();
+    expect(r0.gantt?.orden.length).toBe(18);
+    const r1 = await c.operar({ op: 'campo', id: 'E', campo: 'duracion', valor: 70 });
+    expect(r1.estadoGantt.error).toBeNull();
+    expect(r1.estadoGantt.deshacer).toBe('Duración de E');
+    expect(r1.gantt?.modelo.red.actividades.find((a) => a.id === 'E')?.duracion).toBe(70);
+    const r2 = await c.deshacer();
+    expect(r2.gantt?.modelo.red.actividades.find((a) => a.id === 'E')?.duracion).toBe(50);
+    expect(r2.estadoGantt.rehacer).toBe('Duración de E');
+    const r3 = await c.rehacer();
+    expect(r3.gantt?.modelo.red.actividades.find((a) => a.id === 'E')?.duracion).toBe(70);
+    // Rechazo: un ciclo no escribe nada.
+    const antes = JSON.stringify(libro);
+    const r4 = await c.operar({ op: 'vinculo', accion: 'crear', pred: 'L', suc: 'A', tipo: 'FC', desfase: 0 });
+    expect(r4.estadoGantt.error).toMatch(/ciclo/);
+    expect(JSON.stringify(libro)).toBe(antes);
+    // Alguien inserta una fila a mano en Relaciones: deshacer se niega y vacía el historial.
+    await c.operar({ op: 'vinculo', accion: 'crear', pred: 'C', suc: 'G', tipo: 'FC', desfase: 0 });
+    (libro[H.relaciones] as unknown[][]).splice(1, 0, ['INI', 'B', 'FC', 0]);
+    const r5 = await c.deshacer();
+    expect(r5.estadoGantt.error).toMatch(/cambiaron fuera del Gantt/);
+    expect(r5.estadoGantt.deshacer).toBeNull();
+  });
+});

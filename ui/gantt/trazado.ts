@@ -157,12 +157,25 @@ export function rectBarra(e: Escala, g: Geometria, k: number, inicio: number, fi
   return { x: x0, y: cy - g.altoBarra / 2, ancho, alto: g.altoBarra };
 }
 
-/** Bajo el ratón: el borde derecho (cambia la duración), el centro (mueve) o el conector (crea un vínculo). */
-export function zonaBarra(r: Rect, px: number, hito: boolean): 'fin' | 'cuerpo' | 'vincular' | null {
-  if (px < r.x - 4 || px > r.x + r.ancho + 14) return null;
-  if (px > r.x + r.ancho + 2) return 'vincular';
+export type ZonaBarra = 'fin' | 'cuerpo' | 'vincular-inicio' | 'vincular-fin';
+
+/**
+ * Bajo el ratón: el borde derecho (cambia la duración), el centro (mueve) o
+ * uno de los dos conectores, fuera de la barra a cada lado (crea un vínculo
+ * desde el comienzo o desde el fin).
+ */
+export function zonaBarra(r: Rect, px: number, hito: boolean): ZonaBarra | null {
+  if (px < r.x - 14 || px > r.x + r.ancho + 14) return null;
+  if (px > r.x + r.ancho + 2) return 'vincular-fin';
+  if (px < r.x - 2) return 'vincular-inicio';
   if (!hito && px >= r.x + r.ancho - 5) return 'fin';
   return 'cuerpo';
+}
+
+/** El tipo de un vínculo arrastrado (§6.4): del borde de origen y de la mitad de la barra destino donde se suelta. */
+export function tipoVinculo(desde: 'inicio' | 'fin', destino: Rect, px: number): TipoFlecha {
+  const llegaComienzo = px < destino.x + destino.ancho / 2;
+  return desde === 'fin' ? (llegaComienzo ? 'FC' : 'FF') : llegaComienzo ? 'CC' : 'CF';
 }
 
 // ------------------------------------------------------------- flechas

@@ -69,6 +69,7 @@ if (typeof Office === 'undefined') {
     crearCronograma: () => pedirAlPanel('cronograma:crear'),
     calidadCronograma: () => pedirAlPanel('cronograma:calidad'),
     simularCronograma: () => pedirAlPanel('cronograma:simular'),
+    verGantt: () => pedirAlPanel('cronograma:gantt'),
     // Los ejemplos se escriben sin el panel: una hoja nueva, lista para simular.
     ...Object.fromEntries(PLANTILLAS.map((p) => [`ejemplo${p.id[0]?.toUpperCase()}${p.id.slice(1)}`, async () => {
       await escribirPlantilla(p);

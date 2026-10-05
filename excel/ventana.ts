@@ -10,6 +10,10 @@
  * mensajes van por `postMessage`, para poder probarla en un navegador.
  */
 
+import { juntarTrozos } from './trozos.ts';
+
+export { enviarEnTrozos, juntarTrozos, TAMANO_TROZO } from './trozos.ts';
+
 export interface Ventana {
   /** Manda datos a la ventana. `false` si esta versión de Excel no puede. */
   enviar(datos: unknown): boolean;
@@ -119,7 +123,8 @@ export function hablarAlPanel(pagina: string, datos: unknown): void {
  * Del lado de la ventana: lo que el panel le manda después de abrirla. Con
  * Office, por `DialogParentMessageReceived`; en el banco, por `postMessage`.
  */
-export function escucharAlPanel(pagina: string, alRecibir: (datos: unknown) => void): void {
+export function escucharAlPanel(pagina: string, alRecibirEntero: (datos: unknown) => void): void {
+  const alRecibir = juntarTrozos(alRecibirEntero);
   window.addEventListener('message', (e: MessageEvent) => {
     if (e.origin !== window.location.origin) return;
     const m = e.data as { riesgo?: string; datos?: unknown } | null;

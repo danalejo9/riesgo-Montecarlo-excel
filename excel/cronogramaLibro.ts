@@ -10,7 +10,7 @@ import { HOJAS_QUE_IMPORTA } from './importarCronograma.ts';
 import type { HojaResultados } from './cronogramaResultados.ts';
 import type { CambioHoja } from './edicionGantt.ts';
 
-export const VERSION_COMPLEMENTO = '0.8.0';
+export const VERSION_COMPLEMENTO = '0.9.0';
 
 const AZUL = '#1F4E79';
 const ENCABEZADO = '#DDEBF7';

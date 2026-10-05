@@ -40,7 +40,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.8.0.0</Version>
+  <Version>0.9.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -544,6 +544,21 @@
                     <FunctionName>simularCronograma</FunctionName>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="btnGantt">
+                  <Label resid="btnGantt.Label" />
+                  <Supertip>
+                    <Title resid="btnGantt.Label" />
+                    <Description resid="btnGantt.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoGantt.16" />
+                    <bt:Image size="32" resid="IconoGantt.32" />
+                    <bt:Image size="80" resid="IconoGantt.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>verGantt</FunctionName>
+                  </Action>
+                </Control>
               </Group>
               <Group id="GrupoInformes">
                 <Label resid="GrupoInformes.Label" />
@@ -766,6 +781,9 @@
         <bt:Image id="IconoSimularCronograma.16" DefaultValue="https://localhost:9090/icon-simularcronograma-16.png" />
         <bt:Image id="IconoSimularCronograma.32" DefaultValue="https://localhost:9090/icon-simularcronograma-32.png" />
         <bt:Image id="IconoSimularCronograma.80" DefaultValue="https://localhost:9090/icon-simularcronograma-80.png" />
+        <bt:Image id="IconoGantt.16" DefaultValue="https://localhost:9090/icon-gantt-16.png" />
+        <bt:Image id="IconoGantt.32" DefaultValue="https://localhost:9090/icon-gantt-32.png" />
+        <bt:Image id="IconoGantt.80" DefaultValue="https://localhost:9090/icon-gantt-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -797,6 +815,7 @@
         <bt:String id="btnCrearCronograma.Label" DefaultValue="Crear libro de cronograma" />
         <bt:String id="btnCalidadCronograma.Label" DefaultValue="Revisar calidad" />
         <bt:String id="btnSimularCronograma.Label" DefaultValue="Simular cronograma" />
+        <bt:String id="btnGantt.Label" DefaultValue="Gantt" />
         <bt:String id="GrupoAyuda.Label" DefaultValue="Ayuda" />
         <bt:String id="menuIteraciones.Label" DefaultValue="Iteraciones" />
         <bt:String id="iter1000.Label" DefaultValue="1.000" />
@@ -828,6 +847,7 @@
         <bt:String id="btnCrearCronograma.Tooltip" DefaultValue="Crea las hojas del cronograma (actividades, relaciones, calendario con festivos de Colombia, incertidumbre y riesgos) con un ejemplo de obra." />
         <bt:String id="btnCalidadCronograma.Tooltip" DefaultValue="Revisa el cronograma antes de simular: ciclos, extremos abiertos, restricciones, holguras y duraciones largas, actividades sin incertidumbre." />
         <bt:String id="btnSimularCronograma.Tooltip" DefaultValue="Recalcula la ruta crítica en cada iteración y escribe la hoja Resultados_Cronograma: fechas P10 a P90, criticidad y tornado de riesgos." />
+        <bt:String id="btnGantt.Tooltip" DefaultValue="Abre el diagrama de Gantt en una ventana: tabla editable, barras con la ruta crítica, vínculos impulsores, ¿por qué es crítica? y calidad. Lo que edita se escribe en las hojas." />
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
         <bt:String id="btnResultados.Tooltip" DefaultValue="Resultados de la última simulación: probabilidades, histograma, curva acumulada y sensibilidad." />
         <bt:String id="btnConfiguracion.Tooltip" DefaultValue="Iteraciones, semilla, muestreo, motor, precisión objetivo y núcleos del equipo." />

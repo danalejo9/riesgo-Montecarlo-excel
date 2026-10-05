@@ -18,10 +18,13 @@ import {
   crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
 import { Ayuda } from './ayuda.tsx';
+import { qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
+import { GanttCompacto } from './gantt/GanttCompacto.tsx';
+import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
-export type AccionCronograma = 'crear' | 'calidad' | 'simular';
+export type AccionCronograma = 'crear' | 'calidad' | 'simular' | 'gantt';
 
 export interface PedidoCronograma {
   accion: AccionCronograma;
@@ -70,6 +73,8 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
   const [avance, setAvance] = useState<{ hecho: number; total: number } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const control = useRef<AbortController | null>(null);
+  /** G1: la vista compacta del Gantt (también antes de simular). */
+  const [datosGantt, setDatosGantt] = useState<DatosGantt | null>(null);
 
   const refrescarExistentes = useCallback(async () => {
     try {
@@ -83,14 +88,27 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
   useEffect(() => {
     if (visible) void refrescarExistentes();
   }, [visible, refrescarExistentes]);
+  // G1: al enseñar la pestaña, el Gantt compacto se dibuja sin esperar a revisar ni simular.
+  useEffect(() => {
+    if (!visible || !existentes?.length) return;
+    let vigente = true;
+    void leerHojasCronograma().then((h) => {
+      const l = leerCronograma(h);
+      if (!vigente || !l.modelo) return;
+      setDatosGantt({ version: 1, modelo: l.modelo, orden: l.orden ?? [], vinculosResumen: l.vinculosResumen ?? [], ...(controlGantt.qrsa ? { qrsa: controlGantt.qrsa } : {}) });
+    }).catch(() => {});
+    return () => { vigente = false; };
+  }, [visible, existentes]);
 
   /** Lee y valida las hojas; con errores, los enseña y devuelve null. */
   const leer = useCallback(async (): Promise<ModeloCronograma | null> => {
     const lectura = leerCronograma(await leerHojasCronograma());
     if (!lectura.modelo) {
       setEstado({ ...VACIO, errores: lectura.errores, avisos: lectura.avisos });
+      setDatosGantt(null);
       return null;
     }
+    setDatosGantt({ version: 1, modelo: lectura.modelo, orden: lectura.orden ?? [], vinculosResumen: lectura.vinculosResumen ?? [], ...(controlGantt.qrsa ? { qrsa: controlGantt.qrsa } : {}) });
     setEstado((e) => ({ ...e, errores: [], avisos: lectura.avisos }));
     return lectura.modelo;
   }, []);
@@ -172,6 +190,10 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       const sim = await simularCronograma(modelo, { senal: c.signal, progreso: (hecho, total) => setAvance({ hecho, total }) });
       const { fin, hitos } = resumenesDe(sim, modelo);
       setEstado((e) => ({ ...e, sim, fin, hitos, indices: indicesActividades(sim) }));
+      // El Gantt toma la criticidad y el rango P10–P90 de cada actividad.
+      controlGantt.qrsa = qrsaDeSimulacion(sim);
+      setDatosGantt((d) => (d ? { ...d, qrsa: controlGantt.qrsa } : d));
+      window.dispatchEvent(new Event(REFRESCAR_GANTT));
       setOcupado('Escribiendo la hoja de resultados…');
       await escribirResultadosCronograma(hojaResultados({ sim, modelo, calidad, ahora: serieAhora(), version: VERSION_COMPLEMENTO }));
     } catch (e) {
@@ -213,6 +235,10 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
         </button>
         <button type="button" className="secundario" onClick={() => void revisar()} disabled={ocupado !== null || faltan}>Revisar calidad</button>
         <button type="button" className={faltan ? 'secundario' : ''} onClick={() => void simular()} disabled={ocupado !== null || faltan}>Simular cronograma</button>
+        <button type="button" className="secundario" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))} disabled={faltan}
+          title="El diagrama completo, con la tabla editable y el diagnóstico de la ruta crítica, en una ventana">
+          Ver Gantt
+        </button>
         <button type="button" className="secundario" onClick={() => archivo.current?.click()} disabled={ocupado !== null}
           title="Un XML de MS Project (o de ProjectLibre) o un XER de Primavera P6">
           Importar MS Project o P6…
@@ -289,6 +315,18 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       )}
 
       {calidad && <Calidad calidad={calidad} />}
+
+      {datosGantt && errores.length === 0 && (
+        <section>
+          <h2>Diagrama de Gantt</h2>
+          <Ayuda tema="gantt" />
+          <GanttCompacto datos={datosGantt} />
+          <p className="tenue">
+            Rojo: ruta crítica (holgura total ≤ 0); naranja: casi crítica (≤ 5 días); la línea gris llega hasta el fin tardío.
+            {' '}<button type="button" className="enlace" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))}>Abrir el Gantt completo</button> para editar, ver los vínculos impulsores y «¿por qué es crítica?».
+          </p>
+        </section>
+      )}
 
       {sim && fin && (
         <>

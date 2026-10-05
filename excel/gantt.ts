@@ -30,6 +30,20 @@ export interface DatosGantt {
   qrsa?: Record<string, { criticidad: number; p10: number; p50: number; p80: number; p90: number }>;
 }
 
+export interface EstadoEdicion {
+  deshacer: string | null;
+  rehacer: string | null;
+  /** Lo último que pasó (una edición escrita, deshecha…). */
+  mensaje: string | null;
+  /** Una edición rechazada, con el motivo. */
+  error: string | null;
+  ocupado: boolean;
+  /** La actividad que hay que seleccionar (la recién insertada). */
+  seleccion?: string;
+}
+
+export const ESTADO_INICIAL: EstadoEdicion = { deshacer: null, rehacer: null, mensaje: null, error: null, ocupado: false };
+
 export interface FilaGantt {
   id: string;
   nombre: string;
@@ -268,4 +282,17 @@ export function impulsoraHacia(v: VistaGantt, id: string): { actividades: Set<st
 export function explicarCritica(v: VistaGantt, id: string): ExplicacionCritica | null {
   const i = v.red.indice.get(id);
   return i === undefined ? null : porQueCritica(v.red, v.rutas, i, (x) => v.red.ids[x] as string);
+}
+
+/** Lo que el Gantt toma de la última simulación QRSA: criticidad y P10/P50/P80/P90 del fin de cada actividad. */
+export function qrsaDeSimulacion(sim: { red: RedCompilada; criticidad: Float64Array; fechas: { fin: Float32Array[] }; riesgoInsertado: boolean[] }): NonNullable<DatosGantt['qrsa']> {
+  const out: NonNullable<DatosGantt['qrsa']> = {};
+  const q = (v: Float64Array, p: number) => v[Math.min(v.length - 1, Math.max(0, Math.ceil(p * v.length) - 1))] as number;
+  for (let a = 0; a < sim.red.n; a++) {
+    if (sim.riesgoInsertado[a]) continue;
+    const fin = Float64Array.from(sim.fechas.fin[a] ?? []).sort();
+    if (fin.length === 0) continue;
+    out[sim.red.ids[a] as string] = { criticidad: sim.criticidad[a] as number, p10: q(fin, 0.1), p50: q(fin, 0.5), p80: q(fin, 0.8), p90: q(fin, 0.9) };
+  }
+  return out;
 }

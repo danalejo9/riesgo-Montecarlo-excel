@@ -393,31 +393,74 @@ function renumerar(e: Editor, cambiados: ReadonlyMap<number, number> = new Map()
   });
 }
 
+/**
+ * Huella de las hojas que toca una edición, para no deshacer a ciegas: si
+ * alguien cambió esas hojas a mano en Excel después, los cambios guardados
+ * (por número de fila) ya no corresponden y deshacer se niega.
+ */
+export function huellaHojas(hojas: Readonly<Record<string, MatrizHoja | undefined>>, nombres: Iterable<string>): string {
+  const limpia = (m: MatrizHoja | undefined) => {
+    const filas = (m ?? []).map((f) => {
+      const r = f.map((v) => (vacio(v) ? null : v));
+      while (r.length && r[r.length - 1] === null) r.pop();
+      return r;
+    });
+    while (filas.length && (filas[filas.length - 1] as unknown[]).length === 0) filas.pop();
+    return filas;
+  };
+  return JSON.stringify([...new Set(nombres)].sort().map((n) => [n, limpia(hojas[n])]));
+}
+
+export const hojasDe = (cambios: readonly CambioHoja[]): string[] => [...new Set(cambios.map((c) => c.hoja))];
+
+interface Hecho {
+  descripcion: string;
+  cambios: CambioHoja[];
+  /** Huellas de las hojas tocadas antes y después de la edición. */
+  antes: string;
+  despues: string;
+}
+
 /** Deshacer y rehacer de la sesión (decisión 2: Excel no deshace lo que escribe un complemento). */
 export class HistorialGantt {
-  private hechos: { descripcion: string; cambios: CambioHoja[] }[] = [];
-  private deshechos: { descripcion: string; cambios: CambioHoja[] }[] = [];
+  private hechos: Hecho[] = [];
+  private deshechos: Hecho[] = [];
   private readonly limite: number;
   constructor(limite = 100) {
     this.limite = limite;
   }
-  registrar(descripcion: string, cambios: CambioHoja[]): void {
-    this.hechos.push({ descripcion, cambios });
+  registrar(descripcion: string, cambios: CambioHoja[], antes = '', despues = ''): void {
+    this.hechos.push({ descripcion, cambios, antes, despues });
     if (this.hechos.length > this.limite) this.hechos.shift();
     this.deshechos = [];
   }
-  /** Los cambios que deshacen la última edición (y la pasan a «rehacer»). */
+  /** Los cambios que deshacen la última edición; `huella`: cómo tienen que estar las hojas para poder aplicarlos. */
+  verDeshacer(): { descripcion: string; cambios: CambioHoja[]; huella: string; hojas: string[] } | null {
+    const h = this.hechos[this.hechos.length - 1];
+    return h ? { descripcion: h.descripcion, cambios: invertirCambios(h.cambios), huella: h.despues, hojas: hojasDe(h.cambios) } : null;
+  }
+  verRehacer(): { descripcion: string; cambios: CambioHoja[]; huella: string; hojas: string[] } | null {
+    const h = this.deshechos[this.deshechos.length - 1];
+    return h ? { descripcion: h.descripcion, cambios: h.cambios, huella: h.antes, hojas: hojasDe(h.cambios) } : null;
+  }
+  /** Deshace (pasa la última edición a «rehacer») y devuelve sus cambios inversos. */
   deshacer(): { descripcion: string; cambios: CambioHoja[] } | null {
+    const v = this.verDeshacer();
     const h = this.hechos.pop();
-    if (!h) return null;
+    if (!h || !v) return null;
     this.deshechos.push(h);
-    return { descripcion: h.descripcion, cambios: invertirCambios(h.cambios) };
+    return { descripcion: v.descripcion, cambios: v.cambios };
   }
   rehacer(): { descripcion: string; cambios: CambioHoja[] } | null {
     const h = this.deshechos.pop();
     if (!h) return null;
     this.hechos.push(h);
     return { descripcion: h.descripcion, cambios: h.cambios };
+  }
+  /** Olvida todo (las hojas cambiaron por fuera). */
+  vaciar(): void {
+    this.hechos = [];
+    this.deshechos = [];
   }
   get puedeDeshacer(): string | null {
     return this.hechos[this.hechos.length - 1]?.descripcion ?? null;

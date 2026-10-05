@@ -13,6 +13,8 @@ import { Panel } from '../Panel.tsx';
 import '../estilos.css';
 import { avisarSeleccion, CELDAS, hojasMemoria, hojaVolcada, instalarExcelFalso, rellenos, seleccion } from './excelFalso.ts';
 import { pedirAlPanel } from '../acciones.ts';
+import { hojasSinteticas } from '../../excel/cronogramaSintetico.ts';
+import { serieDeFecha } from '../../engine/modelo/fechas.ts';
 
 instalarExcelFalso();
 
@@ -23,6 +25,10 @@ instalarExcelFalso();
 // dibuja una cuadrícula, así que esta es la única forma de comprobarlo.
 (globalThis as unknown as Record<string, unknown>).__hojaVolcada = hojaVolcada;
 (globalThis as unknown as Record<string, unknown>).__hojasMemoria = hojasMemoria;
+// G1: un cronograma sintético grande en las hojas de memoria, para medir el Gantt.
+(globalThis as unknown as Record<string, unknown>).__cronogramaSintetico = (n = 2000) => {
+  for (const [nombre, m] of Object.entries(hojasSinteticas(serieDeFecha(2027, 1, 4), n))) hojasMemoria.set(nombre, m.map((f) => [...f]));
+};
 
 function Banco() {
   const [celda, setCelda] = useState(seleccion.ref);

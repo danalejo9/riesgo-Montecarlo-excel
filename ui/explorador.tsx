@@ -14,6 +14,9 @@ import { conteosDesdeCdf, PERCENTILES_EXPLORADOR, VERSION_EXPLORADOR, type Compa
 import { escucharAlPanel, hablarAlPanel } from '../excel/ventana.ts';
 import { formatoDe, miles } from './formato.ts';
 import { CurvaAcumulada, Histograma } from './Resultados.tsx';
+import { Gantt } from './gantt/Gantt.tsx';
+import { ESTADO_INICIAL, type DatosGantt, type EstadoEdicion } from '../excel/gantt.ts';
+import type { OperacionGantt } from '../excel/edicionGantt.ts';
 import './estilos.css';
 import './explorador.css';
 
@@ -26,8 +29,13 @@ interface Mensaje {
   comparables?: Comparable[];
   motivo?: string;
   lista?: ListaModelo;
-  pestana?: 'distribucion' | 'lista';
+  pestana?: Pestana;
+  /** G1/G2: el cronograma para el Gantt y cómo va la edición. */
+  gantt?: DatosGantt;
+  estadoGantt?: EstadoEdicion;
 }
+
+type Pestana = 'distribucion' | 'lista' | 'gantt';
 
 function comoMensaje(d: unknown): Mensaje | null {
   const m = d as Mensaje | null;
@@ -37,7 +45,9 @@ function comoMensaje(d: unknown): Mensaje | null {
     ...(vistaValida ? { vista: m.vista, comparables: Array.isArray(m.comparables) ? m.comparables : [] } : {}),
     ...(typeof m.motivo === 'string' ? { motivo: m.motivo } : {}),
     ...(m.lista && Array.isArray(m.lista.entradas) ? { lista: m.lista } : {}),
-    ...(m.pestana === 'lista' || m.pestana === 'distribucion' ? { pestana: m.pestana } : {}),
+    ...(m.pestana === 'lista' || m.pestana === 'distribucion' || m.pestana === 'gantt' ? { pestana: m.pestana } : {}),
+    ...(m.gantt && m.gantt.version === 1 && Array.isArray(m.gantt.orden) ? { gantt: m.gantt } : {}),
+    ...(m.estadoGantt && typeof m.estadoGantt === 'object' ? { estadoGantt: m.estadoGantt } : {}),
   };
 }
 
@@ -46,7 +56,9 @@ function Explorador() {
   const [aviso, setAviso] = useState<string | null>('Cargando…');
   const [modo, setModo] = useState<'histograma' | 'acumulada'>('histograma');
   const [lista, setLista] = useState<ListaModelo | null>(null);
-  const [pestana, setPestana] = useState<'distribucion' | 'lista'>('distribucion');
+  const [pestana, setPestana] = useState<Pestana>('distribucion');
+  const [gantt, setGantt] = useState<DatosGantt | null>(null);
+  const [estadoGantt, setEstadoGantt] = useState<EstadoEdicion>(ESTADO_INICIAL);
   const [comparables, setComparables] = useState<Comparable[]>([]);
   /** V3: la distribución superpuesta (su id); se conserva al cambiar de celda si sigue disponible. */
   const [comparar, setComparar] = useState<string>('');
@@ -56,6 +68,8 @@ function Explorador() {
       if (!m) return;
       if (m.lista) setLista(m.lista);
       if (m.pestana) setPestana(m.pestana);
+      if (m.gantt) setGantt(m.gantt);
+      if (m.estadoGantt) setEstadoGantt(m.estadoGantt);
       if (m.vista) {
         const v = m.vista;
         setVista(v);
@@ -71,17 +85,40 @@ function Explorador() {
     if (codigo) void decodificarJson(codigo).then((d) => aplicar(comoMensaje(d) ?? { motivo: 'No se pudo leer lo que mandó el panel.' }));
     else setAviso('Esta ventana se abre desde la cinta: Riesgo → Ver distribución.');
     escucharAlPanel('explorador.html', (d) => aplicar(comoMensaje(d)));
+    // Ya escucha: el panel puede mandar lo grande (el cronograma del Gantt).
+    hablarAlPanel('explorador.html', { accion: 'listo' });
   }, []);
 
   const pestanas = (
     <nav className="pestanas pestanas-ventana">
-      {(['distribucion', 'lista'] as const).map((p) => (
-        <button key={p} type="button" className={p === pestana ? 'activa' : ''} onClick={() => setPestana(p)}>
-          {p === 'distribucion' ? 'Distribución' : 'Entradas y salidas'}
+      {(['distribucion', 'lista', 'gantt'] as const).map((p) => (
+        <button key={p} type="button" className={p === pestana ? 'activa' : ''} onClick={() => {
+          setPestana(p);
+          if (p === 'gantt' && !gantt) hablarAlPanel('explorador.html', { accion: 'gantt-releer' });
+        }}>
+          {p === 'distribucion' ? 'Distribución' : p === 'lista' ? 'Entradas y salidas' : 'Gantt'}
         </button>
       ))}
     </nav>
   );
+  if (pestana === 'gantt') {
+    const pedir = (d: object) => {
+      setEstadoGantt((e) => ({ ...e, ocupado: true, error: null, mensaje: null }));
+      hablarAlPanel('explorador.html', d);
+    };
+    return (
+      <main className="explorador ventana-gantt">
+        {pestanas}
+        {gantt ? (
+          <Gantt datos={gantt} editable estado={estadoGantt}
+            alOperar={(op: OperacionGantt) => pedir({ accion: 'gantt', op })}
+            alDeshacer={() => pedir({ accion: 'gantt-deshacer' })}
+            alRehacer={() => pedir({ accion: 'gantt-rehacer' })}
+            alReleer={() => pedir({ accion: 'gantt-releer' })} />
+        ) : <p className={estadoGantt.error ? 'aviso-error' : 'tenue'}>{estadoGantt.error ?? 'Leyendo el cronograma…'}</p>}
+      </main>
+    );
+  }
   if (pestana === 'lista') {
     return (
       <main className="explorador">

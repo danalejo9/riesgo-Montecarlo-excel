@@ -33,7 +33,10 @@ import { huellaModelo, restaurarResultados, serializarResultados } from '../exce
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
-import { abrirVentana, type Ventana } from '../excel/ventana.ts';
+import { abrirVentana, enviarEnTrozos, type Ventana } from '../excel/ventana.ts';
+import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT } from './gantt/controlPanel.ts';
+import type { RespuestaGantt } from './gantt/controlGantt.ts';
+import type { OperacionGantt } from '../excel/edicionGantt.ts';
 import { codificarJson } from '../excel/codificacion.ts';
 import { Cronograma, type PedidoCronograma } from './Cronograma.tsx';
 import { comparablesPara, listaDelModelo, vistaDeCelda, vistaPorDefecto, type Comparable, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
@@ -45,7 +48,7 @@ interface MensajeExplorador {
   comparables?: Comparable[];
   motivo?: string;
   lista?: ListaModelo;
-  pestana?: 'distribucion' | 'lista';
+  pestana?: 'distribucion' | 'lista' | 'gantt';
 }
 import { rangoDesdeDireccion } from '../excel/rangos.ts';
 import { actualizarCintaIteraciones, actualizarCintaSimulando, ITERACIONES_CINTA } from '../excel/cinta.ts';
@@ -298,7 +301,27 @@ export function Panel() {
     }) : undefined;
     return { ...(v.ok ? { vista: v.vista, comparables } : { motivo: v.motivo }), ...(lista ? { lista } : {}) };
   }, []);
-  const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' = 'distribucion') => {
+  // G1/G2: el Gantt va en la misma ventana (Office.js deja abrir una sola).
+  // La ventana pide y el panel lee las hojas, aplica la edición, la escribe y
+  // le devuelve el cronograma; las peticiones se atienden de una en una.
+  const ganttPendiente = useRef(false);
+  const colaGantt = useRef<Promise<void>>(Promise.resolve());
+  const atenderGantt = useCallback((pedido: { accion?: string; op?: OperacionGantt }) => {
+    colaGantt.current = colaGantt.current.then(async () => {
+      let r: RespuestaGantt;
+      try {
+        if (pedido.accion === 'gantt' && pedido.op) r = await controlGantt.operar(pedido.op);
+        else if (pedido.accion === 'gantt-deshacer') r = await controlGantt.deshacer();
+        else if (pedido.accion === 'gantt-rehacer') r = await controlGantt.rehacer();
+        else r = await controlGantt.leer();
+      } catch (e) {
+        r = { estadoGantt: { deshacer: controlGantt.historial.puedeDeshacer, rehacer: controlGantt.historial.puedeRehacer, mensaje: null, error: `No se pudo: ${mensajeDe(e)}`, ocupado: false } };
+      }
+      const v = explorador.current?.ventana;
+      if (v) enviarEnTrozos(v, r);
+    });
+  }, []);
+  const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' | 'gantt' = 'distribucion') => {
     let direccion = '';
     try {
       direccion = (await leerSeleccion()).direccion;
@@ -316,18 +339,34 @@ export function Panel() {
     }
     mensaje = { ...mensaje, pestana: pestanaVentana };
     const abierta = explorador.current;
-    if (abierta && abierta.ventana.enviar(mensaje)) return;
+    if (abierta && abierta.ventana.enviar(mensaje)) {
+      if (pestanaVentana === 'gantt') atenderGantt({ accion: 'gantt-releer' });
+      return;
+    }
+    // El cronograma no va en la URL (puede ser grande): se manda cuando la ventana avisa que escucha.
+    ganttPendiente.current = pestanaVentana === 'gantt';
     const ventana = await abrirVentana('explorador.html', await codificarJson(mensaje), {
-      alto: 75,
-      ancho: 60,
-      // U3.4: pulsar una fila de la lista selecciona esa celda en la hoja.
+      alto: pestanaVentana === 'gantt' ? 90 : 75,
+      ancho: pestanaVentana === 'gantt' ? 90 : 60,
       alRecibir: (texto) => {
-        let pedido: { accion?: string; ref?: string } = {};
+        let pedido: { accion?: string; ref?: string; op?: OperacionGantt } = {};
         try {
           pedido = JSON.parse(texto) as typeof pedido;
         } catch {
           return;
         }
+        if (pedido.accion === 'listo') {
+          if (ganttPendiente.current) {
+            ganttPendiente.current = false;
+            atenderGantt({ accion: 'gantt-releer' });
+          }
+          return;
+        }
+        if (pedido.accion?.startsWith('gantt')) {
+          atenderGantt(pedido);
+          return;
+        }
+        // U3.4: pulsar una fila de la lista selecciona esa celda en la hoja.
         if (pedido.accion !== 'ir' || !pedido.ref) return;
         const ref = pedido.ref;
         if (explorador.current) {
@@ -356,7 +395,18 @@ export function Panel() {
     } catch {
       // sin el evento de selección, la ventana enseña lo que se abrió
     }
-  }, [mensajeExplorador]);
+  }, [mensajeExplorador, atenderGantt]);
+  // La pestaña Cronograma pide abrir el Gantt, o refrescarlo tras simular (si está abierto).
+  useEffect(() => {
+    const abrir = () => void abrirExplorador('gantt').catch((e) => setError(`No se pudo abrir el Gantt: ${mensajeDe(e)}`));
+    const refrescar = () => { if (explorador.current) atenderGantt({ accion: 'gantt-releer' }); };
+    window.addEventListener(ABRIR_GANTT, abrir);
+    window.addEventListener(REFRESCAR_GANTT, refrescar);
+    return () => {
+      window.removeEventListener(ABRIR_GANTT, abrir);
+      window.removeEventListener(REFRESCAR_GANTT, refrescar);
+    };
+  }, [abrirExplorador, atenderGantt]);
   useEffect(() => {
     const e = explorador.current;
     if (e && resultado?.ok) e.ventana.enviar(mensajeExplorador(e.direccion));
@@ -469,6 +519,8 @@ export function Panel() {
       }),
       manejarDesdeLaCinta('verDistribucion', () => abrirExplorador()),
       manejarDesdeLaCinta('verListaModelo', () => abrirExplorador('lista')),
+      // G1: el botón Gantt del grupo Cronograma.
+      manejarDesdeLaCinta('cronograma:gantt', () => abrirExplorador('gantt')),
       manejarDesdeLaCinta('ajustarDatos', async () => {
         setPestana('modelo');
         setPedidoAjuste((x) => x + 1);

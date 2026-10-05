@@ -32,6 +32,8 @@ export const AYUDA = {
     'El valor base es lo que da la hoja sin incertidumbre: la estimación de siempre. En un coste o un plazo, la probabilidad de no pasarse de él y la reserva (P80 menos el valor base) que haría falta para tener un 80 % de confianza; en un beneficio, la probabilidad de alcanzarlo y lo que se obtiene con esa confianza (el P20). Elige arriba si la salida es un coste o un beneficio.',
   matriz:
     'Cada riesgo del registro en su casilla: la probabilidad en horizontal y el impacto medio en vertical, comparado con el mayor del registro. El color es la severidad (probabilidad × impacto): baja, media, alta o crítica. Los de arriba a la derecha son los primeros que hay que mitigar.',
+  gantt:
+    'El Gantt se calcula con el mismo motor del análisis (CPM con las cuatro relaciones, desfases, calendarios y festivos). La ruta crítica, por defecto, son las actividades con holgura total ≤ 0; en la ventana se puede cambiar a «ruta más larga», que sigue hacia atrás desde el fin solo los vínculos impulsores (los de holgura 0) y es la correcta cuando hay restricciones o varios calendarios. Lo que se edita en la ventana se escribe en las hojas Actividades y Relaciones: las hojas siguen siendo la verdad.',
   finCronograma:
     'La fecha determinística es la del cronograma con las duraciones base y sin riesgos: la que se presentaría sin análisis. En cada iteración se recalcula la red entera, así que donde dos ramas se juntan manda la más larga de esa iteración (sesgo de convergencia): por eso casi nunca se cumple. El P80 es la fecha que se cumple 8 de cada 10 veces.',
   eliminacion:

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ajustarTodo, distanciaAFlecha, encabezados, filasVisibles, GEOMETRIA, rectBarra, rutaFlecha, sentidoPunta, TALON, unidades, x,
-  zonaBarra, type Punto, type Rect,
+  tipoVinculo, zonaBarra, type Punto, type Rect,
 } from '../../ui/gantt/trazado.ts';
 import { serieDeFecha } from '../../engine/modelo/fechas.ts';
 
@@ -110,11 +110,29 @@ describe('interacción', () => {
   it('zonas de una barra, distancia a una flecha y filas visibles', () => {
     expect(zonaBarra(P, P.x + 10, false)).toBe('cuerpo');
     expect(zonaBarra(P, P.x + P.ancho - 2, false)).toBe('fin');
-    expect(zonaBarra(P, P.x + P.ancho + 8, false)).toBe('vincular');
+    expect(zonaBarra(P, P.x + P.ancho + 8, false)).toBe('vincular-fin');
+    expect(zonaBarra(P, P.x - 8, false)).toBe('vincular-inicio');
     expect(zonaBarra(P, P.x - 20, false)).toBeNull();
+    expect([tipoVinculo('fin', P, P.x + 1), tipoVinculo('fin', P, P.x + P.ancho - 1), tipoVinculo('inicio', P, P.x + 1), tipoVinculo('inicio', P, P.x + P.ancho - 1)]).toEqual(['FC', 'FF', 'CC', 'CF']);
     const ps = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }];
     expect(distanciaAFlecha(ps, { x: 5, y: 3 })).toBe(3);
     expect(filasVisibles(240, 100, 24, 1000)).toEqual([9, 16]);
     expect(filasVisibles(0, 100, 24, 3)).toEqual([0, 2]);
+  });
+});
+
+describe('mensajes en trozos (ventana del Gantt)', () => {
+  it('parte y vuelve a juntar un mensaje grande, aunque lleguen desordenados', async () => {
+    const { enviarEnTrozos, juntarTrozos, TAMANO_TROZO } = await import('../../excel/trozos.ts');
+    const enviados: unknown[] = [];
+    const datos = { texto: 'ñ'.repeat(TAMANO_TROZO * 2 + 7), n: [1, 2, 3] };
+    expect(enviarEnTrozos({ enviar: (d) => { enviados.push(JSON.parse(JSON.stringify(d))); return true; } }, datos)).toBe(true);
+    expect(enviados.length).toBe(3);
+    const recibidos: unknown[] = [];
+    const juntar = juntarTrozos((d) => recibidos.push(d));
+    for (const k of [2, 0, 1]) juntar(enviados[k]);
+    expect(recibidos).toEqual([datos]);
+    juntar({ pequeno: true });
+    expect(recibidos[1]).toEqual({ pequeno: true });
   });
 });

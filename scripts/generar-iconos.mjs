@@ -21,12 +21,15 @@ const ICONOS = {
   cronograma: `<rect x="6" y="10" width="24" height="9" rx="2" fill="${AZUL}"/><rect x="22" y="27" width="28" height="9" rx="2" fill="${ROJO}"/><rect x="36" y="44" width="22" height="9" rx="2" fill="${ROJO}"/><path d="M30 14.5 H34 V27 M50 31.5 H52 V44" stroke="${GRIS}" stroke-width="2.5" fill="none"/>`,
   calidad: `<circle cx="32" cy="12" r="8" fill="${ROJO}"/><circle cx="32" cy="32" r="8" fill="#E3B505"/><circle cx="32" cy="52" r="8" fill="${VERDE}"/>`,
   simularcronograma: `<rect x="6" y="12" width="26" height="9" rx="2" fill="${AZUL}" opacity=".6"/><rect x="20" y="28" width="30" height="9" rx="2" fill="${AZUL}" opacity=".8"/><path d="M8 58 C22 58 28 44 36 44 C44 44 48 58 60 58 Z" fill="${ROJO}" opacity=".85"/>`,
+  gantt: `<rect x="4" y="8" width="14" height="48" fill="#fff" stroke="${GRIS}" stroke-width="2"/><path d="M4 24 H18 M4 40 H18" stroke="${GRIS}" stroke-width="2"/><rect x="22" y="11" width="18" height="9" rx="1.5" fill="${ROJO}"/><rect x="30" y="27" width="22" height="9" rx="1.5" fill="${AZUL}"/><path d="M52 49 L57 44 L62 49 L57 54 Z" fill="${ROJO}"/><path d="M40 15.5 H44 V44 H50" stroke="${ROJO}" stroke-width="2.5" fill="none"/>`,
   diagnostico: `<path d="M4 34 H18 L24 18 L34 50 L42 26 L46 34 H60" stroke="${GRIS}" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`,
 };
 
 const nav = await chromium.launch();
 const p = await nav.newPage();
-for (const [nombre, dibujo] of Object.entries(ICONOS)) {
+// Con nombres (`node scripts/generar-iconos.mjs gantt`), solo esos.
+const solo = process.argv.slice(2);
+for (const [nombre, dibujo] of Object.entries(ICONOS).filter(([n]) => solo.length === 0 || solo.includes(n))) {
   for (const t of [16, 32, 80]) {
     await p.setViewportSize({ width: t, height: t });
     await p.setContent(`<html><body style="margin:0;background:transparent"><svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}" viewBox="0 0 64 64">${dibujo}</svg></body></html>`);
@@ -34,4 +37,4 @@ for (const [nombre, dibujo] of Object.entries(ICONOS)) {
   }
 }
 await nav.close();
-console.log(`${Object.keys(ICONOS).length} iconos × 3 tamaños en public/`);
+console.log(`${solo.length || Object.keys(ICONOS).length} iconos × 3 tamaños en public/`);
