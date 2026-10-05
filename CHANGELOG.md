@@ -5,6 +5,24 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### QRSA Q0: decisiones y cronogramas de referencia (2026-10-05)
+
+**Añadido**
+- `tests/fixtures/qrsa/`: un CPM independiente en Python
+  (`generar-referencias.py`) que calcula tres cronogramas de referencia y los
+  escribe en formato XML de MS Project para abrirlos en ProjectLibre: R1
+  (solo FC), R2 (CC, FF, CF, desfase negativo, SNET y FNLT) y R3 (calendario
+  con los festivos de Colombia y un desfase en días calendario), cada uno con
+  las fechas y holguras esperadas en CSV; y los festivos de Colombia de 2026
+  a 2030.
+- Guía de pruebas, bloque Q: cómo comprobar esos cronogramas en ProjectLibre.
+
+**Cambiado**
+- `docs/QRSA_PLAN.md`: decisiones de Q0 confirmadas por el usuario
+  (arquitectura con motor CPM propio; lunes a viernes por defecto con opción
+  de lunes a sábado; desfases en días laborables con opción de días
+  calendario; redondeo al día como opción).
+
 ### Ejemplo: cronograma de obra (2026-10-04)
 
 **Añadido**

@@ -1297,6 +1297,16 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     módulo `engine/cronograma/` con motor CPM propio, sin pasar por el grafo
     de fórmulas. **Sin empezar**: pendiente de que el usuario confirme Q0
     (arquitectura, calendarios, cronogramas de referencia de MS Project).
+74. [x] **QRSA Q0: decisiones y referencias (2026-10-05)**. El usuario
+    confirmó la arquitectura B (motor CPM propio), la semana de lunes a
+    viernes con opción de lunes a sábado, los desfases en días laborables con
+    opción de días calendario por relación y el redondeo al día como opción.
+    No tiene MS Project: instalará ProjectLibre. Hecho:
+    `tests/fixtures/qrsa/generar-referencias.py` (CPM independiente en
+    Python, festivos de Colombia, escritor de MS Project XML) y sus salidas
+    R1–R3 con los `*-esperado.csv`; bloque Q de la guía con los pasos en
+    ProjectLibre. **Siguiente**: el usuario comprueba R1–R3 y da la orden de
+    empezar Q1.
 
 **Siguiente acción al retomar**, en orden de valor:
 

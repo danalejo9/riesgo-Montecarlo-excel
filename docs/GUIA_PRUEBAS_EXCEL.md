@@ -47,6 +47,8 @@
 >   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
 >   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
 > - Pendientes de antes: **W6** y **W7** (Excel para la Web).
+> - **Nuevo, aparte y sin Excel**: el bloque **Q** (cronogramas de
+>   referencia en ProjectLibre, para el motor de cronograma). Cuando puedas.
 >
 > Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
 > anteriores: es referencia, no hace falta repetirlo.
@@ -567,6 +569,55 @@ y reabre Excel).
 dice que es lo que más mueve los ingresos) y W1–W5 en la Web.
 
 ---
+
+## Q. Cronograma: comprobar los cronogramas de referencia en ProjectLibre
+
+*Añadido el 05/10. No necesita Excel ni el complemento, y no bloquea el
+resto de la guía: hazlo cuando puedas.* Antes de escribir el motor de
+cronograma (QRSA, fase Q1) quiero saber si mis fechas coinciden con las de un
+programa de cronogramas de verdad. Como no tienes MS Project, uso
+ProjectLibre, que es gratuito y lee el mismo formato XML.
+
+**Preparación**
+1. En PowerShell, en la carpeta del proyecto:
+   `git pull origin claude/nifty-thompson-xfnqm2`. Los archivos quedan en
+   `tests\fixtures\qrsa\`.
+2. Descarga e instala ProjectLibre desde su página oficial
+   (projectlibre.com). El instalador de Windows ya trae lo que necesita para
+   funcionar.
+
+**Q1. Abrir cada cronograma.** En ProjectLibre: Archivo → Abrir, y elige
+`R1-simple.xml` (luego `R2-relaciones.xml` y `R3-calendario.xml`). Si
+pregunta cómo importarlo, acepta lo que propone. El proyecto empieza el
+lunes 04/01/2027.
+
+**Q2. Poner las columnas.** En la tabla de tareas deben verse Inicio, Fin y
+Holgura total. Si falta la holgura: clic derecho en el encabezado de una
+columna → Insertar columna → «Holgura total» (puede llamarse «Margen total»
+o «Total Slack», según el idioma).
+
+**Q3. Comparar** con el archivo `*-esperado.csv` del mismo nombre (se abre
+con Excel o el Bloc de notas). Lo que espero:
+
+| Cronograma | Qué prueba | Termina | Detalles para mirar |
+|---|---|---|---|
+| R1 | Solo fin–comienzo | 21/01/2027 | C y E con 4 días de holgura; el resto en 0 |
+| R2 | Comienzo–comienzo, fin–fin, comienzo–fin, un desfase negativo, «no comenzar antes de» y «terminar no después de» | 25/02/2027 | G y H con holgura **−1**: la fecha límite del 24/02 no se cumple |
+| R3 | Calendario con los festivos de Colombia de 2027 y un desfase de 7 días calendario (el curado) | 24/11/2027 | E termina el 05/08 y F empieza el 13/08; G con 5 días de holgura y C con 31 |
+
+Un hito (duración 0, como M en R1 o J en R3) puede salir en ProjectLibre el
+día anterior al del CSV: él lo pone al final del día en que termina su
+predecesora y yo al comienzo del día laborable siguiente. Es la misma fecha.
+
+**Q4. Mandarme el resultado.** Lo más cómodo, cualquiera de los dos:
+- una captura de la tabla de cada cronograma con Inicio, Fin y Holgura
+  total; o
+- Archivo → Guardar como → formato XML de MS Project
+  (`R1-projectlibre.xml`, etc.), y me adjuntas los tres archivos.
+
+Dime también la versión de ProjectLibre (Ayuda → Acerca de). Si algo no
+coincide, no lo corrijas a mano: mándamelo tal cual, y vemos si es un error
+mío o una convención del programa.
 
 ## A. Lo básico, en la hoja «Modelo»
 

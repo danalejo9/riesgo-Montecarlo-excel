@@ -1,0 +1,8 @@
+id,actividad,duracion,inicio,fin,holgura_total,critica
+A,Replanteo,3,2027-01-04,2027-01-06,0,sí
+B,Excavación,4,2027-01-07,2027-01-12,0,sí
+C,Pedido de acero,2,2027-01-07,2027-01-08,4,no
+D,Cimentación,5,2027-01-13,2027-01-19,0,sí
+E,Figurado de acero,3,2027-01-11,2027-01-13,4,no
+F,Columnas,2,2027-01-20,2027-01-21,0,sí
+M,Fin de obra gris,0,2027-01-22,2027-01-22,0,sí

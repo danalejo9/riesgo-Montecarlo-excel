@@ -22,7 +22,7 @@ modelar con fórmulas de Excel (`=MAX(fin A; fin B)`, como la plantilla
 convergencia, pero no hay ruta crítica, holguras, índice de criticidad,
 calendarios ni importación de MS Project o P6.
 
-## Decisión de arquitectura (propuesta, a confirmar)
+## Decisión de arquitectura (confirmada por el usuario el 05/10)
 
 **Un módulo de cronograma dentro del mismo complemento, con su propio motor
 CPM, que no pasa por el grafo de fórmulas.**
@@ -89,32 +89,58 @@ de darlo por cumplido.
 
 ### Q0. Antes de escribir código
 
-- **Q0.1 Confirmar la arquitectura** de arriba (módulo de cronograma con
-  motor CPM propio dentro del mismo complemento).
-- **Q0.2 Validación sin MS Project** (el usuario no lo tiene, 06/10). La
-  prueba obligatoria 1 se cambia por tres fuentes independientes:
+**Estado (05/10): decisiones confirmadas; falta la comprobación en
+ProjectLibre.** El usuario aceptó las recomendaciones: «La arquitectura, la
+que hice. La semana laboral también. Los desfases. El reenvío también, pero
+quiero que te hagan en una opción. Y el proyecto libre, pues yo lo puedo
+instalar y probar.»
+
+- **Q0.1 Arquitectura** ✅: módulo de cronograma con motor CPM propio dentro
+  del mismo complemento (la de arriba).
+- **Q0.2 Validación sin MS Project** ✅ preparada. La prueba obligatoria 1
+  se cambia por tres fuentes independientes:
   1. **Casos de libro con solución publicada** (redes clásicas de CPM con
      sus fechas y holguras calculadas a mano).
-  2. **Una segunda implementación en Python**, escrita aparte del motor, que
-     calcula las mismas redes: las dos tienen que dar lo mismo, día por día.
-  3. **ProjectLibre** (gratuito y de código abierto, calcula como MS Project y
-     lee su formato XML), si el usuario puede instalarlo: preparo los
-     cronogramas en XML, los abre y me pasa las fechas.
-- **Sin cronogramas reales** del usuario: se generan cronogramas de ejemplo
-  realistas (la obra de 9 actividades; una obra mediana de unas 60 con las
-  cuatro relaciones; un proyecto de restauración y siembra con calendario de
-  lunes a sábado y festivos; uno sintético de 500 para el rendimiento).
-- **Q0.3 Reglas de calendario** (propuestas el 06/10, a confirmar):
-  duraciones en días laborables del calendario de la actividad (semana de
-  lunes a viernes o de lunes a sábado, con festivos de Colombia); desfases en
-  días laborables por defecto, con la opción de días calendario por relación
-  (el curado del concreto sigue los fines de semana); el desfase cuenta con el
-  calendario de la sucesora, como MS Project; duraciones simuladas
-  redondeadas al día entero más cercano (sin sesgo; en fechas, como un
-  cronograma real).
-- **Q0.4 Festivos de Colombia**: tabla generada por el complemento (ley
-  Emiliani y festivos de Semana Santa) para los años del proyecto, editable
-  en la hoja `Calendario`.
+  2. **Una segunda implementación en Python**, escrita aparte del motor:
+     `tests/fixtures/qrsa/generar-referencias.py`. Calcula las mismas redes y
+     el motor tendrá que dar lo mismo, día por día.
+  3. **ProjectLibre** (gratuito y de código abierto, lee el formato XML de
+     MS Project): el usuario lo instala y abre los tres cronogramas de
+     referencia (guía, bloque Q).
+- **Cronogramas de referencia** (en `tests/fixtures/qrsa/`, generados por el
+  script; cada uno con su `*-esperado.csv` de fechas y holguras):
+  - `R1-simple.xml`: 7 actividades, solo FC. Termina el 21/01/2027 (14 días
+    laborables); ruta crítica A-B-D-F-M; C y E con 4 días de holgura.
+  - `R2-relaciones.xml`: CC, FF y CF, un desfase negativo, SNET y FNLT.
+    Termina el 25/02/2027; G y H con holgura −1 (la FNLT del 24/02 no se
+    cumple), que es lo que tiene que señalar el motor.
+  - `R3-calendario.xml`: calendario de 2027 con los festivos de Colombia y un
+    desfase de 7 días calendario (el curado). Termina el 24/11/2027 (220 días
+    laborables); el vaciado termina el 05/08 y el desencofrado empieza el
+    13/08.
+  - `festivos-colombia.csv`: los festivos de 2026 a 2030 (90).
+- **Sin cronogramas reales** del usuario: además se generarán en Q1 una obra
+  mediana de unas 60 actividades, un proyecto de restauración y siembra con
+  semana de lunes a sábado, y uno sintético de 500 para el rendimiento.
+- **Q0.3 Reglas de calendario** ✅ confirmadas:
+  - Duraciones en días laborables del calendario de la actividad.
+  - **Semana de lunes a viernes por defecto**, con la opción de lunes a
+    sábado (por calendario), y los festivos de Colombia.
+  - **Desfases en días laborables por defecto**, con la opción de días
+    calendario por relación (el curado del concreto sigue los fines de
+    semana). El desfase cuenta con el calendario de la sucesora, como MS
+    Project; el de días calendario empieza a contar a la medianoche que sigue
+    al último día laborable de la predecesora.
+  - **Redondeo como opción**: por defecto las duraciones simuladas se
+    redondean al día entero más cercano (sin sesgo, en fechas, como un
+    cronograma real); la alternativa es conservar los decimales.
+- **Q0.4 Festivos de Colombia** ✅ en el script de referencia (algoritmo de
+  Pascua y traslado al lunes de la ley Emiliani); en Q1 el complemento los
+  genera para los años del proyecto, editables en la hoja `Calendario`.
+- **Pendiente para cerrar Q0**: que el usuario abra R1–R3 en ProjectLibre y
+  confirme (o no) las fechas de los `*-esperado.csv`. Una diferencia no
+  bloquea Q1: se estudia caso por caso (puede ser una convención de
+  ProjectLibre, como fechar un hito al final del día anterior).
 
 ### Q1. MVP: un análisis de riesgo de cronograma válido (fase 1 de la especificación)
 
@@ -192,8 +218,10 @@ Sirven ya, sin esperar al cronograma:
 
 ## Dependencias del usuario
 
-- Confirmar la arquitectura (Q0.1) y las reglas de calendario (Q0.3).
-- Si puede, instalar ProjectLibre para la tercera validación (Q0.2).
+- ~~Confirmar la arquitectura (Q0.1) y las reglas de calendario (Q0.3)~~ ✅
+  05/10.
+- Instalar ProjectLibre y comprobar R1–R3 (guía, bloque Q).
+- Dar la orden de empezar Q1.
 - Para la importación (Q2 y Q3): sin archivos reales del usuario, se prueba
   con los generados por ProjectLibre o escritos a mano siguiendo el formato
   publicado de MS Project XML.

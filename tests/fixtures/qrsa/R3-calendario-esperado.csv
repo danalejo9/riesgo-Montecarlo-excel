@@ -1,0 +1,11 @@
+id,actividad,duracion,inicio,fin,holgura_total,critica
+A,Diseño y estudios,25,2027-01-04,2027-02-08,0,sí
+B,Licencia de construcción,45,2027-02-09,2027-04-15,0,sí
+C,Adecuación del terreno,14,2027-02-09,2027-02-26,31,no
+D,Cimentación,25,2027-04-16,2027-05-21,0,sí
+E,Estructura (vaciado),50,2027-05-24,2027-08-05,0,sí
+F,Desencofrado,5,2027-08-13,2027-08-20,0,sí
+G,Instalaciones,30,2027-08-23,2027-10-01,5,no
+H,Mampostería y fachada,35,2027-08-23,2027-10-08,0,sí
+I,Acabados,30,2027-10-11,2027-11-24,0,sí
+J,Entrega,0,2027-11-25,2027-11-25,0,sí
