@@ -580,3 +580,12 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .tornado-eliminacion .barra-valor { display: block; height: 100%; background: var(--baja); }
 .tornado-eliminacion .barra-valor.negativa { background: var(--luz-verde); }
 .tornado-eliminacion .cifra { text-align: right; font-variant-numeric: tabular-nums; }
+/* Q2/Q3: dispersión JCL y Gantt ajustado. */
+.zona-jcl { fill: color-mix(in srgb, var(--luz-verde) 18%, transparent); }
+.punto-dispersion { fill: var(--serie-1); opacity: .55; }
+.grafico line.meta { stroke: var(--luz-rojo); stroke-width: 1; stroke-dasharray: 4 3; }
+.barra-base { fill: var(--tenue); opacity: .55; }
+.barra-p80 { fill: var(--serie-2); }
+.importacion { border-left: 3px solid var(--acento); padding: 6px 10px; background: color-mix(in srgb, var(--acento) 6%, transparent); }
+.rutas { padding-left: 18px; font-size: 12px; }
+.rutas li { margin-bottom: 4px; }

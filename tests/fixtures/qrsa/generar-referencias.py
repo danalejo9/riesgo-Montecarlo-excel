@@ -11,6 +11,8 @@ Escribe en esta carpeta, para cada cronograma:
   inicio del proyecto, para que las calcule él).
 - `R<n>-<nombre>-esperado.csv`: las fechas y holguras que da **este** cálculo
   en Python, escrito aparte del motor del complemento (validación 2 del plan).
+- `R<n>-<nombre>.xer`: el mismo cronograma en el formato XER de Primavera P6
+  (tablas PROJECT, CALENDAR, TASK y TASKPRED), para probar su importación.
 - `R<n>-<nombre>-red.json`: la misma red en un formato sencillo, para que las
   pruebas del motor (`tests/unit/cronogramaReferencias.test.ts`) la lean sin
   pasar por el XML.
@@ -272,10 +274,56 @@ def mspdi(nombre: str, titulo: str, festivos: set[dt.date], acts: list[Act]) -> 
         f'<Tasks>{"".join(tareas)}</Tasks></Project>\n')
 
 
+TIPO_XER = {'FC': 'PR_FS', 'CC': 'PR_SS', 'FF': 'PR_FF', 'CF': 'PR_SF'}
+EPOCA = dt.date(1899, 12, 30)
+
+
+def xer(nombre: str, titulo: str, festivos: set[dt.date], acts: list[Act]) -> str:
+    """XER mínimo con el calendario en el formato de P6 (clndr_data)."""
+    dias = ''.join(
+        f'(0||{d}()(' + ('(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())' if 2 <= d <= 6 else '') + '))'
+        for d in range(1, 8))
+    excepciones = ''.join(f'(0||{k}(d|{(f - EPOCA).days})())' for k, f in enumerate(sorted(festivos)))
+    datos = f'(0||CalendarData()((0||DaysOfWeek()({dias}))(0||VIEW(ShowTotal|Y)())(0||Exceptions()({excepciones}))))'
+    uid = {a.id: 1000 + i for i, a in enumerate(acts)}
+    filas = ['ERMHDR\t19.12\t2026-10-05\tProject\tadmin\tAdmin\tdbxDatabaseNoName\tProject Management\tUSD']
+    def tabla(t, campos, registros):
+        filas.append('%T\t' + t)
+        filas.append('%F\t' + '\t'.join(campos))
+        for r in registros:
+            filas.append('%R\t' + '\t'.join(str(x) for x in r))
+    tabla('PROJECT', ['proj_id', 'proj_short_name', 'plan_start_date', 'clndr_id'], [[1, nombre, f'{INICIO} 08:00', 7]])
+    tabla('CALENDAR', ['clndr_id', 'default_flag', 'clndr_name', 'day_hr_cnt', 'week_hr_cnt', 'clndr_data'],
+          [[7, 'Y', 'Lunes a viernes (Colombia)', 8, 40, datos]])
+    cstr = {'snet': 'CS_MSOA', 'fnlt': 'CS_MEOB'}
+    tareas = []
+    for a in acts:
+        tipo = 'TT_FinMile' if a.dur == 0 and a.rels else 'TT_Mile' if a.dur == 0 else 'TT_Task'
+        c, f = ('', '')
+        if a.snet:
+            c, f = cstr['snet'], f'{a.snet} 08:00'
+        elif a.fnlt:
+            c, f = cstr['fnlt'], f'{a.fnlt} 17:00'
+        tareas.append([uid[a.id], 1, 7, a.id, a.nombre, tipo, a.dur * 8, c, f])
+    tabla('TASK', ['task_id', 'proj_id', 'clndr_id', 'task_code', 'task_name', 'task_type', 'target_drtn_hr_cnt', 'cstr_type', 'cstr_date'], tareas)
+    preds = []
+    k = 1
+    for a in acts:
+        for r in a.rels:
+            # P6 no tiene desfase en días calendario por relación: se escribe en horas laborables
+            # equivalentes y la prueba lo trata aparte (R3 solo se importa desde MS Project XML).
+            preds.append([k, uid[a.id], uid[r.pred], TIPO_XER[r.tipo], r.desfase * 8])
+            k += 1
+    tabla('TASKPRED', ['task_pred_id', 'task_id', 'pred_task_id', 'pred_type', 'lag_hr_cnt'], preds)
+    filas.append('%E')
+    return '\r\n'.join(filas) + '\r\n'
+
+
 def escribir(nombre, titulo, festivos, acts):
     cal = Calendario(INICIO, festivos)
     r = cpm(acts, cal)
     (AQUI / f'{nombre}.xml').write_text(mspdi(nombre, titulo, festivos, acts), encoding='utf-8')
+    (AQUI / f'{nombre}.xer').write_bytes(xer(nombre, titulo, festivos, acts).encode('cp1252'))
     with open(AQUI / f'{nombre}-esperado.csv', 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow(['id', 'actividad', 'duracion', 'inicio', 'fin', 'holgura_total', 'critica'])

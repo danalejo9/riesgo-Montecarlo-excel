@@ -5,7 +5,8 @@
  * `cronogramaResultados.ts`.
  */
 
-import { HOJA_RESULTADOS, HOJAS_CRONOGRAMA, hojasNuevasCronograma, type MatrizHoja } from './cronogramaHojas.ts';
+import { HOJA_RESULTADOS, HOJAS_CRONOGRAMA, hojasNuevasCronograma, type Celda, type HojaNueva, type MatrizHoja } from './cronogramaHojas.ts';
+import { HOJAS_QUE_IMPORTA } from './importarCronograma.ts';
 import type { HojaResultados } from './cronogramaResultados.ts';
 
 export const VERSION_COMPLEMENTO = '0.8.0';
@@ -34,58 +35,110 @@ export function proximoLunes(hoy = new Date()): number {
   return serie + ((7 - dia) % 7);
 }
 
-/** Crea las hojas del libro de cronograma con el ejemplo. Falla si alguna ya existe. */
-export async function crearLibroCronograma(inicio = proximoLunes()): Promise<string[]> {
+/** Escribe una hoja nueva del libro de cronograma (valores, formatos, listas, ayuda, anchos). */
+function escribirHoja(context: Excel.RequestContext, h: HojaNueva): void {
+  const hoja = context.workbook.worksheets.add(h.nombre);
+  const filas = h.valores.length;
+  const ancho = Math.max(...h.valores.map((f) => f.length));
+  const valores = h.valores.map((f) => {
+    const v = [...f];
+    while (v.length < ancho) v.push(null);
+    return v.map((x) => (x === null ? '' : x));
+  });
+  hoja.getRangeByIndexes(0, 0, filas, ancho).values = valores;
+  const enc = hoja.getRangeByIndexes(0, 0, 1, ancho);
+  enc.format.font.bold = true;
+  enc.format.font.color = AZUL;
+  enc.format.fill.color = ENCABEZADO;
+  const alto = Math.max(FILAS_VALIDACION, filas + 50);
+  for (const [c, f] of Object.entries(h.formatos ?? {})) {
+    hoja.getRangeByIndexes(1, Number(c), alto, 1).numberFormat = Array.from({ length: alto }, () => [f]);
+  }
+  for (const [c, lista] of Object.entries(h.listas ?? {})) {
+    const r = hoja.getRangeByIndexes(1, Number(c), alto, 1);
+    r.dataValidation.clear();
+    r.dataValidation.rule = { list: { inCellDropDown: true, source: typeof lista === 'string' ? lista : lista.join(',') } };
+  }
+  for (const [c, nota] of Object.entries(h.notas ?? {})) {
+    // La ayuda de la columna aparece al elegir una de sus celdas.
+    const r = hoja.getRangeByIndexes(1, Number(c), alto, 1);
+    r.dataValidation.prompt = { showPrompt: true, title: String(h.valores[0]?.[Number(c)] ?? '').slice(0, 32), message: nota.slice(0, 255) };
+  }
+  (h.anchos ?? []).forEach((caracteres, c) => {
+    hoja.getRangeByIndexes(0, c, 1, 1).format.columnWidth = caracteres * 6.5;
+  });
+  if (h.nombre === HOJAS_CRONOGRAMA.config) {
+    hoja.getRange('B2').numberFormat = [['dd/mm/yyyy']];
+    hoja.getRange('B9').numberFormat = [['dd/mm/yyyy']];
+    hoja.getRange('B12').numberFormat = [['#,##0']];
+    hoja.getRange('B13').numberFormat = [['0%']];
+    hoja.getRange('B6').dataValidation.rule = { list: { inCellDropDown: true, source: 'Hipercubo latino,Monte Carlo' } };
+    hoja.getRange('B7').dataValidation.rule = { list: { inCellDropDown: true, source: 'Al día,Con decimales' } };
+    hoja.getRange('B8').dataValidation.rule = { list: { inCellDropDown: true, source: 'Respetar,Ignorar' } };
+    hoja.getRange('B3').dataValidation.rule = { list: { inCellDropDown: true, source: `=${HOJAS_CRONOGRAMA.calendario}!$A$2:$A$20` } };
+    hoja.getRange('C:C').format.wrapText = true;
+  }
+  hoja.freezePanes.freezeRows(1);
+}
+
+export interface CreacionLibro {
+  creadas: string[];
+  /** true si el libro ya tenía parte de las hojas (de una versión anterior) y solo se añadieron las que faltaban, vacías. */
+  completado: boolean;
+}
+
+/**
+ * Crea las hojas del libro de cronograma con el ejemplo. Si el libro ya
+ * tiene algunas (un libro de la versión anterior, sin Costos ni
+ * Correlaciones), añade solo las que faltan, vacías. Falla si están todas.
+ */
+export async function crearLibroCronograma(inicio = proximoLunes()): Promise<CreacionLibro> {
   const existentes = await hojasCronogramaExistentes();
-  if (existentes.length) throw new Error(`El libro ya tiene ${existentes.length === 1 ? 'la hoja' : 'las hojas'} ${existentes.join(', ')}. Bórrelas o use otro libro para crear uno nuevo.`);
-  const nuevas = hojasNuevasCronograma(inicio);
+  const todas = Object.values(HOJAS_CRONOGRAMA);
+  if (existentes.length === todas.length) throw new Error('El libro ya tiene todas las hojas del cronograma. Bórrelas o use otro libro para crear uno nuevo.');
+  const completado = existentes.length > 0;
+  const tiene = new Set(existentes.map((n) => n.toLowerCase()));
+  const nuevas = hojasNuevasCronograma(inicio)
+    .filter((h) => !tiene.has(h.nombre.toLowerCase()))
+    .map((h) => (completado ? { ...h, valores: [h.valores[0] as Celda[]] } : h));
   return Excel.run(async (context) => {
-    for (const h of nuevas) {
-      const hoja = context.workbook.worksheets.add(h.nombre);
-      const filas = h.valores.length;
-      const ancho = Math.max(...h.valores.map((f) => f.length));
-      const valores = h.valores.map((f) => {
-        const v = [...f];
-        while (v.length < ancho) v.push(null);
-        return v.map((x) => (x === null ? '' : x));
-      });
-      hoja.getRangeByIndexes(0, 0, filas, ancho).values = valores;
-      const enc = hoja.getRangeByIndexes(0, 0, 1, ancho);
-      enc.format.font.bold = true;
-      enc.format.font.color = AZUL;
-      enc.format.fill.color = ENCABEZADO;
-      for (const [c, f] of Object.entries(h.formatos ?? {})) {
-        hoja.getRangeByIndexes(1, Number(c), FILAS_VALIDACION, 1).numberFormat = Array.from({ length: FILAS_VALIDACION }, () => [f]);
+    for (const h of nuevas) escribirHoja(context, h);
+    context.workbook.worksheets.getItem(completado ? (nuevas[0] as HojaNueva).nombre : HOJAS_CRONOGRAMA.actividades).activate();
+    await context.sync();
+    return { creadas: nuevas.map((h) => h.nombre), completado };
+  });
+}
+
+/**
+ * Lleva un cronograma importado al libro. Sin hojas del cronograma, las crea
+ * todas; con ellas, reemplaza Actividades, Relaciones y Calendario, pone la
+ * fecha de inicio y el calendario en Config y añade las que falten. Lo demás
+ * (incertidumbre, riesgos, costos…) no se toca, salvo con `deCero`.
+ */
+export async function importarAlLibro(hojas: readonly HojaNueva[], inicio: number, calendario: string, deCero = false): Promise<string[]> {
+  const existentes = new Set((await hojasCronogramaExistentes()).map((n) => n.toLowerCase()));
+  // «De cero»: también se vacían incertidumbre, riesgos, costos… (remitían a las actividades de antes).
+  const reemplazar = new Set<string>((deCero ? hojas.map((h) => h.nombre).filter((n) => n !== HOJAS_CRONOGRAMA.config) : HOJAS_QUE_IMPORTA).map((n) => n.toLowerCase()));
+  return Excel.run(async (context) => {
+    const escritas: string[] = [];
+    for (const h of hojas) {
+      const ya = existentes.has(h.nombre.toLowerCase());
+      if (ya && !reemplazar.has(h.nombre.toLowerCase())) continue;
+      if (ya) {
+        context.workbook.worksheets.getItem(h.nombre).delete();
+        await context.sync();
       }
-      for (const [c, lista] of Object.entries(h.listas ?? {})) {
-        const r = hoja.getRangeByIndexes(1, Number(c), FILAS_VALIDACION, 1);
-        r.dataValidation.clear();
-        r.dataValidation.rule = { list: { inCellDropDown: true, source: typeof lista === 'string' ? lista : lista.join(',') } };
-      }
-      for (const [c, nota] of Object.entries(h.notas ?? {})) {
-        // La ayuda de la columna aparece al elegir una de sus celdas.
-        const r = hoja.getRangeByIndexes(1, Number(c), FILAS_VALIDACION, 1);
-        r.dataValidation.prompt = { showPrompt: true, title: String(h.valores[0]?.[Number(c)] ?? '').slice(0, 32), message: nota.slice(0, 255) };
-      }
-      (h.anchos ?? []).forEach((caracteres, c) => {
-        hoja.getRangeByIndexes(0, c, 1, 1).format.columnWidth = caracteres * 6.5;
-      });
-      if (h.nombre === HOJAS_CRONOGRAMA.config) {
-        hoja.getRange('B2').numberFormat = [['dd/mm/yyyy']];
-        hoja.getRange('B9').numberFormat = [['dd/mm/yyyy']];
-        hoja.getRange('B12').numberFormat = [['#,##0']];
-        hoja.getRange('B13').numberFormat = [['0%']];
-        hoja.getRange('B6').dataValidation.rule = { list: { inCellDropDown: true, source: 'Hipercubo latino,Monte Carlo' } };
-        hoja.getRange('B7').dataValidation.rule = { list: { inCellDropDown: true, source: 'Al día,Con decimales' } };
-        hoja.getRange('B8').dataValidation.rule = { list: { inCellDropDown: true, source: 'Respetar,Ignorar' } };
-        hoja.getRange('B3').dataValidation.rule = { list: { inCellDropDown: true, source: `=${HOJAS_CRONOGRAMA.calendario}!$A$2:$A$20` } };
-        hoja.getRange('C:C').format.wrapText = true;
-      }
-      hoja.freezePanes.freezeRows(1);
+      escribirHoja(context, h);
+      escritas.push(h.nombre);
+    }
+    if (existentes.has(HOJAS_CRONOGRAMA.config.toLowerCase())) {
+      const config = context.workbook.worksheets.getItem(HOJAS_CRONOGRAMA.config);
+      config.getRange('B2').values = [[inicio]];
+      config.getRange('B3').values = [[calendario]];
     }
     context.workbook.worksheets.getItem(HOJAS_CRONOGRAMA.actividades).activate();
     await context.sync();
-    return nuevas.map((h) => h.nombre);
+    return escritas;
   });
 }
 

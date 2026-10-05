@@ -40,6 +40,12 @@ export const AYUDA = {
     'Criticidad: en qué porcentaje de iteraciones la actividad quedó en la ruta crítica (holgura total ≤ 0). SSI: la criticidad por lo que varía la actividad frente a lo que varía el proyecto; ordena por cuánto pesa de verdad. Ojo: entre calendarios distintos (lunes a viernes y lunes a sábado) un sábado puede dar un día de holgura y bajar la criticidad de lo que va antes.',
   calidadCronograma:
     'Revisión del cronograma antes de simular, inspirada en los 14 puntos de la DCMA. Rojo en «Red calculable» impide simular (un ciclo, una predecesora que no existe). Lo demás avisa: una actividad sin sucesora no empuja el fin aunque se retrase, una restricción dura no deja que el retraso se propague, y una tarea sin incertidumbre hace los resultados optimistas.',
+  costoCronograma:
+    'El costo se calcula en cada iteración con las duraciones y fechas de esa iteración: lo que se paga por día (administración, interventoría, alquileres) crece con los retrasos, y lo que escala con el tiempo cuesta más si se ejecuta más tarde. El costo base usa los valores y duraciones base, sin riesgos; la contingencia es el P80 menos ese costo base: la reserva que da un 80 % de confianza.',
+  jcl:
+    'La confianza conjunta (JCL): la proporción de iteraciones que cumplen a la vez la fecha meta y el costo meta. Siempre es menor que cada probabilidad por separado, porque un proyecto que se atrasa suele costar más. Es el número que pide la práctica de riesgo integrado (AACE 57R-09).',
+  prePost:
+    'Se simulan los dos escenarios con los mismos números aleatorios: antes de mitigar (probabilidades e impactos actuales) y después (probabilidad post, la parte del impacto que queda, más lo que cuesta mitigar). La diferencia es solo la de la mitigación. Si el costo post sale mayor, la mitigación cuesta más de lo que ahorra en costo, aunque gane tiempo.',
   comparar:
     'Caja y bigotes, curvas acumuladas y abanico de todas las salidas numéricas en un mismo eje. Tiene sentido cuando están en las mismas unidades, como el flujo de caja de cada año.',
 } as const;

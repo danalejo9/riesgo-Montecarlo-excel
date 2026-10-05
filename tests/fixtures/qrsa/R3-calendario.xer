@@ -1,0 +1,33 @@
+ERMHDR	19.12	2026-10-05	Project	admin	Admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	proj_short_name	plan_start_date	clndr_id
+%R	1	R3-calendario	2027-01-04 08:00	7
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	day_hr_cnt	week_hr_cnt	clndr_data
+%R	7	Y	Lunes a viernes (Colombia)	8	40	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||VIEW(ShowTotal|Y)())(0||Exceptions()((0||0(d|46388)())(0||1(d|46398)())(0||2(d|46468)())(0||3(d|46471)())(0||4(d|46472)())(0||5(d|46508)())(0||6(d|46517)())(0||7(d|46538)())(0||8(d|46545)())(0||9(d|46573)())(0||10(d|46588)())(0||11(d|46606)())(0||12(d|46615)())(0||13(d|46678)())(0||14(d|46692)())(0||15(d|46706)())(0||16(d|46729)())(0||17(d|46746)())(0||18(d|46753)())(0||19(d|46762)())(0||20(d|46832)())(0||21(d|46856)())(0||22(d|46857)())(0||23(d|46874)())(0||24(d|46902)())(0||25(d|46923)())(0||26(d|46930)())(0||27(d|46937)())(0||28(d|46954)())(0||29(d|46972)())(0||30(d|46986)())(0||31(d|47042)())(0||32(d|47063)())(0||33(d|47070)())(0||34(d|47095)())(0||35(d|47112)())))))
+%T	TASK
+%F	task_id	proj_id	clndr_id	task_code	task_name	task_type	target_drtn_hr_cnt	cstr_type	cstr_date
+%R	1000	1	7	A	Diseño y estudios	TT_Task	200		
+%R	1001	1	7	B	Licencia de construcción	TT_Task	360		
+%R	1002	1	7	C	Adecuación del terreno	TT_Task	112		
+%R	1003	1	7	D	Cimentación	TT_Task	200		
+%R	1004	1	7	E	Estructura (vaciado)	TT_Task	400		
+%R	1005	1	7	F	Desencofrado	TT_Task	40		
+%R	1006	1	7	G	Instalaciones	TT_Task	240		
+%R	1007	1	7	H	Mampostería y fachada	TT_Task	280		
+%R	1008	1	7	I	Acabados	TT_Task	240		
+%R	1009	1	7	J	Entrega	TT_FinMile	0		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	pred_type	lag_hr_cnt
+%R	1	1001	1000	PR_FS	0
+%R	2	1002	1000	PR_FS	0
+%R	3	1003	1001	PR_FS	0
+%R	4	1003	1002	PR_FS	0
+%R	5	1004	1003	PR_FS	0
+%R	6	1005	1004	PR_FS	56
+%R	7	1006	1005	PR_FS	0
+%R	8	1007	1005	PR_SS	40
+%R	9	1008	1006	PR_FS	0
+%R	10	1008	1007	PR_FS	0
+%R	11	1009	1008	PR_FS	0
+%E
