@@ -46,6 +46,8 @@ export interface OpcionesCpm {
   ignorarDuras?: boolean;
   /** Calcular la holgura libre (el determinístico sí; la simulación no la necesita). */
   holguraLibre?: boolean;
+  /** Solo la ida: fechas tempranas y fin (las corridas del tornado no necesitan holguras). */
+  soloIda?: boolean;
 }
 
 export const TOLERANCIA_CRITICA = 1e-9;
@@ -130,6 +132,7 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
     if (t > fin) fin = t;
   }
   esp.fin = fin;
+  if (opciones.soloIda) return;
 
   // Vuelta.
   for (let o = n - 1; o >= 0; o--) {
