@@ -110,7 +110,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11h | U3.3 | ✅ (29/09, falta Excel real) **Catálogo visual de distribuciones** en el selector: forma en miniatura y cuándo usarla | **Tú** (29/09) |
 | 11i | U3.4 | ✅ (29/09, falta Excel real) **Lista de entradas y salidas** en ventana flotante | **Tú** (29/09) |
 | 11j | U3.5–U3.6 | ✅ (29/09, falta Excel real) Menú del clic derecho (marcar entrada, salida, ver distribución) y botón Detener en la cinta | **Tú** (29/09) |
-| 11n | Q0–Q3 | Sin empezar (05/10, plan en `docs/QRSA_PLAN.md`) **Riesgo integrado de cronograma y costo (QRSA)**: motor CPM por iteración, calendarios, relaciones FC/CC/FF/CF, criticidad, eliminación de riesgos, costos por tiempo, JCL, importación MS Project y P6 | **Tú** (especificación del 05/10) |
+| 11n | Q0–Q3 | ✅ en código el 05/10 (plan en `docs/QRSA_PLAN.md`; ver bloque Q más abajo) **Riesgo integrado de cronograma y costo (QRSA)**: motor CPM por iteración, calendarios, relaciones FC/CC/FF/CF, criticidad, eliminación de riesgos, costos por tiempo, JCL, importación MS Project y P6 | **Tú** (especificación del 05/10) |
 | 11k | V1 | ✅ (03/10, falta Excel real) **Contingencia**: valor base (la hoja sin incertidumbre), probabilidad de cumplirlo y reserva P50/P80/P90 (coste) o lo que se obtiene (beneficio). Panel, hoja volcada y PDF | **Tú** (03/10) |
 | 11l | V2 | ✅ (03/10, falta Excel real) **Matriz de probabilidad e impacto** 5 × 5 del registro de riesgos, con severidad. Panel, hoja volcada y PDF | **Tú** (03/10) |
 | 11m | V3–V4 | Comparar distribuciones en el explorador; asistente de juicio experto | ✅ 05/10 (falta tu prueba, guía V3 y V4) |
@@ -164,7 +164,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 43 | F1 | ✅ (29/09, falta Excel real: N33) `DESREF` con desplazamientos constantes; `LAMBDA` en la celda, en LET y con nombre; nombres definidos (constantes, celdas, rangos). Recursivas y MAP/REDUCE, al compatible | Plan |
 | 44 | F2 | Medir y optimizar con libros grandes (el de 132 hojas) | Plan |
 | 45 | F3 | Modo compatible más rápido | Plan |
-| 46 | F5 | **Congelar la pantalla en el modo compatible** (como `ScreenUpdating` en VBA) | **Tú** |
+| 46 | F5 | ✅ (28/09) **Congelar la pantalla en el modo compatible** (como `ScreenUpdating` en VBA) | **Tú** |
 
 ### Etapa 6: producto y publicación (≈ 17–25 días)
 
