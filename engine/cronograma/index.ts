@@ -6,3 +6,6 @@ export * from './analisis.ts';
 export * from './modelo.ts';
 export * from './simulacion.ts';
 export * from './calidad.ts';
+export * from './rutas.ts';
+export * from './sintaxis.ts';
+export * from './jerarquia.ts';

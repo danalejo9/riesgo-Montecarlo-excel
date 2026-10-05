@@ -55,7 +55,7 @@ export interface LecturaCronograma {
 export const COLUMNAS = {
   calendarios: ['Calendario', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
   excepciones: ['Fecha', 'Descripción', 'Calendario', 'Tipo'],
-  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo'],
+  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo', 'Fecha límite'],
   relaciones: ['Predecesora', 'Sucesora', 'Tipo', 'Desfase (días)', 'Unidad del desfase'],
   incertidumbre: ['Actividad o grupo', 'Distribución', 'Mínimo o P10', 'Más probable', 'Máximo o P90', 'Unidad', 'Lambda (PERT)'],
   riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado', 'Probabilidad post', '% del impacto post', 'Costo de mitigación', 'Modo'],
@@ -390,11 +390,18 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       if (f === null) { error(H.actividades, fila, letra(ta, 'Fecha de la restricción'), 'La restricción necesita una fecha válida'); invalidas.add(clave); continue; }
       restriccion = { tipo: tr, fecha: f };
     }
+    const flTxt = valor(ta, valores, 'Fecha límite');
+    let fechaLimite: number | undefined;
+    if (!vacia(flTxt)) {
+      const f = fechaDeCelda(flTxt);
+      if (f === null) { error(H.actividades, fila, letra(ta, 'Fecha límite'), 'La fecha límite no es una fecha válida'); invalidas.add(clave); continue; }
+      fechaLimite = f;
+    }
     if (siNo(valor(ta, valores, 'Excluir de la simulación'), false)) excluidas.add(id);
     const wbs = texto(valor(ta, valores, 'WBS'));
     const grupo = texto(valor(ta, valores, 'Grupo'));
     info.push({ id, ...(wbs ? { wbs } : {}), ...(grupo ? { grupo } : {}) });
-    actividades.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, duracion, calendario, restriccion, predecesoras: [] });
+    actividades.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, duracion, calendario, restriccion, ...(fechaLimite !== undefined ? { fechaLimite } : {}), predecesoras: [] });
   }
   if (ta.filas.length === 0) error(H.actividades, 2, '', 'No hay actividades');
   const porId = new Map(actividades.map((a) => [normalizar(a.id), a]));
@@ -766,25 +773,29 @@ export interface HojaNueva {
 export const FORMATO_FECHA = 'dd/mm/yyyy';
 
 interface ActividadEjemplo {
-  id: string; nombre: string; wbs: string; tipo: 'Tarea' | 'Hito'; dur: number; cal?: string; restr?: [string, string]; grupo?: string;
+  id: string; nombre: string; wbs: string; tipo: 'Tarea' | 'Hito' | 'Resumen'; dur: number | null; cal?: string; restr?: [string, string]; grupo?: string;
   tri?: [string, number, number, number, string?];
 }
 
 const EJEMPLO: ActividadEjemplo[] = [
-  { id: 'INI', nombre: 'Inicio del proyecto', wbs: '1', tipo: 'Hito', dur: 0 },
+  { id: 'INI', nombre: 'Inicio del proyecto', wbs: '0', tipo: 'Hito', dur: 0 },
+  { id: 'S1', nombre: 'Diseño y licencias', wbs: '1', tipo: 'Resumen', dur: null },
   { id: 'A', nombre: 'Diseño y estudios', wbs: '1.1', tipo: 'Tarea', dur: 25, tri: ['Triangular', 20, 25, 35] },
   { id: 'B', nombre: 'Licencia de construcción', wbs: '1.2', tipo: 'Tarea', dur: 45, tri: ['Trigen', 35, 45, 80] },
+  { id: 'S2', nombre: 'Obra gris', wbs: '2', tipo: 'Resumen', dur: null },
   { id: 'C', nombre: 'Adecuación del terreno', wbs: '2.1', tipo: 'Tarea', dur: 14, tri: ['Triangular', 10, 14, 20] },
   { id: 'D', nombre: 'Cimentación', wbs: '2.2', tipo: 'Tarea', dur: 25, tri: ['PERT', 20, 25, 40] },
   { id: 'E', nombre: 'Estructura', wbs: '2.3', tipo: 'Tarea', dur: 50, cal: 'Lunes a sábado', tri: ['PERT', 42, 50, 70] },
   { id: 'F', nombre: 'Desencofrado', wbs: '2.4', tipo: 'Tarea', dur: 5, tri: ['Triangular', 4, 5, 8] },
+  { id: 'S3', nombre: 'Instalaciones, fachada y cubierta', wbs: '3', tipo: 'Resumen', dur: null },
   { id: 'G', nombre: 'Instalaciones', wbs: '3.1', tipo: 'Tarea', dur: 30, grupo: 'Instalaciones' },
   { id: 'H', nombre: 'Mampostería y fachada', wbs: '3.2', tipo: 'Tarea', dur: 35, tri: ['Triangular', 30, 35, 50] },
   { id: 'I', nombre: 'Cubierta', wbs: '3.3', tipo: 'Tarea', dur: 15, tri: ['Triangular', 12, 15, 22] },
-  { id: 'M', nombre: 'Obra gris terminada', wbs: '3', tipo: 'Hito', dur: 0 },
+  { id: 'M', nombre: 'Obra gris terminada', wbs: '3.4', tipo: 'Hito', dur: 0 },
+  { id: 'S4', nombre: 'Acabados y entrega', wbs: '4', tipo: 'Resumen', dur: null },
   { id: 'J', nombre: 'Acabados', wbs: '4.1', tipo: 'Tarea', dur: 30, tri: ['Triangular', 90, 100, 140, '% de la base'] },
   { id: 'K', nombre: 'Pruebas y puesta en marcha', wbs: '4.2', tipo: 'Tarea', dur: 7, tri: ['Triangular', 5, 7, 12] },
-  { id: 'L', nombre: 'Entrega', wbs: '5', tipo: 'Hito', dur: 0 },
+  { id: 'L', nombre: 'Entrega', wbs: '4.3', tipo: 'Hito', dur: 0 },
 ];
 
 const RELACIONES_EJEMPLO: [string, string, string, number, string?][] = [
@@ -882,12 +893,12 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       nombre: HOJAS_CRONOGRAMA.actividades,
       valores: [
         [...COLUMNAS.actividades],
-        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, 'No', a.grupo ?? ''] as Celda[]),
+        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, a.tipo === 'Resumen' ? '' : 'No', a.grupo ?? '', null] as Celda[]),
       ],
-      formatos: { 7: FORMATO_FECHA, 4: '0' },
-      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12, 16],
+      formatos: { 7: FORMATO_FECHA, 4: '0', 10: FORMATO_FECHA },
+      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12, 16, 14],
       listas: { 3: L.tipoActividad, 5: listaCal, 6: L.restriccion, 8: L.siNo },
-      notas: { 4: 'En días laborables de su calendario. Un hito tiene 0.', 6: 'Vacío: lo antes posible.', 9: 'Libre (tipo de obra, contratista): sirve para dar un rango a todo el grupo en Incertidumbre.' },
+      notas: { 2: 'Jerarquía: 2.1 y 2.2 cuelgan de 2. Una fila «Resumen» no entra en el cálculo: sus fechas salen de sus hijas.', 4: 'En días laborables de su calendario. Un hito tiene 0; un resumen, vacía (se calcula).', 6: 'Vacío: lo antes posible.', 10: 'No mueve la actividad: si su fin pasa de esta fecha, la holgura sale negativa.', 9: 'Libre (tipo de obra, contratista): sirve para dar un rango a todo el grupo en Incertidumbre.' },
     },
     {
       nombre: HOJAS_CRONOGRAMA.relaciones,

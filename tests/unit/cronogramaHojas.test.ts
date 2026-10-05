@@ -38,8 +38,8 @@ describe('libro de cronograma: errores con hoja, fila y columna', () => {
   it('señala cada dato malo', () => {
     const libro = libroEjemplo();
     const act = libro[H.actividades] as unknown[][];
-    act[3]![4] = -2; // B: duración negativa (fila 4, columna E)
-    act.push(['C', 'Otra adecuación', '2.1', 'Tarea', 3, '', '', null, 'No']); // un ID repetido (fila 16)
+    act[4]![4] = -2; // B: duración negativa (fila 5, columna E)
+    act.push(['C', 'Otra adecuación', '2.1', 'Tarea', 3, '', '', null, 'No']); // un ID repetido (fila 20)
     const rel = libro[H.relaciones] as unknown[][];
     rel[2]![1] = 'ZZ'; // fila 3: sucesora inexistente
     rel[6]![2] = 'XY'; // fila 7 (D → E): tipo desconocido
@@ -50,10 +50,10 @@ describe('libro de cronograma: errores con hoja, fila y columna', () => {
     const r = leerCronograma(libro);
     expect(r.modelo).toBeNull();
     expect(r.errores.map((e) => `${e.hoja}!${e.columna}${e.fila}`)).toEqual([
-      'Actividades!E4', 'Actividades!A16', 'Relaciones!B3', 'Relaciones!C7', 'Incertidumbre!C2', 'Riesgos!G2',
+      'Actividades!E5', 'Actividades!A20', 'Relaciones!B3', 'Relaciones!C7', 'Incertidumbre!C2', 'Riesgos!G2',
     ]);
     expect(r.errores[0]?.mensaje).toMatch(/duración/);
-    expect(r.errores[1]?.mensaje).toMatch(/ya está en la fila 5/);
+    expect(r.errores[1]?.mensaje).toMatch(/ya está en la fila 7/);
   });
 
   it('sin la hoja Actividades, lo dice', () => {

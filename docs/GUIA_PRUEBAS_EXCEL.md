@@ -639,7 +639,7 @@ En el panel hay una pestaña nueva, **Cronograma**.
 **Q6. Crear el libro.** Pulsa **Crear libro de cronograma**. Esperado:
 **diez** hojas nuevas (Config, Calendario, Actividades, Relaciones,
 Incertidumbre, Riesgos, Impactos, Costos, Correlaciones, Ramas) con
-encabezados azules y un ejemplo de obra de 14 actividades. Comprueba:
+encabezados azules y un ejemplo de obra de 14 actividades agrupadas en 4 resúmenes (filas «Resumen», que no entran en el cálculo). Comprueba:
 - en Actividades, las columnas Tipo, Calendario y Restricción tienen lista
   desplegable; al elegir una celda de «Duración (días)» sale un mensaje de
   ayuda;
@@ -690,9 +690,9 @@ costo, índices por actividad y convergencia; a la derecha, **tres
 gráficos** (curva S del fin, curva S del costo y dispersión costo–fecha).
 
 **Q11. Un error lleva a su celda.** En Actividades pon la duración de B
-(fila 4) en −2 y pulsa Revisar calidad. Esperado: «Actividades, E4: La
+(fila 5) en −2 y pulsa Revisar calidad. Esperado: «Actividades, E5: La
 duración tiene que ser un número mayor o igual que 0». Pulsa el enlace:
-Excel va a E4. Devuélvela a 45.
+Excel va a E5. Devuélvela a 45.
 
 **Q12. Cambiar el calendario.** Pon el calendario de E (Estructura) en
 «Lunes a viernes» y simula: la fecha determinística se **retrasa**.

@@ -63,7 +63,7 @@ export function crearEspacio(n: number): EspacioCpm {
  * El inicio mínimo que impone la relación `r` a su sucesora `s` (en índices
  * de la sucesora), con las fechas tempranas de la predecesora ya calculadas.
  */
-function limiteRelacion(red: RedCompilada, r: number, s: number, ds: number, es: Float64Array, ef: Float64Array): number {
+export function limiteRelacion(red: RedCompilada, r: number, s: number, ds: number, es: Float64Array, ef: Float64Array): number {
   const p = red.relPred[r] as number;
   const tipo = red.relTipo[r] as number;
   const L = red.relDesfase[r] as number;
@@ -182,6 +182,8 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
       else if (rt === 5 && !ignorarDuras) lsB = Math.min(lsB, c.cuenta(f));
       else if (rt === 6 && !ignorarDuras) lfB = Math.min(lfB, c.cuenta(f) + 1);
     }
+    const lim = red.limite[a] as number;
+    if (lim === lim) lfB = Math.min(lfB, c.maxFin(lim + 1));
     const l = Math.min(lfB - d, lsB);
     ls[a] = l;
     lf[a] = l + d;

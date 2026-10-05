@@ -37,6 +37,12 @@ export interface ActividadRed {
   /** Id del calendario; sin él, el del proyecto. */
   calendario?: string;
   restriccion?: { tipo: TipoRestriccion; fecha: number };
+  /**
+   * Fecha límite (*deadline*, número de serie): no mueve la actividad, pero si
+   * su fin temprano la pasa, la holgura queda negativa. Puede convivir con una
+   * restricción.
+   */
+  fechaLimite?: number;
   predecesoras: readonly Predecesora[];
 }
 
@@ -93,6 +99,8 @@ export interface RedCompilada {
   /** Restricción (código, 0 si no hay) e instante de su fecha. */
   resTipo: Uint8Array;
   resFecha: Float64Array;
+  /** Instante de la fecha límite (NaN si no hay). */
+  limite: Float64Array;
 }
 
 /** Valida y compila la red. Lanza `ErrorRed` con las actividades implicadas. */
@@ -118,6 +126,7 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
   const cal = new Int32Array(n);
   const resTipo = new Uint8Array(n);
   const resFecha = new Float64Array(n);
+  const limite = new Float64Array(n).fill(NaN);
   const rels: { p: number; s: number; tipo: number; desfase: number; transcurrido: boolean }[] = [];
   acts.forEach((a, i) => {
     if (!(Number.isFinite(a.duracion) && a.duracion >= 0)) throw new ErrorRed(`La duración de «${a.id}» tiene que ser un número mayor o igual que 0`, [a.id]);
@@ -129,6 +138,7 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
       resTipo[i] = CODIGO_RESTRICCION[a.restriccion.tipo];
       resFecha[i] = a.restriccion.fecha - base;
     }
+    if (a.fechaLimite !== undefined) limite[i] = a.fechaLimite - base;
     for (const p of a.predecesoras) {
       const pi = indice.get(p.id);
       if (pi === undefined) throw new ErrorRed(`La predecesora «${p.id}» de «${a.id}» no existe`, [a.id]);
@@ -153,7 +163,7 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
   return {
     n, ids: acts.map((a) => a.id), nombres: acts.map((a) => a.nombre), indice, duracion, orden, calendarios, cal, calProyecto: iProyecto,
     inicio: cp.instante(def.inicio), relPred, relSuc, relTipo, relDesfase, relTranscurrido,
-    entradaInicio, relEntrada, salidaInicio, relSalida, resTipo, resFecha,
+    entradaInicio, relEntrada, salidaInicio, relSalida, resTipo, resFecha, limite,
   };
 }
 
