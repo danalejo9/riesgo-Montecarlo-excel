@@ -19,6 +19,9 @@ import {
   LARGO_MAXIMO_DESCRIPCION,
   LARGO_MAXIMO_TITULO,
   OBJETIVO_PRECISION_POR_DEFECTO,
+  leerPercentilesTexto,
+  percentilesDelModelo,
+  type PercentilesRiskModel,
   type ConvergenciaRiskModel,
   type ModeloRiesgo,
 } from '../engine/modelo/index.ts';
@@ -116,8 +119,8 @@ export function Configuracion({
       <section>
         <h2>Precisión</h2>
         <p className="tenue">
-          El margen con el que se decide si las iteraciones bastan: la media se
-          tiene que conocer con ± ese porcentaje (al 95 %). También se guarda en el libro.
+          El margen con el que se decide si las iteraciones bastan: la media y el
+          P80 se tienen que conocer con ± ese porcentaje (al 95 %). También se guarda en el libro.
         </p>
         <div className="parametros">
           <label className="campo">
@@ -156,7 +159,63 @@ export function Configuracion({
           )}
         </div>
       </section>
+
+      <Percentiles modelo={modelo} alCambiar={(percentiles) => cambiarAjustes({ percentiles })} />
     </>
+  );
+}
+
+const BAJOS = [0.01, 0.025, 0.05, 0.1, 0.2] as const;
+const ALTOS = [0.8, 0.9, 0.95, 0.975, 0.99] as const;
+const pctTexto = (p: number) => `p${(Math.round(p * 1000) / 10).toLocaleString('es-ES')}`;
+
+/** C6: qué percentiles se enseñan (las cifras y las tablas) y cuáles se calculan además (la hoja volcada). */
+function Percentiles({ modelo, alCambiar }: { modelo: ModeloRiesgo; alCambiar: (p: PercentilesRiskModel) => void }) {
+  const p = percentilesDelModelo(modelo.settings);
+  const [texto, setTexto] = useState(p.extra.map((x) => (Math.round(x * 1000) / 10).toLocaleString('es-ES')).join('; '));
+  const [aviso, setAviso] = useState<string | null>(null);
+  return (
+    <section>
+      <h2>Percentiles</h2>
+      <p className="tenue">
+        Los dos que se enseñan junto a la media en Resultados, en la tabla de salidas, al comparar escenarios y en
+        el informe. Los adicionales se calculan además y salen en la hoja volcada (p1, p5, p10, p25, p50, p75, p90,
+        p95 y p99 salen siempre). Se guardan en el libro y valen desde la próxima simulación.
+      </p>
+      <div className="parametros">
+        <label className="campo">
+          <span className="tenue">Bajo</span>
+          <select value={p.low} onChange={(e) => alCambiar({ ...p, low: Number(e.target.value) })}>
+            {BAJOS.map((x) => <option key={x} value={x}>{pctTexto(x)}</option>)}
+          </select>
+        </label>
+        <label className="campo">
+          <span className="tenue">Alto</span>
+          <select value={p.high} onChange={(e) => alCambiar({ ...p, high: Number(e.target.value) })}>
+            {ALTOS.map((x) => <option key={x} value={x}>{pctTexto(x)}</option>)}
+          </select>
+        </label>
+        <label className="campo ancho">
+          <span className="tenue">Adicionales (en %, separados por «;»)</span>
+          <input
+            type="text"
+            value={texto}
+            placeholder="por ejemplo 2,5; 80; 97,5"
+            onChange={(e) => setTexto(e.target.value)}
+            onBlur={() => {
+              const lista = leerPercentilesTexto(texto);
+              if (lista === null) {
+                setAviso('Escribe hasta 10 números entre 0 y 100, separados por «;» (por ejemplo 2,5; 80; 97,5).');
+                return;
+              }
+              setAviso(null);
+              alCambiar({ ...p, extra: lista });
+            }}
+          />
+          {aviso && <span className="aviso-linea">{aviso}</span>}
+        </label>
+      </div>
+    </section>
   );
 }
 

@@ -134,6 +134,35 @@ export interface ConfiguracionRiskModel {
    * Opcional: sin él, margen del 1 % e iteraciones fijas (`iterations`).
    */
   convergence?: ConvergenciaRiskModel;
+  /** C6: qué percentiles se enseñan y exportan. Sin él, p5 y p95. */
+  percentiles?: PercentilesRiskModel;
+}
+
+/** C6: el percentil «bajo» y el «alto» de las cifras y las tablas, y otros que se calculan además. */
+export interface PercentilesRiskModel {
+  low: number;
+  high: number;
+  /** Hasta 10, entre 0 y 1 (exclusivos). */
+  extra: number[];
+}
+
+export const PERCENTILES_POR_DEFECTO: PercentilesRiskModel = { low: 0.05, high: 0.95, extra: [] };
+
+/** Los percentiles del modelo, con los de por defecto si no dice otros. */
+export function percentilesDelModelo(s: { percentiles?: PercentilesRiskModel }): PercentilesRiskModel {
+  return s.percentiles ?? PERCENTILES_POR_DEFECTO;
+}
+
+/** Lee «2,5; 97,5; 80» (en %) como fracciones entre 0 y 1; null si algo no vale. */
+export function leerPercentilesTexto(texto: string): number[] | null {
+  const partes = texto.split(/[;\s]+/).map((x) => x.trim()).filter(Boolean);
+  const out: number[] = [];
+  for (const parte of partes) {
+    const x = Number(parte.replace('%', '').replace(',', '.'));
+    if (!Number.isFinite(x) || x <= 0 || x >= 100) return null;
+    out.push(Math.round(x * 10) / 1000);
+  }
+  return out.length > 10 ? null : [...new Set(out)];
 }
 
 export interface ConvergenciaRiskModel {
@@ -456,6 +485,21 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     }
   }
 
+  let percentiles: PercentilesRiskModel | undefined;
+  if (s.percentiles !== undefined) {
+    const c = s.percentiles as Record<string, unknown> | null;
+    const enRango = (x: unknown) => typeof x === 'number' && x > 0 && x < 1;
+    const valido =
+      typeof c === 'object' && c !== null && enRango(c.low) && enRango(c.high) && (c.low as number) < (c.high as number) &&
+      Array.isArray(c.extra) && c.extra.length <= 10 && c.extra.every(enRango);
+    if (!valido) {
+      errores.push('settings.percentiles debe ser { low < high, entre 0 y 1; extra: hasta 10 números entre 0 y 1 }.');
+      ok = false;
+    } else {
+      percentiles = { low: c.low as number, high: c.high as number, extra: [...(c.extra as number[])] };
+    }
+  }
+
   if (!ok) return undefined;
   return {
     iterations: s.iterations as number,
@@ -464,5 +508,6 @@ function validarConfiguracion(v: unknown, errores: string[]): ConfiguracionRiskM
     engine: s.engine as MotorSimulacion,
     ...(locale ? { locale } : {}),
     ...(convergence ? { convergence } : {}),
+    ...(percentiles ? { percentiles } : {}),
   };
 }

@@ -9,6 +9,7 @@ import { Fragment, StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
+import { percentilesClave, type PercentilesClave } from '../excel/informe.ts';
 import { duracion, formatoDe, miles, numero } from './formato.ts';
 import {
   MatrizRiesgosTabla, MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
@@ -84,7 +85,7 @@ function Informe() {
 
       {datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />}
 
-      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} {...(datos.baseFija ? { baseFija: datos.baseFija } : {})} />)}
+      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} pc={percentilesClave(datos)} {...(datos.baseFija ? { baseFija: datos.baseFija } : {})} />)}
 
       {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
         <section className="salida-informe">
@@ -161,7 +162,7 @@ function ContingenciaImpresa({ c, fecha, baseFija }: { c: Contingencia; fecha?: 
   );
 }
 
-function SalidaImpresa({ salida: s, referencia, primera, baseFija }: { salida: SalidaInforme; referencia?: string; primera: boolean; baseFija?: string }) {
+function SalidaImpresa({ salida: s, referencia, primera, baseFija, pc }: { salida: SalidaInforme; referencia?: string; primera: boolean; baseFija?: string; pc: PercentilesClave }) {
   if (esSalidaDeTexto(s)) {
     // Salida de texto o de sí/no (T2): frecuencias, qué la decide y cruce.
     const objetivo = s.categorias?.[0]?.valor;
@@ -250,8 +251,8 @@ function SalidaImpresa({ salida: s, referencia, primera, baseFija }: { salida: S
             marcas={{
               media: s.resumen.media,
               ...(s.resumen.percentiles.p50 !== undefined ? { mediana: s.resumen.percentiles.p50 } : {}),
-              ...(s.resumen.percentiles.p5 !== undefined && s.resumen.percentiles.p95 !== undefined
-                ? { fijos: { desde: s.resumen.percentiles.p5, hasta: s.resumen.percentiles.p95, pDebajo: 0.05, pEntre: 0.9, pEncima: 0.05 } }
+              ...(s.resumen.percentiles[pc.claveBajo] !== undefined && s.resumen.percentiles[pc.claveAlto] !== undefined
+                ? { fijos: { desde: s.resumen.percentiles[pc.claveBajo] as number, hasta: s.resumen.percentiles[pc.claveAlto] as number, pDebajo: pc.bajo, pEntre: pc.alto - pc.bajo, pEncima: 1 - pc.alto } }
                 : {}),
             }}
             formato={formatoDe(s.fecha)}

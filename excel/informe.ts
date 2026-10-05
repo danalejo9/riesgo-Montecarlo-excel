@@ -15,6 +15,9 @@ import type { EleccionMotor } from '../engine/modelo/index.ts';
 import {
   analizarSensibilidad,
   aranaDeSensibilidad,
+  clavePercentil,
+  etiquetaPercentil,
+  percentilesOrdenados,
   histogramaDeMuestra,
   medidasDeRiesgo,
   type MedidasRiesgo,
@@ -294,6 +297,8 @@ export interface SimulacionCompletada {
   busqueda?: import('./busquedaObjetivo.ts').ResultadoBusqueda;
   /** Avisos de coherencia del modelo (H6): entradas sin efecto, distribuciones con negativos… */
   avisosCoherencia?: string[];
+  /** C6: el percentil bajo y el alto elegidos (sin esto, p5 y p95). */
+  percentilesClave?: { bajo: number; alto: number };
   /** Por dónde llega cada entrada a cada salida (H7). */
   trazado?: import('./coherencia.ts').TrazaEntrada[];
   /** Entradas y salidas de las primeras iteraciones, emparejadas (C3). Solo en memoria. */
@@ -327,6 +332,22 @@ export type FalloSimulacion =
   | { ok: false; tipo: 'calculo'; mensaje: string; detalles: string[] };
 
 export type ResultadoSimulacionPanel = SimulacionCompletada | FalloSimulacion;
+
+/** C6: el percentil bajo y el alto de las cifras y las tablas, con su clave en `resumen.percentiles` y su etiqueta. */
+export interface PercentilesClave {
+  bajo: number;
+  alto: number;
+  claveBajo: string;
+  claveAlto: string;
+  etiquetaBajo: string;
+  etiquetaAlto: string;
+}
+
+export function percentilesClave(r?: { percentilesClave?: { bajo: number; alto: number } } | null): PercentilesClave {
+  const bajo = r?.percentilesClave?.bajo ?? 0.05;
+  const alto = r?.percentilesClave?.alto ?? 0.95;
+  return { bajo, alto, claveBajo: clavePercentil(bajo), claveAlto: clavePercentil(alto), etiquetaBajo: etiquetaPercentil(bajo), etiquetaAlto: etiquetaPercentil(alto) };
+}
 
 /** Una fila de la hoja, como la escribe Office.js: valores sueltos. */
 type Fila = (string | number | boolean)[];
@@ -502,7 +523,8 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
   const esConstante = (s: ResultadoSalida) => constantes.has(s.ref) || (s.resumen.n > 0 && s.resumen.desviacion === 0);
 
   titulo('RESUMEN DE LAS SALIDAS');
-  cabecera(['Nombre', 'Media', 'p5', 'p50', 'p95', 'Sin valor']);
+  const pc = percentilesClave(resultado);
+  cabecera(['Nombre', 'Media', pc.etiquetaBajo, 'p50', pc.etiquetaAlto, 'Sin valor']);
   for (const s of resultado.salidas) {
     if (esSalidaDeTexto(s)) {
       const moda = s.categorias?.[0];
@@ -511,7 +533,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
     }
     const p = s.resumen.percentiles;
     formato({ fila, col: 1, filas: 1, cols: 4 }, formatoSalida(s));
-    linea([s.nombre, s.resumen.media, p.p5 ?? '', p.p50 ?? '', p.p95 ?? '', s.noNumericas]);
+    linea([s.nombre, s.resumen.media, p[pc.claveBajo] ?? '', p.p50 ?? '', p[pc.claveAlto] ?? '', s.noNumericas]);
   }
   tenue('«Sin valor» son las iteraciones en que la salida no dio un número (por ejemplo, una TIR que no existe).');
   fila++;
@@ -692,7 +714,7 @@ export function construirInforme(modelo: ModeloRiesgo, resultado: SimulacionComp
       poner(inicio + 1 + k, 0, [etq, v]);
       formato({ fila: inicio + 1 + k, col: 1, filas: 1, cols: 1 }, fmt);
     });
-    const percentiles = Object.entries(s.resumen.percentiles);
+    const percentiles = percentilesOrdenados(s.resumen.percentiles).map(([k, v]): [string, number] => [etiquetaPercentil(Number(k.slice(1)) / 100), v]);
     cabeceras.push({ fila: inicio, col: 3, filas: 1, cols: 2 });
     poner(inicio, 3, ['Percentil', 'Valor']);
     percentiles.forEach(([clave, valor], k) => poner(inicio + 1 + k, 3, [clave, valor]));

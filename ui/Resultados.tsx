@@ -46,7 +46,7 @@ import { exportarIteraciones } from '../excel/exportarIteraciones.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
-import type { CurvaAranaPanel, FilaSensibilidadPanel, ResultadoSalida } from '../excel/informe.ts';
+import { percentilesClave, type CurvaAranaPanel, type FilaSensibilidadPanel, type PercentilesClave, type ResultadoSalida } from '../excel/informe.ts';
 import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
 import type { PeticionBusqueda, ResultadoBusqueda } from '../excel/busquedaObjetivo.ts';
 import { leerSeleccion } from '../excel/seleccion.ts';
@@ -95,6 +95,7 @@ export function Resultados({
   const [vista, setVista] = useState<string>(() => (varias ? (resultado.salidas[0]?.id ?? TODAS) : TODAS));
   const vistaValida = vista === TODAS || resultado.salidas.some((s) => s.id === vista) ? vista : TODAS;
   const salidasVisibles = vistaValida === TODAS ? resultado.salidas : resultado.salidas.filter((s) => s.id === vistaValida);
+  const pc = percentilesClave(resultado);
 
   useEffect(() => {
     if (!varias) return;
@@ -257,6 +258,7 @@ export function Resultados({
           umbrales={new Map(modelo.outputs.map((o) => [o.id, o.threshold]))}
           vista={vistaValida}
           alElegir={setVista}
+          pc={percentilesClave(resultado)}
         />
       )}
 
@@ -323,8 +325,8 @@ export function Resultados({
 
           <div className="cifras">
             <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.media)}</span><span className="cifra-nombre">media</span></div>
-            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles.p5 ?? NaN)}</span><span className="cifra-nombre">p5</span></div>
-            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles.p95 ?? NaN)}</span><span className="cifra-nombre">p95</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles[pc.claveBajo] ?? NaN)}</span><span className="cifra-nombre">{pc.etiquetaBajo}</span></div>
+            <div><span className="cifra">{formatoDe(salida.fecha).valor(salida.resumen.percentiles[pc.claveAlto] ?? NaN)}</span><span className="cifra-nombre">{pc.etiquetaAlto}</span></div>
             <div><span className="cifra">{formatoDe(salida.fecha).dispersion(salida.resumen.desviacion)}</span><span className="cifra-nombre">desviación</span></div>
           </div>
 
@@ -391,7 +393,7 @@ export function Resultados({
             if (!ref) {
               return <p className="tenue">Esta salida no estaba en «{comparando.etiqueta}»: no se compara.</p>;
             }
-            const filas = compararSalida(salida, ref, umbralDe(salida.id));
+            const filas = compararSalida(salida, ref, umbralDe(salida.id), pc);
             return <TablaComparacion etiqueta={comparando.etiqueta} filas={filas} />;
           })()}
 
@@ -1329,11 +1331,13 @@ function ResumenSalidas({
   umbrales,
   vista,
   alElegir,
+  pc,
 }: {
   salidas: readonly ResultadoSalida[];
   umbrales: ReadonlyMap<string, UmbralRiskModel | undefined>;
   vista: string;
   alElegir: (id: string) => void;
+  pc: PercentilesClave;
 }) {
   const conUmbral = salidas.some((s) => umbrales.get(s.id) && s.muestraOrdenada);
   return (
@@ -1354,9 +1358,9 @@ function ResumenSalidas({
             <tr>
               <th>Salida</th>
               <th>Media</th>
-              <th>p5</th>
+              <th>{pc.etiquetaBajo}</th>
               <th>p50</th>
-              <th>p95</th>
+              <th>{pc.etiquetaAlto}</th>
               {conUmbral && <th>Umbral</th>}
             </tr>
           </thead>
@@ -1388,9 +1392,9 @@ function ResumenSalidas({
                 >
                   <td>{s.nombre}</td>
                   <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.media)}</td>
-                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p5 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles[pc.claveBajo] ?? NaN)}</td>
                   <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p50 ?? NaN)}</td>
-                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles.p95 ?? NaN)}</td>
+                  <td>{sinDatos ? '—' : formatoDe(s.fecha).valor(s.resumen.percentiles[pc.claveAlto] ?? NaN)}</td>
                   {conUmbral && (
                     <td>{p === null ? '' : `${u?.direction === 'below' ? '<' : '>'} ${formatoDe(s.fecha).valor(u?.value ?? 0)}: ${(p * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`}</td>
                   )}

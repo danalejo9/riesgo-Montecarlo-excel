@@ -28,6 +28,7 @@ import { construirGrafo, reemplazarAst } from '../engine/graph/index.ts';
 import {
   agruparCorrelaciones,
   aplicarReescrituras,
+  percentilesDelModelo,
   PREFIJO_DINAMICA,
   describirMotivo,
   elegirMotor,
@@ -289,6 +290,7 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
       ...(registro.length > 0 ? { registroRiesgos: registro } : {}),
       ...(avisosCoherencia.length > 0 ? { avisosCoherencia } : {}),
       trazado,
+      ...(modelo.settings.percentiles ? { percentilesClave: { bajo: modelo.settings.percentiles.low, alto: modelo.settings.percentiles.high } } : {}),
     };
   };
 
@@ -415,6 +417,12 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
     };
   }
   return conDecisiones(terminar(final));
+}
+
+/** C6: el bajo, el alto y los adicionales que pide el modelo (los estándar ya se calculan siempre). */
+function percentilesPedidos(modelo: ModeloRiesgo): number[] {
+  const p = percentilesDelModelo(modelo.settings);
+  return [p.low, p.high, ...p.extra];
 }
 
 /** Lo que se compara de cada salida en una opción de decisión (T9). */
@@ -612,6 +620,7 @@ function porElRapido(
           resumen: resumenEstadistico(
             s?.welford ?? { n: 0, media: 0, m2: 0, min: Infinity, max: -Infinity },
             s?.digest ?? { compresion: 100, centroides: [], pesoTotal: 0, min: Infinity, max: -Infinity },
+            percentilesPedidos(args.modelo),
           ),
           cdf: s ? curvaCDF(s.digest) : [],
           noNumericas: s?.noNumericas ?? 0,
@@ -699,6 +708,7 @@ async function porElCompatible(
         resumen: resumenEstadistico(
           s?.welford ?? { n: 0, media: 0, m2: 0, min: Infinity, max: -Infinity },
           s?.digest ?? { compresion: 100, centroides: [], pesoTotal: 0, min: Infinity, max: -Infinity },
+          percentilesPedidos(args.modelo),
         ),
         cdf: s ? curvaCDF(s.digest) : [],
         noNumericas: s?.noNumericas ?? 0,

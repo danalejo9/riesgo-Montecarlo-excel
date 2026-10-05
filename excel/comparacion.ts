@@ -38,6 +38,7 @@ export function compararSalida(
   actual: ResultadoSalida,
   referencia: ResultadoSalida,
   umbral?: { value: number; direction: 'below' | 'above' },
+  pc: { claveBajo: string; claveAlto: string; etiquetaBajo: string; etiquetaAlto: string } = { claveBajo: 'p5', claveAlto: 'p95', etiquetaBajo: 'p5', etiquetaAlto: 'p95' },
 ): FilaComparacion[] {
   // Salida de texto o de sí/no (T2): se compara la probabilidad de cada valor.
   if (esSalidaDeTexto(actual) || esSalidaDeTexto(referencia)) {
@@ -56,9 +57,9 @@ export function compararSalida(
   const filas: FilaComparacion[] = [
     ...fila('Media', referencia.resumen.media, actual.resumen.media),
     ...fila('Desviación', referencia.resumen.desviacion, actual.resumen.desviacion),
-    ...fila('p5', referencia.resumen.percentiles.p5, actual.resumen.percentiles.p5),
+    ...fila(pc.etiquetaBajo, referencia.resumen.percentiles[pc.claveBajo], actual.resumen.percentiles[pc.claveBajo]),
     ...fila('p50', referencia.resumen.percentiles.p50, actual.resumen.percentiles.p50),
-    ...fila('p95', referencia.resumen.percentiles.p95, actual.resumen.percentiles.p95),
+    ...fila(pc.etiquetaAlto, referencia.resumen.percentiles[pc.claveAlto], actual.resumen.percentiles[pc.claveAlto]),
   ];
 
   if (umbral && actual.muestraOrdenada && referencia.muestraOrdenada) {

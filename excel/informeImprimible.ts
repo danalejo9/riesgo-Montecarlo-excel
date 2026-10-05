@@ -18,7 +18,7 @@
 import { resumirDistribucion, textoFecha, type ModeloRiesgo } from '../engine/modelo/index.ts';
 import { probabilidadUmbral } from '../engine/stats/index.ts';
 import { compararSalida, salidaDeReferencia, type FilaComparacion, type ReferenciaGuardada } from './comparacion.ts';
-import type { ResultadoSalida, SimulacionCompletada } from './informe.ts';
+import { percentilesClave, type ResultadoSalida, type SimulacionCompletada } from './informe.ts';
 import type { FilaRiesgo } from './registroRiesgos.ts';
 import { claseSugerida, contingencia, type Contingencia } from './contingencia.ts';
 import { esSalidaDeTexto } from './analisisTexto.ts';
@@ -58,6 +58,8 @@ export interface DatosInforme {
   /** El registro de riesgos (T8), si el libro tiene `RIESGO.EVENTO`. */
   registroRiesgos?: FilaRiesgo[];
   salidas: SalidaInforme[];
+  /** C6: el percentil bajo y el alto elegidos. */
+  percentilesClave?: { bajo: number; alto: number };
 }
 
 export function datosDelInforme(
@@ -70,8 +72,10 @@ export function datosDelInforme(
     ? opciones.referencia
     : null;
 
+  const pc = percentilesClave(resultado);
   return {
     version: 1,
+    ...(resultado.percentilesClave ? { percentilesClave: resultado.percentilesClave } : {}),
     titulo: modelo.project?.title.trim() || 'Análisis de riesgo — simulación Monte Carlo',
     ...(modelo.project?.description?.trim() ? { descripcion: modelo.project.description.trim() } : {}),
     generado: (opciones.ahora ?? new Date()).toISOString(),
@@ -130,7 +134,7 @@ export function datosDelInforme(
             }
           : {}),
         ...(deRef
-          ? { comparacion: compararSalida({ ...s, muestraOrdenada }, deRef, umbral), cdfReferencia: deRef.cdf }
+          ? { comparacion: compararSalida({ ...s, muestraOrdenada }, deRef, umbral, pc), cdfReferencia: deRef.cdf }
           : {}),
       };
     }),

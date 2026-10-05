@@ -5,6 +5,16 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### C6: percentiles configurables (2026-10-06)
+
+**Añadido**
+- En Configuración, **Percentiles**: el bajo (p1 a p20) y el alto (p80 a
+  p99) que se enseñan junto a la media en Resultados, en la tabla de
+  salidas, al comparar escenarios, en el resumen de la hoja volcada y en el
+  informe PDF (con sus delimitadores en el histograma); y hasta 10
+  adicionales (también con decimales, como 2,5 o 97,5) que se calculan y
+  salen en la hoja volcada, ordenados. Se guardan en el libro con el modelo.
+
 ### Pendientes pequeños: Higham y P80 en el motor de fórmulas, holgura libre de referencia (2026-10-06)
 
 **Cambiado**

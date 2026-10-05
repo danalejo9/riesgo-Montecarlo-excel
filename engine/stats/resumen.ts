@@ -39,9 +39,28 @@ export interface ResumenEstadistico {
   percentilesAproximados: true;
 }
 
-export function resumenEstadistico(welford: EstadoWelford, digest: TDigest): ResumenEstadistico {
+/**
+ * La clave de un percentil en `percentiles`: `p5`, `p50`, `p97.5` (C6: el
+ * usuario puede pedir percentiles que no son enteros).
+ */
+export function clavePercentil(p: number): string {
+  return `p${Math.round(p * 1000) / 10}`;
+}
+
+/** Cómo se enseña: `p5`, `p97,5`. */
+export function etiquetaPercentil(p: number): string {
+  return `p${(Math.round(p * 1000) / 10).toLocaleString('es-ES')}`;
+}
+
+/** Los percentiles de un resumen, ordenados por su probabilidad (las claves pueden venir en cualquier orden). */
+export function percentilesOrdenados(percentiles: Record<string, number>): [string, number][] {
+  return Object.entries(percentiles).sort((a, b) => Number(a[0].slice(1)) - Number(b[0].slice(1)));
+}
+
+/** Los estándar más los que pida el modelo (C6). */
+export function resumenEstadistico(welford: EstadoWelford, digest: TDigest, adicionales: readonly number[] = []): ResumenEstadistico {
   const percentiles: Record<string, number> = {};
-  for (const p of PERCENTILES_ESTANDAR) percentiles[`p${Math.round(p * 100)}`] = cuantilTDigest(digest, p);
+  for (const p of [...PERCENTILES_ESTANDAR, ...adicionales]) percentiles[clavePercentil(p)] = cuantilTDigest(digest, p);
 
   return {
     n: welford.n,
