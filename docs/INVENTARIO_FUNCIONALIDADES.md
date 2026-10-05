@@ -144,7 +144,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 |---|---|---|---|
 | 24 | B5 | ✅ (29/09, falta Excel real) Distribuciones nuevas: t de Student, logística, log-logística, Pareto, geométrica, binomial negativa, hipergeométrica, uniforme entera, Trigen, general/histograma | **Tú** (lista de funciones) |
 | 25 | B7 | ✅ (28/09) `RIESGO.*` con celdas o cálculos como argumentos (`=RIESGO.NORMAL(B2;15)`), dentro de operaciones y con parámetros que dependen de otra celda aleatoria (los dos últimos, solo con el motor rápido) | **Tú** (prueba E4) |
-| 26 | C6 | Percentiles configurables | Plan |
+| 26 | C6 | ✅ (06/10, falta tu prueba R3) Percentiles configurables | Plan |
 | 27 | D2 | ✅ (29/09, falta Excel real) Análisis de estrés: fijar una entrada en un percentil | Plan |
 | 28 | D3 | ✅ (29/09, falta Excel real) Salidas que son un rango (C28:H28 como una salida por periodos) | Plan |
 | 29 | D4 | ✅ (29/09, falta Excel real) **Tornado de cambio en la salida**: cuánto sube o baja la media (o un percentil) de la salida entre el valor bajo y el alto de cada entrada, en unidades de la salida | **Nuevo** |
@@ -162,8 +162,8 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 41 | H9 | Manual de usuario en español y más libros de ejemplo | Plan |
 | 42 | H10 | Libros compartidos en OneDrive/SharePoint (coautoría) | Estudio |
 | 43 | F1 | ✅ (29/09, falta Excel real: N33) `DESREF` con desplazamientos constantes; `LAMBDA` en la celda, en LET y con nombre; nombres definidos (constantes, celdas, rangos). Recursivas y MAP/REDUCE, al compatible | Plan |
-| 44 | F2 | Medir y optimizar con libros grandes (el de 132 hojas) | Plan |
-| 45 | F3 | Modo compatible más rápido | Plan |
+| 44 | F2 | ✅ (06/10) Medir y optimizar con libros grandes (libro sintético de 133 hojas; falta medir en tu Excel) | Plan |
+| 45 | F3 | ✅ (06/10, falta tu prueba R4) Modo compatible más rápido (lote adaptativo) | Plan |
 | 46 | F5 | ✅ (28/09) **Congelar la pantalla en el modo compatible** (como `ScreenUpdating` en VBA) | **Tú** |
 
 ### Etapa 6: producto y publicación (≈ 17–25 días)
@@ -192,7 +192,7 @@ Especificación en `docs/QRSA_ESPECIFICACION.md`, plan en `docs/QRSA_PLAN.md`.
 | Q2 | Costos (fijos, por tiempo, por recurso), correlación por grupos y Higham, pre/post mitigación, JCL, factores por grupo, MS Project XML | ✅ en código; falta tu prueba (guía Q15–Q24) |
 | Q3 | XER de Primavera, rutas críticas frecuentes, ramificación, escalamiento, cronograma P80, informe ejecutivo, convergencia automática | ✅ en código; falta tu prueba (guía Q19–Q26) |
 
-### Bloque G: diagrama de Gantt con diagnóstico de ruta crítica — G1 y G2 ✅ en código el 05/10
+### Bloque G: diagrama de Gantt con diagnóstico de ruta crítica — G1, G2 y G3 ✅ en código (05/10 y 06/10)
 
 Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 
@@ -200,7 +200,7 @@ Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 |---|---|---|
 | G1 | Vista compacta en el panel y pestaña Gantt en la ventana: grid, escala de dos niveles con zoom, barras de tarea, hito y resumen, flechas de los 4 tipos, crítica y casi crítica, holgura, tooltip, no laborables, líneas de hoy, inicio, fin y meta, filtro de ruta crítica, leyenda, botón Gantt en la cinta | ✅ en código; falta tu prueba (guía GT1–GT7) |
 | G2 | Edición en grid y en barras, vínculos arrastrando, insertar, borrar, sangría, mover, deshacer y rehacer, automático/manual, ruta más larga frente a holgura total, ruta impulsora, «¿por qué es crítica?», calidad con semáforo e ícono por fila | ✅ en código; falta tu prueba (guía GT8–GT18) |
-| G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | Pendiente |
+| G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | ✅ en código; falta tu prueba (guía GT19–GT30) |
 
 ### Después de la versión 1.0
 

@@ -2,8 +2,8 @@
 
 *Auditoría del 05/10/2026 contra `docs/GANTT_ESPECIFICACION.md` (la
 especificación del usuario, guardada tal cual). El usuario aceptó las 9
-decisiones del final. **G1 y G2 hechas el 05/10** (ver «Estado» al final);
-G3 pendiente.*
+decisiones del final. **G1 y G2 hechas el 05/10, G3 el 06/10** (ver
+«Estado» al final).*
 
 ## Resumen
 
@@ -159,17 +159,25 @@ especificación (§15):
 
 | Prueba | Dónde | Estado |
 |---|---|---|
-| 1. Fechas y holguras contra MS Project | `tests/unit/cronogramaReferencias.test.ts` (R1–R3, Python y ProjectLibre) | ✅ las del QRSA; falta la holgura libre en el CSV de referencia |
+| 1. Fechas y holguras contra MS Project | `tests/unit/cronogramaReferencias.test.ts` (R1–R3, Python y ProjectLibre) | ✅ fechas, holgura total y libre |
 | 2. Anclaje de las flechas de los 4 tipos, con desfase negativo | `tests/unit/ganttTrazado.test.ts` | ✅ |
 | 3. Ruta más larga frente a holgura total con una FNLT | `tests/unit/ganttMotor.test.ts` | ✅ |
 | 4. Ruta impulsora hacia un hito = relaciones con holgura 0 | `tests/unit/ganttMotor.test.ts` | ✅ |
 | 5. Un vínculo que cierra un ciclo se rechaza | `tests/unit/ganttEdicion.test.ts` | ✅ |
 | 6. Deshacer y rehacer restauran el estado exacto | `tests/unit/ganttEdicion.test.ts` (10 ediciones mixtas) | ✅ |
-| 7. Cada chequeo detecta su caso y no da falsos positivos | `tests/unit/cronogramaCalidad.test.ts`, `ganttVista.test.ts` | ✅ los de G2; los de seguimiento van con G3 |
+| 7. Cada chequeo detecta su caso y no da falsos positivos | `cronogramaCalidad.test.ts`, `ganttVista.test.ts`, `ganttSeguimiento.test.ts`, `ganttLineaBase.test.ts` | ✅ también fechas inválidas, fuera de secuencia, BEI y CPLI |
 | 8. 2.000 actividades y 3.000 relaciones | `tests/unit/ganttRendimiento.test.ts` y el banco | ✅ vista 69–75 ms; 40,7 cuadros/s en vertical, 60 en horizontal (Chromium sin GPU) |
-| 9. PDF paginado | — | G3 |
+| 9. PDF paginado | `tests/unit/ganttTrazado.test.ts` (paginar) y el banco | ✅ ninguna fila se pierde ni se repite; escala en cada página, leyenda en la última |
 
 Lo que queda de G1/G2 frente a la especificación, a propósito para G3 o
 después: selección múltiple y copiar/pegar filas, menú contextual,
 reordenar columnas, desplazar unos píxeles las flechas paralelas, el
 recálculo en un Web Worker (no hace falta: 75 ms con 2.000 actividades).
+
+**G3 (06/10)**: seguimiento con lógica retenida o anulación por progreso
+(`ganttSeguimiento.test.ts`), líneas base con BEI y CPLI y probabilidad de
+hitos (`ganttLineaBase.test.ts`), rutas de holgura (`ganttMotor.test.ts`),
+MSPDI de ida y vuelta y CSV (`ganttExportar.test.ts`), paginación
+(`ganttTrazado.test.ts`). Pendiente para después: selección múltiple,
+copiar y pegar filas, menú contextual, reordenar columnas, arrastrar el
+borde del avance, agrupar con encabezados de grupo.

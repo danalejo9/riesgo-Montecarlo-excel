@@ -1379,6 +1379,27 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     G3: seguimiento, líneas base, rutas de holgura múltiples, capas QRSA
     restantes (mapa de calor, probabilidad en hitos), exportar e imprimir,
     copiar y pegar filas, selección múltiple, menú contextual.
+80. [x] **Pendientes pequeños, C6, F2, F3 y Gantt G3 (2026-10-06)**, pedidos
+    por el usuario. Higham en el motor de fórmulas
+    (`engine/modelo/correlaciones.ts`: la matriz imposible se corrige y se
+    avisa) y P80 en la precisión (`engine/stats/convergencia.ts`); holgura
+    libre en R1–R3 (Python, `generar-referencias.py`), igual día por día.
+    C6: `settings.percentiles` {low, high, extra} en el modelo,
+    `percentilesClave` en los resultados. F2: `bench/libroGrande.ts` (133
+    hojas, 130.875 celdas): plan 6,8 → 1,5 s (orden topológico sin copias),
+    grafo 9,5 → 7,4 s (rangos expandidos una vez), simular 10.000
+    iteraciones 105 → 99 s en un hilo (claves de rango e índices de
+    BUSCARV reutilizados). F3: lote adaptativo del modo compatible (y el
+    fallo que saltaba iteraciones al cambiar el lote, corregido). G3:
+    seguimiento en `red.ts`/`cpm.ts` (estado, reales, restante, corte,
+    retenida/anulación, `esp.dur`), hojas y edición; líneas base
+    (`Lineas_Base`, op `lineaBase`, BEI y CPLI); `rutasDeHolgura`; capas de
+    calor y probabilidad de hitos (`QrsaActividad.cuantiles`); «Correr
+    QRSA» desde la ventana (`SIMULAR_CRONOGRAMA`); `excel/exportarGantt.ts`
+    (MSPDI y CSV) y `ui/ganttImpreso.html` (paginado, PNG); importación de
+    avance; filtros, orden y vistas guardables. Probado en el banco de punta
+    a punta. **Siguiente**: el usuario recorre R1–R4 y GT19–GT30; después,
+    los idiomas (propuesta en la respuesta del 06/10).
 
 **Siguiente acción al retomar**, en orden de valor:
 

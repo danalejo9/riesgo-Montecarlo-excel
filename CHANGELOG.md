@@ -5,6 +5,41 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Gantt G3: seguimiento, líneas base, rutas de holgura, riesgo, imprimir y exportar (2026-10-06)
+
+**Añadido**
+- **Seguimiento**: Fecha de corte y Lógica del avance en Config; Comienzo
+  real, Fin real, % completado y Duración restante en Actividades (también
+  editables en el Gantt). El motor programa las terminadas con sus fechas
+  reales, lo que falta de las que están en curso desde la fecha de corte y
+  nada pendiente antes de ella, con **lógica retenida** o **anulación por
+  progreso**. En el Gantt: estado, franja de avance, barra de terminada y
+  línea de la fecha de corte. Calidad: fechas reales después del corte y
+  avance fuera de secuencia. Las terminadas no cuentan como críticas ni
+  como «holgura mayor de 44 días».
+- **Líneas base**: hoja nueva **Lineas_Base** (hasta 3), «Guardar línea
+  base» en el Gantt (con deshacer), barra gris bajo cada barra, columnas LB
+  comienzo, LB fin y Variación, e índices **BEI** y **CPLI** en la calidad.
+- **Rutas de holgura múltiples** al estilo P6 (columna «Ruta n.º» y capa
+  que colorea por ruta) y **mapa de calor** de la criticidad QRSA.
+- **Probabilidad de cumplir cada hito** (su fecha límite, su línea base o
+  su fecha del cronograma), en una columna, en el tooltip y junto al rombo;
+  **Correr QRSA** desde la ventana del Gantt.
+- **Imprimir y exportar**: el Gantt paginado en el navegador (A4, A3, Carta
+  u Oficio, vertical u horizontal; encabezado y escala repetidos, leyenda,
+  «página n de N») para imprimir o guardar como PDF, y descargas de imagen
+  PNG, **MS Project XML** (comprobado volviéndolo a importar) y CSV.
+- La importación de MS Project y P6 trae el avance real, el % completado,
+  las fechas límite y la fecha de estado (a la fecha de corte).
+- Filtros nuevos (hitos, con alertas, en curso, sin terminar), «hasta el
+  nivel n» de la WBS, orden temporal (comienzo, holgura, ruta, criticidad)
+  sin tocar la hoja, y **vistas guardables**.
+- Guía de pruebas: R1–R4 y GT19–GT30.
+
+**Corregido**
+- Un hito terminado tomaba como fin real el final de su día (un hito no
+  dura: va al comienzo del día). Lo encontró la prueba de seguimiento.
+
 ### F2 y F3: libros grandes y modo compatible más rápido (2026-10-06)
 
 **Añadido**

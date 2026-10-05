@@ -439,7 +439,7 @@ Estimaciones en días de trabajo efectivo.
 - **C5. Vista previa de la distribución** al editarla en el panel (su forma,
   p5/p50/p95), para no elegir parámetros a ciegas. Es probablemente la mejora
   de uso más barata con más efecto.
-- **C6. Percentiles configurables** (qué percentiles se enseñan y exportan).
+- **C6. Percentiles configurables** (qué percentiles se enseñan y exportan). ✅ *06/10*: bajo, alto y hasta 10 adicionales en Configuración.
 - **C7. Informe PDF que habla del proyecto** *(usuario, 27/09)*: título y
   descripción del proyecto (editables en Configuración, guardados en el libro),
   nombres legibles en vez de `Modelo!C5` (ver E5), y un párrafo de lectura
@@ -516,7 +516,7 @@ Estimaciones en días de trabajo efectivo.
   - **Q2** costo–plazo: costos fijos, por tiempo y por recurso; correlación por grupos y corrección de Higham; JCL; pre y post mitigación; factores por grupo; importación de MS Project XML; varios calendarios.
   - **Q3** avanzado: P6 XER, SSI y *cruciality*, rutas críticas frecuentes, cronograma ajustado P80, ramificación, escalamiento, convergencia por P80, resumen ejecutivo y CSV.
   - Mejoras pequeñas al motor actual que salen de la auditoría: versión del complemento en cada corrida, Higham, aviso sin correlaciones, P10–P90, LHS por defecto (a decidir).
-- **G. Diagrama de Gantt con diagnóstico de ruta crítica** *(especificación del usuario del 05/10 en `docs/GANTT_ESPECIFICACION.md`; auditoría, tecnología y plan en `docs/GANTT_PLAN.md`; decisiones aceptadas; **G1 y G2 ✅ en código el 05/10**, falta la prueba del usuario, guía GT1–GT18; G3 pendiente)*: vista propia en Canvas sobre el mismo motor CPM del QRSA. G1 visualización con lógica, G2 edición y diagnóstico (ruta más larga, ruta impulsora), G3 seguimiento, líneas base, capas QRSA, exportación.
+- **G. Diagrama de Gantt con diagnóstico de ruta crítica** *(especificación del usuario del 05/10 en `docs/GANTT_ESPECIFICACION.md`; auditoría, tecnología y plan en `docs/GANTT_PLAN.md`; decisiones aceptadas; **G1, G2 y G3 ✅ en código** (05/10 y 06/10), falta la prueba del usuario, guía GT1–GT30)*: vista propia en Canvas sobre el mismo motor CPM del QRSA. G1 visualización con lógica, G2 edición y diagnóstico (ruta más larga, ruta impulsora), G3 seguimiento, líneas base, capas QRSA, exportación.
 - **V. Valor para riesgo de costes y plazos** *(propuesto el 29/09 y elegido por el usuario el 03/10 de cinco mejoras: contingencia, matriz, comparar distribuciones en el explorador, asistente de juicio experto, atajos de teclado)*:
   - **V1. Contingencia y probabilidad de cumplir el valor base** ✅ 03/10 (`excel/contingencia.ts`, `SeccionContingencia` en Resultados, volcado y PDF; `SalidaRiskModel.kind`).
   - **V2. Matriz de probabilidad e impacto** ✅ 03/10 (`excel/matrizRiesgos.ts`, `MatrizRiesgosTabla`, volcado con rellenos y PDF).
@@ -538,8 +538,13 @@ Estimaciones en días de trabajo efectivo.
 ### F. Motor y cobertura — según lo que pidan los libros
 - **F1.** `DESREF` con desplazamientos constantes ✅ 29/09 (`engine/parser/desref.ts`); `LAMBDA` (en la celda, en LET y con nombre) y nombres definidos ✅ 29/09 (`engine/parser/let.ts`, `nombres.ts`; libro `fidelidad-lambda.xlsx`, Peng-Robinson). Siguen en el compatible: LAMBDA recursivas y `MAP`/`REDUCE`/`BYROW`…
 - **F2.** Medir con libros grandes (el de 132 hojas) el tiempo de lectura y de
-  simulación, y optimizar donde se vea.
+  simulación, y optimizar donde se vea. ✅ *06/10* con un libro sintético de
+  133 hojas (`bench/libroGrande.ts`): plan 6,8 → 1,5 s, grafo 9,5 → 7,4 s,
+  simulación 105 → 99 s (10.000 iteraciones, un hilo). Falta medir la
+  lectura del libro real en Excel (la hace Office.js).
 - **F3.** Modo compatible más rápido (lotes de iteraciones por sincronización).
+  ✅ *06/10*: lote adaptativo (5 a 250 iteraciones por viaje, ~0,7 s cada
+  uno). Falta medirlo en Excel real (guía R4).
 - **F4. Núcleos en automático según el tamaño** *(medido el 27/09)*: con
   10.000 iteraciones del libro de demostración, 1 hilo tardó 212 ms y 8 hilos
   527 ms (arrancar los workers cuesta más que lo que reparten). El modo

@@ -57,6 +57,11 @@
 > - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
 >   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
 >   cierra Excel y repite `npm run stop` y `npm start`.
+> - **Nuevo (06/10)**: **R1 a R4** (correlaciones imposibles, P80,
+>   percentiles configurables y modo compatible) y **GT19 a GT30** (el Gantt
+>   con seguimiento, líneas base, rutas de holgura, riesgo, imprimir y
+>   exportar). Usa un libro de cronograma nuevo: tiene hojas y columnas
+>   nuevas.
 >
 > Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
 > anteriores: es referencia, no hace falta repetirlo.
@@ -930,6 +935,129 @@ se recuerda.
 **GT18. Excel para la Web y Mac.** Si puedes, repite GT2, GT8 y GT11 en
 Excel para la Web: la ventana va dentro de la página. Anota si se ve
 entera y si los arrastres responden.
+
+### R1–R4. Pendientes pequeños, percentiles (C6) y modo compatible (F3)
+
+*Añadido el 06/10.* En el libro de demostración.
+
+**R1. Una correlación imposible ya no impide simular.** En la pestaña
+Modelo, abre la **Matriz de correlaciones** con tres entradas y pon 0,9
+entre la 1.ª y la 2.ª, 0,9 entre la 2.ª y la 3.ª y −0,9 entre la 1.ª y la
+3.ª. Esperado: bajo la matriz, un aviso «…no pueden darse a la vez (son
+contradictorias): se usa la combinación posible más cercana — «A»–«B» 0,90
+→ …», con los coeficientes que se usan. Simula: simula, y el mismo aviso
+sale arriba en Resultados. Deja las correlaciones como estaban.
+
+**R2. El P80 en «¿Bastan las iteraciones?».** Simula con 1.000
+iteraciones. El recuadro de precisión de cada salida dice ahora «la media
+se conoce con ±… y el P80 con ±…»; si no bastan, las iteraciones que pide
+cuentan también el P80. Con **Simular hasta alcanzar la precisión**
+(Configuración), las tandas siguen hasta que la media y el P80 cumplen.
+
+**R3. Percentiles configurables (C6).** En Configuración (⚙), sección
+**Percentiles**: pon Bajo p10, Alto p90 y en Adicionales `2,5; 97,5`.
+Simula. Esperado: las cifras grandes dicen «p10» y «p90» (no p5 y p95), la
+tabla de salidas y la comparación con un escenario también; en el informe
+PDF los delimitadores del histograma van en p10 y p90 (10 % · 80 % · 10 %);
+en la hoja volcada, la tabla de percentiles incluye p2,5 y p97,5, en orden.
+Escribe `120` en Adicionales: dice qué está mal y no lo guarda. Vuelve a
+p5 y p95.
+
+**R4. Modo compatible más rápido (F3).** En Configuración elige el motor
+**Compatible** y simula 1.000 iteraciones del libro de demostración.
+Anota cuánto tarda (arriba en Resultados) y compáralo con lo que tardaba
+antes (prueba H2 de la ronda del 29/09): el primer viaje a Excel lleva 20
+iteraciones y los siguientes se ajustan para durar unos 0,7 s, así que
+debería ir igual o más rápido, con los mismos resultados que el motor
+rápido. Vuelve a **Automático**.
+
+### GT19–GT30. Gantt: seguimiento, líneas base, rutas, riesgo, exportar (fase G3)
+
+*Añadido el 06/10.* **El libro de cronograma tiene una hoja nueva,
+Lineas_Base, y columnas nuevas en Actividades** (Comienzo real, Fin real, %
+completado, Duración restante) **y en Config** (Fecha de corte, Lógica del
+avance): un libro de antes muestra en el panel **Añadir las hojas que
+faltan**; para las columnas, lo más fácil es crear un libro nuevo con el
+ejemplo. Inicio 04/01/2027 y meta 31/01/2028, como en GT1.
+
+**GT19. Rutas de holgura.** En el Gantt, abre **Columnas y capas** y marca
+**Colorear por ruta de holgura**; añade la columna **Ruta n.º**. Esperado:
+ruta 1 (roja) INI, A, B, D, E, F, H, M, J, K y L; ruta 2 G; ruta 3 I; ruta
+4 C.
+
+**GT20. Riesgo en el Gantt.** Pulsa **Correr QRSA** en la ventana: el panel
+simula el cronograma y el Gantt se actualiza solo. Esperado: columnas
+Criticidad, P80 fin y **P(cumplir el hito)**; junto a los hitos, su
+probabilidad: M 8 % y L 5 % (la de cumplir su fecha del cronograma). En
+**Columnas y capas**, **Mapa de calor de criticidad** colorea de azul (nunca
+crítica) a rojo (siempre): E 80 %, G 22 %, C 0 %. Pon en L una fecha límite
+31/03/2028: su probabilidad pasa a ser la de cumplir esa fecha (más del 90
+%) y el tooltip dice «(fecha límite)». Quítala.
+
+**GT21. Fecha de corte y avance.** En la hoja **Config** escribe Fecha de
+corte 01/03/2027. En el Gantt (columnas «Comienzo real», «Fin real» y «%
+completado», que aparecen al haber fecha de corte), registra: INI comienzo
+y fin real 04/01/2027; A comienzo 04/01/2027 y fin real 12/02/2027; B
+comienzo real 15/02/2027 y 40 %. Esperado: fin 12/11/2027, 9 críticas,
+una línea naranja punteada en el 01/03/2027 (la fecha de corte, distinta
+de la verde de hoy). A queda «terminada» (barra azul clara, sin holgura ni
+crítica); B «en curso», del 15/02 al 09/04/2027 (37 días: lleva 10 y le
+faltan 27 desde el corte) con una franja oscura del 40 %; C, que no ha
+empezado, empieza el 01/03/2027 (nada pendiente antes de la fecha de
+corte). El resumen S1 sale en curso con un 66 %.
+
+**GT22. Lógica retenida o anulación por progreso.** Registra en D (que
+depende de B) comienzo real 22/02/2027 y Duración restante 10. Esperado: en
+Calidad, «Avance fuera de secuencia: D empezó antes de que terminara una
+predecesora fin–comienzo…»; con lógica **Retenida** (la de por defecto en
+Config) lo que le falta a D espera a B: D termina el 23/04/2027 y el
+proyecto el 25/10/2027. Cambia en Config **Lógica del avance** a
+«Anulación por progreso» y pulsa **Releer hojas**: D termina el 12/03/2027
+y el proyecto el 14/09/2027. Vuelve a «Retenida» y borra el avance de D.
+
+**GT23. Fechas inválidas.** Escribe en C un fin real 10/03/2027 (posterior
+al corte): Calidad dice en rojo «Fechas reales después de la fecha de
+corte: C…». Bórralo.
+
+**GT24. Línea base.** Con el avance de GT21, pulsa **Guardar línea base**
+(LB1). En la hoja **Lineas_Base** aparecen el comienzo y el fin de cada
+actividad. Cambia la duración de E a 60. Esperado: fin 29/11/2027, una
+barra gris delgada bajo cada barra (la línea base), la columna «Variación
+(d)» con E +10 (en rojo) y L +10, y en Calidad: «BEI … 2 de 2 … BEI 1,00» y
+«CPLI … Faltan 184 días laborables por la ruta crítica y el fin va 9 días
+después del de la línea base: CPLI 0,95». Elige **Línea base: Ninguna**:
+desaparecen la barra gris y esas columnas. Deshaz el cambio de E.
+
+**GT25. Hasta tres líneas base.** Elige **Línea base: LB2**, pulsa
+**Guardar línea base** y luego otra vez: la segunda pregunta si
+reemplazarla. Cambia entre LB1 y LB2 en el desplegable.
+
+**GT26. Filtros, orden y vistas.** Prueba los filtros nuevos («Solo
+hitos», «Con alertas de calidad», «En curso», «Sin terminar»), **Hasta el
+nivel 1** (solo los resúmenes y el hito INI) y **Por holgura total** (orden
+temporal: la hoja no cambia). En **Vistas**, escribe un nombre y **Guardar
+la vista actual**; cambia filtros y columnas y vuelve a ella con un clic.
+Cierra la ventana y ábrela otra vez: la vista sigue ahí.
+
+**GT27. Imprimir y PDF.** Pulsa **Imprimir y exportar…**: se abre en el
+navegador el Gantt paginado. Elige A3 horizontal o A4 vertical: cambia el
+número de páginas. Cada página lleva título, fechas, la escala de tiempo
+repetida y «Página n de N»; la leyenda va en la última. **Imprimir o
+guardar como PDF** → «Guardar como PDF».
+
+**GT28. PNG, MS Project y CSV.** En la misma página: **Imagen (PNG)**
+descarga todo el Gantt en una imagen; **MS Project (XML)** un archivo que
+abre ProjectLibre (o MS Project) con las mismas actividades, vínculos,
+calendarios, fechas límite y avance; **Tabla (CSV)** la tabla, que Excel
+abre con acentos y fechas bien.
+
+**GT29. Importar avance.** Importa en un libro nuevo el XML de GT28: el
+avance (comienzo y fin reales, %), las fechas límite y la fecha de corte
+(la de estado del archivo) llegan a las hojas.
+
+**GT30. Muchas actividades.** Si tienes un cronograma grande (cientos de
+actividades), impórtalo y abre el Gantt: anota cuánto dice «calculado en …
+ms» y si el desplazamiento va fluido.
 
 ## A. Lo básico, en la hoja «Modelo»
 
