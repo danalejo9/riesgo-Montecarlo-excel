@@ -5,3 +5,4 @@ export * from './red.ts';
 export * from './analisis.ts';
 export * from './modelo.ts';
 export * from './simulacion.ts';
+export * from './calidad.ts';
