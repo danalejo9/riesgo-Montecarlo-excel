@@ -1344,6 +1344,12 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     ventana los superpone (`ui/explorador.tsx`, `TablaComparada`). Probado
     en el banco. **Siguiente**: el usuario prueba V3 y V4 (guía) con el
     resto de la ronda.
+78. [ ] **Gantt: auditoría y plan (2026-10-05)**. El usuario entregó la
+    especificación del Gantt con diagnóstico de ruta crítica
+    (`docs/GANTT_ESPECIFICACION.md`). Auditoría, propuesta de tecnología
+    (Canvas propio, pestaña en la ventana flotante) y plan G1–G3 en
+    `docs/GANTT_PLAN.md`. **Sin empezar**: pendiente de que el usuario
+    confirme las 9 decisiones del plan.
 
 **Siguiente acción al retomar**, en orden de valor:
 
