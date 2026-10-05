@@ -74,3 +74,51 @@ describe('vista del Gantt con el ejemplo', () => {
     expect(c.actividades).toEqual(['S1', 'E']);
   });
 });
+
+describe('criterios de calidad del Gantt (prueba 7)', () => {
+  const datos = (acts: import('../../engine/cronograma/index.ts').ActividadRed[]): DatosGantt => ({
+    version: 1,
+    modelo: {
+      red: { inicio: INICIO, calendarios: [{ id: 'c', laborables: [true, true, true, true, true, false, false] }], actividades: acts },
+      incertidumbre: [], riesgos: [], configuracion: { iteraciones: 1000, semilla: 1, metodo: 'lhs', redondeo: 'entero', ignorarRestriccionesDuras: false },
+    } as unknown as DatosGantt['modelo'],
+    orden: acts.map((a, i) => ({ id: a.id, nombre: a.nombre, wbs: String(i + 1), tipo: a.duracion === 0 ? 'hito' as const : 'tarea' as const, fila: i + 2 })),
+    vinculosResumen: [],
+  });
+  const fc = (id: string, desfase = 0) => ({ id, tipo: 'FC' as const, desfase });
+  const estado = (d: DatosGantt, opciones = {}) => Object.fromEntries(construirVista(d, opciones).calidad.map((c) => [c.id, c]));
+
+  it('limpio: los criterios del Gantt en verde, y FC al 100 %', () => {
+    const e = estado(datos([
+      { id: 'I', nombre: 'I', duracion: 0, predecesoras: [] },
+      { id: 'A', nombre: 'A', duracion: 5, predecesoras: [fc('I')] },
+      { id: 'B', nombre: 'B', duracion: 3, predecesoras: [fc('I')] },
+      { id: 'F', nombre: 'F', duracion: 0, predecesoras: [fc('A'), fc('B')] },
+    ]));
+    for (const id of ['resumen', 'ruta-continua', 'critica-dura', 'fc', 'negativa']) expect(e[id]?.estado, id).toBe('verde');
+  });
+
+  it('ruta rota por una restricción, crítica por restricción dura, proporción y FC bajo el umbral', () => {
+    const e = estado(datos([
+      { id: 'I', nombre: 'I', duracion: 0, predecesoras: [] },
+      { id: 'A', nombre: 'A', duracion: 5, predecesoras: [fc('I')] },
+      { id: 'B', nombre: 'B', duracion: 3, restriccion: { tipo: 'MSO', fecha: INICIO + 60 }, predecesoras: [{ id: 'I', tipo: 'CC', desfase: 0 }] },
+      { id: 'F', nombre: 'F', duracion: 0, predecesoras: [fc('A'), fc('B')] },
+    ]));
+    expect(e['ruta-continua']?.estado).toBe('rojo');
+    expect(e['ruta-continua']?.actividades).toEqual(['B']);
+    expect(e['critica-dura']?.actividades).toEqual(['B']);
+    expect(e.fc?.estado).not.toBe('verde');
+    expect(e.proporcion?.detalle).toMatch(/de 4 actividades/);
+  });
+
+  it('los umbrales se configuran', () => {
+    const d = datos([
+      { id: 'I', nombre: 'I', duracion: 0, predecesoras: [] },
+      { id: 'A', nombre: 'A', duracion: 50, predecesoras: [fc('I')] },
+      { id: 'F', nombre: 'F', duracion: 0, predecesoras: [fc('A')] },
+    ]);
+    expect(estado(d).largas?.estado).not.toBe('verde');
+    expect(estado(d, { umbrales: { dias: 60 } }).largas?.estado).toBe('verde');
+  });
+});

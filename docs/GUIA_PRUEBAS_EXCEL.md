@@ -54,6 +54,9 @@
 > - **Nuevo, en Excel**: **Q5 a Q26**, el análisis de riesgo de cronograma
 >   y costo (grupo Cronograma de la cinta y pestaña Cronograma). El
 >   manifiesto cambió: cierra Excel y repite `npm run stop` y `npm start`.
+> - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
+>   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
+>   cierra Excel y repite `npm run stop` y `npm start`.
 >
 > Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
 > anteriores: es referencia, no hace falta repetirlo.
@@ -799,6 +802,134 @@ escenario «Base», cambia una entrada, vuelve a simular y abre el
 explorador: en **Comparar con** aparece «La misma salida en un escenario ·
 «Base»». Elígelo y selecciona otra salida en la hoja: sigue comparando con
 «Base» (ahora con esa salida).
+
+### GT1–GT18. Diagrama de Gantt (fases G1 y G2)
+
+*Añadido el 05/10.* **El manifiesto cambió (0.9.0.0, botón nuevo)**: cierra
+Excel y repite `npm run stop` y `npm start`. Usa el libro de cronograma del
+ejemplo con **Fecha de inicio 04/01/2027** y **Fecha meta 31/01/2028** en
+Config (como en Q5); si cambiaste algo del ejemplo, crea uno nuevo. Las
+cifras de abajo salen de ese ejemplo, calculadas con el mismo motor.
+
+**GT1. El botón y la vista compacta.** En el grupo Cronograma de la cinta
+hay un botón nuevo, **Gantt**. Abre antes la pestaña Cronograma del panel:
+sin revisar ni simular aparece **Diagrama de Gantt** con las barras de las
+18 filas, los nombres a la derecha, los resúmenes como corchetes negros y
+las flechas. Rojo es crítica, naranja casi crítica (E y G), azul el resto
+(C e I).
+
+**GT2. La ventana.** Pulsa **Gantt** en la cinta (o **Ver Gantt** en el
+panel). Se abre la ventana flotante en la pestaña **Gantt** (la misma
+ventana del explorador: Office deja una sola). Esperado en la línea de
+estado: «Ruta crítica: holgura total ≤ 0 · 10 críticas · fin 22/11/2027 ·
+meta 31/01/2028» y «18 filas · 16 vínculos · calculado en … ms». En la
+tabla: E con holgura total 1 y G con 5 (naranjas), C con 31 e I con 30.
+Anota cuántos ms dice y en qué Excel (Windows, Mac o Web).
+
+**GT3. Escala de tiempo.** **Ajustar todo** enseña el proyecto entero.
+Prueba **−**, **+**, el desplegable (Años, Trimestres, Meses, Semanas,
+Días) y **Ctrl + rueda** sobre el diagrama. En Semanas o Días se ven
+sombreados los sábados, domingos y festivos (por ejemplo el lunes
+11/01/2027, Reyes). Hay líneas punteadas grises en el inicio y el fin,
+morada en la meta y verde continua en hoy. **Hoy** lleva a la fecha de hoy.
+
+**GT4. Flechas y tooltip.** Pasa el ratón por la barra de H: tooltip con
+fechas 09/08/2027 – 27/09/2027 (35 d), holgura 0, «Predecesoras: F CC+5d».
+Pasa el ratón por la flecha de F a H: «F → H · CC +5 días», holgura de la
+relación 0, impulsora. La flecha sale del **comienzo** de F (CC) y la de E
+a F (FC+7 días calendario) del **final** de E. Las flechas impulsoras entre
+críticas son rojas; C → D (holgura 31) es gris.
+
+**GT5. Las dos definiciones de ruta crítica.** Cambia **Crítica:** a
+**Ruta más larga**. Esperado: 11 críticas, ahora también E. Es el caso que
+explica la especificación: E va en el calendario de lunes a sábado y le
+queda un sábado de holgura, pero es la que de verdad impulsa el fin.
+Vuelve a «Holgura total ≤ 0».
+
+**GT6. Filtros, búsqueda y plegar.** «Solo ruta crítica» deja las 10
+críticas (sin resúmenes); «Crítica + casi crítica», 12. Vuelve a «Todas».
+Escribe `H` en **Buscar** y Enter: selecciona H. Pulsa ▾ junto a «Obra
+gris»: sus cuatro hijas se pliegan.
+
+**GT7. ¿Por qué es crítica? y ruta impulsora.** Selecciona H y abre
+**Diagnóstico** en Detalles: «No tiene holgura: cualquier retraso mueve el
+fin del proyecto. Su inicio lo fija F (CC+5d); a su vez fija el inicio de
+M.» Selecciona E: «Tiene 1 días de holgura. Su inicio lo fija D (FC); a su
+vez fija el inicio de F, I.» Selecciona L y pulsa **Ruta impulsora hacia
+aquí**: quedan resaltadas 11 actividades (INI, A, B, D, E, F, H, M, J, K,
+L) y el resto atenuado; «quitar» lo deshace. Con M resalta 8. Prueba
+también **Aguas arriba** y **Aguas abajo**.
+
+**GT8. Editar en la tabla y deshacer.** Doble clic en la duración de E
+(Estructura), escribe 60 y Enter. Esperado: «Duración de E: escrito en las
+hojas», fin 02/12/2027, y en la hoja **Actividades** la duración de E es
+60. Pulsa **Ctrl+Z** (o ↶): «Deshecho: Duración de E», fin 22/11/2027 y la
+hoja vuelve a 50. **Ctrl+Y** lo rehace; deshazlo otra vez.
+
+**GT9. Un ciclo se rechaza.** Doble clic en Predecesoras de A, escribe
+`INI; L` y Enter. Esperado: «Hay un ciclo en las relaciones: B → D → E →
+F → G → J → K → L → A → B» en rojo, y **nada** cambia en Relaciones. Prueba
+también `INI; ZZ` (no existe) y `INI;;X?!` (no se entiende).
+
+**GT10. Restricción al mover una barra.** Arrastra el centro de la barra
+de G unas semanas a la derecha y suelta: sale un aviso amarillo «Mover G
+al … fija la restricción «No comenzar antes de» …». Pulsa **Cancelar**: no
+cambia nada. Ahora en Detalles → General de G elige «No comenzar antes de»,
+escribe 01/09/2027 y **Aplicar**. Esperado: fin 07/12/2027, G pasa a roja
+(holgura 0) y aparece una marca morada al comienzo de su barra; en la hoja,
+Restricción y su fecha llenas. Deshaz.
+
+**GT11. Duración arrastrando y vínculo arrastrando.** Arrastra el borde
+derecho de la barra de C (el cursor cambia a ↔): al soltar cambia su
+duración. Deshaz. Pon el ratón justo a la derecha de la barra de C (cursor
+de cruz) y arrastra hasta la **mitad izquierda** de la barra de I: se crea
+C → I fin–comienzo («E; C» en Predecesoras de I y una fila nueva en
+Relaciones). Si sueltas en la mitad derecha, sale FF. Repetirlo dice «Ya
+existe un vínculo de C a I». Clic en esa flecha, **Supr**: se borra.
+Deshaz lo que quede.
+
+**GT12. Insertar, borrar, sangría y mover.** Selecciona D y pulsa **+
+Tarea**: aparece N1 «Nueva actividad» con WBS 2.3 (E pasa a 2.4, F a 2.5)
+y una marca (⚠ o !) en la primera columna (sin predecesora ni sucesora). Deshaz.
+Selecciona B y pulsa **⇥** (aumentar sangría): B queda 1.1.1 y A pasa a
+resumen; en Calidad, «Vínculos a actividades resumen» se pone en rojo con
+«INI → A, A → B, A → C». Deshaz. Prueba ↑/↓ con una actividad y **Borrar**
+(pide confirmación; borra también sus vínculos y su incertidumbre). Deshaz
+todo hasta volver a 18 filas y fin 22/11/2027.
+
+**GT13. Fecha límite y holgura negativa.** En Detalles → General de L,
+escribe en **Fecha límite** 01/11/2027 y sal del campo. Esperado: L con
+holgura −14 y la ruta en barras rojas rayadas con borde oscuro, una flecha
+azul hacia abajo sobre L (roja si se incumple) y en Diagnóstico: «Tiene
+holgura negativa (-14 días) por L (fecha límite)…». Deshaz.
+
+**GT14. Calidad con semáforo.** Abajo, «Calidad del cronograma» con 1
+rojo y 2 amarillos: rojo «Duraciones largas» (B, E); amarillos «Desfases
+positivos» (2 de 16) y «Proporción de actividades críticas» (10 de 14, 71
+%). Pulsa un criterio con actividades: las resalta en el diagrama. Las
+filas señaladas llevan ⚠ o ! en la tabla (con el tooltip del criterio).
+
+**GT15. Deshacer protegido.** Cambia una duración desde el Gantt. Luego,
+en Excel, inserta a mano una fila en Relaciones (o cambia una celda de
+Actividades) y pulsa Ctrl+Z en el Gantt. Esperado: «Las hojas … cambiaron
+fuera del Gantt después de esa edición: no se puede deshacer con
+seguridad», sin tocar nada. **Releer hojas** trae lo que cambiaste a mano.
+
+**GT16. Cálculo manual.** Pulsa **Cálculo automático** (pasa a manual) y
+cambia una duración: se escribe en la hoja, pero el diagrama sigue igual y
+dice «Hay cambios sin recalcular (F9)». **F9** o **Recalcular** lo
+actualiza. Vuelve a automático.
+
+**GT17. Con la simulación.** Simula el cronograma (panel o cinta) con el
+Gantt abierto: se refresca solo y aparecen las columnas «P80 fin (QRSA)» y
+«Criticidad (QRSA)» y, sobre cada barra, el rango P10–P90 del fin con una
+marca en el P80. «Columnas y capas» deja quitar o poner columnas y capas;
+el ancho de las columnas y de la tabla (el divisor) se ajusta arrastrando y
+se recuerda.
+
+**GT18. Excel para la Web y Mac.** Si puedes, repite GT2, GT8 y GT11 en
+Excel para la Web: la ventana va dentro de la página. Anota si se ve
+entera y si los arrastres responden.
 
 ## A. Lo básico, en la hoja «Modelo»
 

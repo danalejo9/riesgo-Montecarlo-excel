@@ -1344,12 +1344,41 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     ventana los superpone (`ui/explorador.tsx`, `TablaComparada`). Probado
     en el banco. **Siguiente**: el usuario prueba V3 y V4 (guía) con el
     resto de la ronda.
-78. [ ] **Gantt: auditoría y plan (2026-10-05)**. El usuario entregó la
+78. [x] **Gantt: auditoría y plan (2026-10-05)**. El usuario entregó la
     especificación del Gantt con diagnóstico de ruta crítica
     (`docs/GANTT_ESPECIFICACION.md`). Auditoría, propuesta de tecnología
     (Canvas propio, pestaña en la ventana flotante) y plan G1–G3 en
-    `docs/GANTT_PLAN.md`. **Sin empezar**: pendiente de que el usuario
-    confirme las 9 decisiones del plan.
+    `docs/GANTT_PLAN.md`. El usuario aceptó las 9 decisiones («Dale con G1
+    y G2 de una vez»).
+79. [x] **Gantt G1 y G2 (2026-10-05)**. Motor: `engine/cronograma/rutas.ts`
+    (holgura de cada relación, impulsoras, ruta más larga, ruta impulsora
+    hacia una actividad, cadenas, `porQueCritica`), fecha límite en la red,
+    `sintaxis.ts` (predecesoras `5FC+2d`), `jerarquia.ts` (WBS); umbrales de
+    calidad configurables y el criterio «≥ 90 % FC». Vista:
+    `excel/gantt.ts` (`construirVista`: filas con resúmenes desde la WBS,
+    críticas por las dos definiciones, diagnóstico con vínculos a resúmenes,
+    ruta continua, proporción y crítica por restricción dura). Edición:
+    `excel/edicionGantt.ts` traduce cada operación en cambios de celdas y
+    filas (insertar/borrar fila entera, así Excel conserva fórmulas y
+    formatos), valida releyendo el libro (ciclos, IDs) y los invierte para
+    deshacer; `HistorialGantt` guarda la huella de las hojas tocadas y se
+    niega a deshacer si cambiaron por fuera. Panel: `ui/gantt/controlGantt.ts`
+    (sin Office) y `controlPanel.ts`; la ventana es la del explorador con una
+    pestaña «Gantt» (`ui/explorador.tsx`), mensajes por trozos de 20.000
+    caracteres (`excel/trozos.ts`) y aviso «listo» antes de mandar el
+    cronograma. UI: `ui/gantt/trazado.ts` (escala, encabezados, flechas
+    ortogonales de los 4 tipos), `dibujo.ts` (Canvas), `Gantt.tsx` (grid
+    virtualizado con filas memorizadas, edición en celda, arrastres,
+    detalles, calidad, leyenda, automático/manual), `GanttCompacto.tsx` en la
+    pestaña Cronograma. Cinta: botón **Gantt**, manifiesto 0.9.0.0.
+    **Medido** (prueba 8, `excel/cronogramaSintetico.ts`): 2.000 actividades
+    y 3.080 vínculos, vista en 69 ms (Node) y 75 ms (navegador), edición
+    validada en 93 ms; en el banco (Chromium sin GPU) 40,7 cuadros/s en
+    vertical y 60 en horizontal. Probado en el banco de punta a punta.
+    **Siguiente**: el usuario recorre GT1–GT18 de la guía. Pendiente para
+    G3: seguimiento, líneas base, rutas de holgura múltiples, capas QRSA
+    restantes (mapa de calor, probabilidad en hitos), exportar e imprimir,
+    copiar y pegar filas, selección múltiple, menú contextual.
 
 **Siguiente acción al retomar**, en orden de valor:
 

@@ -5,6 +5,48 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Gantt G1 y G2: diagrama con diagnóstico de ruta crítica (2026-10-05)
+
+**Añadido**
+- **Botón Gantt** en el grupo Cronograma de la cinta (manifiesto 0.9.0.0) y
+  **Ver Gantt** en la pestaña Cronograma: el diagrama completo en la ventana
+  flotante, pestaña «Gantt». Tabla con WBS, ID, nombre con sangría y
+  plegado, duración, fechas, predecesoras y sucesoras en texto (`5FC+2d`),
+  holguras, crítica, restricción, fecha límite, calendario y, tras simular,
+  P80 y criticidad; columnas a elegir y de ancho ajustable.
+- Línea de tiempo en Canvas: escala de dos niveles con zoom (botones,
+  Ctrl + rueda, ajustar todo), días no laborables y festivos, líneas de hoy,
+  inicio, fin y meta; barras de tarea, hito y resumen; crítica en rojo,
+  casi crítica en naranja (umbral configurable), holgura negativa rayada;
+  línea de holgura hasta el fin tardío; marcas de restricción y fecha
+  límite; rango P10–P90 de la simulación; flechas ortogonales de los cuatro
+  tipos que no atraviesan las barras, impulsoras en rojo; tooltip.
+- Ruta crítica por **holgura total ≤ 0** o por **ruta más larga**; ruta
+  impulsora hacia una actividad, aguas arriba y aguas abajo; «¿por qué es
+  crítica?»; filtros «solo ruta crítica» y «crítica + casi crítica»;
+  búsqueda.
+- **Edición** en la tabla (nombre, duración, predecesoras, fecha límite) y
+  en el diagrama (duración arrastrando el borde, mover con confirmación de
+  «No comenzar antes de», vínculos arrastrando entre barras con el tipo
+  según los bordes); restricciones y vínculos desde Detalles; insertar,
+  borrar, sangría (crea o deshace resúmenes), subir y bajar; deshacer y
+  rehacer (Ctrl+Z, Ctrl+Y); cálculo automático o manual (F9). Todo se
+  escribe en las hojas; un ciclo o un ID que no existe se rechazan sin
+  escribir nada.
+- Calidad con semáforo e ícono por fila: los criterios del QRSA más
+  «≥ 90 % fin–comienzo», vínculos a resúmenes, ruta crítica continua,
+  proporción de críticas y ruta crítica por restricción dura; umbrales
+  configurables en el motor.
+- Vista compacta del Gantt en la pestaña Cronograma, también antes de
+  simular.
+- Columna **Fecha límite** en Actividades (no mueve la actividad; si se
+  incumple, la holgura queda negativa).
+- Guía de pruebas: bloque GT1–GT18.
+
+**Medido**: 2.000 actividades y 3.080 vínculos, vista calculada en 69 ms
+(75 ms en el navegador), edición validada en 93 ms; 40,7 cuadros por
+segundo al desplazar en vertical y 60 en horizontal (Chromium sin GPU).
+
 ### V3 y V4: comparar en el explorador y asistente de juicio experto (2026-10-05)
 
 **Añadido**

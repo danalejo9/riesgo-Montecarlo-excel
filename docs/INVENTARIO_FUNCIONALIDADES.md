@@ -192,6 +192,16 @@ Especificación en `docs/QRSA_ESPECIFICACION.md`, plan en `docs/QRSA_PLAN.md`.
 | Q2 | Costos (fijos, por tiempo, por recurso), correlación por grupos y Higham, pre/post mitigación, JCL, factores por grupo, MS Project XML | ✅ en código; falta tu prueba (guía Q15–Q24) |
 | Q3 | XER de Primavera, rutas críticas frecuentes, ramificación, escalamiento, cronograma P80, informe ejecutivo, convergencia automática | ✅ en código; falta tu prueba (guía Q19–Q26) |
 
+### Bloque G: diagrama de Gantt con diagnóstico de ruta crítica — G1 y G2 ✅ en código el 05/10
+
+Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| G1 | Vista compacta en el panel y pestaña Gantt en la ventana: grid, escala de dos niveles con zoom, barras de tarea, hito y resumen, flechas de los 4 tipos, crítica y casi crítica, holgura, tooltip, no laborables, líneas de hoy, inicio, fin y meta, filtro de ruta crítica, leyenda, botón Gantt en la cinta | ✅ en código; falta tu prueba (guía GT1–GT7) |
+| G2 | Edición en grid y en barras, vínculos arrastrando, insertar, borrar, sangría, mover, deshacer y rehacer, automático/manual, ruta más larga frente a holgura total, ruta impulsora, «¿por qué es crítica?», calidad con semáforo e ícono por fila | ✅ en código; falta tu prueba (guía GT8–GT18) |
+| G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | Pendiente |
+
 ### Después de la versión 1.0
 
 | # | Código | Funcionalidad | Origen |
