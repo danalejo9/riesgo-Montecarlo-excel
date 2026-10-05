@@ -193,7 +193,32 @@ def cpm(acts: list[Act], cal: Calendario):
         if a.fnlt:
             tarde = min(tarde, cal.primero_desde(a.fnlt + dt.timedelta(days=1)))
         lf[a.id], ls[a.id] = tarde, tarde - a.dur
-    return {a.id: (es[a.id], ef[a.id], ls[a.id] - es[a.id]) for a in acts}
+    # Holgura libre: cuánto puede retrasarse sin mover el comienzo temprano de
+    # ninguna sucesora (sin sucesoras: hasta el fin del proyecto). Como en MS
+    # Project, nunca pasa de la holgura total (una FNLT aguas abajo la recorta).
+    libre: dict[str, int] = {}
+    for a in acts:
+        h = None
+        for s in acts:
+            for r in s.rels:
+                if r.pred != a.id:
+                    continue
+                if r.tipo == 'FC' and r.calendario:
+                    x = ef[a.id]
+                    while cal.primero_desde(cal.fecha(x) + dt.timedelta(days=1 + r.desfase)) <= es[s.id]:
+                        x += 1
+                    v = x - ef[a.id]
+                elif r.tipo == 'FC':
+                    v = es[s.id] - r.desfase - ef[a.id]
+                elif r.tipo == 'CC':
+                    v = es[s.id] - r.desfase - es[a.id]
+                elif r.tipo == 'FF':
+                    v = ef[s.id] - r.desfase - ef[a.id]
+                else:  # CF
+                    v = ef[s.id] - r.desfase - es[a.id]
+                h = v if h is None else min(h, v)
+        libre[a.id] = fin - ef[a.id] if h is None else h
+    return {a.id: (es[a.id], ef[a.id], ls[a.id] - es[a.id], min(libre[a.id], ls[a.id] - es[a.id])) for a in acts}
 
 
 # ---------------------------------------------------------------- los tres cronogramas
@@ -326,11 +351,11 @@ def escribir(nombre, titulo, festivos, acts):
     (AQUI / f'{nombre}.xer').write_bytes(xer(nombre, titulo, festivos, acts).encode('cp1252'))
     with open(AQUI / f'{nombre}-esperado.csv', 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        w.writerow(['id', 'actividad', 'duracion', 'inicio', 'fin', 'holgura_total', 'critica'])
+        w.writerow(['id', 'actividad', 'duracion', 'inicio', 'fin', 'holgura_total', 'critica', 'holgura_libre'])
         for a in acts:
-            es, ef, hol = r[a.id]
+            es, ef, hol, libre = r[a.id]
             fin = cal.fecha(es) if a.dur == 0 else cal.fecha(ef - 1)
-            w.writerow([a.id, a.nombre, a.dur, cal.fecha(es).isoformat(), fin.isoformat(), hol, 'sí' if hol <= 0 else 'no'])
+            w.writerow([a.id, a.nombre, a.dur, cal.fecha(es).isoformat(), fin.isoformat(), hol, 'sí' if hol <= 0 else 'no', libre])
     red = {
         'nombre': nombre, 'inicio': INICIO.isoformat(), 'festivos': sorted(f.isoformat() for f in festivos),
         'actividades': [{
@@ -352,5 +377,5 @@ if __name__ == '__main__':
                 w.writerow([d.isoformat(), n])
     for nombre, titulo, festivos, acts in (R1, R2, R3):
         cal, r = escribir(nombre, titulo, festivos, acts)
-        fin = max(ef for _, ef, _ in r.values())
+        fin = max(ef for _, ef, _, _ in r.values())
         print(f'{nombre}: {len(acts)} actividades, fin {cal.fecha(fin - 1)} ({fin} días laborables)')

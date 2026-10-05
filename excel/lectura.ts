@@ -85,7 +85,8 @@ export function lecturaDeSalida(d: DatosLectura): string[] {
 
   if (d.precision && !d.precision.suficiente) {
     frases.push(
-      `Con estas iteraciones, la media se conoce con un margen de ±${porcentaje(d.precision.margenRelativo)}; ` +
+      `Con estas iteraciones, la media se conoce con un margen de ±${porcentaje(d.precision.margenRelativo)}` +
+        (d.precision.margenP80Relativo !== undefined ? ` y el P80 con ±${porcentaje(d.precision.margenP80Relativo)}` : '') + '; ' +
         `para bajarlo al ${porcentaje(d.precision.objetivo)} harían falta unas ` +
         `${d.precision.iteracionesParaObjetivo.toLocaleString('es-ES')}.`,
     );

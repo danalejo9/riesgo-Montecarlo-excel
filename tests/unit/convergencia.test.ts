@@ -68,3 +68,20 @@ describe('precisión con otro margen objetivo', () => {
     expect(precisionDeSimulacion(1000, 100, 50, undefined, 0.05)?.suficiente).toBe(true);
   });
 });
+
+describe('el P80 también cuenta para «suficiente»', () => {
+  it('una cola larga: la media basta pero el P80 todavía no, y pide más iteraciones', () => {
+    // Exponencial de media 100: σ = 100, así que 1 % de la media pide ~38.400 iteraciones; con 50.000 la media basta.
+    const n = 50_000;
+    const m = Float64Array.from({ length: n }, (_, i) => -100 * Math.log(1 - (i + 0.5) / n)).sort();
+    const r = precisionDeSimulacion(n, 100, 100, m)!;
+    expect(r.margenRelativo).toBeLessThan(0.01);
+    expect(r.margenP80Relativo).toBeGreaterThan(0);
+    // El P80 de una exponencial está en 161; su intervalo al 95 % mide unos ±2,3 (2,3 % de la media).
+    expect(r.margenP80Relativo).toBeGreaterThan(0.01);
+    expect(r.suficiente).toBe(false);
+    expect(r.iteracionesParaObjetivo).toBeGreaterThan(n);
+    // Sin muestra no hay P80: el veredicto es el de la media.
+    expect(precisionDeSimulacion(n, 100, 100)!.suficiente).toBe(true);
+  });
+});

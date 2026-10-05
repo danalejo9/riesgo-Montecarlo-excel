@@ -26,6 +26,7 @@ import { generarTramoDeEntrada, resolverEntradas, type DefinicionEntrada } from 
 import { compilarPlan } from '../engine/compiler/plan.ts';
 import { construirGrafo, reemplazarAst } from '../engine/graph/index.ts';
 import {
+  agruparCorrelaciones,
   aplicarReescrituras,
   PREFIJO_DINAMICA,
   describirMotivo,
@@ -272,6 +273,11 @@ export async function ejecutarSimulacion(peticion: PeticionSimulacion): Promise<
   const bases = modoLibro.modo === 'fijo' ? await leerNumeros(dirSalidas).catch(() => null) : null;
   // H6 y H7: avisos de coherencia y por dónde llega cada entrada a cada salida.
   const avisosCoherencia = avisosDeCoherencia(grafo, modelo.inputs, clavesEntrada, clavesSalida, direccionDe);
+  // Una matriz de correlación imposible ya no se rechaza: se corrige (Higham) y se avisa con los nombres.
+  const agrupacion = agruparCorrelaciones(modelo.inputs);
+  if (agrupacion.ok) {
+    for (const a of agrupacion.ajustes) avisosCoherencia.push(modelo.inputs.reduce((t, e) => t.split(`"${e.id}"`).join(`«${e.name}»`), a.aviso));
+  }
   const trazado = trazarDependencias(grafo, modelo.inputs, clavesEntrada, modelo.outputs.map((s, i) => ({ nombre: s.name, clave: clavesSalida[i] as string })), direccionDe);
   const terminar = (r: ResultadoSimulacionPanel) => {
     const f = conFechas(conCeldasConResultados(conEntradasDeFunciones(r, deFunciones), celdasConResultados), modelo, dirSalidas, dirEntradas, fechas);

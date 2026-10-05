@@ -25,9 +25,9 @@
  *
  * Lo que sí puede seguir siendo imposible es el conjunto: "A va con B, B va
  * con C, y A va al revés que C" no describe ninguna realidad. Eso no se puede
- * evitar campo a campo —depende de toda la matriz— y lo caza
- * `agruparCorrelaciones` antes de simular, con un mensaje que nombra a los
- * implicados.
+ * evitar campo a campo —depende de toda la matriz—: `agruparCorrelaciones`
+ * usa la matriz posible más cercana (Higham) y avisa, nombrando a los
+ * implicados, de cuánto cambió cada coeficiente.
  */
 
 import { useEffect, useState } from 'react';

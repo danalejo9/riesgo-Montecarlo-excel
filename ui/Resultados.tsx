@@ -1829,10 +1829,10 @@ export function PrecisionSalida({ precision, n, formato = formatoDe(false) }: { 
       <p>
         <span className="precision-icono" aria-hidden="true">{suficiente ? '✓' : '!'}</span>
         {suficiente
-          ? <>Iteraciones suficientes: la media se conoce con ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}).</>
+          ? <>Iteraciones suficientes: la media se conoce con ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}){precision.margenP80Relativo !== undefined ? <> y el P80 con ±{pct(precision.margenP80Relativo)}</> : null}.</>
           : <>
-              Con {miles(n)} iteraciones la media tiene un margen de ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}).
-              Para bajarlo al {pct(precision.objetivo)} harían falta unas {miles(iteracionesParaObjetivo)}.
+              Con {miles(n)} iteraciones la media tiene un margen de ±{formato.dispersion(margenMedia)} ({pct(margenRelativo)}){precision.margenP80Relativo !== undefined ? <> y el P80 de ±{pct(precision.margenP80Relativo)}</> : null}.
+              Para bajar{precision.margenP80Relativo !== undefined ? 'los' : 'lo'} al {pct(precision.objetivo)} harían falta unas {miles(iteracionesParaObjetivo)}.
             </>}
       </p>
       {percentiles.length > 0 && (

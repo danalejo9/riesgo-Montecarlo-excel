@@ -13,7 +13,8 @@
  *   binomial (cuántos valores caen por debajo), sin suponer ninguna forma para
  *   la distribución. Sobre la muestra ordenada es leer dos posiciones.
  *
- * El veredicto usa un **1 % de la media** como listón (o de la desviación, si
+ * El veredicto usa un **1 % de la media** como listón, para la media y
+ * para la mitad del intervalo del P80 (o de la desviación, si
  * la media está cerca de cero y un porcentaje de ella no significa nada). Es
  * un criterio corriente, no una ley: el número se enseña al lado para que
  * cada cual aplique el suyo.
@@ -39,6 +40,13 @@ export interface Precision {
   suficiente: boolean;
   /** Intervalos al 95 % de p5 y p95, si hay muestra. */
   percentiles: IntervaloPercentil[];
+  /**
+   * El P80 (el percentil con que se fijan contingencias): la mitad de su
+   * intervalo al 95 % respecto a la misma escala. Con muestra, «suficiente» y
+   * las iteraciones necesarias tienen en cuenta también el P80, como el
+   * análisis de cronograma («hasta que el P80 se estabilice»).
+   */
+  margenP80Relativo?: number;
 }
 
 /** Intervalo al 95 % del percentil `p` sobre una muestra ordenada (binomial, aproximación normal). */
@@ -73,13 +81,18 @@ export function precisionDeSimulacion(
   const percentiles = ordenada
     ? [0.05, 0.95].map((p) => intervaloPercentil(ordenada, p)).filter((x): x is IntervaloPercentil => x !== null)
     : [];
+  // El ancho del intervalo de un cuantil también baja con √n: n' = n · (margen / objetivo)².
+  const p80 = ordenada ? intervaloPercentil(ordenada, 0.8) : null;
+  const margenP80Relativo = p80 ? (p80.superior - p80.inferior) / 2 / escala : undefined;
+  const paraP80 = margenP80Relativo !== undefined && margenP80Relativo > 0 ? Math.ceil(n * (margenP80Relativo / objetivo) ** 2) : 0;
   return {
     margenMedia,
     margenRelativo,
-    iteracionesParaObjetivo,
+    iteracionesParaObjetivo: Math.max(iteracionesParaObjetivo, paraP80),
     objetivo,
-    suficiente: margenRelativo <= objetivo,
+    suficiente: margenRelativo <= objetivo && (margenP80Relativo === undefined || margenP80Relativo <= objetivo),
     percentiles,
+    ...(margenP80Relativo !== undefined ? { margenP80Relativo } : {}),
   };
 }
 

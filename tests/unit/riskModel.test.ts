@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { esDefinidaPositiva } from '../../engine/sampling/correlate.ts';
 
 import {
   agruparCorrelaciones,
@@ -156,20 +157,26 @@ describe('agruparCorrelaciones', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('rechaza una matriz imposible antes de simular, nombrando a los implicados', () => {
+  it('una matriz imposible se corrige a la posible más cercana (Higham) y avisa nombrando a los implicados', () => {
     // "A va con B, B va con C, y A va al revés que C" no describe ninguna
-    // realidad: no existen tres variables así. Sin esta comprobación, la
-    // contradicción salía a mitad de la simulación como una excepción de
-    // Cholesky, que para el usuario es un fallo del programa y no un error suyo.
+    // realidad. Antes se rechazaba; ahora se usa la matriz posible más
+    // cercana, como en el análisis de cronograma, y se dice cuánto cambió.
     const a = entrada('a', [{ with: 'b', coefficient: 0.9 }, { with: 'c', coefficient: -0.9 }]);
     const b = entrada('b', [{ with: 'c', coefficient: 0.9 }]);
     const c = entrada('c');
 
     const r = agruparCorrelaciones([a, b, c]);
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.errores[0]).toContain('"a"');
-    expect(r.errores[0]).toContain('contradictorias');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.ajustes).toHaveLength(1);
+    const aj = r.ajustes[0]!;
+    expect(aj.aviso).toContain('"a"');
+    expect(aj.aviso).toContain('contradictorias');
+    expect(aj.pares).toHaveLength(3);
+    // La matriz que se usa sí es posible, y se aleja de lo pedido.
+    expect(esDefinidaPositiva(r.grupos[0]!.matriz)).toBe(true);
+    expect(aj.cambioMaximo).toBeGreaterThan(0.1);
+    for (const p of aj.pares) expect(Math.sign(p.usada)).toBe(Math.sign(p.pedida));
   });
 
   it('una correlación fuerte pero posible entre tres sí se acepta', () => {
@@ -179,13 +186,18 @@ describe('agruparCorrelaciones', () => {
     expect(r.ok).toBe(true);
   });
 
-  it('el límite: dos variables idénticas (r = 1) no son definidas positivas', () => {
+  it('el límite: dos variables idénticas (r = 1) dan una matriz singular, que se corrige a casi 1', () => {
     // Un coeficiente de exactamente 1 dice "son la misma variable", y entonces
-    // la matriz es singular. Excel y cualquier otra herramienta lo rechazan
-    // igual; el panel acota a [-1, 1] pero puede llegar el 1 exacto.
+    // la matriz es singular; Iman–Conover no puede con ella. Se usa la más
+    // cercana posible (un poco menos de 1) y se avisa.
     const a = entrada('a', [{ with: 'b', coefficient: 1 }]);
     const r = agruparCorrelaciones([a, entrada('b')]);
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.ajustes).toHaveLength(1);
+    const usada = r.ajustes[0]!.pares[0]!.usada;
+    expect(usada).toBeGreaterThan(0.999);
+    expect(usada).toBeLessThan(1);
   });
 });
 

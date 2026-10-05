@@ -1,9 +1,9 @@
-id,actividad,duracion,inicio,fin,holgura_total,critica
-A,Movimiento de tierras,10,2027-01-04,2027-01-15,13,no
-B,Instalación de tubería,8,2027-01-07,2027-01-18,13,no
-C,Relleno de zanja,6,2027-01-13,2027-01-20,14,no
-D,Inspección de tubería,2,2027-01-18,2027-01-19,13,no
-E,Pavimento,7,2027-01-22,2027-02-01,13,no
-F,Señalización,3,2027-01-26,2027-01-28,19,no
-G,Interventoría de cierre,4,2027-02-22,2027-02-25,-1,sí
-H,Entrega a la comunidad,0,2027-02-26,2027-02-26,-1,sí
+id,actividad,duracion,inicio,fin,holgura_total,critica,holgura_libre
+A,Movimiento de tierras,10,2027-01-04,2027-01-15,13,no,0
+B,Instalación de tubería,8,2027-01-07,2027-01-18,13,no,0
+C,Relleno de zanja,6,2027-01-13,2027-01-20,14,no,1
+D,Inspección de tubería,2,2027-01-18,2027-01-19,13,no,0
+E,Pavimento,7,2027-01-22,2027-02-01,13,no,0
+F,Señalización,3,2027-01-26,2027-01-28,19,no,19
+G,Interventoría de cierre,4,2027-02-22,2027-02-25,-1,sí,-1
+H,Entrega a la comunidad,0,2027-02-26,2027-02-26,-1,sí,-1

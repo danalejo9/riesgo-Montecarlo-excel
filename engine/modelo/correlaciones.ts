@@ -10,6 +10,7 @@
  * las variables que de verdad participan en uno pagan el costo de reordenar.
  */
 import { esDefinidaPositiva } from '../sampling/correlate.ts';
+import { correlacionMasCercana } from '../sampling/higham.ts';
 import type { EntradaRiskModel } from './riskModel.ts';
 
 export interface GrupoCorrelacionado {
@@ -18,8 +19,17 @@ export interface GrupoCorrelacionado {
   matriz: number[][];
 }
 
+/** Una matriz imposible que se corrigió (Higham): lo pedido y lo que se usa, por pareja declarada. */
+export interface AjusteCorrelacion {
+  ids: string[];
+  cambioMaximo: number;
+  pares: { a: string; b: string; pedida: number; usada: number }[];
+  /** En una frase, con los ids entre comillas (el panel los cambia por los nombres). */
+  aviso: string;
+}
+
 export type ResultadoAgrupacion =
-  | { ok: true; grupos: GrupoCorrelacionado[] }
+  | { ok: true; grupos: GrupoCorrelacionado[]; ajustes: AjusteCorrelacion[] }
   | { ok: false; errores: string[] };
 
 export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): ResultadoAgrupacion {
@@ -53,6 +63,7 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
 
   const entradaPorId = new Map(entradas.map((e) => [e.id, e] as const));
   const grupos: GrupoCorrelacionado[] = [];
+  const ajustes: AjusteCorrelacion[] = [];
 
   for (const ids of porGrupo.values()) {
     if (ids.length < 2) continue; // sin correlaciones declaradas: no es un grupo
@@ -84,15 +95,27 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
 
     // Una matriz simétrica con unos en la diagonal no describe siempre una
     // correlación posible: "A y B van juntos, B y C van juntos, y A y C van al
-    // revés" no puede existir. Sin esta comprobación, la contradicción sale a
-    // mitad de la simulación como una excepción de Cholesky; aquí sale antes
-    // de empezar, nombrando a los implicados.
+    // revés" no puede existir. Antes se rechazaba; ahora se usa la matriz
+    // posible más cercana (Higham), como el análisis de cronograma, y se dice
+    // cuánto cambió cada coeficiente para que el usuario decida si le sirve.
     if (!esDefinidaPositiva(matriz)) {
-      errores.push(
-        `Las correlaciones entre ${ids.map((id) => `"${id}"`).join(', ')} no pueden darse a la vez: ` +
-          'son contradictorias entre sí. Revisa los coeficientes — por ejemplo, si A va con B y B va ' +
-          'con C, A y C no pueden ir al revés con la misma fuerza.',
-      );
+      const h = correlacionMasCercana(matriz);
+      const pares: AjusteCorrelacion['pares'] = [];
+      for (const clave of declarados.keys()) {
+        const [i, j] = clave.split(',').map(Number) as [number, number];
+        pares.push({ a: ids[i] as string, b: ids[j] as string, pedida: (matriz[i] as number[])[j] as number, usada: (h.matriz[i] as number[])[j] as number });
+      }
+      const red = (x: number) => Math.round(x * 100) / 100;
+      ajustes.push({
+        ids,
+        cambioMaximo: h.cambioMaximo,
+        pares,
+        aviso:
+          `Las correlaciones entre ${ids.map((id) => `"${id}"`).join(', ')} no pueden darse a la vez (son contradictorias): ` +
+          `se usa la combinación posible más cercana — ${pares.filter((p) => red(p.pedida) !== red(p.usada)).map((p) => `"${p.a}"–"${p.b}" ${fmt(p.pedida)} → ${fmt(p.usada)}`).join(', ') || 'cambios menores de 0,01'}. ` +
+          'Si no te sirve, revisa los coeficientes.',
+      });
+      grupos.push({ ids, matriz: h.matriz });
       continue;
     }
 
@@ -100,5 +123,9 @@ export function agruparCorrelaciones(entradas: readonly EntradaRiskModel[]): Res
   }
 
   if (errores.length > 0) return { ok: false, errores };
-  return { ok: true, grupos };
+  return { ok: true, grupos, ajustes };
+}
+
+function fmt(x: number): string {
+  return x.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

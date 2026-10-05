@@ -37,8 +37,8 @@ function cargar(nombre: string) {
     actividades,
   });
   const esperado = readFileSync(new URL(`${nombre}-esperado.csv`, DIR), 'utf8').trim().split(/\r?\n/).slice(1).map((l) => {
-    const [id, , duracion, inicio, fin, holgura, critica] = l.split(',');
-    return { id, duracion: Number(duracion), inicio: serie(inicio as string), fin: serie(fin as string), holgura: Number(holgura), critica: critica === 'sí' };
+    const [id, , duracion, inicio, fin, holgura, critica, libre] = l.split(',');
+    return { id, duracion: Number(duracion), inicio: serie(inicio as string), fin: serie(fin as string), holgura: Number(holgura), critica: critica === 'sí', libre: Number(libre) };
   });
   return { compilada, esperado };
 }
@@ -51,8 +51,8 @@ describe('CPM contra los cronogramas de referencia (0 días de tolerancia)', () 
       expect(r.fin).toBe(serie(fin));
       for (const e of esperado) {
         const f = r.filas.find((x) => x.id === e.id);
-        expect({ id: f?.id, inicio: f?.inicio, fin: f?.fin, holgura: f?.holguraTotal, critica: f?.critica })
-          .toEqual({ id: e.id, inicio: e.inicio, fin: e.fin, holgura: e.holgura, critica: e.critica });
+        expect({ id: f?.id, inicio: f?.inicio, fin: f?.fin, holgura: f?.holguraTotal, critica: f?.critica, libre: f?.holguraLibre })
+          .toEqual({ id: e.id, inicio: e.inicio, fin: e.fin, holgura: e.holgura, critica: e.critica, libre: e.libre });
       }
     });
   }

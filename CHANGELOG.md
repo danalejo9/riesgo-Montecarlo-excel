@@ -5,6 +5,21 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Pendientes pequeños: Higham y P80 en el motor de fórmulas, holgura libre de referencia (2026-10-06)
+
+**Cambiado**
+- Una matriz de correlación imposible en el modelo de la hoja ya **no
+  impide simular**: se usa la combinación posible más cercana (corrección de
+  Higham, como en el análisis de cronograma) y se avisa en la matriz de
+  correlaciones y en Resultados de cuánto cambió cada coeficiente.
+- «¿Bastan las iteraciones?» y la simulación hasta la precisión miran
+  también el **P80**, no solo la media: con colas largas pide más
+  iteraciones hasta que el P80 se estabilice.
+
+**Añadido**
+- Holgura libre en los cronogramas de referencia R1–R3 (Python): el motor la
+  reproduce día por día, también cuando una FNLT la recorta.
+
 ### Gantt G1 y G2: diagrama con diagnóstico de ruta crítica (2026-10-05)
 
 **Añadido**

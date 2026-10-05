@@ -409,7 +409,8 @@ export function Modelo({
             <MatrizCorrelaciones modelo={modelo} alCambiar={alCambiar} problemas={(() => {
               const r = agruparCorrelaciones(modelo.inputs);
               // Los mensajes nombran los identificadores internos: se cambian por los nombres.
-              return r.ok ? [] : r.errores.map((t) => modelo.inputs.reduce((x, e) => x.split(`"${e.id}"`).join(`«${e.name}»`), t));
+              // Una matriz imposible ya no impide simular: se corrige (Higham) y se avisa.
+              return (r.ok ? r.ajustes.map((a) => a.aviso) : r.errores).map((t) => modelo.inputs.reduce((x, e) => x.split(`"${e.id}"`).join(`«${e.name}»`), t));
             })()} />
           </Plegable>
         )}

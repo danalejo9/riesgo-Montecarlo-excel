@@ -9,7 +9,7 @@ export {
   type ParametroDistribucion,
   type TipoDistribucion,
 } from './catalogoDistribuciones.ts';
-export { agruparCorrelaciones, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
+export { agruparCorrelaciones, type AjusteCorrelacion, type GrupoCorrelacionado, type ResultadoAgrupacion } from './correlaciones.ts';
 export {
   fromDescriptor,
   categoriasDe,
