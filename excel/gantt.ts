@@ -74,6 +74,13 @@ export interface FilaGantt {
   diagnosticos: string[];
   /** Fila de la hoja Actividades. */
   filaHoja: number;
+  /** G3: seguimiento. */
+  estado: 'pendiente' | 'en curso' | 'terminada';
+  /** Avance (0 a 1): lo registrado, o el de lo hecho hasta la fecha de corte. */
+  avance: number | null;
+  inicioReal: number | null;
+  finReal: number | null;
+  restante: number | null;
 }
 
 export interface RelacionGantt {
@@ -103,6 +110,8 @@ export interface VistaGantt {
   inicio: number;
   fin: number;
   fechaMeta: number | null;
+  /** G3: fecha de corte (número de serie), si hay. */
+  fechaCorte: number | null;
   /** Días no laborables del calendario del proyecto entre el inicio − 60 y el fin + 120. */
   noLaborables: Set<number>;
   calidad: CriterioGantt[];
@@ -164,24 +173,35 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
         ...base, tipo: 'resumen' as const, indice: -1, duracion: null, inicio: NaN, fin: NaN, inicioTardio: NaN, finTardio: NaN,
         holguraTotal: null, holguraLibre: null, critica: false, casiCritica: false, enRutaMasLarga: false, calendario: '',
         restriccion: null, fechaRestriccion: null, fechaLimite: null, predecesoras: '', sucesoras: '',
+        estado: 'pendiente' as const, avance: null, inicioReal: null, finReal: null, restante: null,
       };
     }
     const c = red.calendarios[red.cal[i] as number] as CalendarioLaboral;
-    const dur = red.duracion[i] as number;
+    const dur = esp.dur[i] as number;
     const h = esp.holgura[i] as number;
+    const st = red.estado[i] as number;
+    const av = a.avance;
+    const hecho = st === 2 ? 1 : st === 1
+      ? av?.porcentaje ?? (Number.isFinite(red.corte) && dur > 0 ? Math.max(0, Math.min(1, (c.cuenta(red.corte) - (esp.es[i] as number)) / dur)) : 0)
+      : av?.porcentaje ?? null;
     const enLarga = rutas.rutaMasLarga[i] === 1;
     const critica = definicion === 'holgura' ? h <= TOLERANCIA_CRITICA : enLarga;
     return {
       ...base,
-      tipo: dur === 0 ? 'hito' as const : 'tarea' as const,
+      tipo: (red.duracion[i] as number) === 0 ? 'hito' as const : 'tarea' as const,
       indice: i,
       duracion: dur,
+      estado: st === 2 ? 'terminada' as const : st === 1 ? 'en curso' as const : 'pendiente' as const,
+      avance: hecho,
+      inicioReal: av?.inicioReal ?? null,
+      finReal: av?.finReal ?? null,
+      restante: st === 1 ? Math.max(0, (esp.ef[i] as number) - Math.max(Number.isFinite(red.corte) ? c.cuenta(red.corte) : -Infinity, esp.es[i] as number)) : null,
       inicio: c.serieInicio(esp.es[i] as number),
       fin: c.serieFin(esp.ef[i] as number, dur),
       inicioTardio: c.serieInicio(esp.ls[i] as number),
       finTardio: c.serieFin(esp.lf[i] as number, dur),
-      holguraTotal: h,
-      holguraLibre: esp.holguraLibre[i] as number,
+      holguraTotal: Number.isFinite(h) ? h : null,
+      holguraLibre: Number.isFinite(esp.holguraLibre[i] as number) ? esp.holguraLibre[i] as number : null,
       critica,
       casiCritica: !critica && h > TOLERANCIA_CRITICA && h <= umbral,
       enRutaMasLarga: enLarga,
@@ -205,6 +225,13 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
     f.inicioTardio = Math.min(...hijas.map((x) => x.inicioTardio));
     f.finTardio = Math.max(...hijas.map((x) => x.finTardio));
     f.critica = hijas.some((x) => x.critica);
+    // G3: el avance del resumen, ponderado por la duración de sus hijas.
+    const conPeso = hijas.filter((x) => x.avance !== null && (x.duracion ?? 0) > 0);
+    if (conPeso.length) {
+      const total = hijas.reduce((t, x) => t + (x.duracion ?? 0), 0);
+      f.avance = total > 0 ? hijas.reduce((t, x) => t + (x.duracion ?? 0) * (x.avance ?? 0), 0) / total : null;
+      f.estado = hijas.every((x) => x.estado === 'terminada') ? 'terminada' : hijas.some((x) => x.estado !== 'pendiente') ? 'en curso' : 'pendiente';
+    }
     f.duracion = cp.cuenta(cp.instante(f.fin) + 1) - cp.cuenta(cp.instante(f.inicio));
   });
 
@@ -213,7 +240,7 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
   const noLaborables = new Set<number>();
   for (let s = inicio - 60; s <= fin + 120; s++) if (!cp.esLaborable(s)) noLaborables.add(s);
   return {
-    filas, relaciones, inicio, fin, fechaMeta: m.configuracion.fechaMeta ?? null, noLaborables, calidad, definicion,
+    filas, relaciones, inicio, fin, fechaMeta: m.configuracion.fechaMeta ?? null, fechaCorte: m.red.fechaCorte ?? null, noLaborables, calidad, definicion,
     umbralCasiCritica: umbral, red, rutas,
   };
 }
@@ -268,6 +295,38 @@ function diagnostico(d: DatosGantt, red: RedCompilada, rutas: AnalisisRutas, umb
     detalle: durasCriticas.length === 0 ? 'Ninguna.' : `${durasCriticas.map((a) => red.ids[a]).join(', ')}: una fecha fija, no la lógica, decide la ruta.`,
     actividades: durasCriticas.map((a) => red.ids[a] as string),
   });
+  // G3: seguimiento. Fechas reales después de la fecha de corte y avance fuera de secuencia.
+  if (red.conAvance || Number.isFinite(red.corte)) {
+    const corte = d.modelo.red.fechaCorte;
+    const futuras = corte === undefined ? [] : d.modelo.red.actividades.filter((a) => (a.avance?.inicioReal ?? -Infinity) > corte || (a.avance?.finReal ?? -Infinity) > corte).map((a) => a.id);
+    base.push({
+      id: 'fechas-invalidas',
+      criterio: 'Fechas reales después de la fecha de corte',
+      estado: corte === undefined && red.conAvance ? 'amarillo' : futuras.length ? 'rojo' : 'verde',
+      detalle: corte === undefined && red.conAvance
+        ? 'Hay avance registrado pero no fecha de corte en Config: lo pendiente no se ajusta a ella.'
+        : futuras.length ? `${futuras.join(', ')}: un comienzo o fin real no puede ser posterior a la fecha de corte.` : 'Ninguna.',
+      actividades: futuras,
+    });
+    const fuera: string[] = [];
+    for (let r = 0; r < red.relPred.length; r++) {
+      const p = red.relPred[r] as number;
+      const s = red.relSuc[r] as number;
+      if ((red.estado[s] as number) === 0 || red.relTipo[r] !== 0) continue;
+      // La sucesora empezó (FC) y la predecesora no ha terminado, o terminó después.
+      const terminoAntes = (red.estado[p] as number) === 2 && (red.realFin[p] as number) <= (red.realInicio[s] as number) + 1e-9;
+      if (!terminoAntes && !fuera.includes(red.ids[s] as string)) fuera.push(red.ids[s] as string);
+    }
+    base.push({
+      id: 'fuera-secuencia',
+      criterio: 'Avance fuera de secuencia',
+      estado: fuera.length ? 'amarillo' : 'verde',
+      detalle: fuera.length
+        ? `${fuera.join(', ')}: empezó antes de que terminara una predecesora fin–comienzo. Con lógica ${red.retenida ? '«retenida», lo que le falta espera a la predecesora' : '«anulación por progreso», lo que le falta sigue sin esperarla'}.`
+        : 'Ninguno.',
+      actividades: fuera,
+    });
+  }
   return base;
 }
 

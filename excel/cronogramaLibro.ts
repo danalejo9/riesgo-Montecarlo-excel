@@ -73,6 +73,8 @@ function escribirHoja(context: Excel.RequestContext, h: HojaNueva): void {
     hoja.getRange('B9').numberFormat = [['dd/mm/yyyy']];
     hoja.getRange('B12').numberFormat = [['#,##0']];
     hoja.getRange('B13').numberFormat = [['0%']];
+    hoja.getRange('B14').numberFormat = [['dd/mm/yyyy']];
+    hoja.getRange('B15').dataValidation.rule = { list: { inCellDropDown: true, source: 'Retenida,Anulación por progreso' } };
     hoja.getRange('B6').dataValidation.rule = { list: { inCellDropDown: true, source: 'Hipercubo latino,Monte Carlo' } };
     hoja.getRange('B7').dataValidation.rule = { list: { inCellDropDown: true, source: 'Al día,Con decimales' } };
     hoja.getRange('B8').dataValidation.rule = { list: { inCellDropDown: true, source: 'Respetar,Ignorar' } };

@@ -36,6 +36,8 @@ export const COLORES = {
   limite: '#2E75B6',
   restriccion: '#7030A0',
   qrsa: '#404040',
+  avance: 'rgba(0,0,0,0.38)',
+  corte: '#C55A11',
 } as const;
 
 export interface Resaltado {
@@ -145,6 +147,21 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
   linea(e.vista.fin + 1, COLORES.limites, true);
   if (e.vista.fechaMeta !== null) linea(e.vista.fechaMeta + 1, COLORES.meta, true);
   linea(Math.floor(e.hoy), COLORES.hoy, false);
+  // G3: la fecha de corte, gruesa y punteada en naranja (distinta de hoy).
+  if (e.vista.fechaCorte !== null) {
+    const x0 = Math.round(X(e.vista.fechaCorte + 1)) + 0.5;
+    if (x0 >= 0 && x0 <= ancho) {
+      ctx.save();
+      ctx.strokeStyle = COLORES.corte;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 3, 2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x0, AE);
+      ctx.lineTo(x0, alto);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 
   const atenuada = (id: string) => e.resaltado !== null && !e.resaltado.actividades.has(id);
 
@@ -267,8 +284,13 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
         ctx.lineTo(X(f.finTardio + 1), r.y + r.alto + 1);
         ctx.stroke();
       }
-      ctx.fillStyle = color;
+      ctx.fillStyle = f.estado === 'terminada' ? '#8EA9DB' : color;
       ctx.fillRect(r.x, r.y, r.ancho, r.alto);
+      // G3: el avance, una franja oscura dentro de la barra.
+      if (f.avance !== null && f.avance > 0) {
+        ctx.fillStyle = COLORES.avance;
+        ctx.fillRect(r.x, r.y + r.alto * 0.3, r.ancho * Math.min(1, f.avance), r.alto * 0.4);
+      }
       if (negativa) {
         // Holgura negativa: rayas y borde oscuro.
         ctx.save();

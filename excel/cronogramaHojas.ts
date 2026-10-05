@@ -69,7 +69,7 @@ export interface FilaOrden {
 export const COLUMNAS = {
   calendarios: ['Calendario', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
   excepciones: ['Fecha', 'Descripción', 'Calendario', 'Tipo'],
-  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo', 'Fecha límite'],
+  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo', 'Fecha límite', 'Comienzo real', 'Fin real', '% completado', 'Duración restante'],
   relaciones: ['Predecesora', 'Sucesora', 'Tipo', 'Desfase (días)', 'Unidad del desfase'],
   incertidumbre: ['Actividad o grupo', 'Distribución', 'Mínimo o P10', 'Más probable', 'Máximo o P90', 'Unidad', 'Lambda (PERT)'],
   riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado', 'Probabilidad post', '% del impacto post', 'Costo de mitigación', 'Modo'],
@@ -101,6 +101,7 @@ export const LISTAS = {
   tipoCosto: ['Fijo', 'Por tiempo', 'Por recurso'],
   distribucionCosto: ['Triangular', 'PERT', 'Uniforme', 'Lognormal'],
   modoRiesgo: ['Extiende actividades', 'Actividad insertada'],
+  logicaAvance: ['Retenida', 'Anulación por progreso'],
 } as const;
 
 const CODIGO_RESTRICCION: Record<string, TipoRestriccion> = {
@@ -131,6 +132,8 @@ export const ETIQUETAS_CONFIG = {
   moneda: 'Moneda',
   costoMeta: 'Costo meta',
   percentil: 'Percentil de la contingencia',
+  corte: 'Fecha de corte',
+  logica: 'Lógica del avance',
 } as const;
 
 // ------------------------------------------------------------- utilidades
@@ -318,6 +321,16 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     if (x === null || x <= 0 || x >= 1) error(H.config, pc.fila, 'B', 'El percentil de la contingencia tiene que estar entre 1 % y 99 %');
     else configuracion.percentilContingencia = x;
   }
+  // G3: seguimiento.
+  let fechaCorte: number | undefined;
+  const co = leerCfg('corte');
+  if (co && !vacia(co.v)) {
+    const f = fechaDeCelda(co.v);
+    if (f === null) error(H.config, co.fila, 'B', 'La fecha de corte no es una fecha válida');
+    else fechaCorte = f;
+  }
+  const lo = leerCfg('logica');
+  const logicaProgreso: 'retenida' | 'anulacion' = lo && normalizar(lo.v).startsWith('anul') ? 'anulacion' : 'retenida';
   const hi = leerCfg('hitos');
   if (hi && !vacia(hi.v)) configuracion.hitos = texto(hi.v).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
 
@@ -415,10 +428,39 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       fechaLimite = f;
     }
     if (siNo(valor(ta, valores, 'Excluir de la simulación'), false)) excluidas.add(id);
+    // G3: el avance.
+    const avance: NonNullable<ActividadRed['avance']> = {};
+    let malAvance = false;
+    for (const [col, campo] of [['Comienzo real', 'inicioReal'], ['Fin real', 'finReal']] as const) {
+      const v = valor(ta, valores, col);
+      if (vacia(v)) continue;
+      const f = fechaDeCelda(v);
+      if (f === null) { error(H.actividades, fila, letra(ta, col), `«${col}» no es una fecha válida`); malAvance = true; continue; }
+      avance[campo] = f;
+    }
+    const pcV = valor(ta, valores, '% completado');
+    if (!vacia(pcV)) {
+      const x = proporcion(pcV);
+      if (x === null || x < 0 || x > 1) { error(H.actividades, fila, letra(ta, '% completado'), 'El % completado tiene que estar entre 0 % y 100 %'); malAvance = true; } else avance.porcentaje = x;
+    }
+    const reV = valor(ta, valores, 'Duración restante');
+    if (!vacia(reV)) {
+      const x = numero(reV);
+      if (x === null || x < 0) { error(H.actividades, fila, letra(ta, 'Duración restante'), 'La duración restante tiene que ser un número mayor o igual que 0'); malAvance = true; } else avance.restante = x;
+    }
+    if (avance.finReal !== undefined && avance.inicioReal !== undefined && avance.finReal < avance.inicioReal) {
+      error(H.actividades, fila, letra(ta, 'Fin real'), 'El fin real es anterior al comienzo real'); malAvance = true;
+    }
+    // Un 100 % sin fin real, o un % sin comienzo real: se avisa y se toma lo que se puede.
+    if (avance.porcentaje !== undefined && avance.porcentaje > 0 && avance.inicioReal === undefined && avance.finReal === undefined) {
+      avisos.push(`${H.actividades}, fila ${fila}: «${id}» tiene % completado pero no comienzo real; se toma como pendiente.`);
+    }
+    if (malAvance) { invalidas.add(clave); continue; }
+    const conAvance = avance.inicioReal !== undefined || avance.finReal !== undefined;
     const wbs = texto(valor(ta, valores, 'WBS'));
     const grupo = texto(valor(ta, valores, 'Grupo'));
     info.push({ id, ...(wbs ? { wbs } : {}), ...(grupo ? { grupo } : {}) });
-    actividades.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, duracion, calendario, restriccion, ...(fechaLimite !== undefined ? { fechaLimite } : {}), predecesoras: [] });
+    actividades.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, duracion, calendario, restriccion, ...(fechaLimite !== undefined ? { fechaLimite } : {}), ...(conAvance ? { avance } : {}), predecesoras: [] });
   }
   if (ta.filas.length === 0) error(H.actividades, 2, '', 'No hay actividades');
   const porId = new Map(actividades.map((a) => [normalizar(a.id), a]));
@@ -729,7 +771,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     orden,
     vinculosResumen,
     modelo: {
-      red: { inicio, calendarios, calendarioProyecto, actividades },
+      red: { inicio, calendarios, calendarioProyecto, actividades, ...(fechaCorte !== undefined ? { fechaCorte } : {}), logicaProgreso },
       incertidumbre,
       riesgos,
       configuracion,
@@ -879,6 +921,8 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         [ETIQUETAS_CONFIG.moneda, 'COP', 'Solo para los títulos.'],
         [ETIQUETAS_CONFIG.costoMeta, COSTO_META_EJEMPLO, 'El presupuesto comprometido: con la fecha meta da la probabilidad conjunta (JCL).'],
         [ETIQUETAS_CONFIG.percentil, 0.8, 'La contingencia es este percentil del costo menos el costo base (P80 en la práctica).'],
+        [ETIQUETAS_CONFIG.corte, '', 'Seguimiento: la fecha hasta la que está registrado el avance (comienzo y fin reales, % completado). Vacía: sin seguimiento.'],
+        [ETIQUETAS_CONFIG.logica, L.logicaAvance[0], 'Si una actividad empezó antes de que terminaran sus predecesoras: «Retenida» hace esperar lo que le falta; «Anulación por progreso» lo deja seguir.'],
       ],
       formatos: {},
       anchos: [36, 18, 90],
@@ -913,12 +957,12 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       nombre: HOJAS_CRONOGRAMA.actividades,
       valores: [
         [...COLUMNAS.actividades],
-        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, a.tipo === 'Resumen' ? '' : 'No', a.grupo ?? '', null] as Celda[]),
+        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, a.tipo === 'Resumen' ? '' : 'No', a.grupo ?? '', null, null, null, null, null] as Celda[]),
       ],
-      formatos: { 7: FORMATO_FECHA, 4: '0', 10: FORMATO_FECHA },
-      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12, 16, 14],
+      formatos: { 7: FORMATO_FECHA, 4: '0', 10: FORMATO_FECHA, 11: FORMATO_FECHA, 12: FORMATO_FECHA, 13: '0%' },
+      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12, 16, 14, 14, 14, 12, 12],
       listas: { 3: L.tipoActividad, 5: listaCal, 6: L.restriccion, 8: L.siNo },
-      notas: { 2: 'Jerarquía: 2.1 y 2.2 cuelgan de 2. Una fila «Resumen» no entra en el cálculo: sus fechas salen de sus hijas.', 4: 'En días laborables de su calendario. Un hito tiene 0; un resumen, vacía (se calcula).', 6: 'Vacío: lo antes posible.', 10: 'No mueve la actividad: si su fin pasa de esta fecha, la holgura sale negativa.', 9: 'Libre (tipo de obra, contratista): sirve para dar un rango a todo el grupo en Incertidumbre.' },
+      notas: { 2: 'Jerarquía: 2.1 y 2.2 cuelgan de 2. Una fila «Resumen» no entra en el cálculo: sus fechas salen de sus hijas.', 4: 'En días laborables de su calendario. Un hito tiene 0; un resumen, vacía (se calcula).', 6: 'Vacío: lo antes posible.', 10: 'No mueve la actividad: si su fin pasa de esta fecha, la holgura sale negativa.', 11: 'Seguimiento: el día en que empezó de verdad. Con comienzo real y sin fin real, está en curso.', 12: 'El día en que terminó de verdad: se usa en vez de la duración.', 13: 'Lo hecho de una en curso; sin «Duración restante», lo que falta es la duración × (1 − %).', 14: 'Días laborables que le faltan desde la fecha de corte (manda sobre el %).', 9: 'Libre (tipo de obra, contratista): sirve para dar un rango a todo el grupo en Incertidumbre.' },
     },
     {
       nombre: HOJAS_CRONOGRAMA.relaciones,

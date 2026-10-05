@@ -38,8 +38,9 @@ const RESTRICCIONES: { tipo: TipoRestriccion; nombre: string }[] = [
   { tipo: 'MSO', nombre: 'Debe comenzar el' }, { tipo: 'MFO', nombre: 'Debe terminar el' },
 ];
 
-type IdColumna = 'diag' | 'wbs' | 'id' | 'nombre' | 'duracion' | 'inicio' | 'fin' | 'predecesoras' | 'sucesoras' | 'ht' | 'hl' | 'critica' | 'restriccion' | 'limite' | 'calendario' | 'p80' | 'criticidad';
-interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean }
+type IdColumna = 'diag' | 'wbs' | 'id' | 'nombre' | 'duracion' | 'inicio' | 'fin' | 'predecesoras' | 'sucesoras' | 'ht' | 'hl' | 'critica' | 'restriccion' | 'limite' | 'calendario' | 'p80' | 'criticidad'
+  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante';
+interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean; seguimiento?: boolean }
 const COLUMNAS: Columna[] = [
   { id: 'diag', titulo: '', ancho: 24 },
   { id: 'wbs', titulo: 'WBS', ancho: 52 },
@@ -56,10 +57,15 @@ const COLUMNAS: Columna[] = [
   { id: 'restriccion', titulo: 'Restricción', ancho: 170 },
   { id: 'limite', titulo: 'Fecha límite', ancho: 82, editable: true },
   { id: 'calendario', titulo: 'Calendario', ancho: 110 },
+  { id: 'estado', titulo: 'Estado', ancho: 76, seguimiento: true },
+  { id: 'avance', titulo: '% completado', ancho: 72, editable: true, numero: true, seguimiento: true },
+  { id: 'inicioReal', titulo: 'Comienzo real', ancho: 82, editable: true, seguimiento: true },
+  { id: 'finReal', titulo: 'Fin real', ancho: 82, editable: true, seguimiento: true },
+  { id: 'restante', titulo: 'Duración restante', ancho: 72, editable: true, numero: true, seguimiento: true },
   { id: 'p80', titulo: 'P80 fin (QRSA)', ancho: 90, qrsa: true },
   { id: 'criticidad', titulo: 'Criticidad (QRSA)', ancho: 80, qrsa: true, numero: true },
 ];
-const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'p80', 'criticidad'];
+const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'p80', 'criticidad'];
 
 const num = (x: number | null, d = 1) => (x === null || !Number.isFinite(x) ? '' : x.toLocaleString('es-ES', { maximumFractionDigits: d }));
 const fecha = (s: number | null) => (s === null || !Number.isFinite(s) ? '' : textoFecha(s));
@@ -479,6 +485,10 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
       case 'duracion': return f.duracion === null ? '' : String(f.duracion);
       case 'predecesoras': return f.predecesoras;
       case 'limite': return fecha(f.fechaLimite);
+      case 'inicioReal': return fecha(f.inicioReal);
+      case 'finReal': return fecha(f.finReal);
+      case 'avance': return f.avance === null || f.inicioReal === null && f.finReal === null && f.avance === 0 ? '' : num(100 * f.avance, 0);
+      case 'restante': return f.restante === null ? '' : num(f.restante);
       default: return '';
     }
   };
@@ -510,10 +520,15 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
       const l = leerPredecesoras(ed.valor);
       if (!l.ok) { setAvisoLocal(l.error); return; }
       operar({ op: 'predecesoras', id: ed.id, texto: ed.valor });
-    } else if (ed.col === 'limite') {
+    } else if (ed.col === 'limite' || ed.col === 'inicioReal' || ed.col === 'finReal') {
       const s = ed.valor.trim() ? leerFecha(ed.valor) : null;
       if (ed.valor.trim() && s === null) { setAvisoLocal('Escriba la fecha como dd/mm/aaaa.'); return; }
-      operar({ op: 'campo', id: ed.id, campo: 'fechaLimite', valor: s });
+      operar({ op: 'campo', id: ed.id, campo: ed.col === 'limite' ? 'fechaLimite' : ed.col, valor: s });
+    } else if (ed.col === 'avance' || ed.col === 'restante') {
+      const t = ed.valor.replace('%', '').trim().replace(',', '.');
+      const x = t ? Number(t) : null;
+      if (x !== null && !Number.isFinite(x)) { setAvisoLocal('Escriba un número.'); return; }
+      operar({ op: 'campo', id: ed.id, campo: ed.col === 'avance' ? 'porcentaje' : 'restante', valor: x === null ? null : ed.col === 'avance' ? x / 100 : x });
     }
   };
 
@@ -535,7 +550,9 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const [anchoGrid, setAnchoGrid] = useState<number>(pref.grid ?? 560);
   useEffect(() => guardarPreferencias({ columnas: visibles, anchos, grid: anchoGrid }), [visibles, anchos, anchoGrid]);
   const hayQrsa = !!datos.qrsa && Object.keys(datos.qrsa).length > 0;
-  const columnas = useMemo(() => COLUMNAS.filter((c) => visibles.includes(c.id) && (!c.qrsa || hayQrsa)), [visibles, hayQrsa]);
+  // G3: las columnas de seguimiento aparecen cuando hay fecha de corte o avance.
+  const haySeguimiento = datos.modelo.red.fechaCorte !== undefined || datos.modelo.red.actividades.some((a) => a.avance);
+  const columnas = useMemo(() => COLUMNAS.filter((c) => visibles.includes(c.id) && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento)), [visibles, hayQrsa, haySeguimiento]);
   const anchoDe = (c: Columna) => anchos[c.id] ?? c.ancho;
   const anchoColumnas = columnas.reduce((s, c) => s + anchoDe(c), 0);
   const anchosColumnas = useMemo(() => columnas.map((c) => anchos[c.id] ?? c.ancho), [columnas, anchos]);
@@ -645,7 +662,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
           <details className="menu-columnas">
             <summary>Columnas y capas</summary>
             <div>
-              {COLUMNAS.filter((c) => c.id !== 'diag' && (!c.qrsa || hayQrsa)).map((c) => (
+              {COLUMNAS.filter((c) => c.id !== 'diag' && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento)).map((c) => (
                 <label key={c.id}><input type="checkbox" checked={visibles.includes(c.id)} onChange={(e) => setVisibles(e.target.checked ? [...visibles, c.id] : visibles.filter((x) => x !== c.id))} /> {c.titulo}</label>
               ))}
               <hr />
@@ -658,7 +675,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
       </div>
 
       <div className="gantt-estado">
-        <span>Ruta crítica: <strong>{definicion === 'holgura' ? 'holgura total ≤ 0' : 'ruta más larga'}</strong> · {criticas} críticas · fin {textoFecha(v.fin)}{v.fechaMeta !== null ? ` · meta ${textoFecha(v.fechaMeta)}` : ''}</span>
+        <span>Ruta crítica: <strong>{definicion === 'holgura' ? 'holgura total ≤ 0' : 'ruta más larga'}</strong> · {criticas} críticas · fin {textoFecha(v.fin)}{v.fechaMeta !== null ? ` · meta ${textoFecha(v.fechaMeta)}` : ''}{v.fechaCorte !== null ? ` · corte ${textoFecha(v.fechaCorte)}` : ''}</span>
         <span className="tenue">{v.filas.length} filas · {v.relaciones.length} vínculos · calculado en {num(calculo.ms, 1)} ms</span>
         {!automatico && pendiente && <span className="pendiente">Hay cambios sin recalcular (F9)</span>}
         {estado.ocupado && <span className="tenue">Escribiendo en las hojas…</span>}
@@ -820,10 +837,15 @@ function Celda({ f, c, ancho, vista, plegado, alPlegar, editando, alEditar, alEm
     case 'sucesoras': contenido = f.sucesoras; titulo = f.sucesoras; break;
     case 'ht': contenido = <span className={f.holguraTotal !== null && f.holguraTotal < 0 ? 'negativo' : ''}>{num(f.holguraTotal)}</span>; break;
     case 'hl': contenido = num(f.holguraLibre); break;
-    case 'critica': contenido = f.tipo === 'resumen' ? '' : f.critica ? 'Sí' : 'No'; break;
+    case 'critica': contenido = f.tipo === 'resumen' || f.estado === 'terminada' ? '' : f.critica ? 'Sí' : 'No'; break;
     case 'restriccion': contenido = f.restriccion ? `${f.restriccion} ${fecha(f.fechaRestriccion)}` : ''; break;
     case 'limite': contenido = fecha(f.fechaLimite); break;
     case 'calendario': contenido = f.calendario; break;
+    case 'estado': contenido = f.tipo === 'resumen' && f.avance === null ? '' : f.estado; break;
+    case 'avance': contenido = f.avance === null ? '' : `${num(100 * f.avance, 0)} %`; break;
+    case 'inicioReal': contenido = fecha(f.inicioReal); break;
+    case 'finReal': contenido = fecha(f.finReal); break;
+    case 'restante': contenido = f.restante === null ? '' : `${num(f.restante)} d`; break;
     case 'p80': contenido = f.qrsa ? fecha(f.qrsa.p80) : ''; break;
     case 'criticidad': contenido = f.qrsa ? `${num(100 * f.qrsa.criticidad, 0)} %` : ''; break;
   }
@@ -845,6 +867,7 @@ function TooltipFila({ f, vista, zona }: { f: FilaGantt; vista: VistaGantt; zona
       {f.sucesoras && <div>Sucesoras: {f.sucesoras}</div>}
       {f.restriccion && <div>{f.restriccion} {fecha(f.fechaRestriccion)}</div>}
       {f.fechaLimite !== null && <div>Fecha límite {fecha(f.fechaLimite)}</div>}
+      {f.estado !== 'pendiente' && <div>{f.estado === 'terminada' ? 'Terminada' : 'En curso'}{f.avance !== null ? ` · ${num(100 * f.avance, 0)} %` : ''}{f.inicioReal !== null ? ` · comenzó el ${fecha(f.inicioReal)}` : ''}{f.finReal !== null ? ` · terminó el ${fecha(f.finReal)}` : ''}{f.restante !== null ? ` · le faltan ${num(f.restante)} d` : ''}</div>}
       {f.qrsa && <div>QRSA: fin P10 {fecha(f.qrsa.p10)} · P80 {fecha(f.qrsa.p80)} · P90 {fecha(f.qrsa.p90)} · criticidad {num(100 * f.qrsa.criticidad, 0)} %</div>}
       {alertas.map((a) => <div key={a.id} className={a.estado === 'rojo' ? 'negativo' : ''}>⚠ {a.criterio}</div>)}
       {zona && <div className="tenue">{zona === 'fin' ? 'Arrastre para cambiar la duración' : zona === 'cuerpo' ? 'Arrastre para moverla (fija «No comenzar antes de»)' : 'Arrastre hasta otra barra para vincularlas'}</div>}
@@ -1051,6 +1074,7 @@ function Leyenda({ hayQrsa }: { hayQrsa: boolean }) {
         <li><span className="ley-vertical" style={{ borderColor: COLORES.hoy }} /> Hoy · <span className="ley-vertical punteada" style={{ borderColor: COLORES.limites }} /> inicio y fin · <span className="ley-vertical punteada" style={{ borderColor: COLORES.meta }} /> meta</li>
         <li><span className="ley-limite" /> Fecha límite · <span className="ley-restriccion" /> restricción</li>
         <li><span className="ley-noLab" /> No laborable o festivo</li>
+        <li><span className="ley-barra" style={{ background: COLORES.tarea, boxShadow: 'inset 0 0 0 3px #4472C4, inset 0 0 0 10px rgba(0,0,0,.38)' }} /> Avance · <span className="ley-barra" style={{ background: '#8EA9DB' }} /> terminada · <span className="ley-vertical punteada" style={{ borderColor: COLORES.corte, borderLeftWidth: 3 }} /> fecha de corte</li>
         {hayQrsa && <li><span className="ley-qrsa" /> Rango QRSA del fin: P10–P90, marca en P80</li>}
       </ul>
     </div>

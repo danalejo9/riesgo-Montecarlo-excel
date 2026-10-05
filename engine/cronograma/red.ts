@@ -44,7 +44,28 @@ export interface ActividadRed {
    */
   fechaLimite?: number;
   predecesoras: readonly Predecesora[];
+  /**
+   * Seguimiento (Gantt G3): comienzo y fin reales (números de serie), % completado y
+   * duración restante (días laborables). Con fin real está terminada; con
+   * comienzo real y sin fin, en curso; sin nada, pendiente.
+   */
+  avance?: AvanceActividad;
 }
+
+export interface AvanceActividad {
+  inicioReal?: number;
+  finReal?: number;
+  /** 0 a 1. */
+  porcentaje?: number;
+  restante?: number;
+}
+
+/**
+ * Cómo se programa lo que falta de una actividad en curso cuyas predecesoras
+ * no han terminado: `retenida` (lo restante espera a la lógica, como P6 por
+ * defecto) o `anulacion` (anulación por progreso: sigue desde la fecha de corte).
+ */
+export type LogicaProgreso = 'retenida' | 'anulacion';
 
 export interface DefinicionRed {
   /** Fecha de inicio del proyecto (número de serie). */
@@ -53,6 +74,9 @@ export interface DefinicionRed {
   /** Id del calendario del proyecto (por defecto, el primero). */
   calendarioProyecto?: string;
   actividades: readonly ActividadRed[];
+  /** Fecha de corte (número de serie): nada pendiente empieza antes. */
+  fechaCorte?: number;
+  logicaProgreso?: LogicaProgreso;
 }
 
 /** Error de la red con las actividades implicadas (para señalarlas en la hoja). */
@@ -101,6 +125,19 @@ export interface RedCompilada {
   resFecha: Float64Array;
   /** Instante de la fecha límite (NaN si no hay). */
   limite: Float64Array;
+  /** Seguimiento: 0 pendiente, 1 en curso, 2 terminada. */
+  estado: Uint8Array;
+  /** Instantes del comienzo real y del final del último día real (NaN si no hay). */
+  realInicio: Float64Array;
+  realFin: Float64Array;
+  /** Duración restante base de las que están en curso (días laborables). */
+  restante: Float64Array;
+  /** Instante de la fecha de corte (NaN si no hay). */
+  corte: number;
+  /** Lógica retenida (true) o anulación por progreso. */
+  retenida: boolean;
+  /** Hay alguna actividad con avance. */
+  conAvance: boolean;
 }
 
 /** Valida y compila la red. Lanza `ErrorRed` con las actividades implicadas. */
@@ -127,6 +164,11 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
   const resTipo = new Uint8Array(n);
   const resFecha = new Float64Array(n);
   const limite = new Float64Array(n).fill(NaN);
+  const estado = new Uint8Array(n);
+  const realInicio = new Float64Array(n).fill(NaN);
+  const realFin = new Float64Array(n).fill(NaN);
+  const restante = new Float64Array(n).fill(NaN);
+  const corte = def.fechaCorte !== undefined ? def.fechaCorte - base : NaN;
   const rels: { p: number; s: number; tipo: number; desfase: number; transcurrido: boolean }[] = [];
   acts.forEach((a, i) => {
     if (!(Number.isFinite(a.duracion) && a.duracion >= 0)) throw new ErrorRed(`La duración de «${a.id}» tiene que ser un número mayor o igual que 0`, [a.id]);
@@ -139,6 +181,24 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
       resFecha[i] = a.restriccion.fecha - base;
     }
     if (a.fechaLimite !== undefined) limite[i] = a.fechaLimite - base;
+    const av = a.avance;
+    if (av && (av.inicioReal !== undefined || av.finReal !== undefined)) {
+      if (av.inicioReal !== undefined && av.finReal !== undefined && av.finReal < av.inicioReal) {
+        throw new ErrorRed(`El fin real de «${a.id}» es anterior a su comienzo real`, [a.id]);
+      }
+      if (av.finReal !== undefined) {
+        estado[i] = 2;
+        // Un hito no dura: su «fin» es el comienzo de su día; una tarea termina al final del día.
+        realFin[i] = av.finReal - base + (a.duracion === 0 ? 0 : 1);
+        if (av.inicioReal !== undefined) realInicio[i] = av.inicioReal - base;
+      } else {
+        estado[i] = 1;
+        realInicio[i] = (av.inicioReal as number) - base;
+        const r = av.restante ?? (av.porcentaje !== undefined ? a.duracion * (1 - Math.min(1, Math.max(0, av.porcentaje))) : NaN);
+        if (r === r && !(r >= 0)) throw new ErrorRed(`La duración restante de «${a.id}» tiene que ser mayor o igual que 0`, [a.id]);
+        restante[i] = r;
+      }
+    }
     for (const p of a.predecesoras) {
       const pi = indice.get(p.id);
       if (pi === undefined) throw new ErrorRed(`La predecesora «${p.id}» de «${a.id}» no existe`, [a.id]);
@@ -164,6 +224,7 @@ export function compilarRed(def: DefinicionRed): RedCompilada {
     n, ids: acts.map((a) => a.id), nombres: acts.map((a) => a.nombre), indice, duracion, orden, calendarios, cal, calProyecto: iProyecto,
     inicio: cp.instante(def.inicio), relPred, relSuc, relTipo, relDesfase, relTranscurrido,
     entradaInicio, relEntrada, salidaInicio, relSalida, resTipo, resFecha, limite,
+    estado, realInicio, realFin, restante, corte, retenida: def.logicaProgreso !== 'anulacion', conAvance: estado.some((x) => x !== 0),
   };
 }
 

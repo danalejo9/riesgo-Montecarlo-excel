@@ -25,7 +25,7 @@ export type CambioHoja =
   | { hoja: string; op: 'borrar'; fila: number; antes: unknown[] };
 
 export type OperacionGantt =
-  | { op: 'campo'; id: string; campo: 'nombre' | 'duracion' | 'calendario' | 'fechaLimite'; valor: string | number | null }
+  | { op: 'campo'; id: string; campo: CampoGantt; valor: string | number | null }
   | { op: 'restriccion'; id: string; tipo: TipoRestriccion | null; fecha: number | null }
   | { op: 'predecesoras'; id: string; texto: string }
   | { op: 'vinculo'; accion: 'crear' | 'editar'; pred: string; suc: string; tipo: TipoRelacion; desfase: number; transcurrido?: boolean }
@@ -35,6 +35,13 @@ export type OperacionGantt =
   | { op: 'nivel'; id: string; delta: 1 | -1 }
   | { op: 'hito'; id: string }
   | { op: 'mover'; id: string; delta: 1 | -1 };
+
+export type CampoGantt = 'nombre' | 'duracion' | 'calendario' | 'fechaLimite' | 'inicioReal' | 'finReal' | 'porcentaje' | 'restante';
+
+/** G3: las columnas de seguimiento de Actividades, por campo. */
+const COLUMNA_AVANCE: Partial<Record<CampoGantt, string>> = {
+  inicioReal: 'Comienzo real', finReal: 'Fin real', porcentaje: '% completado', restante: 'Duración restante',
+};
 
 export type ResultadoEdicion =
   | { ok: true; cambios: CambioHoja[]; hojas: Record<string, MatrizHoja | undefined>; lectura: LecturaCronograma; descripcion: string; seleccion?: string }
@@ -163,8 +170,19 @@ export function aplicarOperacion(hojas: Readonly<Record<string, MatrizHoja | und
         else if (tipoDe(fila).startsWith('hito')) e.celda(A, fila, cA('Tipo'), 'Tarea');
       } else if (op.campo === 'calendario') {
         e.celda(A, fila, cA('Calendario'), texto(op.valor) || null);
-      } else {
+      } else if (op.campo === 'fechaLimite') {
         e.celda(A, fila, cA('Fecha límite'), op.valor === null || op.valor === '' ? null : op.valor);
+      } else {
+        // G3: avance. El % va como fracción (formato 0 %); los demás, tal cual.
+        if (tipoDe(fila).startsWith('resumen')) return { ok: false, error: 'El avance de un resumen sale de sus hijas: regístrelo en ellas.' };
+        let v: number | null = op.valor === null || op.valor === '' ? null : Number(op.valor);
+        if (v !== null && !Number.isFinite(v)) return { ok: false, error: 'Escriba un número.' };
+        if (op.campo === 'porcentaje' && v !== null) {
+          if (v > 1) v /= 100;
+          if (v < 0 || v > 1) return { ok: false, error: 'El % completado tiene que estar entre 0 % y 100 %.' };
+        }
+        if (op.campo === 'restante' && v !== null && v < 0) return { ok: false, error: 'La duración restante tiene que ser mayor o igual que 0.' };
+        e.celda(A, fila, cA(COLUMNA_AVANCE[op.campo] as string), v);
       }
       descripcion = `${etiquetaCampo(op.campo)} de ${op.id}`;
       break;
@@ -314,8 +332,8 @@ export function aplicarOperacion(hojas: Readonly<Record<string, MatrizHoja | und
   return { ok: true, cambios: e.cambios, hojas: nuevas, lectura: despues, descripcion, ...(seleccion ? { seleccion } : {}) };
 }
 
-function etiquetaCampo(c: 'nombre' | 'duracion' | 'calendario' | 'fechaLimite'): string {
-  return c === 'nombre' ? 'Nombre' : c === 'duracion' ? 'Duración' : c === 'calendario' ? 'Calendario' : 'Fecha límite';
+function etiquetaCampo(c: CampoGantt): string {
+  return ({ nombre: 'Nombre', duracion: 'Duración', calendario: 'Calendario', fechaLimite: 'Fecha límite', inicioReal: 'Comienzo real', finReal: 'Fin real', porcentaje: '% completado', restante: 'Duración restante' } as const)[c];
 }
 
 function ultimaFila(m: unknown[][]): number {

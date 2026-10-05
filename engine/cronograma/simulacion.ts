@@ -499,7 +499,8 @@ async function correr(
   const mitigacion = esc.post ? modelo.riesgos.reduce((s, r) => s + (r.costoMitigacion ?? 0), 0) : 0;
   const calDe = (a: number) => red.calendarios[red.cal[a] as number] as CalendarioLaboral;
   const serieIni = (a: number) => calDe(a).serieInicio(esp.es[a] as number);
-  const serieFin = (a: number) => calDe(a).serieFin(esp.ef[a] as number, dur[a] as number);
+  // Con avance (G3), la duración efectiva de este cálculo (la real de las terminadas).
+  const serieFin = (a: number) => calDe(a).serieFin(esp.ef[a] as number, esp.dur[a] as number);
 
   for (let i = 0; i < n; i++) {
     if (i > 0 && i % BLOQUE === 0) {
@@ -533,7 +534,7 @@ async function correr(
     finDias[i] = fd;
     finSerie[i] = fs;
     if (costo) {
-      let c = costoDe(pre, i, dur, serieIni, serieFin, inicioSerie, fs, fd, true) + mitigacion;
+      let c = costoDe(pre, i, red.conAvance ? esp.dur : dur, serieIni, serieFin, inicioSerie, fs, fd, true) + mitigacion;
       for (const imp of pre.impactosCosto) {
         if (imp.actividad >= 0) {
           const rama = pre.ramaDe[imp.actividad];

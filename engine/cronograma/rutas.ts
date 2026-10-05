@@ -42,7 +42,7 @@ export function analizarRutas(red: RedCompilada, duracion: Float64Array = red.du
   const impulsora = new Uint8Array(m);
   for (let r = 0; r < m; r++) {
     const s = red.relSuc[r] as number;
-    const h = (esp.es[s] as number) - limiteRelacion(red, r, s, duracion[s] as number, esp.es, esp.ef);
+    const h = (esp.es[s] as number) - limiteRelacion(red, r, s, esp.dur[s] as number, esp.es, esp.ef);
     holguraRelacion[r] = h;
     impulsora[r] = h <= TOLERANCIA_CRITICA ? 1 : 0;
   }

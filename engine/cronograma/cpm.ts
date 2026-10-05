@@ -37,6 +37,12 @@ export interface EspacioCpm {
   lf: Float64Array;
   holgura: Float64Array;
   holguraLibre: Float64Array;
+  /**
+   * Duración efectiva de cada actividad en este cálculo (`ef − es`): la dada,
+   * salvo con avance (G3): la real si está terminada; lo hecho más lo
+   * restante si está en curso.
+   */
+  dur: Float64Array;
   /** Instante (relativo a la base) en que termina el proyecto. */
   fin: number;
 }
@@ -55,7 +61,7 @@ export const TOLERANCIA_CRITICA = 1e-9;
 export function crearEspacio(n: number): EspacioCpm {
   return {
     es: new Float64Array(n), ef: new Float64Array(n), ls: new Float64Array(n), lf: new Float64Array(n),
-    holgura: new Float64Array(n), holguraLibre: new Float64Array(n), fin: 0,
+    holgura: new Float64Array(n), holguraLibre: new Float64Array(n), dur: new Float64Array(n), fin: 0,
   };
 }
 
@@ -108,12 +114,55 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
   const ignorarDuras = opciones.ignorarDuras === true;
 
   // Ida.
+  const dur = esp.dur;
+  // Sin avance en ninguna actividad, ninguna está terminada ni en curso (la fecha de corte sí cuenta).
+  const estado = red.conAvance ? red.estado : undefined;
+  const { realInicio, realFin, restante } = red;
+  const corte = red.corte;
+  const hayCorte = corte === corte;
   let fin = -Infinity;
   for (let o = 0; o < n; o++) {
     const a = orden[o] as number;
     const d = duracion[a] as number;
     const c = calendarios[cal[a] as number] as CalendarioLaboral;
+    const st = estado ? estado[a] as number : 0;
+    if (st === 2) {
+      // Terminada (G3): sus fechas reales, diga lo que diga la lógica.
+      const e1 = c.cuenta(realFin[a] as number);
+      const ri = realInicio[a] as number;
+      const e0 = ri === ri ? c.cuenta(ri) : e1 - (red.duracion[a] as number);
+      es[a] = e0;
+      ef[a] = Math.max(e0, e1);
+      dur[a] = (ef[a] as number) - e0;
+      const t = c.fin(ef[a] as number);
+      if (t > fin) fin = t;
+      continue;
+    }
+    if (st === 1) {
+      // En curso: empezó en su fecha real; lo que falta (escalado como la
+      // duración en la simulación) va desde la fecha de corte y, con lógica
+      // retenida, no antes de lo que permitan sus predecesoras.
+      const e0 = c.cuenta(realInicio[a] as number);
+      const base = red.duracion[a] as number;
+      let rest = restante[a] as number;
+      if (!(rest === rest)) rest = Math.max(0, base - (hayCorte ? c.cuenta(corte) - e0 : 0));
+      rest = base > 0 ? rest * (d / base) : rest;
+      let desde = hayCorte ? Math.max(c.cuenta(corte), e0) : e0 + Math.max(0, base - rest);
+      if (red.retenida) {
+        for (let k = entradaInicio[a] as number; k < (entradaInicio[a + 1] as number); k++) {
+          const v = limiteRelacion(red, relEntrada[k] as number, a, rest, es, ef);
+          if (v > desde) desde = v;
+        }
+      }
+      es[a] = e0;
+      ef[a] = desde + rest;
+      dur[a] = desde + rest - e0;
+      const t = c.fin(ef[a] as number);
+      if (t > fin) fin = t;
+      continue;
+    }
     let lb = c.cuenta(red.inicio);
+    if (hayCorte) lb = Math.max(lb, c.cuenta(corte));
     for (let k = entradaInicio[a] as number; k < (entradaInicio[a + 1] as number); k++) {
       const v = limiteRelacion(red, relEntrada[k] as number, a, d, es, ef);
       if (v > lb) lb = v;
@@ -128,6 +177,7 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
     }
     es[a] = lb;
     ef[a] = lb + d;
+    dur[a] = d;
     const t = c.fin(lb + d);
     if (t > fin) fin = t;
   }
@@ -137,7 +187,7 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
   // Vuelta.
   for (let o = n - 1; o >= 0; o--) {
     const a = orden[o] as number;
-    const d = duracion[a] as number;
+    const d = dur[a] as number;
     const ca = cal[a] as number;
     const c = calendarios[ca] as CalendarioLaboral;
     let lfB = c.maxFin(fin);
@@ -184,13 +234,22 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
     }
     const lim = red.limite[a] as number;
     if (lim === lim) lfB = Math.min(lfB, c.maxFin(lim + 1));
-    const l = Math.min(lfB - d, lsB);
+    const st = estado ? estado[a] as number : 0;
+    if (st === 2) {
+      // Terminada: no tiene holgura que perder (no puede ser crítica).
+      ls[a] = es[a] as number;
+      lf[a] = ef[a] as number;
+      holgura[a] = Infinity;
+      continue;
+    }
+    // En curso: la holgura se mide por el fin (el comienzo ya pasó).
+    const l = st === 1 ? lfB - d : Math.min(lfB - d, lsB);
     ls[a] = l;
     lf[a] = l + d;
     holgura[a] = l - (es[a] as number);
   }
 
-  if (opciones.holguraLibre) calcularHolguraLibre(red, duracion, esp);
+  if (opciones.holguraLibre) calcularHolguraLibre(red, dur, esp);
 }
 
 function calcularHolguraLibre(red: RedCompilada, duracion: Float64Array, esp: EspacioCpm): void {
@@ -204,7 +263,7 @@ function calcularHolguraLibre(red: RedCompilada, duracion: Float64Array, esp: Es
       const margen = (es[s] as number) - limiteRelacion(red, r, s, duracion[s] as number, es, ef);
       if (margen < libre) libre = margen;
     }
-    holguraLibre[a] = Math.min(libre, holgura[a] as number);
+    holguraLibre[a] = red.estado?.[a] === 2 ? Infinity : Math.min(libre, holgura[a] as number);
   }
 }
 
@@ -237,7 +296,7 @@ export function cpmDeterministico(red: RedCompilada, opciones: OpcionesCpm = {},
   const filas: FilaCpm[] = [];
   for (let a = 0; a < red.n; a++) {
     const c = red.calendarios[red.cal[a] as number] as CalendarioLaboral;
-    const d = duracion[a] as number;
+    const d = esp.dur[a] as number;
     filas.push({
       id: red.ids[a] as string,
       nombre: red.nombres[a] as string,
