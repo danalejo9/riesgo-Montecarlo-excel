@@ -41,6 +41,19 @@ export const COLORES = {
   corte: '#C55A11',
 } as const;
 
+/** G3: un color por ruta de holgura (la 1, roja como la crítica). */
+export const COLORES_RUTA = ['#C00000', '#ED7D31', '#FFC000', '#70AD47', '#00B0F0', '#7030A0', '#FF66CC', '#8C6D31', '#2F75B5', '#548235'] as const;
+
+/** G3: mapa de calor de la criticidad QRSA: del azul (nunca crítica) al rojo (siempre). */
+export function colorCalor(criticidad: number): string {
+  const t = Math.max(0, Math.min(1, criticidad));
+  const a = [68, 114, 196];
+  const b = [255, 192, 0];
+  const c = [192, 0, 0];
+  const [x, y, u] = t < 0.5 ? [a, b, t / 0.5] : [b, c, (t - 0.5) / 0.5];
+  return `rgb(${x.map((v, i) => Math.round(v + ((y[i] as number) - v) * u)).join(',')})`;
+}
+
 export interface Resaltado {
   actividades: Set<string>;
   relaciones: Set<number>;
@@ -72,7 +85,7 @@ export interface EscenaGantt {
   relacionSeleccionada: number | null;
   resaltado: Resaltado | null;
   hoy: number;
-  capas: { flechas: boolean; holgura: boolean; qrsa: boolean; etiquetas: boolean };
+  capas: { flechas: boolean; holgura: boolean; qrsa: boolean; etiquetas: boolean; rutas?: boolean; calor?: boolean };
   arrastre?: ArrastreGantt | null;
 }
 
@@ -222,7 +235,9 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
     if (atenuada(f.id)) ctx.globalAlpha = 0.25;
     const cy = r.y + r.alto / 2;
     const negativa = f.holguraTotal !== null && f.holguraTotal < -1e-9;
-    const color = f.critica ? COLORES.critica : f.casiCritica ? COLORES.casiCritica : COLORES.tarea;
+    const color = e.capas.calor && f.qrsa ? colorCalor(f.qrsa.criticidad)
+      : e.capas.rutas ? (f.rutaHolgura > 0 ? COLORES_RUTA[(f.rutaHolgura - 1) % COLORES_RUTA.length] as string : '#BFBFBF')
+        : f.critica ? COLORES.critica : f.casiCritica ? COLORES.casiCritica : COLORES.tarea;
 
     // G3: la línea base, una barra gris delgada justo debajo (un rombo hueco si es hito).
     if (f.lineaBase && f.tipo !== 'resumen') {

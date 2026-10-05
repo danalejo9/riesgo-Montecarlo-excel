@@ -7,7 +7,7 @@
  */
 
 import {
-  analizarRutas, chequearCalidad, compilarRed, CalendarioLaboral, descendientes, nivelDeWbs, porQueCritica, rutaImpulsoraHacia,
+  analizarRutas, chequearCalidad, rutasDeHolgura, compilarRed, CalendarioLaboral, descendientes, nivelDeWbs, porQueCritica, rutaImpulsoraHacia,
   textoRelacion, TOLERANCIA_CRITICA, type AnalisisRutas, type ExplicacionCritica, type ModeloCronograma, type RedCompilada,
   type TipoRelacion, type UmbralesCalidad,
 } from '../engine/cronograma/index.ts';
@@ -96,6 +96,8 @@ export interface FilaGantt {
   /** G3: la línea base elegida y la variación del fin (días laborables; positiva = va tarde). */
   lineaBase: LineaBase | null;
   variacion: number | null;
+  /** G3: número de ruta de holgura (1 = la que impulsa el fin; 0 = ninguna de las primeras 10). */
+  rutaHolgura: number;
 }
 
 export interface RelacionGantt {
@@ -158,6 +160,7 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
   const red = compilarRed(m.red);
   const rutas = analizarRutas(red, red.duracion, { ignorarDuras: false });
   const { esp } = rutas;
+  const rutaH = rutasDeHolgura(red, rutas, 10);
   const cp = red.calendarios[red.calProyecto] as CalendarioLaboral;
   const actPorId = new Map(m.red.actividades.map((a) => [a.id, a]));
 
@@ -197,7 +200,7 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
         holguraTotal: null, holguraLibre: null, critica: false, casiCritica: false, enRutaMasLarga: false, calendario: '',
         restriccion: null, fechaRestriccion: null, fechaLimite: null, predecesoras: '', sucesoras: '',
         estado: 'pendiente' as const, avance: null, inicioReal: null, finReal: null, restante: null,
-        lineaBase: null, variacion: null,
+        lineaBase: null, variacion: null, rutaHolgura: 0,
       };
     }
     const c = red.calendarios[red.cal[i] as number] as CalendarioLaboral;
@@ -219,6 +222,7 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
       avance: hecho,
       inicioReal: av?.inicioReal ?? null,
       finReal: av?.finReal ?? null,
+      rutaHolgura: rutaH[i] as number,
       lineaBase: lbDe(o.id),
       variacion: (() => {
         const lb = lbDe(o.id);

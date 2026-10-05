@@ -99,3 +99,24 @@ describe('jerarquía por WBS', () => {
     expect(renumerarWbs([2, 3, 1])).toEqual(['1', '1.1', '2']);
   });
 });
+
+describe('rutas de holgura múltiples (G3)', () => {
+  it('ruta 1 la más larga; las siguientes por menor holgura hacia la ruta ya asignada', async () => {
+    const { rutasDeHolgura } = await import('../../engine/cronograma/index.ts');
+    // I → A(10) → F ; I → B(7) → F ; I → C(3) → B ; I → D(2) → F
+    const r = red([
+      { id: 'I', nombre: 'I', duracion: 0, predecesoras: [] },
+      { id: 'A', nombre: 'A', duracion: 10, predecesoras: [fc('I')] },
+      { id: 'C', nombre: 'C', duracion: 3, predecesoras: [fc('I')] },
+      { id: 'B', nombre: 'B', duracion: 5, predecesoras: [fc('C')] },
+      { id: 'D', nombre: 'D', duracion: 2, predecesoras: [fc('I')] },
+      { id: 'F', nombre: 'F', duracion: 0, predecesoras: [fc('A'), fc('B'), fc('D')] },
+    ]);
+    const n = rutasDeHolgura(r, analizarRutas(r));
+    const de = (id: string) => n[r.indice.get(id) as number];
+    expect([de('I'), de('A'), de('F')]).toEqual([1, 1, 1]);
+    // B (holgura 2) con C, que la impulsa: ruta 2; D (holgura 8): ruta 3.
+    expect([de('B'), de('C')]).toEqual([2, 2]);
+    expect(de('D')).toBe(3);
+  });
+});

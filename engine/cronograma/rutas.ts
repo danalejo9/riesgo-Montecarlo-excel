@@ -179,3 +179,47 @@ export function porQueCritica(red: RedCompilada, rutas: AnalisisRutas, a: number
     : critica ? 'No tiene holgura: cualquier retraso mueve el fin del proyecto.' : `Tiene ${Math.round(holgura * 100) / 100} días de holgura.`;
   return { critica, holgura, impulsadaPor, inicioPor, impulsaA, restriccion, causasNegativa, texto: `${estado} ${quien}${aQuien}.` };
 }
+
+/**
+ * Rutas de holgura múltiples (Gantt G3, al estilo P6): la ruta 1 es la más
+ * larga (la que impulsa el fin); para la siguiente se toma, entre las
+ * actividades sin ruta que alimentan una ruta ya asignada, la de menor
+ * holgura total (a igualdad, la que termina más tarde), y desde ella se sigue
+ * hacia atrás por sus relaciones impulsoras mientras no tengan ruta. Hasta
+ * `maximo` rutas. Devuelve el número de ruta de cada actividad (0 = ninguna).
+ * Las terminadas (seguimiento) no entran.
+ */
+export function rutasDeHolgura(red: RedCompilada, rutas: AnalisisRutas, maximo = 10): Int32Array {
+  const ruta = new Int32Array(red.n);
+  const { esp } = rutas;
+  const activa = (a: number) => red.estado[a] !== 2;
+  for (let a = 0; a < red.n; a++) if (rutas.rutaMasLarga[a] === 1 && activa(a)) ruta[a] = 1;
+  for (let k = 2; k <= maximo; k++) {
+    let mejor = -1;
+    for (let a = 0; a < red.n; a++) {
+      if (ruta[a] !== 0 || !activa(a)) continue;
+      let alimenta = false;
+      for (let j = red.salidaInicio[a] as number; j < (red.salidaInicio[a + 1] as number); j++) {
+        if (ruta[red.relSuc[red.relSalida[j] as number] as number] !== 0) { alimenta = true; break; }
+      }
+      if (!alimenta) continue;
+      if (mejor < 0) { mejor = a; continue; }
+      const h = esp.holgura[a] as number;
+      const hm = esp.holgura[mejor] as number;
+      if (h < hm - TOLERANCIA_CRITICA || (Math.abs(h - hm) <= TOLERANCIA_CRITICA && (esp.ef[a] as number) > (esp.ef[mejor] as number))) mejor = a;
+    }
+    if (mejor < 0) break;
+    const pila = [mejor];
+    ruta[mejor] = k;
+    while (pila.length) {
+      const x = pila.pop() as number;
+      for (let j = red.entradaInicio[x] as number; j < (red.entradaInicio[x + 1] as number); j++) {
+        const r = red.relEntrada[j] as number;
+        if (rutas.impulsora[r] !== 1) continue;
+        const p = red.relPred[r] as number;
+        if (ruta[p] === 0 && activa(p)) { ruta[p] = k; pila.push(p); }
+      }
+    }
+  }
+  return ruta;
+}

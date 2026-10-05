@@ -14,7 +14,7 @@ import { construirVista, explicarCritica, impulsoraHacia, type DatosGantt, type 
 import type { OperacionGantt } from '../../excel/edicionGantt.ts';
 import { cadena, leerPredecesoras, type CalendarioLaboral, type TipoRelacion, type TipoRestriccion } from '../../engine/cronograma/index.ts';
 import { leerFecha, textoFecha } from '../../engine/modelo/fechas.ts';
-import { COLORES, dibujar, rectEnPantalla, type ArrastreGantt, type EscenaGantt, type FlechaDibujada, type Resaltado } from './dibujo.ts';
+import { COLORES, COLORES_RUTA, colorCalor, dibujar, rectEnPantalla, type ArrastreGantt, type EscenaGantt, type FlechaDibujada, type Resaltado } from './dibujo.ts';
 import { ajustarTodo, distanciaAFlecha, filasVisibles, GEOMETRIA, PX_MAX, PX_MIN, serieEn, tipoVinculo, ZOOMS, zonaBarra, type Escala } from './trazado.ts';
 import './gantt.css';
 
@@ -39,7 +39,7 @@ const RESTRICCIONES: { tipo: TipoRestriccion; nombre: string }[] = [
 ];
 
 type IdColumna = 'diag' | 'wbs' | 'id' | 'nombre' | 'duracion' | 'inicio' | 'fin' | 'predecesoras' | 'sucesoras' | 'ht' | 'hl' | 'critica' | 'restriccion' | 'limite' | 'calendario' | 'p80' | 'criticidad'
-  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante' | 'lbInicio' | 'lbFin' | 'variacion';
+  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante' | 'lbInicio' | 'lbFin' | 'variacion' | 'ruta';
 interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean; seguimiento?: boolean; lineaBase?: boolean }
 const COLUMNAS: Columna[] = [
   { id: 'diag', titulo: '', ancho: 24 },
@@ -54,6 +54,7 @@ const COLUMNAS: Columna[] = [
   { id: 'ht', titulo: 'Holgura total', ancho: 70, numero: true },
   { id: 'hl', titulo: 'Holgura libre', ancho: 70, numero: true },
   { id: 'critica', titulo: 'Crítica', ancho: 54 },
+  { id: 'ruta', titulo: 'Ruta n.º', ancho: 52, numero: true },
   { id: 'restriccion', titulo: 'Restricción', ancho: 170 },
   { id: 'limite', titulo: 'Fecha límite', ancho: 82, editable: true },
   { id: 'calendario', titulo: 'Calendario', ancho: 110 },
@@ -288,7 +289,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   }, [zoom, escala.px]);
 
   // ---------------------------------------------------------- dibujo
-  const [capas, setCapas] = useState({ flechas: true, holgura: true, qrsa: true, etiquetas: true });
+  const [capas, setCapas] = useState({ flechas: true, holgura: true, qrsa: true, etiquetas: true, rutas: false, calor: false });
   const escena = useCallback((): EscenaGantt | null => {
     if (!vista) return null;
     const l = linea.current;
@@ -688,8 +689,8 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
                 <label key={c.id}><input type="checkbox" checked={visibles.includes(c.id)} onChange={(e) => setVisibles(e.target.checked ? [...visibles, c.id] : visibles.filter((x) => x !== c.id))} /> {c.titulo}</label>
               ))}
               <hr />
-              {(['flechas', 'holgura', 'qrsa', 'etiquetas'] as const).filter((k) => k !== 'qrsa' || hayQrsa).map((k) => (
-                <label key={k}><input type="checkbox" checked={capas[k]} onChange={(e) => setCapas({ ...capas, [k]: e.target.checked })} /> {k === 'flechas' ? 'Flechas' : k === 'holgura' ? 'Línea de holgura' : k === 'qrsa' ? 'Rango QRSA (P10–P90)' : 'Nombres junto a las barras'}</label>
+              {(['flechas', 'holgura', 'qrsa', 'etiquetas', 'rutas', 'calor'] as const).filter((k) => (k !== 'qrsa' && k !== 'calor') || hayQrsa).map((k) => (
+                <label key={k}><input type="checkbox" checked={capas[k]} onChange={(e) => setCapas({ ...capas, [k]: e.target.checked, ...(e.target.checked && k === 'rutas' ? { calor: false } : {}), ...(e.target.checked && k === 'calor' ? { rutas: false } : {}) })} /> {({ flechas: 'Flechas', holgura: 'Línea de holgura', qrsa: 'Rango QRSA (P10–P90)', etiquetas: 'Nombres junto a las barras', rutas: 'Colorear por ruta de holgura', calor: 'Mapa de calor de criticidad (QRSA)' } as const)[k]}</label>
               ))}
             </div>
           </details>
@@ -781,7 +782,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
             ))}
           </ul>
         </div>
-        <Leyenda hayQrsa={hayQrsa} />
+        <Leyenda hayQrsa={hayQrsa} rutas={capas.rutas} calor={capas.calor && hayQrsa} />
       </div>
     </div>
   );
@@ -860,6 +861,7 @@ function Celda({ f, c, ancho, vista, plegado, alPlegar, editando, alEditar, alEm
     case 'ht': contenido = <span className={f.holguraTotal !== null && f.holguraTotal < 0 ? 'negativo' : ''}>{num(f.holguraTotal)}</span>; break;
     case 'hl': contenido = num(f.holguraLibre); break;
     case 'critica': contenido = f.tipo === 'resumen' || f.estado === 'terminada' ? '' : f.critica ? 'Sí' : 'No'; break;
+    case 'ruta': contenido = f.rutaHolgura > 0 ? <span style={{ color: COLORES_RUTA[(f.rutaHolgura - 1) % COLORES_RUTA.length], fontWeight: 600 }}>{f.rutaHolgura}</span> : ''; break;
     case 'restriccion': contenido = f.restriccion ? `${f.restriccion} ${fecha(f.fechaRestriccion)}` : ''; break;
     case 'limite': contenido = fecha(f.fechaLimite); break;
     case 'calendario': contenido = f.calendario; break;
@@ -1082,7 +1084,7 @@ function DetalleRelacion({ r, vista, editable, alOperar }: { r: RelacionGantt; v
   );
 }
 
-function Leyenda({ hayQrsa }: { hayQrsa: boolean }) {
+function Leyenda({ hayQrsa, rutas, calor }: { hayQrsa: boolean; rutas: boolean; calor: boolean }) {
   const barra = (color: string, extra?: React.CSSProperties) => <span className="ley-barra" style={{ background: color, ...extra }} />;
   return (
     <div className="gantt-leyenda">
@@ -1103,6 +1105,8 @@ function Leyenda({ hayQrsa }: { hayQrsa: boolean }) {
         <li><span className="ley-barra" style={{ background: COLORES.lineaBase, height: 3 }} /> Línea base</li>
         <li><span className="ley-barra" style={{ background: COLORES.tarea, boxShadow: 'inset 0 0 0 3px #4472C4, inset 0 0 0 10px rgba(0,0,0,.38)' }} /> Avance · <span className="ley-barra" style={{ background: '#8EA9DB' }} /> terminada · <span className="ley-vertical punteada" style={{ borderColor: COLORES.corte, borderLeftWidth: 3 }} /> fecha de corte</li>
         {hayQrsa && <li><span className="ley-qrsa" /> Rango QRSA del fin: P10–P90, marca en P80</li>}
+        {rutas && <li>Rutas de holgura: {COLORES_RUTA.slice(0, 5).map((c, i) => <span key={c} style={{ color: c, fontWeight: 700, marginRight: 4 }}>{i + 1}</span>)}… (gris: más allá de la 10)</li>}
+        {calor && <li>Criticidad: {[0, 0.25, 0.5, 0.75, 1].map((x) => <span key={x} className="ley-barra" style={{ background: colorCalor(x), width: 14, marginRight: 2 }} title={`${x * 100} %`} />)} 0 % → 100 %</li>}
       </ul>
     </div>
   );
