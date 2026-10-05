@@ -558,3 +558,25 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .sev-critica { background: var(--sev-critica); }
 .lista-matriz { margin: 8px 0; padding-left: 20px; }
 .etiqueta-sev { font-size: 11px; padding: 0 6px; border-radius: 3px; margin-left: 4px; }
+
+/* Q1: pestaña Cronograma. */
+:root {
+  --luz-verde: #1baf7a;
+  --luz-amarillo: #eda100;
+  --luz-rojo: #d13438;
+}
+.semaforos { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.semaforos li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; font-size: 12px; }
+.luz { width: 12px; height: 12px; border-radius: 50%; margin-top: 2px; display: inline-block; }
+.luz-verde { background: var(--luz-verde); }
+.luz-amarillo { background: var(--luz-amarillo); }
+.luz-rojo { background: var(--luz-rojo); }
+.errores-cronograma { border-left: 3px solid var(--error-borde); background: var(--error-fondo); padding: 6px 10px; }
+.errores-cronograma ul { margin: 4px 0; padding-left: 18px; font-size: 12px; }
+.tornado-eliminacion { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: 12px; }
+.tornado-eliminacion li { display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 9fr) 44px; gap: 6px; align-items: center; }
+.tornado-eliminacion .nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tornado-eliminacion .barra-fondo { height: 10px; background: var(--borde); border-radius: 2px; overflow: hidden; }
+.tornado-eliminacion .barra-valor { display: block; height: 100%; background: var(--baja); }
+.tornado-eliminacion .barra-valor.negativa { background: var(--luz-verde); }
+.tornado-eliminacion .cifra { text-align: right; font-variant-numeric: tabular-nums; }

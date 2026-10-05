@@ -102,7 +102,7 @@ describe('la cinta reorganizada (U3.2)', () => {
 
   it('los grupos, en orden', () => {
     const grupos = [...manifiesto.matchAll(/<Group id="([^"]+)">/g)].map((m) => m[1]);
-    expect(grupos).toEqual(['GrupoPrincipal', 'GrupoAcciones', 'GrupoSimulacion', 'GrupoModo', 'GrupoAnalisis', 'GrupoInformes', 'GrupoAyuda']);
+    expect(grupos).toEqual(['GrupoPrincipal', 'GrupoAcciones', 'GrupoSimulacion', 'GrupoModo', 'GrupoAnalisis', 'GrupoCronograma', 'GrupoInformes', 'GrupoAyuda']);
   });
 });
 
@@ -154,5 +154,20 @@ describe('clic derecho y Detener (U3.5, U3.6)', () => {
     const { estadoSimulando } = await import('../../excel/cinta.ts');
     expect(estadoSimulando(true)).toEqual([{ id: 'btnSimular', enabled: false }, { id: 'btnDetener', enabled: true }]);
     expect(estadoSimulando(false)).toEqual([{ id: 'btnSimular', enabled: true }, { id: 'btnDetener', enabled: false }]);
+  });
+});
+
+describe('grupo Cronograma de la cinta (QRSA Q1)', () => {
+  it('sus tres botones tienen acción registrada e iconos', async () => {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const m = readFileSync(new URL('../../manifest.xml', import.meta.url), 'utf8');
+    const main = readFileSync(new URL('../../ui/main.tsx', import.meta.url), 'utf8');
+    for (const f of ['crearCronograma', 'calidadCronograma', 'simularCronograma']) {
+      expect(m).toContain(`<FunctionName>${f}</FunctionName>`);
+      expect(main).toContain(`${f}: () => pedirAlPanel(`);
+    }
+    for (const i of ['cronograma', 'calidad', 'simularcronograma']) {
+      for (const t of [16, 32, 80]) expect(existsSync(new URL(`../../public/icon-${i}-${t}.png`, import.meta.url))).toBe(true);
+    }
   });
 });

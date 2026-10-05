@@ -65,6 +65,10 @@ if (typeof Office === 'undefined') {
     volcarHoja: () => pedirAlPanel('volcarHoja'),
     informePdf: () => pedirAlPanel('informePdf'),
     abrirAyuda: () => pedirAlPanel('abrirAyuda'),
+    // Q1: el grupo Cronograma.
+    crearCronograma: () => pedirAlPanel('cronograma:crear'),
+    calidadCronograma: () => pedirAlPanel('cronograma:calidad'),
+    simularCronograma: () => pedirAlPanel('cronograma:simular'),
     // Los ejemplos se escriben sin el panel: una hoja nueva, lista para simular.
     ...Object.fromEntries(PLANTILLAS.map((p) => [`ejemplo${p.id[0]?.toUpperCase()}${p.id.slice(1)}`, async () => {
       await escribirPlantilla(p);

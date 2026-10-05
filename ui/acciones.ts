@@ -12,7 +12,7 @@
  */
 
 /** Las pestañas del panel (las mismas que `Pestana` en `Panel.tsx`). */
-type Pestana = 'modelo' | 'resultados' | 'configuracion' | 'diagnostico';
+type Pestana = 'modelo' | 'resultados' | 'cronograma' | 'configuracion' | 'diagnostico';
 
 const ACCIONES: Record<string, Pestana> = {
   mostrarModelo: 'modelo',

@@ -353,6 +353,61 @@ function rangoSimple(ref: string) {
 
 const ajustes = new Map<string, string>();
 
+/**
+ * Q1: hojas en memoria para el libro de cronograma (Config, Actividades…,
+ * Resultados_Cronograma). Guardan los valores que se escriben por índices y
+ * los devuelven como rango usado; el formato, las listas y los gráficos se
+ * aceptan y se descartan.
+ */
+export const hojasMemoria = new Map<string, unknown[][]>();
+
+function hojaMemoria(nombre: string): Record<string, unknown> {
+  const rejillaDe = () => hojasMemoria.get(nombre) as unknown[][];
+  const nada = () => {};
+  const formato = () => ({ font: {}, fill: {}, borders: { getItem: () => ({}) }, autofitColumns: nada, columnWidth: 0, wrapText: false });
+  const validacion = () => ({ clear: nada, rule: {}, prompt: {} });
+  const rango = (fila: number, col: number) => ({
+    set values(v: unknown[][]) {
+      const g = rejillaDe();
+      v.forEach((f, i) => {
+        const r = (g[fila + i] ??= []);
+        f.forEach((x, j) => { r[col + j] = x === '' ? null : x; });
+      });
+    },
+    set numberFormat(_v: unknown) {},
+    format: formato(),
+    dataValidation: validacion(),
+    select: nada,
+  });
+  return {
+    name: nombre,
+    isNullObject: false,
+    load: nada,
+    delete: () => hojasMemoria.delete(nombre),
+    activate: nada,
+    getRangeByIndexes: (fila: number, col: number) => rango(fila, col),
+    getRange: (ref: string) => {
+      const m = /^([A-Z]+)(\d+)/.exec(ref);
+      return rango(m ? Number(m[2]) - 1 : 0, m ? columnaDeLetras(m[1] as string) - 1 : 0);
+    },
+    getUsedRangeOrNullObject: () => {
+      const g = rejillaDe();
+      const ancho = Math.max(0, ...g.map((f) => f?.length ?? 0));
+      return {
+        isNullObject: g.length === 0,
+        rowIndex: 0,
+        columnIndex: 0,
+        load: nada,
+        values: Array.from({ length: g.length }, (_, i) => Array.from({ length: ancho }, (_, j) => g[i]?.[j] ?? '')),
+      };
+    },
+    freezePanes: { freezeRows: nada },
+    charts: { add: () => ({ title: {}, legend: {}, setPosition: nada }) },
+  };
+}
+
+const ES_HOJA_MEMORIA = /^(Config|Calendario|Actividades|Relaciones|Incertidumbre|Riesgos|Impactos|Resultados_Cronograma)$/;
+
 /** Instala los globales `Office` y `Excel` que espera el panel. */
 export function instalarExcelFalso(): void {
   recalcular();
@@ -443,14 +498,22 @@ export function instalarExcelFalso(): void {
         }),
       },
       worksheets: {
-        items: [hojaFalsa],
+        get items() {
+          return [hojaFalsa, ...[...hojasMemoria.keys()].map((name) => ({ name }))];
+        },
         load: () => {},
-        getItem: () => hojaFalsa,
+        getItem: (nombre?: string) => (nombre && hojasMemoria.has(nombre) ? hojaMemoria(nombre) : hojaFalsa),
         getActiveWorksheet: () => hojaFalsa,
-        getItemOrNullObject: () => ({ isNullObject: true, load: () => {}, delete: () => {} }),
+        getItemOrNullObject: (nombre?: string) => (nombre && hojasMemoria.has(nombre)
+          ? hojaMemoria(nombre)
+          : { isNullObject: true, load: () => {}, delete: () => {}, getUsedRangeOrNullObject: () => ({ isNullObject: true, load: () => {} }) }),
         // El volcado crea una hoja nueva. El banco no dibuja cuadrícula, así
         // que la recoge en `hojaVolcada` para poder comprobar qué se escribió.
         add: (nombre: string) => {
+          if (ES_HOJA_MEMORIA.test(nombre)) {
+            hojasMemoria.set(nombre, []);
+            return hojaMemoria(nombre);
+          }
           hojaVolcada.nombre = nombre;
           hojaVolcada.filas = [];
           hojaVolcada.graficos = 0;
@@ -474,7 +537,7 @@ export function instalarExcelFalso(): void {
     // También `Excel.run(contextoAnterior, fn)`, como al dejar de escuchar un evento.
     run: <T>(a: unknown, b?: (c: typeof contexto) => Promise<T>) =>
       (typeof a === 'function' ? (a as (c: typeof contexto) => Promise<T>) : (b as (c: typeof contexto) => Promise<T>))(contexto),
-    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered' },
+    ChartType: { line: 'Line', columnClustered: 'ColumnClustered', barClustered: 'BarClustered', xyscatterLinesNoMarkers: 'XYScatterLinesNoMarkers' },
     BorderIndex: { edgeBottom: 'EdgeBottom' },
     BorderLineStyle: { continuous: 'Continuous' },
     ChartSeriesBy: { columns: 'Columns', rows: 'Rows' },

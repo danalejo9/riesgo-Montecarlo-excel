@@ -40,7 +40,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.6.0.0</Version>
+  <Version>0.7.0.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -492,6 +492,59 @@
                   </Action>
                 </Control>
               </Group>
+              <Group id="GrupoCronograma">
+                <Label resid="GrupoCronograma.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="IconoCronograma.16" />
+                  <bt:Image size="32" resid="IconoCronograma.32" />
+                  <bt:Image size="80" resid="IconoCronograma.80" />
+                </Icon>
+                <Control xsi:type="Button" id="btnCrearCronograma">
+                  <Label resid="btnCrearCronograma.Label" />
+                  <Supertip>
+                    <Title resid="btnCrearCronograma.Label" />
+                    <Description resid="btnCrearCronograma.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoCronograma.16" />
+                    <bt:Image size="32" resid="IconoCronograma.32" />
+                    <bt:Image size="80" resid="IconoCronograma.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>crearCronograma</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnCalidadCronograma">
+                  <Label resid="btnCalidadCronograma.Label" />
+                  <Supertip>
+                    <Title resid="btnCalidadCronograma.Label" />
+                    <Description resid="btnCalidadCronograma.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoCalidad.16" />
+                    <bt:Image size="32" resid="IconoCalidad.32" />
+                    <bt:Image size="80" resid="IconoCalidad.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>calidadCronograma</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Button" id="btnSimularCronograma">
+                  <Label resid="btnSimularCronograma.Label" />
+                  <Supertip>
+                    <Title resid="btnSimularCronograma.Label" />
+                    <Description resid="btnSimularCronograma.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="IconoSimularCronograma.16" />
+                    <bt:Image size="32" resid="IconoSimularCronograma.32" />
+                    <bt:Image size="80" resid="IconoSimularCronograma.80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>simularCronograma</FunctionName>
+                  </Action>
+                </Control>
+              </Group>
               <Group id="GrupoInformes">
                 <Label resid="GrupoInformes.Label" />
                 <Icon>
@@ -704,6 +757,15 @@
         <bt:Image id="IconoDetener.16" DefaultValue="https://localhost:9090/icon-detener-16.png" />
         <bt:Image id="IconoDetener.32" DefaultValue="https://localhost:9090/icon-detener-32.png" />
         <bt:Image id="IconoDetener.80" DefaultValue="https://localhost:9090/icon-detener-80.png" />
+        <bt:Image id="IconoCronograma.16" DefaultValue="https://localhost:9090/icon-cronograma-16.png" />
+        <bt:Image id="IconoCronograma.32" DefaultValue="https://localhost:9090/icon-cronograma-32.png" />
+        <bt:Image id="IconoCronograma.80" DefaultValue="https://localhost:9090/icon-cronograma-80.png" />
+        <bt:Image id="IconoCalidad.16" DefaultValue="https://localhost:9090/icon-calidad-16.png" />
+        <bt:Image id="IconoCalidad.32" DefaultValue="https://localhost:9090/icon-calidad-32.png" />
+        <bt:Image id="IconoCalidad.80" DefaultValue="https://localhost:9090/icon-calidad-80.png" />
+        <bt:Image id="IconoSimularCronograma.16" DefaultValue="https://localhost:9090/icon-simularcronograma-16.png" />
+        <bt:Image id="IconoSimularCronograma.32" DefaultValue="https://localhost:9090/icon-simularcronograma-32.png" />
+        <bt:Image id="IconoSimularCronograma.80" DefaultValue="https://localhost:9090/icon-simularcronograma-80.png" />
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Panel.Url" DefaultValue="https://localhost:9090/taskpane.html" />
@@ -731,6 +793,10 @@
         <bt:String id="GrupoSimulacion.Label" DefaultValue="Simulación" />
         <bt:String id="GrupoAnalisis.Label" DefaultValue="Análisis" />
         <bt:String id="GrupoInformes.Label" DefaultValue="Informes" />
+        <bt:String id="GrupoCronograma.Label" DefaultValue="Cronograma" />
+        <bt:String id="btnCrearCronograma.Label" DefaultValue="Crear libro de cronograma" />
+        <bt:String id="btnCalidadCronograma.Label" DefaultValue="Revisar calidad" />
+        <bt:String id="btnSimularCronograma.Label" DefaultValue="Simular cronograma" />
         <bt:String id="GrupoAyuda.Label" DefaultValue="Ayuda" />
         <bt:String id="menuIteraciones.Label" DefaultValue="Iteraciones" />
         <bt:String id="iter1000.Label" DefaultValue="1.000" />
@@ -759,6 +825,9 @@
         <bt:String id="ejCronograma.Label" DefaultValue="Cronograma de obra" />
       </bt:ShortStrings>
       <bt:LongStrings>
+        <bt:String id="btnCrearCronograma.Tooltip" DefaultValue="Crea las hojas del cronograma (actividades, relaciones, calendario con festivos de Colombia, incertidumbre y riesgos) con un ejemplo de obra." />
+        <bt:String id="btnCalidadCronograma.Tooltip" DefaultValue="Revisa el cronograma antes de simular: ciclos, extremos abiertos, restricciones, holguras y duraciones largas, actividades sin incertidumbre." />
+        <bt:String id="btnSimularCronograma.Tooltip" DefaultValue="Recalcula la ruta crítica en cada iteración y escribe la hoja Resultados_Cronograma: fechas P10 a P90, criticidad y tornado de riesgos." />
         <bt:String id="btnModelo.Tooltip" DefaultValue="Entradas inciertas, salidas y ajustes de la simulación. Desde aquí se simula." />
         <bt:String id="btnResultados.Tooltip" DefaultValue="Resultados de la última simulación: probabilidades, histograma, curva acumulada y sensibilidad." />
         <bt:String id="btnConfiguracion.Tooltip" DefaultValue="Iteraciones, semilla, muestreo, motor, precisión objetivo y núcleos del equipo." />

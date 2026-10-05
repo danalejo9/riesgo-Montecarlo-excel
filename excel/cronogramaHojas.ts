@@ -432,10 +432,12 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   }
   const porRiesgo = new Map(riesgos.map((r) => [normalizar(r.id), r]));
   const tm = tabla(H.impactos, hojas[H.impactos], COLUMNAS.impactos);
+  const conFilas = new Set<string>();
   for (const { fila, valores } of tm.filas) {
     const rid = texto(valor(tm, valores, 'Riesgo'));
     if (cerrados.has(normalizar(rid))) continue;
     const r = porRiesgo.get(normalizar(rid));
+    if (r) conFilas.add(r.id);
     if (!r) { error(H.impactos, fila, letra(tm, 'Riesgo'), rid ? `El riesgo «${rid}» no existe en la hoja Riesgos` : 'Falta el riesgo'); continue; }
     const aid = texto(valor(tm, valores, 'Actividad'));
     if (invalidas.has(normalizar(aid))) continue;
@@ -457,7 +459,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     }
     r.impactos.push({ actividad: a.id, dias: d });
   }
-  for (const r of riesgos) if (r.impactos.length === 0) avisos.push(`El riesgo «${r.id}» no tiene impactos en la hoja Impactos: no cambia nada.`);
+  for (const r of riesgos) if (!conFilas.has(r.id)) avisos.push(`El riesgo «${r.id}» no tiene impactos en la hoja Impactos: no cambia nada.`);
 
   if (configuracion.hitos) {
     for (const h of configuracion.hitos) {
@@ -590,7 +592,7 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         [ETIQUETAS_CONFIG.redondeo, L.redondeo[0], 'Al día: duraciones enteras, como un cronograma real. Con decimales: sin redondear.'],
         [ETIQUETAS_CONFIG.duras, L.duras[0], '«Debe comenzar / terminar el» fijan fechas; ignorarlas deja que los retrasos se propaguen.'],
         [ETIQUETAS_CONFIG.meta, inicio + 392, 'La fecha comprometida: se calcula la probabilidad de cumplirla (puede quedar vacía).'],
-        [ETIQUETAS_CONFIG.hitos, '', 'IDs separados por comas; vacío: todos los hitos.'],
+        [ETIQUETAS_CONFIG.hitos, '', 'IDs separados por comas; vacío: los hitos intermedios (el fin del proyecto siempre se sigue).'],
       ],
       formatos: {},
       anchos: [36, 18, 90],

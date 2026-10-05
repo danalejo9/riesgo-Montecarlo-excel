@@ -35,6 +35,7 @@ import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../exce
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
 import { abrirVentana, type Ventana } from '../excel/ventana.ts';
 import { codificarJson } from '../excel/codificacion.ts';
+import { Cronograma, type PedidoCronograma } from './Cronograma.tsx';
 import { listaDelModelo, vistaDeCelda, vistaPorDefecto, type ListaModelo, type VistaExplorador } from '../excel/explorador.ts';
 
 /** Lo que el panel manda al explorador (U3.1, U3.4). */
@@ -72,7 +73,7 @@ import { Resultados } from './Resultados.tsx';
 import { duracion, miles, porcentaje } from './formato.ts';
 import { escribirFragmento } from './fragmento.ts';
 
-export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
+export type Pestana = 'modelo' | 'resultados' | 'cronograma' | 'diagnostico' | 'configuracion';
 
 /**
  * La pestaña que pide la URL: cada botón de la cinta abre el panel con su
@@ -81,7 +82,7 @@ export type Pestana = 'modelo' | 'resultados' | 'diagnostico' | 'configuracion';
  */
 export function pestanaDeFragmento(hash: string): Pestana {
   const h = hash.replace(/^#/, '').toLowerCase();
-  return h === 'resultados' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
+  return h === 'resultados' || h === 'cronograma' || h === 'diagnostico' || h === 'configuracion' ? h : 'modelo';
 }
 
 const PREFIJO_FALLO_GUARDADO = 'El modelo no se pudo guardar:';
@@ -104,6 +105,8 @@ export function Panel() {
   const [escenarios, setEscenarios] = useState<AlmacenEscenarios>(sinEscenarios);
   /** U3.2: «Ajustar a datos» en la cinta; cada pulsación abre el ajuste con la selección. */
   const [pedidoAjuste, setPedidoAjuste] = useState(0);
+  /** Q1: los botones del grupo Cronograma de la cinta. */
+  const [pedidoCronograma, setPedidoCronograma] = useState<PedidoCronograma | undefined>(undefined);
   /** Las celdas del modelo la última vez que se pintó la hoja. Ver `cambiarModelo`. */
   const refsPintadas = useRef<string | null>(null);
   const cancelado = useRef(false);
@@ -492,6 +495,12 @@ export function Panel() {
         const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc) }));
         abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
       }),
+      // Q1: el grupo Cronograma de la cinta lleva a su pestaña y hace la acción.
+      ...(['crear', 'calidad', 'simular'] as const).map((accion) => manejarDesdeLaCinta(`cronograma:${accion}`, async () => {
+        setPestana('cronograma');
+        setPedidoCronograma({ accion, n: Date.now() });
+        await mostrarPanel();
+      })),
       manejarDesdeLaCinta('abrirAyuda', async () => {
         await abrirVentana('ayuda.html', '', { alto: 70, ancho: 45 });
       }),
@@ -504,14 +513,14 @@ export function Panel() {
       <header>
         <h1>Riesgo Monte Carlo</h1>
         <nav className="pestanas">
-          {(['modelo', 'resultados', 'diagnostico'] as const).map((p) => (
+          {(['modelo', 'resultados', 'cronograma', 'diagnostico'] as const).map((p) => (
             <button
               key={p}
               type="button"
               className={p === pestana ? 'activa' : ''}
               onClick={() => setPestana(p)}
             >
-              {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : 'Diagnóstico'}
+              {p === 'modelo' ? 'Modelo' : p === 'resultados' ? 'Resultados' : p === 'cronograma' ? 'Cronograma' : 'Diagnóstico'}
             </button>
           ))}
           <button
@@ -649,6 +658,16 @@ export function Panel() {
           hilosUltimaSimulacion={resultado?.ok ? resultado.hilos : undefined}
         />
       )}
+
+      {/* Siempre montada (oculta en las demás pestañas): así no pierde los resultados al cambiar de pestaña. */}
+      <div hidden={pestana !== 'cronograma'}>
+        <Cronograma
+          visible={pestana === 'cronograma'}
+          pedido={pedidoCronograma}
+          alAtender={() => setPedidoCronograma(undefined)}
+          alFallar={(e) => setError(mensajeDe(e))}
+        />
+      </div>
 
       {pestana === 'diagnostico' && <Diagnostico entorno={entorno} alFallar={(e) => setError(mensajeDe(e))} />}
     </main>

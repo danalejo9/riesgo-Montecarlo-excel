@@ -227,7 +227,11 @@ async function correr(
   return { finDias, finSerie, hitosSerie, hitosDias, criticas, duraciones };
 }
 
-/** Los hitos que se siguen: los pedidos o, si no, todos los de duración 0. */
+/**
+ * Los hitos que se siguen: los pedidos o, si no, los intermedios (duración 0
+ * con predecesora y sucesora). El de inicio no cambia nunca y el final es el
+ * fin del proyecto, que ya se sigue aparte.
+ */
 function hitosASeguir(modelo: ModeloCronograma, red: RedCompilada): number[] {
   if (modelo.configuracion.hitos) {
     return modelo.configuracion.hitos.map((id) => {
@@ -237,7 +241,11 @@ function hitosASeguir(modelo: ModeloCronograma, red: RedCompilada): number[] {
     });
   }
   const r: number[] = [];
-  for (let a = 0; a < red.n; a++) if (red.duracion[a] === 0) r.push(a);
+  for (let a = 0; a < red.n; a++) {
+    const conPredecesora = (red.entradaInicio[a + 1] as number) > (red.entradaInicio[a] as number);
+    const conSucesora = (red.salidaInicio[a + 1] as number) > (red.salidaInicio[a] as number);
+    if (red.duracion[a] === 0 && conPredecesora && conSucesora) r.push(a);
+  }
   return r;
 }
 

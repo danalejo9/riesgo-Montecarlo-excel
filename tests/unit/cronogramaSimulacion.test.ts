@@ -21,7 +21,7 @@ describe('sesgo de convergencia (prueba 2)', () => {
     ], [
       { actividad: 'A', distribucion: tri(5, 10, 20) },
       { actividad: 'B', distribucion: tri(5, 10, 20) },
-    ], [], { iteraciones: 5000, redondeo: 'decimal' });
+    ], [], { iteraciones: 5000, redondeo: 'decimal', hitos: ['H'] });
     const sim = await simularCronograma(m);
     const mediaA = Array.from(sim.duraciones[0] as Float32Array).reduce((s, x) => s + x, 0) / 5000;
     const hito = sim.hitos[0]?.dias as Float64Array;

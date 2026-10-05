@@ -18,6 +18,9 @@ const ICONOS = {
   ejemplos: `<rect x="16" y="6" width="38" height="46" rx="3" fill="${OCRE}" opacity=".45"/><rect x="10" y="12" width="38" height="46" rx="3" fill="#fff" stroke="${OCRE}" stroke-width="4"/><path d="M18 26 H40 M18 36 H40 M18 46 H32" stroke="${OCRE}" stroke-width="4"/>`,
   lista: `<rect x="6" y="10" width="10" height="10" fill="#E3B505"/><rect x="22" y="12" width="36" height="6" fill="${GRIS}"/><rect x="6" y="27" width="10" height="10" fill="${VERDE}"/><rect x="22" y="29" width="36" height="6" fill="${GRIS}"/><rect x="6" y="44" width="10" height="10" fill="#E3B505"/><rect x="22" y="46" width="36" height="6" fill="${GRIS}"/>`,
   detener: `<rect x="12" y="12" width="40" height="40" rx="4" fill="${ROJO}"/>`,
+  cronograma: `<rect x="6" y="10" width="24" height="9" rx="2" fill="${AZUL}"/><rect x="22" y="27" width="28" height="9" rx="2" fill="${ROJO}"/><rect x="36" y="44" width="22" height="9" rx="2" fill="${ROJO}"/><path d="M30 14.5 H34 V27 M50 31.5 H52 V44" stroke="${GRIS}" stroke-width="2.5" fill="none"/>`,
+  calidad: `<circle cx="32" cy="12" r="8" fill="${ROJO}"/><circle cx="32" cy="32" r="8" fill="#E3B505"/><circle cx="32" cy="52" r="8" fill="${VERDE}"/>`,
+  simularcronograma: `<rect x="6" y="12" width="26" height="9" rx="2" fill="${AZUL}" opacity=".6"/><rect x="20" y="28" width="30" height="9" rx="2" fill="${AZUL}" opacity=".8"/><path d="M8 58 C22 58 28 44 36 44 C44 44 48 58 60 58 Z" fill="${ROJO}" opacity=".85"/>`,
   diagnostico: `<path d="M4 34 H18 L24 18 L34 50 L42 26 L46 34 H60" stroke="${GRIS}" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`,
 };
 
