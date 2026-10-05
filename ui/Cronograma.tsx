@@ -18,7 +18,7 @@ import {
   crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
 import { Ayuda } from './ayuda.tsx';
-import { qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
+import { datosGanttDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
 import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
@@ -95,7 +95,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
     void leerHojasCronograma().then((h) => {
       const l = leerCronograma(h);
       if (!vigente || !l.modelo) return;
-      setDatosGantt({ version: 1, modelo: l.modelo, orden: l.orden ?? [], vinculosResumen: l.vinculosResumen ?? [], ...(controlGantt.qrsa ? { qrsa: controlGantt.qrsa } : {}) });
+      setDatosGantt(datosGanttDe(l, controlGantt.qrsa));
     }).catch(() => {});
     return () => { vigente = false; };
   }, [visible, existentes]);
@@ -108,7 +108,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       setDatosGantt(null);
       return null;
     }
-    setDatosGantt({ version: 1, modelo: lectura.modelo, orden: lectura.orden ?? [], vinculosResumen: lectura.vinculosResumen ?? [], ...(controlGantt.qrsa ? { qrsa: controlGantt.qrsa } : {}) });
+    setDatosGantt(datosGanttDe(lectura, controlGantt.qrsa));
     setEstado((e) => ({ ...e, errores: [], avisos: lectura.avisos }));
     return lectura.modelo;
   }, []);

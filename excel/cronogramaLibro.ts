@@ -228,15 +228,20 @@ export async function escribirResultadosCronograma(r: HojaResultados): Promise<v
  */
 export async function aplicarCambiosEnLibro(cambios: readonly CambioHoja[]): Promise<void> {
   await Excel.run(async (context) => {
-    const hojas = new Map<string, Excel.Worksheet>();
-    const hoja = (n: string) => {
-      let h = hojas.get(n);
-      if (!h) {
-        h = context.workbook.worksheets.getItem(n);
-        hojas.set(n, h);
-      }
+    // Una hoja que todavía no existe (Lineas_Base en un libro de antes) se crea.
+    const nombres = [...new Set(cambios.map((c) => c.hoja))];
+    const existentes = nombres.map((n) => {
+      const h = context.workbook.worksheets.getItemOrNullObject(n);
+      h.load('isNullObject');
       return h;
-    };
+    });
+    await context.sync();
+    const hojas = new Map<string, Excel.Worksheet>();
+    nombres.forEach((n, i) => {
+      const h = existentes[i] as Excel.Worksheet;
+      hojas.set(n, h.isNullObject ? context.workbook.worksheets.add(n) : h);
+    });
+    const hoja = (n: string) => hojas.get(n) as Excel.Worksheet;
     for (const c of cambios) {
       const h = hoja(c.hoja);
       if (c.op === 'celda') {

@@ -411,7 +411,7 @@ function hojaMemoria(nombre: string): Record<string, unknown> {
   };
 }
 
-const ES_HOJA_MEMORIA = /^(Config|Calendario|Actividades|Relaciones|Incertidumbre|Riesgos|Impactos|Costos|Correlaciones|Ramas|Resultados_Cronograma)$/;
+const ES_HOJA_MEMORIA = /^(Config|Calendario|Actividades|Relaciones|Incertidumbre|Riesgos|Impactos|Costos|Correlaciones|Ramas|Lineas_Base|Resultados_Cronograma)$/;
 
 /** Instala los globales `Office` y `Excel` que espera el panel. */
 export function instalarExcelFalso(): void {

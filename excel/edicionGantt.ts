@@ -11,7 +11,8 @@
  */
 
 import { compilarRed, ErrorRed, leerPredecesoras, nivelDeWbs, padres, type TipoRelacion, type TipoRestriccion } from '../engine/cronograma/index.ts';
-import { COLUMNAS, HOJAS_CRONOGRAMA, LISTAS, leerCronograma, normalizar, type LecturaCronograma, type MatrizHoja } from './cronogramaHojas.ts';
+import { COLUMNAS, HOJAS_CRONOGRAMA, LINEAS_BASE, LISTAS, leerCronograma, normalizar, type LecturaCronograma, type MatrizHoja } from './cronogramaHojas.ts';
+import { construirVista, datosGanttDe } from './gantt.ts';
 
 const H = HOJAS_CRONOGRAMA;
 const NOMBRE_RESTRICCION: Record<TipoRestriccion, string> = {
@@ -34,7 +35,9 @@ export type OperacionGantt =
   | { op: 'borrar'; id: string }
   | { op: 'nivel'; id: string; delta: 1 | -1 }
   | { op: 'hito'; id: string }
-  | { op: 'mover'; id: string; delta: 1 | -1 };
+  | { op: 'mover'; id: string; delta: 1 | -1 }
+  /** G3: guarda las fechas actuales como la línea base `numero` (1 a 3). */
+  | { op: 'lineaBase'; numero: number };
 
 export type CampoGantt = 'nombre' | 'duracion' | 'calendario' | 'fechaLimite' | 'inicioReal' | 'finReal' | 'porcentaje' | 'restante';
 
@@ -298,6 +301,31 @@ export function aplicarOperacion(hojas: Readonly<Record<string, MatrizHoja | und
       e.celda(A, fila, cA('Tipo'), esHito ? 'Tarea' : 'Hito');
       e.celda(A, fila, cA('Duración (días)'), esHito ? 1 : 0);
       descripcion = esHito ? `${op.id} pasa a tarea` : `${op.id} pasa a hito`;
+      break;
+    }
+    case 'lineaBase': {
+      const k = Math.trunc(op.numero);
+      if (!(k >= 1 && k <= LINEAS_BASE)) return { ok: false, error: `La línea base tiene que ser de 1 a ${LINEAS_BASE}.` };
+      const datos = datosGanttDe(leerCronograma(hojas));
+      if (!datos) return { ok: false, error: 'El cronograma tiene errores: corríjalos antes de guardar una línea base.' };
+      const v = construirVista(datos);
+      const LB = H.lineasBase;
+      if (!e.libro[LB] || e.hoja(LB).length === 0) COLUMNAS.lineasBase.forEach((n, c) => e.celda(LB, 0, c, n));
+      const cId = e.col(LB, 'ID');
+      const cIni = e.col(LB, `LB${k} comienzo`);
+      const cFin = e.col(LB, `LB${k} fin`);
+      const m = e.hoja(LB);
+      const filaDe = new Map<string, number>();
+      for (let f = 1; f < m.length; f++) { const id = texto(m[f]?.[cId]); if (id) filaDe.set(normalizar(id), f); }
+      let siguiente = ultimaFila(m) + 1;
+      for (const f of v.filas) {
+        if (f.tipo === 'resumen' || !Number.isFinite(f.inicio)) continue;
+        let r = filaDe.get(normalizar(f.id));
+        if (r === undefined) { r = siguiente++; e.celda(LB, r, cId, f.id); }
+        e.celda(LB, r, cIni, f.inicio);
+        e.celda(LB, r, cFin, f.fin);
+      }
+      descripcion = `Guardar la línea base ${k}`;
       break;
     }
     case 'mover': {

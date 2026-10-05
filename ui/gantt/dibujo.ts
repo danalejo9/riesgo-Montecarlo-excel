@@ -37,6 +37,7 @@ export const COLORES = {
   restriccion: '#7030A0',
   qrsa: '#404040',
   avance: 'rgba(0,0,0,0.38)',
+  lineaBase: '#A6A6A6',
   corte: '#C55A11',
 } as const;
 
@@ -222,6 +223,26 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
     const cy = r.y + r.alto / 2;
     const negativa = f.holguraTotal !== null && f.holguraTotal < -1e-9;
     const color = f.critica ? COLORES.critica : f.casiCritica ? COLORES.casiCritica : COLORES.tarea;
+
+    // G3: la línea base, una barra gris delgada justo debajo (un rombo hueco si es hito).
+    if (f.lineaBase && f.tipo !== 'resumen') {
+      const lb = f.lineaBase;
+      ctx.fillStyle = COLORES.lineaBase;
+      if (lb.fin === lb.inicio && f.tipo === 'hito') {
+        const c = X(lb.inicio);
+        ctx.strokeStyle = COLORES.lineaBase;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(c, r.y + r.alto - 1);
+        ctx.lineTo(c + 4, r.y + r.alto + 3);
+        ctx.lineTo(c, r.y + r.alto + 7);
+        ctx.lineTo(c - 4, r.y + r.alto + 3);
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(X(lb.inicio), r.y + r.alto + 1, Math.max(2, X(lb.fin + 1) - X(lb.inicio)), 3);
+      }
+    }
 
     // Rango QRSA (bigote P10–P90 con marca en P80) sobre el fin.
     if (e.capas.qrsa && f.qrsa && f.tipo !== 'resumen') {

@@ -11,7 +11,7 @@ import {
   textoRelacion, TOLERANCIA_CRITICA, type AnalisisRutas, type ExplicacionCritica, type ModeloCronograma, type RedCompilada,
   type TipoRelacion, type UmbralesCalidad,
 } from '../engine/cronograma/index.ts';
-import type { FilaOrden } from './cronogramaHojas.ts';
+import type { FilaOrden, LecturaCronograma, LineaBase } from './cronogramaHojas.ts';
 
 const TIPOS: readonly TipoRelacion[] = ['FC', 'CC', 'FF', 'CF'];
 const NOMBRE_RESTRICCION: Record<string, string> = {
@@ -28,6 +28,18 @@ export interface DatosGantt {
   vinculosResumen: [string, string][];
   /** De la última simulación QRSA, por id: criticidad y P10/P50/P80/P90 del fin. */
   qrsa?: Record<string, { criticidad: number; p10: number; p50: number; p80: number; p90: number }>;
+  /** G3: líneas base guardadas, por id (posición 0 = LB1). */
+  lineasBase?: Record<string, (LineaBase | null)[]>;
+}
+
+/** Lo que se manda al Gantt, desde una lectura de las hojas (null si tiene errores). */
+export function datosGanttDe(l: LecturaCronograma, qrsa?: DatosGantt['qrsa']): DatosGantt | null {
+  if (!l.modelo) return null;
+  return {
+    version: 1, modelo: l.modelo, orden: l.orden ?? [], vinculosResumen: l.vinculosResumen ?? [],
+    ...(qrsa ? { qrsa } : {}),
+    ...(l.lineasBase && Object.keys(l.lineasBase).length ? { lineasBase: l.lineasBase } : {}),
+  };
 }
 
 export interface EstadoEdicion {
@@ -81,6 +93,9 @@ export interface FilaGantt {
   inicioReal: number | null;
   finReal: number | null;
   restante: number | null;
+  /** G3: la línea base elegida y la variación del fin (días laborables; positiva = va tarde). */
+  lineaBase: LineaBase | null;
+  variacion: number | null;
 }
 
 export interface RelacionGantt {
@@ -117,6 +132,9 @@ export interface VistaGantt {
   calidad: CriterioGantt[];
   definicion: DefinicionCritica;
   umbralCasiCritica: number;
+  /** G3: la línea base que se enseña (1 a 3; 0 ninguna) y cuáles hay guardadas. */
+  lineaBase: number;
+  lineasBaseGuardadas: number[];
   /** Para el trazado de cadenas y «¿por qué es crítica?». */
   red: RedCompilada;
   rutas: AnalisisRutas;
@@ -126,12 +144,17 @@ export interface OpcionesVista {
   definicion?: DefinicionCritica;
   umbralCasiCritica?: number;
   umbrales?: Partial<UmbralesCalidad>;
+  /** G3: qué línea base enseñar (1 a 3; 0 ninguna). Por defecto, la primera guardada. */
+  lineaBase?: number;
 }
 
 export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): VistaGantt {
   const definicion = opciones.definicion ?? 'holgura';
   const umbral = opciones.umbralCasiCritica ?? 5;
   const m = d.modelo;
+  const guardadas = [1, 2, 3].filter((k) => Object.values(d.lineasBase ?? {}).some((l) => l[k - 1]));
+  const nLb = opciones.lineaBase ?? guardadas[0] ?? 0;
+  const lbDe = (id: string): LineaBase | null => (nLb > 0 ? d.lineasBase?.[id]?.[nLb - 1] ?? null : null);
   const red = compilarRed(m.red);
   const rutas = analizarRutas(red, red.duracion, { ignorarDuras: false });
   const { esp } = rutas;
@@ -174,6 +197,7 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
         holguraTotal: null, holguraLibre: null, critica: false, casiCritica: false, enRutaMasLarga: false, calendario: '',
         restriccion: null, fechaRestriccion: null, fechaLimite: null, predecesoras: '', sucesoras: '',
         estado: 'pendiente' as const, avance: null, inicioReal: null, finReal: null, restante: null,
+        lineaBase: null, variacion: null,
       };
     }
     const c = red.calendarios[red.cal[i] as number] as CalendarioLaboral;
@@ -195,6 +219,13 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
       avance: hecho,
       inicioReal: av?.inicioReal ?? null,
       finReal: av?.finReal ?? null,
+      lineaBase: lbDe(o.id),
+      variacion: (() => {
+        const lb = lbDe(o.id);
+        if (!lb) return null;
+        const f = c.serieFin(esp.ef[i] as number, dur);
+        return f >= lb.fin ? c.cuenta(c.instante(f)) - c.cuenta(c.instante(lb.fin)) : -(c.cuenta(c.instante(lb.fin)) - c.cuenta(c.instante(f)));
+      })(),
       restante: st === 1 ? Math.max(0, (esp.ef[i] as number) - Math.max(Number.isFinite(red.corte) ? c.cuenta(red.corte) : -Infinity, esp.es[i] as number)) : null,
       inicio: c.serieInicio(esp.es[i] as number),
       fin: c.serieFin(esp.ef[i] as number, dur),
@@ -225,6 +256,11 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
     f.inicioTardio = Math.min(...hijas.map((x) => x.inicioTardio));
     f.finTardio = Math.max(...hijas.map((x) => x.finTardio));
     f.critica = hijas.some((x) => x.critica);
+    const conLb = hijas.filter((x) => x.lineaBase);
+    if (conLb.length) {
+      f.lineaBase = { inicio: Math.min(...conLb.map((x) => (x.lineaBase as LineaBase).inicio)), fin: Math.max(...conLb.map((x) => (x.lineaBase as LineaBase).fin)) };
+      f.variacion = cp.cuenta(cp.instante(f.fin)) - cp.cuenta(cp.instante(f.lineaBase.fin));
+    }
     // G3: el avance del resumen, ponderado por la duración de sus hijas.
     const conPeso = hijas.filter((x) => x.avance !== null && (x.duracion ?? 0) > 0);
     if (conPeso.length) {
@@ -240,9 +276,47 @@ export function construirVista(d: DatosGantt, opciones: OpcionesVista = {}): Vis
   const noLaborables = new Set<number>();
   for (let s = inicio - 60; s <= fin + 120; s++) if (!cp.esLaborable(s)) noLaborables.add(s);
   return {
-    filas, relaciones, inicio, fin, fechaMeta: m.configuracion.fechaMeta ?? null, fechaCorte: m.red.fechaCorte ?? null, noLaborables, calidad, definicion,
-    umbralCasiCritica: umbral, red, rutas,
+    filas, relaciones, inicio, fin, fechaMeta: m.configuracion.fechaMeta ?? null, fechaCorte: m.red.fechaCorte ?? null, noLaborables,
+    calidad: [...calidad, ...indicesLineaBase(filas, m.red.fechaCorte, cp, fin)], definicion,
+    umbralCasiCritica: umbral, lineaBase: nLb, lineasBaseGuardadas: guardadas, red, rutas,
   };
+}
+
+/**
+ * G3: BEI y CPLI (DCMA, informativos), con la línea base que se enseña.
+ * - **BEI**: actividades terminadas entre las que la línea base decía que
+ *   tenían que estar terminadas a la fecha de corte.
+ * - **CPLI**: (lo que le queda a la ruta crítica + la holgura frente al fin de
+ *   la línea base) / lo que le queda; por debajo de 1, el fin se va a escapar.
+ */
+function indicesLineaBase(filas: FilaGantt[], corte: number | undefined, cp: CalendarioLaboral, fin: number): CriterioGantt[] {
+  const tareas = filas.filter((f) => f.tipo !== 'resumen');
+  const conLb = tareas.filter((f) => f.lineaBase);
+  if (conLb.length === 0) return [];
+  const out: CriterioGantt[] = [];
+  if (corte !== undefined) {
+    const debian = conLb.filter((f) => (f.lineaBase as LineaBase).fin <= corte);
+    const hechas = debian.filter((f) => f.estado === 'terminada').length;
+    const bei = debian.length ? hechas / debian.length : 1;
+    out.push({
+      id: 'bei', criterio: 'BEI (índice de ejecución de la línea base, ≥ 0,95)', estado: bei >= 0.95 ? 'verde' : 'amarillo',
+      detalle: debian.length ? `${hechas} de ${debian.length} actividades que la línea base daba por terminadas al corte lo están: BEI ${bei.toFixed(2).replace('.', ',')}.` : 'La línea base no daba ninguna por terminada a la fecha de corte.',
+      actividades: debian.filter((f) => f.estado !== 'terminada').map((f) => f.id),
+    });
+  }
+  const finLb = Math.max(...conLb.map((f) => (f.lineaBase as LineaBase).fin));
+  const desde = corte !== undefined ? Math.max(corte, Math.min(...tareas.map((f) => f.inicio))) : Math.min(...tareas.map((f) => f.inicio));
+  const cpl = cp.cuenta(cp.instante(fin) + 1) - cp.cuenta(cp.instante(desde));
+  const holgura = cp.cuenta(cp.instante(finLb) + 1) - cp.cuenta(cp.instante(fin) + 1);
+  if (cpl > 0) {
+    const cpli = (cpl + holgura) / cpl;
+    out.push({
+      id: 'cpli', criterio: 'CPLI (índice de longitud de la ruta crítica, ≥ 0,95)', estado: cpli >= 0.95 ? 'verde' : 'amarillo',
+      detalle: `Faltan ${cpl} días laborables por la ruta crítica y el fin va ${holgura >= 0 ? `${holgura} días antes` : `${-holgura} días después`} del de la línea base: CPLI ${cpli.toFixed(2).replace('.', ',')}.`,
+      actividades: [],
+    });
+  }
+  return out;
 }
 
 /** Calidad del QRSA más lo del Gantt: vínculos a resúmenes y alertas de la ruta crítica (§7.4 y §8). */

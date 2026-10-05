@@ -29,6 +29,7 @@ export const HOJAS_CRONOGRAMA = {
   costos: 'Costos',
   correlaciones: 'Correlaciones',
   ramas: 'Ramas',
+  lineasBase: 'Lineas_Base',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -52,6 +53,13 @@ export interface LecturaCronograma {
   orden?: FilaOrden[];
   /** Relaciones que tocan una actividad resumen (no se usan en el cálculo). */
   vinculosResumen?: [string, string][];
+  /** G3: las líneas base guardadas, por id (posición 0 = LB1). */
+  lineasBase?: Record<string, (LineaBase | null)[]>;
+}
+
+export interface LineaBase {
+  inicio: number;
+  fin: number;
 }
 
 /** Una fila de Actividades tal como está en la hoja. */
@@ -78,7 +86,11 @@ export const COLUMNAS = {
   correlacionPares: ['Elemento A', 'Elemento B', 'Coeficiente'],
   correlacionGrupos: ['Grupo', 'Miembros', 'Coeficiente'],
   ramas: ['Rama', 'Opción', 'Probabilidad', 'Actividades'],
+  lineasBase: ['ID', 'LB1 comienzo', 'LB1 fin', 'LB2 comienzo', 'LB2 fin', 'LB3 comienzo', 'LB3 fin'],
 } as const;
+
+/** G3: hasta tres líneas base. */
+export const LINEAS_BASE = 3;
 
 /** La tabla de excepciones del calendario empieza en la columna J. */
 export const COLUMNA_EXCEPCIONES = 9;
@@ -766,10 +778,27 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     configuracion.hitos = configuracion.hitos.map((h) => porId.get(normalizar(h))?.id ?? h);
   }
 
-  if (errores.length) return { modelo: null, errores, avisos, orden, vinculosResumen };
+  // G3: líneas base (no entran en el cálculo; las enseña el Gantt).
+  const lineasBase: Record<string, (LineaBase | null)[]> = {};
+  const tlb = tabla(H.lineasBase, hojas[H.lineasBase], COLUMNAS.lineasBase);
+  for (const { fila, valores } of tlb.filas) {
+    const id = texto(valor(tlb, valores, 'ID'));
+    if (!id) continue;
+    const lineas: (LineaBase | null)[] = [];
+    for (let k = 1; k <= LINEAS_BASE; k++) {
+      const i0 = fechaDeCelda(valor(tlb, valores, `LB${k} comienzo`));
+      const f0 = fechaDeCelda(valor(tlb, valores, `LB${k} fin`));
+      if ((i0 === null) !== (f0 === null)) avisos.push(`${H.lineasBase}, fila ${fila}: la línea base ${k} de «${id}» no tiene comienzo y fin; no se usa.`);
+      lineas.push(i0 !== null && f0 !== null ? { inicio: i0, fin: f0 } : null);
+    }
+    if (lineas.some(Boolean)) lineasBase[porId.get(normalizar(id))?.id ?? id] = lineas;
+  }
+
+  if (errores.length) return { modelo: null, errores, avisos, orden, vinculosResumen, lineasBase };
   return {
     orden,
     vinculosResumen,
+    lineasBase,
     modelo: {
       red: { inicio, calendarios, calendarioProyecto, actividades, ...(fechaCorte !== undefined ? { fechaCorte } : {}), logicaProgreso },
       incertidumbre,
@@ -1044,6 +1073,14 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         0: 'Pares de actividades (sus duraciones) o partidas (sus tarifas) que se mueven juntas: de −1 a 1.',
         [COLUMNA_GRUPOS_CORRELACION + 1]: 'Todos los miembros con el mismo coeficiente: IDs separados por comas, «WBS 3» o «Grupo Instalaciones».',
       },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.lineasBase,
+      valores: [[...COLUMNAS.lineasBase]],
+      formatos: { 1: FORMATO_FECHA, 2: FORMATO_FECHA, 3: FORMATO_FECHA, 4: FORMATO_FECHA, 5: FORMATO_FECHA, 6: FORMATO_FECHA },
+      anchos: [10, 14, 14, 14, 14, 14, 14],
+      listas: {},
+      notas: { 0: 'Las líneas base se guardan desde el Gantt («Guardar línea base»): las fechas del cronograma en ese momento, para comparar después.' },
     },
     {
       nombre: HOJAS_CRONOGRAMA.ramas,

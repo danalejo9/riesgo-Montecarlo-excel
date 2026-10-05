@@ -8,7 +8,7 @@
 
 import { leerCronograma, type LecturaCronograma, type MatrizHoja } from '../../excel/cronogramaHojas.ts';
 import { aplicarCambios, aplicarOperacion, HistorialGantt, hojasDe, huellaHojas, type CambioHoja, type OperacionGantt } from '../../excel/edicionGantt.ts';
-import type { DatosGantt, EstadoEdicion } from '../../excel/gantt.ts';
+import { datosGanttDe, type DatosGantt, type EstadoEdicion } from '../../excel/gantt.ts';
 
 export interface RespuestaGantt {
   gantt?: DatosGantt;
@@ -28,8 +28,7 @@ export class ControlGantt {
   }
 
   private datosDe(l: LecturaCronograma): DatosGantt | null {
-    if (!l.modelo) return null;
-    return { version: 1, modelo: l.modelo, orden: l.orden ?? [], vinculosResumen: l.vinculosResumen ?? [], ...(this.qrsa ? { qrsa: this.qrsa } : {}) };
+    return datosGanttDe(l, this.qrsa);
   }
 
   private estado(extra: Partial<EstadoEdicion> = {}): EstadoEdicion {

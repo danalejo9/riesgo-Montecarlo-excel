@@ -39,8 +39,8 @@ const RESTRICCIONES: { tipo: TipoRestriccion; nombre: string }[] = [
 ];
 
 type IdColumna = 'diag' | 'wbs' | 'id' | 'nombre' | 'duracion' | 'inicio' | 'fin' | 'predecesoras' | 'sucesoras' | 'ht' | 'hl' | 'critica' | 'restriccion' | 'limite' | 'calendario' | 'p80' | 'criticidad'
-  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante';
-interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean; seguimiento?: boolean }
+  | 'estado' | 'avance' | 'inicioReal' | 'finReal' | 'restante' | 'lbInicio' | 'lbFin' | 'variacion';
+interface Columna { id: IdColumna; titulo: string; ancho: number; editable?: boolean; numero?: boolean; qrsa?: boolean; seguimiento?: boolean; lineaBase?: boolean }
 const COLUMNAS: Columna[] = [
   { id: 'diag', titulo: '', ancho: 24 },
   { id: 'wbs', titulo: 'WBS', ancho: 52 },
@@ -62,10 +62,13 @@ const COLUMNAS: Columna[] = [
   { id: 'inicioReal', titulo: 'Comienzo real', ancho: 82, editable: true, seguimiento: true },
   { id: 'finReal', titulo: 'Fin real', ancho: 82, editable: true, seguimiento: true },
   { id: 'restante', titulo: 'Duración restante', ancho: 72, editable: true, numero: true, seguimiento: true },
+  { id: 'lbInicio', titulo: 'LB comienzo', ancho: 82, lineaBase: true },
+  { id: 'lbFin', titulo: 'LB fin', ancho: 82, lineaBase: true },
+  { id: 'variacion', titulo: 'Variación (d)', ancho: 70, numero: true, lineaBase: true },
   { id: 'p80', titulo: 'P80 fin (QRSA)', ancho: 90, qrsa: true },
   { id: 'criticidad', titulo: 'Criticidad (QRSA)', ancho: 80, qrsa: true, numero: true },
 ];
-const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'p80', 'criticidad'];
+const VISIBLES_POR_DEFECTO: IdColumna[] = ['diag', 'wbs', 'id', 'nombre', 'duracion', 'inicio', 'fin', 'predecesoras', 'ht', 'critica', 'avance', 'variacion', 'p80', 'criticidad'];
 
 const num = (x: number | null, d = 1) => (x === null || !Number.isFinite(x) ? '' : x.toLocaleString('es-ES', { maximumFractionDigits: d }));
 const fecha = (s: number | null) => (s === null || !Number.isFinite(s) ? '' : textoFecha(s));
@@ -95,6 +98,8 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   // ---------------------------------------------------------- cálculo
   const [definicion, setDefinicion] = useState<DefinicionCritica>('holgura');
   const [umbral, setUmbral] = useState(5);
+  /** G3: la línea base que se enseña (undefined: la primera guardada). */
+  const [lineaBase, setLineaBase] = useState<number | undefined>(undefined);
   const [automatico, setAutomatico] = useState(true);
   const [calculados, setCalculados] = useState<DatosGantt>(datos);
   useEffect(() => {
@@ -104,12 +109,12 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const calculo = useMemo((): { vista: VistaGantt; ms: number } | { error: string } => {
     const t0 = performance.now();
     try {
-      const vista = construirVista(calculados, { definicion, umbralCasiCritica: umbral });
+      const vista = construirVista(calculados, { definicion, umbralCasiCritica: umbral, ...(lineaBase !== undefined ? { lineaBase } : {}) });
       return { vista, ms: performance.now() - t0 };
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) };
     }
-  }, [calculados, definicion, umbral]);
+  }, [calculados, definicion, umbral, lineaBase]);
   const vista = 'vista' in calculo ? calculo.vista : null;
 
   // ---------------------------------------------------------- filas visibles
@@ -552,7 +557,8 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const hayQrsa = !!datos.qrsa && Object.keys(datos.qrsa).length > 0;
   // G3: las columnas de seguimiento aparecen cuando hay fecha de corte o avance.
   const haySeguimiento = datos.modelo.red.fechaCorte !== undefined || datos.modelo.red.actividades.some((a) => a.avance);
-  const columnas = useMemo(() => COLUMNAS.filter((c) => visibles.includes(c.id) && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento)), [visibles, hayQrsa, haySeguimiento]);
+  const hayLineaBase = !!vista && vista.lineaBase > 0;
+  const columnas = useMemo(() => COLUMNAS.filter((c) => visibles.includes(c.id) && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento) && (!c.lineaBase || hayLineaBase)), [visibles, hayQrsa, haySeguimiento, hayLineaBase]);
   const anchoDe = (c: Columna) => anchos[c.id] ?? c.ancho;
   const anchoColumnas = columnas.reduce((s, c) => s + anchoDe(c), 0);
   const anchosColumnas = useMemo(() => columnas.map((c) => anchos[c.id] ?? c.ancho), [columnas, anchos]);
@@ -637,6 +643,22 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
             <option value="critica">Solo ruta crítica</option>
             <option value="casi">Crítica + casi crítica</option>
           </select>
+          <label title="G3: la línea base que se dibuja debajo de cada barra">
+            Línea base:{' '}
+            <select value={v.lineaBase} onChange={(e) => setLineaBase(Number(e.target.value))}>
+              <option value={0}>Ninguna</option>
+              {[1, 2, 3].map((k) => <option key={k} value={k}>{`LB${k}${v.lineasBaseGuardadas.includes(k) ? '' : ' (vacía)'}`}</option>)}
+            </select>
+          </label>
+          {editable && (
+            <button type="button" className="secundario" disabled={estado.ocupado} title="Guarda las fechas de ahora como esta línea base (en la hoja Lineas_Base)"
+              onClick={() => {
+                const k = v.lineaBase || 1;
+                const op: OperacionGantt = { op: 'lineaBase', numero: k };
+                if (v.lineasBaseGuardadas.includes(k)) setConfirmar({ texto: `La línea base ${k} ya existe: ¿reemplazarla por las fechas de ahora? Se puede deshacer.`, op });
+                else { operar(op); setLineaBase(k); }
+              }}>Guardar línea base</button>
+          )}
           <input type="search" placeholder="Buscar ID o nombre" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') buscar(); }} style={{ width: 140 }} />
         </div>
         {editable && (
@@ -662,7 +684,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
           <details className="menu-columnas">
             <summary>Columnas y capas</summary>
             <div>
-              {COLUMNAS.filter((c) => c.id !== 'diag' && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento)).map((c) => (
+              {COLUMNAS.filter((c) => c.id !== 'diag' && (!c.qrsa || hayQrsa) && (!c.seguimiento || haySeguimiento) && (!c.lineaBase || hayLineaBase)).map((c) => (
                 <label key={c.id}><input type="checkbox" checked={visibles.includes(c.id)} onChange={(e) => setVisibles(e.target.checked ? [...visibles, c.id] : visibles.filter((x) => x !== c.id))} /> {c.titulo}</label>
               ))}
               <hr />
@@ -846,6 +868,9 @@ function Celda({ f, c, ancho, vista, plegado, alPlegar, editando, alEditar, alEm
     case 'inicioReal': contenido = fecha(f.inicioReal); break;
     case 'finReal': contenido = fecha(f.finReal); break;
     case 'restante': contenido = f.restante === null ? '' : `${num(f.restante)} d`; break;
+    case 'lbInicio': contenido = fecha(f.lineaBase?.inicio ?? null); break;
+    case 'lbFin': contenido = fecha(f.lineaBase?.fin ?? null); break;
+    case 'variacion': contenido = f.variacion === null ? '' : <span className={f.variacion > 0 ? 'negativo' : ''}>{f.variacion > 0 ? '+' : ''}{num(f.variacion, 0)}</span>; break;
     case 'p80': contenido = f.qrsa ? fecha(f.qrsa.p80) : ''; break;
     case 'criticidad': contenido = f.qrsa ? `${num(100 * f.qrsa.criticidad, 0)} %` : ''; break;
   }
@@ -867,6 +892,7 @@ function TooltipFila({ f, vista, zona }: { f: FilaGantt; vista: VistaGantt; zona
       {f.sucesoras && <div>Sucesoras: {f.sucesoras}</div>}
       {f.restriccion && <div>{f.restriccion} {fecha(f.fechaRestriccion)}</div>}
       {f.fechaLimite !== null && <div>Fecha límite {fecha(f.fechaLimite)}</div>}
+      {f.lineaBase && <div>Línea base {fecha(f.lineaBase.inicio)} – {fecha(f.lineaBase.fin)}{f.variacion !== null ? ` · variación ${f.variacion > 0 ? '+' : ''}${num(f.variacion, 0)} d` : ''}</div>}
       {f.estado !== 'pendiente' && <div>{f.estado === 'terminada' ? 'Terminada' : 'En curso'}{f.avance !== null ? ` · ${num(100 * f.avance, 0)} %` : ''}{f.inicioReal !== null ? ` · comenzó el ${fecha(f.inicioReal)}` : ''}{f.finReal !== null ? ` · terminó el ${fecha(f.finReal)}` : ''}{f.restante !== null ? ` · le faltan ${num(f.restante)} d` : ''}</div>}
       {f.qrsa && <div>QRSA: fin P10 {fecha(f.qrsa.p10)} · P80 {fecha(f.qrsa.p80)} · P90 {fecha(f.qrsa.p90)} · criticidad {num(100 * f.qrsa.criticidad, 0)} %</div>}
       {alertas.map((a) => <div key={a.id} className={a.estado === 'rojo' ? 'negativo' : ''}>⚠ {a.criterio}</div>)}
@@ -1074,6 +1100,7 @@ function Leyenda({ hayQrsa }: { hayQrsa: boolean }) {
         <li><span className="ley-vertical" style={{ borderColor: COLORES.hoy }} /> Hoy · <span className="ley-vertical punteada" style={{ borderColor: COLORES.limites }} /> inicio y fin · <span className="ley-vertical punteada" style={{ borderColor: COLORES.meta }} /> meta</li>
         <li><span className="ley-limite" /> Fecha límite · <span className="ley-restriccion" /> restricción</li>
         <li><span className="ley-noLab" /> No laborable o festivo</li>
+        <li><span className="ley-barra" style={{ background: COLORES.lineaBase, height: 3 }} /> Línea base</li>
         <li><span className="ley-barra" style={{ background: COLORES.tarea, boxShadow: 'inset 0 0 0 3px #4472C4, inset 0 0 0 10px rgba(0,0,0,.38)' }} /> Avance · <span className="ley-barra" style={{ background: '#8EA9DB' }} /> terminada · <span className="ley-vertical punteada" style={{ borderColor: COLORES.corte, borderLeftWidth: 3 }} /> fecha de corte</li>
         {hayQrsa && <li><span className="ley-qrsa" /> Rango QRSA del fin: P10–P90, marca en P80</li>}
       </ul>
