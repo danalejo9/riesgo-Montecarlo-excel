@@ -37,31 +37,32 @@ export function ordenarTopologicamente(grafo: Grafo, raices?: Iterable<string>):
   for (const raiz of nodos) {
     if (estado.get(raiz) === 2) continue;
 
+    // Cada nivel de la pila guarda su iterador de vecinos: copiar la lista de
+    // dependencias en cada paso hacía cuadrático el orden de una celda que
+    // apunta a un rango grande (un BUSCARV sobre 200 celdas, F2).
     const pila: string[] = [raiz];
-    const cursor: number[] = [0];
-    const rutaPila: string[] = [raiz]; // para reconstruir el ciclo si aparece
+    const iteradores: Iterator<string>[] = [(grafo.dependencias.get(raiz) ?? new Set<string>()).values()];
+    const enRuta = new Map<string, number>([[raiz, 0]]); // posición en la pila, para reconstruir un ciclo
     estado.set(raiz, 1);
 
     while (pila.length > 0) {
       const actual = pila[pila.length - 1] as string;
-      const vecinos = [...(grafo.dependencias.get(actual) ?? [])];
-      const k = cursor[cursor.length - 1] as number;
+      const siguiente = (iteradores[iteradores.length - 1] as Iterator<string>).next();
 
-      if (k < vecinos.length) {
-        cursor[cursor.length - 1] = k + 1;
-        const vecino = vecinos[k] as string;
+      if (!siguiente.done) {
+        const vecino = siguiente.value;
         const e = estado.get(vecino) ?? 0;
 
         if (e === 0) {
           estado.set(vecino, 1);
+          enRuta.set(vecino, pila.length);
           pila.push(vecino);
-          cursor.push(0);
-          rutaPila.push(vecino);
+          iteradores.push((grafo.dependencias.get(vecino) ?? new Set<string>()).values());
         } else if (e === 1) {
           // Encontramos un nodo gris: hay un ciclo. Marca todo el tramo de la
           // ruta actual desde ese nodo en adelante.
-          const idx = rutaPila.indexOf(vecino);
-          for (let i = idx; i < rutaPila.length; i++) enCiclo.add(rutaPila[i] as string);
+          const idx = enRuta.get(vecino) ?? 0;
+          for (let i = idx; i < pila.length; i++) enCiclo.add(pila[i] as string);
           enCiclo.add(actual);
         }
         // Si e === 2 (ya resuelto), no hay nada que hacer: no es un ciclo.
@@ -71,8 +72,8 @@ export function ordenarTopologicamente(grafo: Grafo, raices?: Iterable<string>):
       estado.set(actual, 2);
       orden.push(actual);
       pila.pop();
-      cursor.pop();
-      rutaPila.pop();
+      iteradores.pop();
+      enRuta.delete(actual);
     }
   }
 

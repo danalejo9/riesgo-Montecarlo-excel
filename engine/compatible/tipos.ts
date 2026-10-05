@@ -103,6 +103,15 @@ export interface OpcionesCompatible {
    * una por viaje, como hasta el 29/09.
    */
   lote?: number;
+  /**
+   * F3: ajustar el lote sobre la marcha para que cada viaje dure unos
+   * `objetivoMs` (por defecto 700 ms): en un libro rápido, más iteraciones por
+   * viaje (menos viajes, que es lo caro); en uno lento, menos (el panel sigue
+   * respondiendo y se puede cancelar). Sin esto, el lote es fijo.
+   */
+  loteAdaptativo?: { objetivoMs?: number; minimo?: number; maximo?: number };
+  /** Reloj en ms (para las pruebas); por defecto `performance.now`. */
+  reloj?: () => number;
   progreso?: (avance: AvanceCompatible) => void;
   debeCancelar?: () => boolean;
 }

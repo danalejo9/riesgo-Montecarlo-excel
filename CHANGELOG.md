@@ -5,6 +5,32 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### F2 y F3: libros grandes y modo compatible más rápido (2026-10-06)
+
+**Añadido**
+- `bench/libroGrande.ts`: un libro sintético como el del usuario (133
+  hojas, 130.875 celdas, BUSCARV a una tabla de tarifas, SUMAR.SI.CONJUNTO y
+  cadenas entre hojas) que mide cada etapa por separado.
+
+**Cambiado**
+- **Más rápido con libros grandes** (medido con ese libro, mismos
+  resultados): compilar el plan pasa de 6,8 s a 1,5 s (el orden de cálculo
+  copiaba la lista de dependencias de cada celda en cada paso, cuadrático
+  con rangos grandes); construir el grafo de 9,5 s a 7,4 s (la expansión de
+  cada rango se arma una vez); simular 10.000 iteraciones en un hilo de 105 s
+  a 99 s (las claves de cada rango y el índice de cada tabla de BUSCARV se
+  reutilizan entre celdas y bloques).
+- **Modo compatible con lote adaptativo**: el primer viaje a Excel lleva 20
+  iteraciones y después el lote se ajusta para que cada viaje dure unos
+  0,7 s (entre 5 y 250, y no más de unos 6.000 comandos por viaje). En un
+  libro rápido hay muchos menos viajes; en uno lento, el panel sigue
+  respondiendo. Mismos números que con el lote fijo.
+
+**Corregido**
+- Con un lote que cambia de tamaño, el bucle del modo compatible avanzaba
+  con el tamaño nuevo y se saltaba iteraciones (lo encontró la prueba del
+  lote adaptativo; con el lote fijo de antes no pasaba).
+
 ### C6: percentiles configurables (2026-10-06)
 
 **Añadido**

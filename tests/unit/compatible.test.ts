@@ -345,4 +345,36 @@ describe('lotes: varias iteraciones por viaje a Excel (F5b, prueba H2 del 29/09)
     expect(libro.viajes).toBe(1);
     expect(libro.llamadas).toBe(0);
   });
+
+  it('lote adaptativo (F3): crece en un libro rápido, baja en uno lento y da los mismos números', async () => {
+    // Un reloj de mentira: cada viaje cuesta 20 ms fijos + `msPorIteracion` por iteración.
+    const crear = (msPorIteracion: number) => {
+      let t = 0;
+      const tamanos: number[] = [];
+      const f = ([x]: readonly number[]) => [(x as number) * 3];
+      const libro = Object.assign(libroDe(f), {
+        async calcularLote(filas: readonly (readonly number[])[]) {
+          tamanos.push(filas.length);
+          t += 20 + msPorIteracion * filas.length;
+          return filas.map((fila) => f(fila));
+        },
+      });
+      return { libro, tamanos, reloj: () => t };
+    };
+    const muchas = Array.from({ length: 3000 }, (_, i) => i);
+    const comun = { entradas: [entrada('A1', muchas)], salidas: ['B1'], iteraciones: 3000, retenerMuestra: 3000 };
+    const rapido = crear(1);
+    const r1 = await simularCompatible({ ...comun, libro: rapido.libro, lote: 20, reloj: rapido.reloj, loteAdaptativo: { objetivoMs: 700, minimo: 5, maximo: 250 } });
+    // 20 → 40 → 80 → 160 → 250 (tope): con 1 ms por iteración, 250 cuestan 270 ms < 700.
+    expect(rapido.tamanos.slice(0, 5)).toEqual([20, 40, 80, 160, 250]);
+    expect(rapido.tamanos.length).toBeLessThan(20);
+    const lento = crear(100);
+    await simularCompatible({ ...comun, iteraciones: 200, libro: lento.libro, lote: 20, reloj: lento.reloj, loteAdaptativo: { objetivoMs: 700, minimo: 5, maximo: 250 } });
+    // 20 iteraciones × 100 ms = 2 s por viaje: baja a la mitad hasta acercarse a 0,7 s (7 iteraciones).
+    expect(lento.tamanos.slice(0, 3)).toEqual([20, 10, 7]);
+    const fijo = await simularCompatible({ ...comun, libro: crear(1).libro, lote: 20 });
+    if (!r1.ok || !fijo.ok) throw new Error('falló');
+    expect(r1.porSalida.get('B1')?.welford).toEqual(fijo.porSalida.get('B1')?.welford);
+    expect(Array.from(r1.porSalida.get('B1')?.muestra ?? [])).toEqual(Array.from(fijo.porSalida.get('B1')?.muestra ?? []));
+  });
 });

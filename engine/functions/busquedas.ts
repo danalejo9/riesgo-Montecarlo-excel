@@ -187,7 +187,33 @@ interface IndiceFijo {
   exacto: Map<number, number>;
 }
 
+/**
+ * F2: el mismo índice para la misma tabla. Mil BUSCARV a la tabla de tarifas
+ * reciben las mismas celdas (los mismos objetos `Columna`) en cada bloque: si
+ * todas las celdas clave son idénticas a las de un índice ya armado, se
+ * reutiliza. Comparar identidades es mucho más barato que volver a leerlas.
+ */
+const INDICES = new WeakMap<Columna, { celdas: (Columna | undefined)[]; indice: IndiceFijo | null }[]>();
+
 function construirIndice(largo: number, celda: (k: number) => Columna | undefined): IndiceFijo | null {
+  const primera = largo > 0 ? celda(0) : undefined;
+  if (!primera) return construirIndiceNuevo(largo, celda);
+  const candidatos = INDICES.get(primera);
+  if (candidatos) {
+    for (const c of candidatos) {
+      if (c.celdas.length !== largo) continue;
+      let igual = true;
+      for (let k = 1; k < largo; k++) if (c.celdas[k] !== celda(k)) { igual = false; break; }
+      if (igual) return c.indice;
+    }
+  }
+  const indice = construirIndiceNuevo(largo, celda);
+  const celdas = Array.from({ length: largo }, (_, k) => celda(k));
+  if (candidatos) { if (candidatos.length < 8) candidatos.push({ celdas, indice }); } else INDICES.set(primera, [{ celdas, indice }]);
+  return indice;
+}
+
+function construirIndiceNuevo(largo: number, celda: (k: number) => Columna | undefined): IndiceFijo | null {
   const claves = new Float64Array(largo);
   const exacto = new Map<number, number>();
   let ordenada = true;

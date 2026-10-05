@@ -285,17 +285,27 @@ function matrizDeRango(
     return { ok: false, motivo: 'Rango abierto (columna o fila entera) no soportado todavía' };
   }
   const hoja = ref.hoja ?? hojaActual;
-  const celdas: Columna[] = [];
-  for (let col = ref.col1; col <= ref.col2; col++) {
-    for (let fila = ref.fila1; fila <= ref.fila2; fila++) {
-      const clave = claveCelda(hoja, col, fila);
-      const c = valores.get(clave);
-      if (!c) return { ok: false, motivo: `Referencia no resuelta a ${clave}` };
-      celdas.push(c);
+  // F2: las claves del rango se arman una vez por nodo (y hoja) y se reutilizan en cada bloque.
+  const porHoja = CLAVES_DE_RANGO.get(nodo);
+  let claves = porHoja?.get(hoja);
+  if (!claves) {
+    claves = [];
+    for (let col = ref.col1; col <= ref.col2; col++) {
+      for (let fila = ref.fila1; fila <= ref.fila2; fila++) claves.push(claveCelda(hoja, col, fila));
     }
+    if (porHoja) porHoja.set(hoja, claves);
+    else CLAVES_DE_RANGO.set(nodo, new Map([[hoja, claves]]));
+  }
+  const celdas: Columna[] = new Array(claves.length);
+  for (let i = 0; i < claves.length; i++) {
+    const c = valores.get(claves[i] as string);
+    if (!c) return { ok: false, motivo: `Referencia no resuelta a ${claves[i]}` };
+    celdas[i] = c;
   }
   return { ok: true, matriz: { filas: ref.fila2 - ref.fila1 + 1, cols: ref.col2 - ref.col1 + 1, celdas } };
 }
+
+const CLAVES_DE_RANGO = new WeakMap<object, Map<string, string[]>>();
 
 /**
  * Evalúa un nodo **como matriz**, en un contexto que la va a consumir. Un

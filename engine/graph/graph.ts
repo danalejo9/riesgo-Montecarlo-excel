@@ -128,14 +128,18 @@ export function construirGrafo(
   }
 
   // Segunda pasada: recorrer cada AST y crear las aristas de dependencia.
+  // F2: los rangos se repiten mucho (un BUSCARV a la misma tabla en miles de
+  // filas); su lista de claves se arma una vez y se reutiliza: las mismas
+  // cadenas ya tienen su hash calculado y no se crean otra vez.
+  const cacheRangos: CacheRangos = new Map();
   for (const c of celdas) {
     const clave = claveCelda(c.hoja, c.col, c.fila);
     const nodo = nodos.get(clave) as NodoGrafo;
     if (!nodo.ast) continue;
     rangosNoExpandidos += referenciasDe(nodo.ast, c.hoja, (destino, hoja, col, fila) => {
-      obtenerNodo(destino, hoja, col, fila);
+      if (!nodos.has(destino)) obtenerNodo(destino, hoja, col, fila);
       agregarArista(clave, destino);
-    });
+    }, cacheRangos);
   }
 
   return { grafo: { nodos, dependencias, dependientes }, rangosNoExpandidos };
@@ -146,10 +150,14 @@ export function construirGrafo(
  * la que apunta (los rangos, expandidos). Devuelve cuántos rangos no se
  * expandieron por abiertos o demasiado anchos.
  */
+/** Claves de las celdas de cada rango ya expandido (con su hoja, columna y fila), por rango. */
+export type CacheRangos = Map<string, { claves: string[]; hoja: string; cols: Int32Array; filas: Int32Array }>;
+
 export function referenciasDe(
   ast: Nodo,
   hojaActual: string,
   alEncontrar: (clave: string, hoja: string, col: number, fila: number) => void,
+  cache?: CacheRangos,
 ): number {
   let noExpandidos = 0;
   recorrer(ast, (n) => {
@@ -170,6 +178,26 @@ export function referenciasDe(
       const alto = ref.fila2 - ref.fila1 + 1;
       if (ancho * alto > LIMITE_EXPANSION_RANGO) {
         noExpandidos++;
+        return;
+      }
+      if (cache) {
+        const k = `${hoja}\u0000${ref.col1}:${ref.fila1}:${ref.col2}:${ref.fila2}`;
+        let e = cache.get(k);
+        if (!e) {
+          const claves: string[] = [];
+          const cols = new Int32Array(ancho * alto);
+          const filas = new Int32Array(ancho * alto);
+          for (let col = ref.col1, i = 0; col <= ref.col2; col++) {
+            for (let fila = ref.fila1; fila <= ref.fila2; fila++, i++) {
+              claves.push(claveCelda(hoja, col, fila));
+              cols[i] = col;
+              filas[i] = fila;
+            }
+          }
+          e = { claves, hoja, cols, filas };
+          cache.set(k, e);
+        }
+        for (let i = 0; i < e.claves.length; i++) alEncontrar(e.claves[i] as string, e.hoja, e.cols[i] as number, e.filas[i] as number);
         return;
       }
       for (let col = ref.col1; col <= ref.col2; col++) {

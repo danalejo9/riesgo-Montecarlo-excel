@@ -44,9 +44,9 @@ import { empezarSimulacionEnExcel, terminarSimulacionEnExcel, type SorteoEnCelda
 import { normalizarDireccion } from './resultadosEnHoja.ts';
 
 /**
- * Iteraciones por viaje a Excel (F5b). Con 20, la hoja se repinta 20 veces
- * menos y se ahorran 19 de cada 20 viajes; más no compensa, porque el lote
- * entero se pierde si Excel falla a mitad y el progreso avanzaría a saltos.
+ * Iteraciones del primer viaje a Excel (F5b). Con 20, la hoja se repinta 20
+ * veces menos y se ahorran 19 de cada 20 viajes. Desde F3 el lote se ajusta
+ * después según lo que tarda cada viaje (unos 0,7 s), entre 5 y 250.
  */
 export const LOTE_COMPATIBLE = 20;
 
@@ -112,7 +112,11 @@ export async function simularEnExcel(peticion: PeticionCompatible): Promise<Resp
         congelarPantalla: peticion.congelarPantalla ?? false,
         categorias: peticion.entradas.map((e) => e.categorias),
       });
-      if (sorteos.length === 0) return await simularCompatible({ libro: base, lote: LOTE_COMPATIBLE, ...peticion });
+      // F3: el lote empieza en 20 y se ajusta para que cada viaje dure ~0,7 s, sin pasar de
+      // unos 6.000 comandos por viaje (cada iteración escribe las entradas, recalcula y lee).
+      const porIteracion = peticion.entradas.length + peticion.salidas.length + 1;
+      const maximo = Math.max(LOTE_COMPATIBLE, Math.min(250, Math.floor(6000 / porIteracion)));
+      if (sorteos.length === 0) return await simularCompatible({ libro: base, lote: LOTE_COMPATIBLE, loteAdaptativo: { objetivoMs: 700, minimo: 5, maximo }, ...peticion });
       // B1b: antes de cada recálculo se dice a las funciones qué iteración toca.
       const enCurso = empezarSimulacionEnExcel(new Map(sorteos.map((x) => [normalizarDireccion(x.direccion), x] as const)));
       let siguiente = 0;

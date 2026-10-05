@@ -124,14 +124,21 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
   const muestras = salidas.map(() => new Float64Array(limiteMuestra).fill(NaN));
   const nombresLogicos = opciones.nombresLogicos ?? regionalActual();
 
-  const arranque = ahora();
+  const reloj = opciones.reloj ?? ahora;
+  const arranque = reloj();
   let completadas = 0;
   let cancelada = false;
 
-  const lote = libro.calcularLote ? Math.max(1, Math.floor(opciones.lote ?? 1)) : 1;
+  let lote = libro.calcularLote ? Math.max(1, Math.floor(opciones.lote ?? 1)) : 1;
+  // F3: con lotes, el tamaño se ajusta para que cada viaje dure unos `objetivo` ms.
+  const adaptar = lote > 1 && libro.calcularLote && opciones.loteAdaptativo ? opciones.loteAdaptativo : null;
+  const objetivoMs = adaptar?.objetivoMs ?? 700;
+  const loteMin = Math.max(1, adaptar?.minimo ?? 5);
+  const loteMax = Math.max(loteMin, adaptar?.maximo ?? 250);
   let ultimoAviso = -Infinity;
 
-  for (let inicio = 0; inicio < iteraciones; inicio += lote) {
+  // El lote puede cambiar a mitad (F3): se avanza siempre lo que se hizo, no el lote nuevo.
+  for (let inicio = 0, fin = 0; inicio < iteraciones; inicio = fin) {
     // Cancelar y avisar del progreso: cada `cadaCuantas` iteraciones, o en
     // cada lote si se va por lotes (un lote ya son muchas iteraciones).
     if (lote > 1 || inicio - ultimoAviso >= cadaCuantas) {
@@ -140,10 +147,10 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
         cancelada = true;
         break;
       }
-      informar(opciones.progreso, completadas, iteraciones, arranque);
+      informar(opciones.progreso, completadas, iteraciones, arranque, reloj);
     }
 
-    const fin = Math.min(iteraciones, inicio + lote);
+    fin = Math.min(iteraciones, inicio + lote);
     const valoresLote: number[][] = [];
     for (let i = inicio; i < fin; i++) {
       const fila = new Array<number>(entradas.length);
@@ -152,6 +159,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
     }
 
     let leidasLote: readonly (readonly ValorLeido[])[];
+    const antesDelViaje = reloj();
     try {
       leidasLote = lote > 1 && libro.calcularLote
         ? await libro.calcularLote(valoresLote)
@@ -195,10 +203,19 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       }
       completadas += 1;
     }
+
+    if (adaptar) {
+      // Proporcional a lo que tardó, sin más que duplicar o reducir a la mitad de una vez.
+      const ms = reloj() - antesDelViaje;
+      const hechas = leidasLote.length;
+      const ideal = ms > 0 ? (hechas * objetivoMs) / ms : hechas * 2;
+      const siguiente = Math.round(Math.min(hechas * 2, Math.max(hechas / 2, ideal)));
+      lote = Math.min(loteMax, Math.max(loteMin, siguiente));
+    }
   }
 
-  const transcurrido = ahora() - arranque;
-  informar(opciones.progreso, completadas, iteraciones, arranque);
+  const transcurrido = reloj() - arranque;
+  informar(opciones.progreso, completadas, iteraciones, arranque, reloj);
 
   const porSalida = new Map<string, SalidaCompatible>();
   for (let s = 0; s < salidas.length; s++) {
@@ -272,9 +289,10 @@ function informar(
   completadas: number,
   totales: number,
   arranque: number,
+  reloj: () => number = ahora,
 ): void {
   if (!progreso) return;
-  const transcurrido = ahora() - arranque;
+  const transcurrido = reloj() - arranque;
   const porSegundo = ritmo(completadas, transcurrido);
   progreso({
     completadas,
