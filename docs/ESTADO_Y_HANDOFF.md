@@ -1320,6 +1320,21 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     300 × 20 × 5.000 con el tornado, 4,65 s. Probado en el banco (hojas en
     memoria). **Siguiente**: el usuario recorre la guía Q5–Q14 (y Q1–Q4 en
     ProjectLibre); después, Q2 (costos, correlación, pre/post, MS Project XML).
+76. [x] **QRSA Q2 y Q3 en código (2026-10-05)**, pedidas por el usuario.
+    Motor: `engine/sampling/higham.ts` y la simulación reescrita (costos
+    fijos, por tiempo y por recurso con escalamiento; correlación por pares y
+    grupos con Higham y correlación lograda; escenario post mitigación;
+    factores por WBS o grupo; ramas; riesgos insertados; rutas críticas
+    frecuentes; fechas por actividad; iteraciones automáticas). Análisis:
+    `resumirCosto`, `confianzaConjunta`, `cronogramaAjustado`,
+    `comparacionPrePost`. Hojas Costos, Correlaciones y Ramas y columnas
+    nuevas; `excel/importarCronograma.ts` (MSPDI y XER, con R1–R3 en XER
+    generados por el script de Python); `excel/informeCronograma.ts` y
+    `ui/informeCronograma.html`; pestaña ampliada; manifiesto 0.8.0.0.
+    Probado en el banco (crear, simular, CSV, informe, importar R2 → 25/02/2027).
+    300 × 20 × 5.000: 3,8 s. **Siguiente**: el usuario recorre Q5–Q26 (y
+    Q1–Q4 en ProjectLibre). Pendientes pequeños: Higham y convergencia
+    automática en el motor de fórmulas.
 
 **Siguiente acción al retomar**, en orden de valor:
 

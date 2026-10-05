@@ -5,6 +5,35 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### QRSA Q2 y Q3: costo, mitigación, importación y lo avanzado (2026-10-05)
+
+**Añadido**
+- Costos del cronograma (hoja Costos): fijos, por tiempo y por recurso, con
+  incertidumbre y escalamiento anual según la fecha simulada; impactos de
+  costo de los riesgos. Contingencia (P80 − costo base) y su desglose por
+  riesgo y por incertidumbre.
+- Correlación por pares y por grupos (hoja Correlaciones) entre duraciones y
+  tarifas, con la corrección de Higham cuando la matriz es imposible y la
+  correlación lograda frente a la pedida.
+- Probabilidad conjunta de cumplir fecha y costo (JCL), con la dispersión
+  costo–fecha.
+- Escenario post mitigación con los mismos números aleatorios
+  (probabilidad post, % del impacto post, costo de mitigación).
+- Rangos de incertidumbre por WBS o por grupo de actividades.
+- Importar cronogramas de MS Project (XML, también de ProjectLibre) y de
+  Primavera P6 (XER).
+- Rutas críticas más frecuentes, cronograma ajustado por riesgo (P50/P80 por
+  actividad, con un Gantt en el panel), ramificación probabilística (hoja
+  Ramas) y riesgos insertados como actividad.
+- Iteraciones automáticas hasta que el P80 se estabilice.
+- Informe ejecutivo del cronograma (imprimible a PDF) e iteraciones en CSV.
+- Guía de pruebas: Q15 a Q26; Q5 a Q14 con los valores nuevos del ejemplo.
+
+**Cambiado**
+- El ejemplo de obra trae costos (COP), correlaciones, mitigación y un rango
+  por WBS: los números del ejemplo cambiaron.
+- Manifiesto 0.8.0.0.
+
 ### QRSA Q1: análisis de riesgo de cronograma (2026-10-05)
 
 **Añadido**

@@ -197,6 +197,27 @@ Decisiones tomadas al implementar (revisables):
 
 ### Q2. Integración costo–plazo (fase 2)
 
+**Estado (05/10): hecho en código; falta la prueba del usuario (guía
+Q15–Q26).**
+
+| Punto | Hecho | Dónde |
+|---|---|---|
+| 1. Costos | ✅ hoja Costos: fijo, por tiempo (tarifa × duración simulada de la actividad o del proyecto) y por recurso, con incertidumbre; impactos de costo de los riesgos (también ahorros). **Prueba 7** | `engine/cronograma/simulacion.ts` (`costoDe`), `excel/cronogramaHojas.ts` |
+| 2. Correlación | ✅ pares y grupos (IDs, «WBS x», «Grupo y») sobre duraciones y tarifas; **Higham** con aviso si la matriz es imposible; correlación lograda en la hoja y aviso si se aleja más de 0,05 (**prueba 5**); el chequeo de calidad avisa si no hay ninguna | `engine/sampling/higham.ts`, `correlacionar` |
+| 3. Contingencia | ✅ Pxx − costo base (percentil configurable, 80 % por defecto) y su desglose por riesgo (eliminación) y por incertidumbre (corrida sin riesgos) | `resumirCosto`, `eliminacion[].reduccionP80Costo` |
+| 4. JCL | ✅ probabilidad conjunta con la fecha y el costo meta, dispersión costo–fecha (panel y gráfico en la hoja) | `confianzaConjunta` |
+| 5. Pre/post | ✅ probabilidad post, % del impacto post y costo de mitigación por riesgo; segunda corrida con los mismos números; tabla de diferencias y curvas S superpuestas | `comparacionPrePost` |
+| 6. Factores por grupo | ✅ fila de Incertidumbre «WBS 3» o «Grupo Siembra», para las actividades sin fila propia (la primera que coincide manda) | `incertidumbreDe` |
+| 7. MS Project XML | ✅ tareas, resúmenes, hitos, vínculos y desfases (laborables o transcurridos), calendarios con excepciones, restricciones; R1–R3 importados dan las fechas de referencia | `excel/importarCronograma.ts` |
+| 8. Varios calendarios | ✅ desde Q1 (por actividad) y en la importación | |
+
+Decisiones: el costo base usa los valores base y las duraciones base sin
+riesgos; el escalamiento usa la fecha media simulada de la actividad (o del
+proyecto); en el escenario post el costo de mitigación se suma siempre.
+La corrección de Higham aún no se aplica al **motor de fórmulas** (allí el
+editor de correlaciones ya impide la matriz imposible); queda en las mejoras
+pequeñas.
+
 1. Hoja `Costos`: costo **fijo** con incertidumbre, **dependiente del
    tiempo** (tarifa × duración simulada de la actividad o del proyecto) y
    **por recurso**; impactos de costo de los riesgos. Prueba 7.
@@ -216,6 +237,21 @@ Decisiones tomadas al implementar (revisables):
 8. **Varios calendarios**.
 
 ### Q3. Avanzado (fase 3)
+
+**Estado (05/10): hecho en código; falta la prueba del usuario.**
+
+| Punto | Hecho |
+|---|---|
+| 1. P6 XER | ✅ PROJECT, CALENDAR (clndr_data: días y excepciones), TASK, TASKPRED, PROJWBS; R1 y R2 dan las fechas de referencia. P6 no trae desfases transcurridos por relación |
+| 2. SSI, cruciality, rutas frecuentes | ✅ (SSI y cruciality desde Q1); las 5 rutas críticas más frecuentes con su % |
+| 3. Cronograma ajustado | ✅ P50 y P80 de inicio y fin por actividad (hoja) y un Gantt base frente a P80 en el panel (en el panel, no en el explorador) |
+| 4. Ramificación y riesgo insertado | ✅ hoja Ramas (opciones con probabilidad; el determinístico sigue la más probable) y modo «Actividad insertada» por riesgo |
+| 5. Escalamiento | ✅ por partida, anual, según la fecha simulada |
+| 6. Convergencia automática | ✅ en el cronograma: «Automático» sube de 1.000 a 20.000 hasta que el P80 cambie menos del 0,5 %; **pendiente** en el motor de fórmulas |
+| 7. Resumen ejecutivo y CSV | ✅ `ui/informeCronograma.html` (imprimible a PDF) y las iteraciones en CSV |
+
+Medida tras Q2/Q3: 300 actividades × 20 riesgos × 5.000 iteraciones, con el
+tornado, 3,8 s en el contenedor.
 
 1. Importación de **P6 XER**.
 2. **SSI** y *cruciality* por actividad; **rutas críticas más frecuentes**
@@ -248,7 +284,7 @@ Sirven ya, sin esperar al cronograma:
   05/10.
 - Instalar ProjectLibre y comprobar R1–R3 (guía, bloque Q).
 - ~~Dar la orden de empezar Q1~~ ✅ 05/10; Q1 hecha en código.
-- Probar Q1 en Excel (guía Q5–Q14).
+- Probar Q1, Q2 y Q3 en Excel (guía Q5–Q26).
 - Para la importación (Q2 y Q3): sin archivos reales del usuario, se prueba
   con los generados por ProjectLibre o escritos a mano siguiendo el formato
   publicado de MS Project XML.
