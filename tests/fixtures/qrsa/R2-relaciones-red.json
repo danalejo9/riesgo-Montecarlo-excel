@@ -1,0 +1,109 @@
+{
+ "nombre": "R2-relaciones",
+ "inicio": "2027-01-04",
+ "festivos": [],
+ "actividades": [
+  {
+   "id": "A",
+   "nombre": "Movimiento de tierras",
+   "duracion": 10,
+   "predecesoras": []
+  },
+  {
+   "id": "B",
+   "nombre": "Instalación de tubería",
+   "duracion": 8,
+   "predecesoras": [
+    {
+     "id": "A",
+     "tipo": "CC",
+     "desfase": 3
+    }
+   ]
+  },
+  {
+   "id": "C",
+   "nombre": "Relleno de zanja",
+   "duracion": 6,
+   "predecesoras": [
+    {
+     "id": "B",
+     "tipo": "FF",
+     "desfase": 2
+    }
+   ]
+  },
+  {
+   "id": "D",
+   "nombre": "Inspección de tubería",
+   "duracion": 2,
+   "predecesoras": [
+    {
+     "id": "B",
+     "tipo": "FC",
+     "desfase": -1
+    }
+   ]
+  },
+  {
+   "id": "E",
+   "nombre": "Pavimento",
+   "duracion": 7,
+   "predecesoras": [
+    {
+     "id": "C",
+     "tipo": "FC",
+     "desfase": 0
+    },
+    {
+     "id": "D",
+     "tipo": "FC",
+     "desfase": 2
+    }
+   ]
+  },
+  {
+   "id": "F",
+   "nombre": "Señalización",
+   "duracion": 3,
+   "predecesoras": [
+    {
+     "id": "E",
+     "tipo": "CF",
+     "desfase": 5
+    }
+   ]
+  },
+  {
+   "id": "G",
+   "nombre": "Interventoría de cierre",
+   "duracion": 4,
+   "snet": "2027-02-22",
+   "predecesoras": [
+    {
+     "id": "E",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "H",
+   "nombre": "Entrega a la comunidad",
+   "duracion": 0,
+   "fnlt": "2027-02-24",
+   "predecesoras": [
+    {
+     "id": "F",
+     "tipo": "FC",
+     "desfase": 0
+    },
+    {
+     "id": "G",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  }
+ ]
+}

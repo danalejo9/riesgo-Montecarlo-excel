@@ -11,8 +11,11 @@ Escribe en esta carpeta, para cada cronograma:
   inicio del proyecto, para que las calcule él).
 - `R<n>-<nombre>-esperado.csv`: las fechas y holguras que da **este** cálculo
   en Python, escrito aparte del motor del complemento (validación 2 del plan).
+- `R<n>-<nombre>-red.json`: la misma red en un formato sencillo, para que las
+  pruebas del motor (`tests/unit/cronogramaReferencias.test.ts`) la lean sin
+  pasar por el XML.
 
-Reglas (decididas con el usuario el 06/10, `docs/QRSA_PLAN.md`):
+Reglas (decididas con el usuario el 05/10, `docs/QRSA_PLAN.md`):
 - Días laborables de lunes a viernes, con festivos de Colombia en R3.
 - Una actividad de d días que empieza el día laborable s termina al final
   del día laborable s+d−1 (un hito, d = 0, empieza y termina en s).
@@ -25,6 +28,7 @@ Reglas (decididas con el usuario el 06/10, `docs/QRSA_PLAN.md`):
 from __future__ import annotations
 
 import csv
+import json
 import datetime as dt
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -58,26 +62,31 @@ def al_lunes(f: dt.date) -> dt.date:
 def festivos_colombia(anio: int) -> dict[dt.date, str]:
     p = pascua(anio)
     d = dt.timedelta
-    fs = {
-        dt.date(anio, 1, 1): 'Año Nuevo',
-        al_lunes(dt.date(anio, 1, 6)): 'Reyes Magos',
-        al_lunes(dt.date(anio, 3, 19)): 'San José',
-        p - d(days=3): 'Jueves Santo',
-        p - d(days=2): 'Viernes Santo',
-        dt.date(anio, 5, 1): 'Día del Trabajo',
-        p + d(days=43): 'Ascensión del Señor',
-        p + d(days=64): 'Corpus Christi',
-        p + d(days=71): 'Sagrado Corazón',
-        al_lunes(dt.date(anio, 6, 29)): 'San Pedro y San Pablo',
-        dt.date(anio, 7, 20): 'Independencia',
-        dt.date(anio, 8, 7): 'Batalla de Boyacá',
-        al_lunes(dt.date(anio, 8, 15)): 'Asunción de la Virgen',
-        al_lunes(dt.date(anio, 10, 12)): 'Día de la Raza',
-        al_lunes(dt.date(anio, 11, 1)): 'Todos los Santos',
-        al_lunes(dt.date(anio, 11, 11)): 'Independencia de Cartagena',
-        dt.date(anio, 12, 8): 'Inmaculada Concepción',
-        dt.date(anio, 12, 25): 'Navidad',
-    }
+    lista = [
+        (dt.date(anio, 1, 1), 'Año Nuevo'),
+        (al_lunes(dt.date(anio, 1, 6)), 'Reyes Magos'),
+        (al_lunes(dt.date(anio, 3, 19)), 'San José'),
+        (p - d(days=3), 'Jueves Santo'),
+        (p - d(days=2), 'Viernes Santo'),
+        (dt.date(anio, 5, 1), 'Día del Trabajo'),
+        (p + d(days=43), 'Ascensión del Señor'),
+        (p + d(days=64), 'Corpus Christi'),
+        (p + d(days=71), 'Sagrado Corazón'),
+        (al_lunes(dt.date(anio, 6, 29)), 'San Pedro y San Pablo'),
+        (dt.date(anio, 7, 20), 'Independencia'),
+        (dt.date(anio, 8, 7), 'Batalla de Boyacá'),
+        (al_lunes(dt.date(anio, 8, 15)), 'Asunción de la Virgen'),
+        (al_lunes(dt.date(anio, 10, 12)), 'Día de la Raza'),
+        (al_lunes(dt.date(anio, 11, 1)), 'Todos los Santos'),
+        (al_lunes(dt.date(anio, 11, 11)), 'Independencia de Cartagena'),
+        (dt.date(anio, 12, 8), 'Inmaculada Concepción'),
+        (dt.date(anio, 12, 25), 'Navidad'),
+    ]
+    # Dos festivos pueden caer el mismo día (el 01/07/2030, Sagrado Corazón y
+    # San Pedro): es un solo día libre, con los dos nombres.
+    fs: dict[dt.date, str] = {}
+    for f, n in lista:
+        fs[f] = f'{fs[f]} · {n}' if f in fs else n
     return dict(sorted(fs.items()))
 
 
@@ -135,8 +144,9 @@ def cpm(acts: list[Act], cal: Calendario):
             p = por[r.pred]
             if r.tipo == 'FC':
                 if r.calendario:
-                    # Desde la medianoche tras el último día laborable de la predecesora.
-                    borde = cal.fecha(ef[p.id] - 1) + dt.timedelta(days=1) if p.dur > 0 else cal.fecha(es[p.id])
+                    # Desde la medianoche tras el último día laborable de la
+                    # predecesora (un hito cuenta como el final del día anterior).
+                    borde = cal.fecha(ef[p.id] - 1) + dt.timedelta(days=1)
                     ini = max(ini, cal.primero_desde(borde + dt.timedelta(days=r.desfase)))
                 else:
                     ini = max(ini, ef[p.id] + r.desfase)
@@ -273,6 +283,15 @@ def escribir(nombre, titulo, festivos, acts):
             es, ef, hol = r[a.id]
             fin = cal.fecha(es) if a.dur == 0 else cal.fecha(ef - 1)
             w.writerow([a.id, a.nombre, a.dur, cal.fecha(es).isoformat(), fin.isoformat(), hol, 'sí' if hol <= 0 else 'no'])
+    red = {
+        'nombre': nombre, 'inicio': INICIO.isoformat(), 'festivos': sorted(f.isoformat() for f in festivos),
+        'actividades': [{
+            'id': a.id, 'nombre': a.nombre, 'duracion': a.dur,
+            **({'snet': a.snet.isoformat()} if a.snet else {}), **({'fnlt': a.fnlt.isoformat()} if a.fnlt else {}),
+            'predecesoras': [{'id': r.pred, 'tipo': r.tipo, 'desfase': r.desfase, **({'calendario': True} if r.calendario else {})} for r in a.rels],
+        } for a in acts],
+    }
+    (AQUI / f'{nombre}-red.json').write_text(json.dumps(red, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     return cal, r
 
 

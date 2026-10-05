@@ -1,0 +1,90 @@
+{
+ "nombre": "R1-simple",
+ "inicio": "2027-01-04",
+ "festivos": [],
+ "actividades": [
+  {
+   "id": "A",
+   "nombre": "Replanteo",
+   "duracion": 3,
+   "predecesoras": []
+  },
+  {
+   "id": "B",
+   "nombre": "Excavación",
+   "duracion": 4,
+   "predecesoras": [
+    {
+     "id": "A",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "C",
+   "nombre": "Pedido de acero",
+   "duracion": 2,
+   "predecesoras": [
+    {
+     "id": "A",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "D",
+   "nombre": "Cimentación",
+   "duracion": 5,
+   "predecesoras": [
+    {
+     "id": "B",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "E",
+   "nombre": "Figurado de acero",
+   "duracion": 3,
+   "predecesoras": [
+    {
+     "id": "C",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "F",
+   "nombre": "Columnas",
+   "duracion": 2,
+   "predecesoras": [
+    {
+     "id": "D",
+     "tipo": "FC",
+     "desfase": 0
+    },
+    {
+     "id": "E",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  },
+  {
+   "id": "M",
+   "nombre": "Fin de obra gris",
+   "duracion": 0,
+   "predecesoras": [
+    {
+     "id": "F",
+     "tipo": "FC",
+     "desfase": 0
+    }
+   ]
+  }
+ ]
+}
