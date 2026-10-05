@@ -138,7 +138,8 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
   let ultimoAviso = -Infinity;
 
   // El lote puede cambiar a mitad (F3): se avanza siempre lo que se hizo, no el lote nuevo.
-  for (let inicio = 0, fin = 0; inicio < iteraciones; inicio = fin) {
+  let inicio = 0;
+  while (inicio < iteraciones) {
     // Cancelar y avisar del progreso: cada `cadaCuantas` iteraciones, o en
     // cada lote si se va por lotes (un lote ya son muchas iteraciones).
     if (lote > 1 || inicio - ultimoAviso >= cadaCuantas) {
@@ -150,7 +151,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       informar(opciones.progreso, completadas, iteraciones, arranque, reloj);
     }
 
-    fin = Math.min(iteraciones, inicio + lote);
+    const fin = Math.min(iteraciones, inicio + lote);
     const valoresLote: number[][] = [];
     for (let i = inicio; i < fin; i++) {
       const fila = new Array<number>(entradas.length);
@@ -212,6 +213,7 @@ export async function simularCompatible(opciones: OpcionesCompatible): Promise<R
       const siguiente = Math.round(Math.min(hechas * 2, Math.max(hechas / 2, ideal)));
       lote = Math.min(loteMax, Math.max(loteMin, siguiente));
     }
+    inicio = fin;
   }
 
   const transcurrido = reloj() - arranque;
