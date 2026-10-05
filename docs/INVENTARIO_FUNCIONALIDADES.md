@@ -180,6 +180,17 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 50 | M1 | **Tres libros tutoriales**: «Feria de fin de semana» (sencillo, un periodo), «Proyecto Aurora» (el actual, ampliado) y «Parque solar Altamira» (completo, todo el potencial). Diseño en `docs/LIBROS_TUTORIAL.md` | **Tú** |
 | 51 | M2 | **Manual en HTML** con índice, buscador, lectura paso a paso, tutoriales y preguntas frecuentes; botón «Ayuda» en el panel | **Tú** |
 
+### Bloque Q: riesgo integrado de cronograma y costo (QRSA) — Q0 y Q1 ✅ en código el 05/10
+
+Especificación en `docs/QRSA_ESPECIFICACION.md`, plan en `docs/QRSA_PLAN.md`.
+
+| Fase | Qué | Estado |
+|---|---|---|
+| Q0 | Decisiones (motor CPM propio, calendarios, desfases, redondeo) y cronogramas de referencia R1–R3 | ✅ decidido; falta tu comprobación en ProjectLibre (guía Q1–Q4) |
+| Q1 | Libro de cronograma, CPM, simulación, calidad, salidas, pestaña y cinta | ✅ en código; falta tu prueba (guía Q5–Q14) |
+| Q2 | Costos (fijos, por tiempo, por recurso), correlación por grupos y Higham, pre/post mitigación, JCL, factores por grupo, MS Project XML | Sin empezar |
+| Q3 | XER de Primavera, rutas críticas frecuentes, ramificación, escalamiento, cronograma P80, informe ejecutivo, convergencia automática | Sin empezar |
+
 ### Después de la versión 1.0
 
 | # | Código | Funcionalidad | Origen |

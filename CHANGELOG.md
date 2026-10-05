@@ -5,6 +5,34 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### QRSA Q1: análisis de riesgo de cronograma (2026-10-05)
+
+**Añadido**
+- Motor de cronograma (`engine/cronograma/`): festivos de Colombia,
+  calendarios laborables (lunes a viernes, lunes a sábado, excepciones),
+  ruta crítica con FC, CC, FF y CF, desfases en días laborables o calendario,
+  restricciones de fecha, holgura total y libre. Coincide día por día con la
+  implementación independiente en Python en los tres cronogramas de
+  referencia.
+- Simulación del cronograma: la red entera se recalcula en cada iteración
+  (sesgo de convergencia), hipercubo latino por defecto, riesgos que afectan
+  varias actividades con un solo sorteo, oportunidades, redondeo al día o
+  decimales. Salidas: P10 a P90 en fechas, probabilidad de cumplir la fecha
+  determinística y la meta, curva S, criticidad, SSI, tornado por eliminación
+  de riesgos y convergencia del P80. 300 actividades × 20 riesgos × 5.000
+  iteraciones en 4,65 s.
+- Chequeo de calidad del cronograma con semáforo (inspirado en la DCMA).
+- Libro de cronograma: siete hojas con listas desplegables, ayuda por
+  columna, festivos y un ejemplo de obra; lectura con errores por hoja, fila
+  y columna; hoja `Resultados_Cronograma` con gráfico de la curva S.
+- Pestaña **Cronograma** en el panel y grupo **Cronograma** en la cinta
+  (Crear libro de cronograma, Revisar calidad, Simular cronograma).
+- Guía de pruebas: Q5 a Q14.
+
+**Cambiado**
+- Manifiesto 0.7.0.0 (grupo nuevo en la cinta): hay que repetir
+  `npm run stop` y `npm start`.
+
 ### QRSA Q0: decisiones y cronogramas de referencia (2026-10-05)
 
 **Añadido**

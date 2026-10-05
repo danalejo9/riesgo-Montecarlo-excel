@@ -144,6 +144,32 @@ instalar y probar.»
 
 ### Q1. MVP: un análisis de riesgo de cronograma válido (fase 1 de la especificación)
 
+**Estado (05/10): hecho en código; falta la prueba del usuario en Excel
+(guía Q5–Q14) y en ProjectLibre (Q1–Q4).**
+
+| Punto | Hecho | Dónde |
+|---|---|---|
+| 1. Libro de cronograma | ✅ siete hojas con encabezados, listas desplegables, mensajes de ayuda y el ejemplo de una obra de 14 actividades (calendario de lunes a sábado en la estructura, curado de 7 días calendario, cuatro riesgos y una oportunidad) | `excel/cronogramaHojas.ts`, `excel/cronogramaLibro.ts` |
+| 2. Lectura y validación | ✅ columnas por encabezado (se pueden reordenar), errores con hoja, fila, columna y causa, sin errores en cascada; actividades resumen fuera del cálculo con aviso; «Excluir de la simulación» deja la duración fija | `excel/cronogramaHojas.ts` |
+| 3. CPM determinístico | ✅ orden topológico, ciclos con sus actividades, FC/CC/FF/CF, desfases laborables o en días calendario (también negativos), varios calendarios, festivos, SNET/FNET/SNLT/FNLT/MSO/MFO, holgura total y libre. **Igual, día por día, a la implementación en Python en R1–R3** | `engine/cronograma/{calendario,red,cpm}.ts` |
+| 4. CPM por iteración | ✅ duraciones en días o en % de la base (triangular, PERT, Trigen, uniforme, lognormal), riesgos con varios impactos y un solo sorteo, oportunidades, LHS por defecto, redondeo al día o decimales, opción de ignorar las restricciones duras, Cancelar | `engine/cronograma/{modelo,simulacion}.ts` |
+| 5. Salidas | ✅ P10–P90 en fechas y días del fin y de los hitos intermedios, probabilidad de cumplir la fecha determinística y la meta, curva S, histograma, criticidad, *cruciality*, SSI, tornado por eliminación (y la corrida sin ningún riesgo), convergencia del P80 en bloques de 500; hoja `Resultados_Cronograma` con gráfico | `engine/cronograma/analisis.ts`, `excel/cronogramaResultados.ts`, `ui/Cronograma.tsx` |
+| 6. Chequeo de calidad | ✅ semáforo por criterio con las actividades: red calculable (bloquea), extremos abiertos, restricciones duras, adelantos, desfases > 5 %, CF, holgura > 44 d, holgura negativa, duraciones > 44 d, tareas sin incertidumbre, correlación | `engine/cronograma/calidad.ts` |
+| 7. Pruebas | ✅ 1 (contra Python en R1–R3; ProjectLibre pendiente del usuario), 2 (sesgo de convergencia), 3 (reproducibilidad), 4 (media y percentiles ±1 % con 50.000), 6 (p = 1 y p = 0). **Medida: 300 actividades × 20 riesgos × 5.000 iteraciones, con las 21 corridas del tornado, 4,65 s** en el contenedor (criterio: < 60 s) | `tests/unit/cronograma*.test.ts` |
+| UI | ✅ pestaña Cronograma y grupo Cronograma en la cinta (manifiesto 0.7.0.0) | `ui/Cronograma.tsx`, `manifest.xml` |
+
+Decisiones tomadas al implementar (revisables):
+- Un hito se fecha al comienzo del día laborable siguiente al fin de su
+  predecesora (la convención del CSV de referencia); ProjectLibre lo pone al
+  final del día anterior: es el mismo instante.
+- Las actividades con la ruta en otro calendario pueden ganar un día de
+  holgura por un sábado (lo mismo hace MS Project); baja su criticidad. Se
+  explica en la ayuda.
+- Por defecto se siguen los hitos intermedios (con predecesora y sucesora);
+  en Config se pueden elegir otros.
+- La simulación corre en el hilo del panel con pausas cada 500 iteraciones:
+  con 4,65 s en el caso grande no hacen falta hilos.
+
 1. **Libro de cronograma**: botón «Crear libro de cronograma» que escribe las
    hojas `Config`, `Calendario`, `Actividades`, `Relaciones`,
    `Incertidumbre`, `Riesgos` e `Impactos` con validación de datos y un
@@ -221,7 +247,8 @@ Sirven ya, sin esperar al cronograma:
 - ~~Confirmar la arquitectura (Q0.1) y las reglas de calendario (Q0.3)~~ ✅
   05/10.
 - Instalar ProjectLibre y comprobar R1–R3 (guía, bloque Q).
-- Dar la orden de empezar Q1.
+- ~~Dar la orden de empezar Q1~~ ✅ 05/10; Q1 hecha en código.
+- Probar Q1 en Excel (guía Q5–Q14).
 - Para la importación (Q2 y Q3): sin archivos reales del usuario, se prueba
   con los generados por ProjectLibre o escritos a mano siguiendo el formato
   publicado de MS Project XML.

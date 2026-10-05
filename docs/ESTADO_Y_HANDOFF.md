@@ -1307,6 +1307,19 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     R1–R3 con los `*-esperado.csv`; bloque Q de la guía con los pasos en
     ProjectLibre. **Siguiente**: el usuario comprueba R1–R3 y da la orden de
     empezar Q1.
+75. [x] **QRSA Q1 en código (2026-10-05)**. El usuario dio la orden de
+    empezar. Hecho, con pruebas: `engine/cronograma/` (festivos, calendarios,
+    red compilada, CPM con las cuatro relaciones, desfases laborables o en
+    días calendario, restricciones; simulación con LHS, riesgos de varios
+    impactos, tornado por eliminación, criticidad, SSI; chequeo de calidad),
+    `excel/cronogramaHojas.ts` (las siete hojas, el ejemplo y la lectura con
+    errores por celda), `excel/cronogramaResultados.ts` y
+    `excel/cronogramaLibro.ts` (hoja `Resultados_Cronograma`),
+    `ui/Cronograma.tsx` y el grupo Cronograma de la cinta (manifiesto
+    0.7.0.0). El CPM coincide día por día con Python en R1–R3. Medida:
+    300 × 20 × 5.000 con el tornado, 4,65 s. Probado en el banco (hojas en
+    memoria). **Siguiente**: el usuario recorre la guía Q5–Q14 (y Q1–Q4 en
+    ProjectLibre); después, Q2 (costos, correlación, pre/post, MS Project XML).
 
 **Siguiente acción al retomar**, en orden de valor:
 

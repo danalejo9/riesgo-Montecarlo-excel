@@ -32,6 +32,14 @@ export const AYUDA = {
     'El valor base es lo que da la hoja sin incertidumbre: la estimación de siempre. En un coste o un plazo, la probabilidad de no pasarse de él y la reserva (P80 menos el valor base) que haría falta para tener un 80 % de confianza; en un beneficio, la probabilidad de alcanzarlo y lo que se obtiene con esa confianza (el P20). Elige arriba si la salida es un coste o un beneficio.',
   matriz:
     'Cada riesgo del registro en su casilla: la probabilidad en horizontal y el impacto medio en vertical, comparado con el mayor del registro. El color es la severidad (probabilidad × impacto): baja, media, alta o crítica. Los de arriba a la derecha son los primeros que hay que mitigar.',
+  finCronograma:
+    'La fecha determinística es la del cronograma con las duraciones base y sin riesgos: la que se presentaría sin análisis. En cada iteración se recalcula la red entera, así que donde dos ramas se juntan manda la más larga de esa iteración (sesgo de convergencia): por eso casi nunca se cumple. El P80 es la fecha que se cumple 8 de cada 10 veces.',
+  eliminacion:
+    'Para cada riesgo, se vuelve a simular sin él con los mismos números aleatorios, y se mide cuánto baja el P80 del fin. Es más fiable que una correlación: un riesgo que cae en una ruta con holgura sale con 0 aunque ocurra a menudo, porque no mueve la entrega.',
+  criticidad:
+    'Criticidad: en qué porcentaje de iteraciones la actividad quedó en la ruta crítica (holgura total ≤ 0). SSI: la criticidad por lo que varía la actividad frente a lo que varía el proyecto; ordena por cuánto pesa de verdad. Ojo: entre calendarios distintos (lunes a viernes y lunes a sábado) un sábado puede dar un día de holgura y bajar la criticidad de lo que va antes.',
+  calidadCronograma:
+    'Revisión del cronograma antes de simular, inspirada en los 14 puntos de la DCMA. Rojo en «Red calculable» impide simular (un ciclo, una predecesora que no existe). Lo demás avisa: una actividad sin sucesora no empuja el fin aunque se retrase, una restricción dura no deja que el retraso se propague, y una tarea sin incertidumbre hace los resultados optimistas.',
   comparar:
     'Caja y bigotes, curvas acumuladas y abanico de todas las salidas numéricas en un mismo eje. Tiene sentido cuando están en las mismas unidades, como el flujo de caja de cada año.',
 } as const;

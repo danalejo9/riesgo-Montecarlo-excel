@@ -15,6 +15,7 @@ import { hojaResultados, resumenesDe } from '../excel/cronogramaResultados.ts';
 import {
   crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
+import { Ayuda } from './ayuda.tsx';
 import { CurvaAcumulada, Histograma } from './Resultados.tsx';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
@@ -228,6 +229,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
         <>
           <section>
             <h2>Fin del proyecto</h2>
+            <Ayuda tema="finCronograma" />
             <table className="tabla-resumen sin-clic">
               <tbody>
                 <tr><td>Fecha determinística (sin riesgos)</td><td>{FECHA.valor(fin.serieDeterministica)}</td></tr>
@@ -246,6 +248,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
 
           <section>
             <h2>Riesgos: tornado por eliminación</h2>
+            <Ayuda tema="eliminacion" />
             {sim.eliminacion.length === 0 ? <p className="tenue">El cronograma no tiene riesgos activos.</p> : (
               <>
                 <p className="tenue">Cuánto bajaría el P80 del fin (en días) si el riesgo desapareciera, con los mismos números aleatorios.</p>
@@ -259,6 +262,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
 
           <section>
             <h2>Actividades más críticas</h2>
+            <Ayuda tema="criticidad" />
             <p className="tenue">Criticidad: % de iteraciones en la ruta crítica. SSI: criticidad × variabilidad de la actividad frente a la del proyecto.</p>
             <div className="tabla-desplazable">
               <table className="tabla-resumen sin-clic">
@@ -286,6 +290,7 @@ function Calidad({ calidad }: { calidad: ChequeoCalidad }) {
   return (
     <section>
       <h2>Calidad del cronograma</h2>
+      <Ayuda tema="calidadCronograma" />
       <p className="tenue">
         {calidad.bloquea ? 'No se puede simular hasta corregir lo que está en rojo.' : `${rojos} en rojo, ${amarillos} en amarillo: se puede simular, pero conviene revisarlos.`}
       </p>
