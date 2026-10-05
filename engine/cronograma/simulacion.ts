@@ -25,7 +25,7 @@ import { correlacionarImanConover, correlacionMasCercana, generarEntrada } from 
 import { uniform } from '../distributions/index.ts';
 import { spearman } from '../stats/index.ts';
 import { cpmDeterministico, calcularCpm, calendarioProyecto, crearEspacio, TOLERANCIA_CRITICA, type ResultadoCpm } from './cpm.ts';
-import { construirDistribucion, tieneCostos, tienePostMitigacion, type ModeloCronograma, type PartidaCosto } from './modelo.ts';
+import { construirDistribucion, incertidumbreDe, tieneCostos, tienePostMitigacion, type ModeloCronograma, type PartidaCosto } from './modelo.ts';
 import { compilarRed, type ActividadRed, type DefinicionRed, type RedCompilada } from './red.ts';
 import type { CalendarioLaboral } from './calendario.ts';
 import { convergenciaP80 } from './analisis.ts';
@@ -217,17 +217,10 @@ export function idInsertado(riesgo: string, actividad: string): string {
 }
 
 function distribucionPara(red: RedCompilada, modelo: ModeloCronograma, a: number): { inc: ModeloCronograma['incertidumbre'][number]; escala: number } | null {
-  const id = red.ids[a] as string;
-  const propia = modelo.incertidumbre.find((i) => !i.selector && i.actividad === id);
   const base = red.duracion[a] as number;
-  if (propia) return { inc: propia, escala: propia.relativa ? base : 1 };
-  if (base === 0) return null;
-  const info = modelo.info?.find((x) => x.id === id);
-  if (!info) return null;
-  const grupo = modelo.incertidumbre.find((i) => i.selector && (
-    (i.selector.wbs !== undefined && info.wbs !== undefined && (info.wbs === i.selector.wbs || info.wbs.startsWith(`${i.selector.wbs}.`)))
-    || (i.selector.grupo !== undefined && info.grupo !== undefined && info.grupo.toLowerCase() === i.selector.grupo.toLowerCase())));
-  return grupo ? { inc: grupo, escala: grupo.relativa ? base : 1 } : null;
+  const inc = incertidumbreDe(modelo, red.ids[a] as string);
+  if (!inc || (inc.selector && base === 0)) return null;
+  return { inc, escala: inc.relativa ? base : 1 };
 }
 
 function preparar(modelo: ModeloCronograma, red: RedCompilada, n: number): Preparado {

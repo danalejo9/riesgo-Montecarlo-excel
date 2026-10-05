@@ -103,3 +103,55 @@ describe('hoja de resultados del cronograma', () => {
     expect(h.semaforos.some(([, , e]) => e === 'amarillo')).toBe(true);
   });
 });
+
+describe('libro de cronograma: hojas de Q2 y Q3', () => {
+  it('el ejemplo trae costos, correlaciones, datos post y un factor por WBS', () => {
+    const m = leerCronograma(libroEjemplo()).modelo!;
+    expect(m.costos?.map((c) => [c.id, c.tipo, c.actividad ?? 'proyecto'])).toEqual([
+      ['ADM', 'tiempo', 'proyecto'], ['INT', 'tiempo', 'proyecto'], ['CIM', 'fijo', 'D'], ['EST', 'fijo', 'E'],
+      ['GRUA', 'recurso', 'E'], ['FACH', 'fijo', 'H'], ['ACAB', 'fijo', 'J'],
+    ]);
+    expect(m.costos?.find((c) => c.id === 'EST')?.escalamiento).toBeCloseTo(0.06, 12);
+    expect(m.correlaciones).toEqual([{ a: 'ADM', b: 'INT', rho: 0.6 }]);
+    expect(m.gruposCorrelacion?.map((g) => [g.nombre, g.miembros])).toEqual([['Obra húmeda', ['D', 'E', 'H']], ['Materiales', ['CIM', 'EST', 'FACH', 'ACAB']]]);
+    const r1 = m.riesgos.find((r) => r.id === 'R1')!;
+    expect([r1.probabilidadPost, r1.factorImpactoPost, r1.costoMitigacion]).toEqual([0.35, 0.5, 60_000_000]);
+    expect(r1.impactos[0]?.costo).toEqual({ tipo: 'triangular', min: 20_000_000, moda: 40_000_000, max: 80_000_000 });
+    expect(m.riesgos.find((r) => r.id === 'R4')!.impactos[0]?.costo).toEqual({ tipo: 'fija', valor: -30_000_000 });
+    expect(m.incertidumbre.find((i) => i.selector)?.selector).toEqual({ wbs: '3' });
+    expect(m.configuracion.costoMeta).toBe(5_600_000_000);
+    expect(m.ramas).toEqual([]);
+  });
+
+  it('errores en Costos, Correlaciones y Ramas con su celda', () => {
+    const libro = libroEjemplo();
+    (libro[H.costos] as unknown[][])[1]![2] = 'Mensual';
+    (libro[H.costos] as unknown[][])[3]![3] = 'ZZ';
+    const fila3 = (libro[H.correlaciones] as unknown[][])[2]!;
+    fila3[0] = 'EST'; fila3[1] = 'FACH'; fila3[2] = 1.5;
+    (libro[H.correlaciones] as unknown[][])[2]![5] = 'EST, NADA';
+    libro[H.ramas] = [['Rama', 'Opción', 'Probabilidad', 'Actividades'], ['Permiso', 'Sí', 0.6, 'B'], ['Permiso', 'No', 0.3, 'C']];
+    const r = leerCronograma(libro);
+    expect(r.errores.map((e) => `${e.hoja}!${e.columna}${e.fila}`)).toEqual([
+      'Costos!C2', 'Costos!D4', 'Correlaciones!C3', 'Correlaciones!F3', 'Ramas!0',
+    ]);
+    expect(r.errores[4]?.mensaje).toMatch(/suman 90 %/);
+  });
+
+  it('la hoja de resultados lleva costo, JCL, pre/post, rutas y el cronograma ajustado', async () => {
+    const { hojaResultados } = await import('../../excel/cronogramaResultados.ts');
+    const { chequearCalidad } = await import('../../engine/cronograma/index.ts');
+    const m = leerCronograma(libroEjemplo()).modelo!;
+    const modelo = { ...m, configuracion: { ...m.configuracion, iteraciones: 1000 } };
+    const sim = await simularCronograma(modelo);
+    const h = hojaResultados({ sim, modelo, calidad: chequearCalidad(modelo), ahora: 46400.5, version: '0.8.0' });
+    const textos = h.valores.map((f) => f[0]);
+    for (const t of ['Costo del proyecto (COP)', 'Confianza conjunta costo–plazo (JCL)', 'Pre y post mitigación (mismos números aleatorios)',
+      'Rutas críticas más frecuentes', 'Correlación pedida y lograda', 'Cronograma ajustado por riesgo (P50 y P80 de cada actividad)']) {
+      expect(textos).toContain(t);
+    }
+    expect(h.graficos.map((g) => g.tipo)).toEqual(['linea', 'linea', 'dispersion']);
+    const ancho = h.valores[0]!.length;
+    expect(h.valores.every((f) => f.length === ancho)).toBe(true);
+  });
+});

@@ -8,7 +8,7 @@
 import { HOJA_RESULTADOS, HOJAS_CRONOGRAMA, hojasNuevasCronograma, type MatrizHoja } from './cronogramaHojas.ts';
 import type { HojaResultados } from './cronogramaResultados.ts';
 
-export const VERSION_COMPLEMENTO = '0.7.0';
+export const VERSION_COMPLEMENTO = '0.8.0';
 
 const AZUL = '#1F4E79';
 const ENCABEZADO = '#DDEBF7';
@@ -73,6 +73,8 @@ export async function crearLibroCronograma(inicio = proximoLunes()): Promise<str
       if (h.nombre === HOJAS_CRONOGRAMA.config) {
         hoja.getRange('B2').numberFormat = [['dd/mm/yyyy']];
         hoja.getRange('B9').numberFormat = [['dd/mm/yyyy']];
+        hoja.getRange('B12').numberFormat = [['#,##0']];
+        hoja.getRange('B13').numberFormat = [['0%']];
         hoja.getRange('B6').dataValidation.rule = { list: { inCellDropDown: true, source: 'Hipercubo latino,Monte Carlo' } };
         hoja.getRange('B7').dataValidation.rule = { list: { inCellDropDown: true, source: 'Al día,Con decimales' } };
         hoja.getRange('B8').dataValidation.rule = { list: { inCellDropDown: true, source: 'Respetar,Ignorar' } };
@@ -149,12 +151,15 @@ export async function escribirResultadosCronograma(r: HojaResultados): Promise<v
     [36, 30, 14, 16, 14, 16, 14, 13, 13, 3, 13, 16].forEach((caracteres, c) => {
       if (c < ancho) hoja.getRangeByIndexes(0, c, 1, 1).format.columnWidth = caracteres * 6.5;
     });
-    if (r.rangoCurva) {
-      const g = hoja.charts.add(Excel.ChartType.xyscatterLinesNoMarkers, hoja.getRange(r.rangoCurva), Excel.ChartSeriesBy.columns);
-      g.title.text = 'Curva S: probabilidad de terminar a más tardar en cada fecha';
+    r.graficos.forEach((gr, k) => {
+      const tipo = gr.tipo === 'dispersion' ? Excel.ChartType.xyscatter : Excel.ChartType.xyscatterLinesNoMarkers;
+      const g = hoja.charts.add(tipo, hoja.getRange(gr.rango), Excel.ChartSeriesBy.columns);
+      g.title.text = gr.titulo;
       g.legend.visible = false;
-      g.setPosition('N3', 'V22');
-    }
+      // Uno debajo de otro, a la derecha de los datos.
+      const col = 10 + 3 * r.graficos.length + 1;
+      g.setPosition(hoja.getRangeByIndexes(2 + 22 * k, col, 1, 1), hoja.getRangeByIndexes(21 + 22 * k, col + 8, 1, 1));
+    });
     hoja.activate();
     await context.sync();
   });

@@ -8,7 +8,7 @@
  */
 
 import {
-  convergenciaP80, indicesActividades, resumirTiempo,
+  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, resumirCosto, resumirTiempo,
   type ChequeoCalidad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { FORMATO_FECHA, type Celda } from './cronogramaHojas.ts';
@@ -24,11 +24,14 @@ export interface HojaResultados {
   semaforos: [number, number, 'verde' | 'amarillo' | 'rojo'][];
   /** Rango de la curva S del fin (para el gráfico), en notación A1. */
   rangoCurva: string | null;
+  /** Los gráficos de la derecha: rango de sus datos, título y tipo. */
+  graficos: { rango: string; titulo: string; tipo: 'linea' | 'dispersion' }[];
 }
 
 const ANCHO = 9;
 const PCT = '0.0%';
 const DIAS = '0.0';
+const MONEDA = '#,##0';
 
 export interface DatosResultados {
   sim: SimulacionCronograma;
@@ -123,14 +126,84 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
   titulo('Tornado por eliminación de riesgos');
   if (sim.eliminacion.length === 0) fila(['El cronograma no tiene riesgos activos.']);
   else {
-    fila(['Riesgo', 'Descripción', 'Ocurrió', 'Media sin él (días)', 'Baja la media', 'P80 sin él (días)', 'Baja el P80'], [], true);
+    const conCosto = sim.costo !== null;
+    const pc = Math.round(100 * (cfg.percentilContingencia ?? 0.8));
+    fila(['Riesgo', 'Descripción', 'Ocurrió', 'Media sin él (días)', 'Baja la media', 'P80 sin él (días)', 'Baja el P80', ...(conCosto ? ['Baja el costo medio', `Baja el costo P${pc}`] : [])], [], true);
     for (const e of sim.eliminacion) {
-      fila([e.id, e.nombre, e.ocurrencia, e.media, e.reduccionMedia, e.p80, e.reduccionP80], [null, null, PCT, DIAS, DIAS, DIAS, DIAS]);
+      fila([e.id, e.nombre, e.ocurrencia, e.media, e.reduccionMedia, e.p80, e.reduccionP80, ...(conCosto ? [e.reduccionMediaCosto, e.reduccionP80Costo] : [])],
+        [null, null, PCT, DIAS, DIAS, DIAS, DIAS, MONEDA, MONEDA]);
     }
     if (sim.sinRiesgos) {
-      fila(['Todos', 'Sin ningún riesgo (solo la incertidumbre de las duraciones)', null, sim.sinRiesgos.media, sim.media - sim.sinRiesgos.media, sim.sinRiesgos.p80, sim.p80 - sim.sinRiesgos.p80],
-        [null, null, null, DIAS, DIAS, DIAS, DIAS]);
+      const mc = sim.costo ? sim.costo.reduce((a, b) => a + b, 0) / sim.costo.length : null;
+      const p80c = sim.costo ? resumirCosto(sim.costo, sim.costoBase ?? 0, cfg.percentilContingencia).valorContingencia : null;
+      fila(['Todos', 'Sin ningún riesgo (solo la incertidumbre de las duraciones)', null, sim.sinRiesgos.media, sim.media - sim.sinRiesgos.media, sim.sinRiesgos.p80, sim.p80 - sim.sinRiesgos.p80,
+        ...(conCosto && mc !== null && sim.sinRiesgos.mediaCosto !== null && p80c !== null && sim.sinRiesgos.p80Costo !== null ? [mc - sim.sinRiesgos.mediaCosto, p80c - sim.sinRiesgos.p80Costo] : [])],
+        [null, null, null, DIAS, DIAS, DIAS, DIAS, MONEDA, MONEDA]);
     }
+  }
+
+  // Costo (Q2.1, Q2.3) y probabilidad conjunta (Q2.4).
+  const rc = sim.costo && sim.costoBase !== null ? resumirCosto(sim.costo, sim.costoBase, cfg.percentilContingencia, cfg.costoMeta) : null;
+  if (rc) {
+    const mon = cfg.moneda ? ` (${cfg.moneda})` : '';
+    titulo(`Costo del proyecto${mon}`);
+    fila(['Costo base (valores base, sin riesgos)', rc.base], [null, MONEDA]);
+    fila(['Probabilidad de no pasarse del costo base', rc.probabilidadBase], [null, PCT]);
+    fila([`Contingencia: P${Math.round(rc.pContingencia * 100)} − costo base`, rc.contingencia], [null, MONEDA]);
+    if (rc.probabilidadMeta !== null) {
+      fila(['Costo meta', cfg.costoMeta ?? null], [null, MONEDA]);
+      fila(['Probabilidad de cumplir el costo meta', rc.probabilidadMeta], [null, PCT]);
+    }
+    fila(['Media · desviación', rc.media, rc.desviacion], [null, MONEDA, MONEDA]);
+    fila(['Mínimo · máximo simulados', rc.minimo, rc.maximo], [null, MONEDA, MONEDA]);
+    fila(['Percentil', 'Costo'], [], true);
+    for (const p of rc.percentiles) fila([`P${Math.round(p.p * 100)}`, p.valor], [null, MONEDA]);
+    if (cfg.fechaMeta !== undefined && cfg.costoMeta !== undefined && sim.costo) {
+      const j = confianzaConjunta(sim.fin.serie, sim.costo, cfg.fechaMeta, cfg.costoMeta);
+      titulo('Confianza conjunta costo–plazo (JCL)');
+      fila(['Cumplen la fecha meta y el costo meta a la vez', j.jcl], [null, PCT]);
+      fila(['Solo la fecha meta · solo el costo meta', j.soloPlazo, j.soloCosto], [null, PCT, PCT]);
+    }
+  }
+
+  // Pre y post mitigación (Q2.5).
+  const pp = comparacionPrePost(sim, cfg.fechaMeta, cfg.percentilContingencia);
+  if (pp.length) {
+    titulo('Pre y post mitigación (mismos números aleatorios)');
+    fila(['Medida', 'Pre', 'Post', 'Gana la mitigación'], [], true);
+    for (const r of pp) {
+      const f = r.unidad === 'fecha' ? FORMATO_FECHA : r.unidad === 'costo' ? MONEDA : r.unidad === 'probabilidad' ? PCT : DIAS;
+      fila([r.medida, r.pre, r.post, r.diferencia], [null, f, f, r.unidad === 'fecha' ? '0' : f]);
+    }
+    const mit = modelo.riesgos.reduce((a, r) => a + (r.costoMitigacion ?? 0), 0);
+    if (mit > 0) fila(['Costo de la mitigación (incluido en el post)', mit], [null, MONEDA]);
+  }
+
+  // Rutas críticas más frecuentes (Q3.2).
+  if (sim.rutas.length) {
+    titulo('Rutas críticas más frecuentes');
+    fila(['Iteraciones', 'Actividades críticas'], [], true);
+    for (const r of sim.rutas) fila([r.proporcion, r.actividades.join(' → ')], [PCT]);
+  }
+
+  // Correlación lograda (Q2.2).
+  if (sim.correlacionLograda.length) {
+    titulo('Correlación pedida y lograda');
+    fila(['Elemento A', 'Elemento B', 'Pedida', 'Aplicada (Higham)', 'Lograda'], [], true);
+    for (const c of sim.correlacionLograda) fila([c.a, c.b, c.objetivo, c.aplicada, c.lograda], [null, null, '0.00', '0.00', '0.00']);
+  }
+  if (sim.avisos.length) {
+    titulo('Avisos de la simulación');
+    for (const a of sim.avisos) fila([a]);
+  }
+
+  // Cronograma ajustado por riesgo (Q3.3).
+  const pAj = 0.8;
+  titulo('Cronograma ajustado por riesgo (P50 y P80 de cada actividad)');
+  fila(['ID', 'Actividad', 'Inicio base', 'Fin base', 'Inicio P50', 'Fin P50', 'Inicio P80', 'Fin P80', 'Corrimiento del fin (días)'], [], true);
+  for (const x of cronogramaAjustado(sim, pAj)) {
+    fila([x.id, x.nombre, x.inicioBase, x.finBase, x.inicioP50, x.finP50, x.inicioP, x.finP, x.desplazamiento],
+      [null, null, FORMATO_FECHA, FORMATO_FECHA, FORMATO_FECHA, FORMATO_FECHA, FORMATO_FECHA, FORMATO_FECHA, '0']);
   }
 
   titulo('Índices por actividad');
@@ -153,33 +226,41 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
     for (const p of conv.puntos) fila([p.iteraciones, p.p80], ['#,##0', DIAS]);
   }
 
-  // La curva S del fin, a la derecha (columnas K y L), para el gráfico.
-  const col = ANCHO + 1;
-  let rangoCurva: string | null = null;
-  if (fin.curvaS.length > 1) {
-    const filas = [['Curva S del fin', null], ['Fecha', 'Probabilidad acumulada'], ...fin.curvaS.map(([s, p]) => [s, p])] as Celda[][];
-    filas.forEach((par, k) => {
-      while (valores.length <= k + 2) fila([]);
-      const v = valores[k + 2] as Celda[];
-      const f = formatos[k + 2] as (string | null)[];
+  // Los datos de los gráficos, a la derecha, de dos en dos columnas desde la K.
+  const graficos: HojaResultados['graficos'] = [];
+  const bloques: { titulo: string; enc: [string, string]; datos: [number, number][]; fmt: [string, string]; tipo: 'linea' | 'dispersion' }[] = [];
+  if (fin.curvaS.length > 1) bloques.push({ titulo: 'Curva S: probabilidad de terminar a más tardar en cada fecha', enc: ['Fecha', 'Probabilidad acumulada'], datos: fin.curvaS, fmt: [FORMATO_FECHA, PCT], tipo: 'linea' });
+  if (rc && rc.curvaS.length > 1) bloques.push({ titulo: 'Curva S del costo', enc: ['Costo', 'Probabilidad acumulada'], datos: rc.curvaS, fmt: [MONEDA, PCT], tipo: 'linea' });
+  if (sim.costo && cfg.fechaMeta !== undefined && cfg.costoMeta !== undefined) {
+    const j = confianzaConjunta(sim.fin.serie, sim.costo, cfg.fechaMeta, cfg.costoMeta, 1000);
+    bloques.push({ titulo: 'Costo frente a fecha de fin (cada punto, una iteración)', enc: ['Fecha de fin', 'Costo'], datos: j.puntos, fmt: [FORMATO_FECHA, MONEDA], tipo: 'dispersion' });
+  }
+  const letra = (c: number) => (c < 26 ? String.fromCharCode(65 + c) : String.fromCharCode(64 + Math.floor(c / 26)) + String.fromCharCode(65 + (c % 26)));
+  bloques.forEach((b, k) => {
+    const col = ANCHO + 1 + 3 * k;
+    const filas = [[b.titulo, null], b.enc, ...b.datos] as Celda[][];
+    filas.forEach((par, i) => {
+      while (valores.length <= i + 2) fila([]);
+      const v = valores[i + 2] as Celda[];
+      const f = formatos[i + 2] as (string | null)[];
       while (v.length < col + 2) {
         v.push(null);
         f.push(null);
       }
       v[col] = par[0] as Celda;
       v[col + 1] = par[1] as Celda;
-      if (k >= 2) { f[col] = FORMATO_FECHA; f[col + 1] = PCT; }
+      if (i >= 2) { f[col] = b.fmt[0]; f[col + 1] = b.fmt[1]; }
     });
-    // Toda fila tiene que tener el mismo ancho.
-    const ancho = col + 2;
-    for (let r = 0; r < valores.length; r++) {
-      while ((valores[r] as Celda[]).length < ancho) {
-        (valores[r] as Celda[]).push(null);
-        (formatos[r] as (string | null)[]).push(null);
-      }
+    graficos.push({ rango: `${letra(col)}4:${letra(col + 1)}${b.datos.length + 4}`, titulo: b.titulo, tipo: b.tipo });
+  });
+  // Toda fila tiene que tener el mismo ancho.
+  const ancho = Math.max(...valores.map((v) => v.length));
+  for (let r = 0; r < valores.length; r++) {
+    while ((valores[r] as Celda[]).length < ancho) {
+      (valores[r] as Celda[]).push(null);
+      (formatos[r] as (string | null)[]).push(null);
     }
-    const letra = (c: number) => String.fromCharCode(65 + c);
-    rangoCurva = `${letra(col)}4:${letra(col + 1)}${fin.curvaS.length + 4}`;
   }
-  return { valores, formatos, negritas, titulos, semaforos, rangoCurva };
+  const rangoCurva = graficos[0]?.tipo === 'linea' && fin.curvaS.length > 1 ? (graficos[0]?.rango ?? null) : null;
+  return { valores, formatos, negritas, titulos, semaforos, rangoCurva, graficos };
 }

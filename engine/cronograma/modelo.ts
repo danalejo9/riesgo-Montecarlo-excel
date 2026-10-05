@@ -238,3 +238,17 @@ export function valorTipico(d: DistribucionDuracion): number {
     }
   }
 }
+
+/**
+ * La distribución que le toca a una actividad: la suya o, si no tiene, la de
+ * la primera fila de grupo (WBS por prefijo, o grupo) que coincide.
+ */
+export function incertidumbreDe(modelo: ModeloCronograma, id: string): IncertidumbreActividad | null {
+  const propia = modelo.incertidumbre.find((i) => !i.selector && i.actividad === id);
+  if (propia) return propia;
+  const info = modelo.info?.find((x) => x.id === id);
+  if (!info) return null;
+  return modelo.incertidumbre.find((i) => i.selector && (
+    (i.selector.wbs !== undefined && info.wbs !== undefined && (info.wbs === i.selector.wbs || info.wbs.startsWith(`${i.selector.wbs}.`)))
+    || (i.selector.grupo !== undefined && info.grupo !== undefined && info.grupo.toLowerCase() === i.selector.grupo.toLowerCase()))) ?? null;
+}

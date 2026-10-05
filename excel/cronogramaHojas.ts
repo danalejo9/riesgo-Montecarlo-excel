@@ -14,6 +14,7 @@ import {
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
+  type CorrelacionPar, type GrupoCorrelacion, type InfoActividad, type PartidaCosto, type Ramificacion,
 } from '../engine/cronograma/index.ts';
 import { fechaDeSerie, serieDeFecha } from '../engine/modelo/fechas.ts';
 
@@ -25,6 +26,9 @@ export const HOJAS_CRONOGRAMA = {
   incertidumbre: 'Incertidumbre',
   riesgos: 'Riesgos',
   impactos: 'Impactos',
+  costos: 'Costos',
+  correlaciones: 'Correlaciones',
+  ramas: 'Ramas',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -51,15 +55,21 @@ export interface LecturaCronograma {
 export const COLUMNAS = {
   calendarios: ['Calendario', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
   excepciones: ['Fecha', 'Descripción', 'Calendario', 'Tipo'],
-  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación'],
+  actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo'],
   relaciones: ['Predecesora', 'Sucesora', 'Tipo', 'Desfase (días)', 'Unidad del desfase'],
-  incertidumbre: ['Actividad', 'Distribución', 'Mínimo o P10', 'Más probable', 'Máximo o P90', 'Unidad', 'Lambda (PERT)'],
-  riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado'],
-  impactos: ['Riesgo', 'Actividad', 'Distribución', 'Mínimo (días)', 'Más probable (días)', 'Máximo (días)'],
+  incertidumbre: ['Actividad o grupo', 'Distribución', 'Mínimo o P10', 'Más probable', 'Máximo o P90', 'Unidad', 'Lambda (PERT)'],
+  riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado', 'Probabilidad post', '% del impacto post', 'Costo de mitigación', 'Modo'],
+  impactos: ['Riesgo', 'Actividad', 'Distribución', 'Mínimo (días)', 'Más probable (días)', 'Máximo (días)', 'Costo mínimo', 'Costo más probable', 'Costo máximo'],
+  costos: ['ID', 'Partida', 'Tipo', 'Actividad', 'Valor (monto o tarifa diaria)', 'Unidades', 'Distribución', 'Mínimo', 'Más probable', 'Máximo', 'Escalamiento anual'],
+  correlacionPares: ['Elemento A', 'Elemento B', 'Coeficiente'],
+  correlacionGrupos: ['Grupo', 'Miembros', 'Coeficiente'],
+  ramas: ['Rama', 'Opción', 'Probabilidad', 'Actividades'],
 } as const;
 
 /** La tabla de excepciones del calendario empieza en la columna J. */
 export const COLUMNA_EXCEPCIONES = 9;
+/** La tabla de grupos de correlación empieza en la columna E. */
+export const COLUMNA_GRUPOS_CORRELACION = 4;
 
 export const LISTAS = {
   tipoActividad: ['Tarea', 'Hito', 'Resumen'],
@@ -74,6 +84,9 @@ export const LISTAS = {
   muestreo: ['Hipercubo latino', 'Monte Carlo'],
   redondeo: ['Al día', 'Con decimales'],
   duras: ['Respetar', 'Ignorar'],
+  tipoCosto: ['Fijo', 'Por tiempo', 'Por recurso'],
+  distribucionCosto: ['Triangular', 'PERT', 'Uniforme', 'Lognormal'],
+  modoRiesgo: ['Extiende actividades', 'Actividad insertada'],
 } as const;
 
 const CODIGO_RESTRICCION: Record<string, TipoRestriccion> = {
@@ -101,6 +114,9 @@ export const ETIQUETAS_CONFIG = {
   duras: 'Restricciones duras en la simulación',
   meta: 'Fecha meta',
   hitos: 'Hitos a seguir',
+  moneda: 'Moneda',
+  costoMeta: 'Costo meta',
+  percentil: 'Percentil de la contingencia',
 } as const;
 
 // ------------------------------------------------------------- utilidades
@@ -181,11 +197,23 @@ function tabla(hoja: string, m: MatrizHoja | undefined, esperadas: readonly stri
   const enc = m[0] ?? [];
   let fin = desde;
   while (fin < enc.length && !vacia(enc[fin])) fin++;
+  // Primero los encabezados exactos; después, los que empiezan igual
+  // («Duración» por «Duración (días)», «Actividad» por «Actividad o grupo»).
+  const usadas = new Set<number>();
   for (let c = desde; c < fin; c++) {
     const h = normalizar(enc[c]);
     for (const e of esperadas) {
       const ne = normalizar(e);
-      if (!col.has(ne) && (h === ne || h.startsWith(ne.split(' (')[0] as string))) col.set(ne, c);
+      if (!col.has(ne) && h === ne) { col.set(ne, c); usadas.add(c); }
+    }
+  }
+  for (let c = desde; c < fin; c++) {
+    if (usadas.has(c)) continue;
+    const h = normalizar(enc[c]);
+    for (const e of esperadas) {
+      const ne = normalizar(e);
+      const corta = ne.split(' (')[0] as string;
+      if (!col.has(ne) && (h.startsWith(corta) || (h.length >= 6 && ne.startsWith(h)))) { col.set(ne, c); break; }
     }
   }
   for (let f = 1; f < m.length; f++) {
@@ -238,7 +266,8 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   }
   const configuracion: ConfiguracionCronograma = { ...CONFIGURACION_POR_DEFECTO };
   const it = leerCfg('iteraciones');
-  if (it && !vacia(it.v)) {
+  if (it && normalizar(it.v).startsWith('autom')) configuracion.iteracionesAutomaticas = true;
+  else if (it && !vacia(it.v)) {
     const x = numero(it.v);
     if (x === null || !Number.isInteger(x) || x < 100 || x > 1_000_000) error(H.config, it.fila, 'B', 'Las iteraciones tienen que ser un número entero entre 100 y 1.000.000');
     else configuracion.iteraciones = x;
@@ -260,6 +289,20 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     const f = fechaDeCelda(me.v);
     if (f === null) error(H.config, me.fila, 'B', 'La fecha meta no es una fecha válida');
     else configuracion.fechaMeta = f;
+  }
+  const mo = leerCfg('moneda');
+  if (mo && !vacia(mo.v)) configuracion.moneda = texto(mo.v);
+  const cm = leerCfg('costoMeta');
+  if (cm && !vacia(cm.v)) {
+    const x = numero(cm.v);
+    if (x === null || x < 0) error(H.config, cm.fila, 'B', 'El costo meta tiene que ser un número positivo');
+    else configuracion.costoMeta = x;
+  }
+  const pc = leerCfg('percentil');
+  if (pc && !vacia(pc.v)) {
+    const x = proporcion(pc.v);
+    if (x === null || x <= 0 || x >= 1) error(H.config, pc.fila, 'B', 'El percentil de la contingencia tiene que estar entre 1 % y 99 %');
+    else configuracion.percentilContingencia = x;
   }
   const hi = leerCfg('hitos');
   if (hi && !vacia(hi.v)) configuracion.hitos = texto(hi.v).split(/[,;]/).map((s) => s.trim()).filter(Boolean);
@@ -312,6 +355,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   // Las filas con un error siguen contando como IDs conocidos: así una
   // actividad mal escrita no arrastra errores en cada relación que la nombra.
   const invalidas = new Set<string>();
+  const info: InfoActividad[] = [];
   const vistos = new Map<string, number>();
   for (const { fila, valores } of ta.filas) {
     const id = texto(valor(ta, valores, 'ID'));
@@ -347,6 +391,9 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       restriccion = { tipo: tr, fecha: f };
     }
     if (siNo(valor(ta, valores, 'Excluir de la simulación'), false)) excluidas.add(id);
+    const wbs = texto(valor(ta, valores, 'WBS'));
+    const grupo = texto(valor(ta, valores, 'Grupo'));
+    info.push({ id, ...(wbs ? { wbs } : {}), ...(grupo ? { grupo } : {}) });
     actividades.push({ id, nombre: texto(valor(ta, valores, 'Nombre')) || id, duracion, calendario, restriccion, predecesoras: [] });
   }
   if (ta.filas.length === 0) error(H.actividades, 2, '', 'No hay actividades');
@@ -380,15 +427,20 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   const ti = tabla(H.incertidumbre, hojas[H.incertidumbre], COLUMNAS.incertidumbre);
   const incertidumbre: IncertidumbreActividad[] = [];
   const conInc = new Set<string>();
+  const colAct = 'Actividad o grupo';
   for (const { fila, valores } of ti.filas) {
-    const id = texto(valor(ti, valores, 'Actividad'));
+    const id = texto(valor(ti, valores, colAct));
     if (invalidas.has(normalizar(id))) continue;
-    const a = porId.get(normalizar(id));
-    if (!a) { error(H.incertidumbre, fila, letra(ti, 'Actividad'), id ? `La actividad «${id}» no existe` : 'Falta la actividad'); continue; }
-    if (conInc.has(a.id)) { error(H.incertidumbre, fila, letra(ti, 'Actividad'), `«${a.id}» ya tiene una distribución más arriba`); continue; }
-    conInc.add(a.id);
-    if (excluidas.has(a.id)) continue;
-    if (a.duracion === 0) { avisos.push(`${H.incertidumbre}, fila ${fila}: «${a.id}» es un hito; su incertidumbre no se usa.`); continue; }
+    // Una fila de grupo (Q2.6): «WBS 2» (y sus hijas) o «Grupo Siembra».
+    const sel = /^(wbs|grupo)\s*[:=]?\s+(.+)$/i.exec(id) ?? /^(wbs|grupo)\s*[:=]\s*(.+)$/i.exec(id);
+    const a = sel ? null : porId.get(normalizar(id));
+    if (!sel && !a) { error(H.incertidumbre, fila, letra(ti, colAct), id ? `La actividad «${id}» no existe (para un grupo escriba «WBS 2» o «Grupo nombre»)` : 'Falta la actividad'); continue; }
+    if (a) {
+      if (conInc.has(a.id)) { error(H.incertidumbre, fila, letra(ti, colAct), `«${a.id}» ya tiene una distribución más arriba`); continue; }
+      conInc.add(a.id);
+      if (excluidas.has(a.id)) continue;
+      if (a.duracion === 0) { avisos.push(`${H.incertidumbre}, fila ${fila}: «${a.id}» es un hito; su incertidumbre no se usa.`); continue; }
+    }
     const relativa = normalizar(valor(ti, valores, 'Unidad')).startsWith('%');
     let x1 = numero(valor(ti, valores, 'Mínimo o P10'));
     let x2 = numero(valor(ti, valores, 'Más probable'));
@@ -403,12 +455,22 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     const d = distribucionDeFila(nd, x1, x2, x3, lambda ?? undefined);
     if (typeof d === 'string') { error(H.incertidumbre, fila, letra(ti, d.startsWith('Distribución') ? 'Distribución' : 'Mínimo o P10'), d); continue; }
     try {
-      construirDistribucion(d, relativa ? a.duracion : 1);
+      construirDistribucion(d, relativa && a ? a.duracion : 1);
     } catch (e) {
       error(H.incertidumbre, fila, letra(ti, 'Mínimo o P10'), (e as Error).message);
       continue;
     }
-    incertidumbre.push({ actividad: a.id, distribucion: d, relativa });
+    if (sel) {
+      const clase = (sel[1] as string).toLowerCase();
+      const valorSel = (sel[2] as string).trim();
+      const alguna = info.some((x) => clase === 'wbs'
+        ? x.wbs !== undefined && (x.wbs === valorSel || x.wbs.startsWith(`${valorSel}.`))
+        : x.grupo !== undefined && normalizar(x.grupo) === normalizar(valorSel));
+      if (!alguna) avisos.push(`${H.incertidumbre}, fila ${fila}: ninguna actividad tiene ${clase === 'wbs' ? `la WBS ${valorSel}` : `el grupo «${valorSel}»`}.`);
+      incertidumbre.push({ actividad: id, selector: clase === 'wbs' ? { wbs: valorSel } : { grupo: valorSel }, distribucion: d, relativa });
+    } else {
+      incertidumbre.push({ actividad: (a as ActividadRed).id, distribucion: d, relativa });
+    }
   }
 
   // Riesgos e impactos.
@@ -428,7 +490,30 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       cerrados.add(normalizar(id));
       continue;
     }
-    riesgos.push({ id, nombre: texto(valor(tk, valores, 'Descripción')) || id, probabilidad: p, impactos: [] });
+    // Un error en las columnas post también cierra el riesgo para no arrastrar errores en Impactos.
+    cerrados.add(normalizar(id));
+    const r: RiesgoCronograma & { impactos: RiesgoCronograma['impactos'][number][] } = { id, nombre: texto(valor(tk, valores, 'Descripción')) || id, probabilidad: p, impactos: [] };
+    const pp = valor(tk, valores, 'Probabilidad post');
+    if (!vacia(pp)) {
+      const x = proporcion(pp);
+      if (x === null || x < 0 || x > 1) { error(H.riesgos, fila, letra(tk, 'Probabilidad post'), 'La probabilidad post tiene que estar entre 0 % y 100 %'); continue; }
+      r.probabilidadPost = x;
+    }
+    const fp = valor(tk, valores, '% del impacto post');
+    if (!vacia(fp)) {
+      const x = numero(fp);
+      if (x === null || x < 0) { error(H.riesgos, fila, letra(tk, '% del impacto post'), 'El % del impacto post tiene que ser un número (100 % = igual)'); continue; }
+      r.factorImpactoPost = x > 3 ? x / 100 : x;
+    }
+    const cm = valor(tk, valores, 'Costo de mitigación');
+    if (!vacia(cm)) {
+      const x = numero(cm);
+      if (x === null || x < 0) { error(H.riesgos, fila, letra(tk, 'Costo de mitigación'), 'El costo de mitigación tiene que ser un número positivo'); continue; }
+      r.costoMitigacion = x;
+    }
+    if (normalizar(valor(tk, valores, 'Modo')).startsWith('actividad')) r.modo = 'actividad';
+    cerrados.delete(normalizar(id));
+    riesgos.push(r);
   }
   const porRiesgo = new Map(riesgos.map((r) => [normalizar(r.id), r]));
   const tm = tabla(H.impactos, hojas[H.impactos], COLUMNAS.impactos);
@@ -447,19 +532,165 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     const x1 = numero(valor(tm, valores, 'Mínimo (días)'));
     const x2 = numero(valor(tm, valores, 'Más probable (días)'));
     const x3 = numero(valor(tm, valores, 'Máximo (días)'));
+    const c1 = numero(valor(tm, valores, 'Costo mínimo'));
+    const c2 = numero(valor(tm, valores, 'Costo más probable'));
+    const c3 = numero(valor(tm, valores, 'Costo máximo'));
     const ndTxt = normalizar(valor(tm, valores, 'Distribución'));
-    const nd = ndTxt || (x1 === null && x3 === null ? 'fija' : 'triangular');
-    const d = distribucionDeFila(nd, x1, x2, x3);
-    if (typeof d === 'string') { error(H.impactos, fila, letra(tm, d.startsWith('Distribución') ? 'Distribución' : 'Mínimo (días)'), d); continue; }
-    try {
-      construirDistribucion(d);
-    } catch (e) {
-      error(H.impactos, fila, letra(tm, 'Mínimo (días)'), (e as Error).message);
-      continue;
+    const impacto: RiesgoCronograma['impactos'][number] = { actividad: a.id };
+    if (x1 !== null || x2 !== null || x3 !== null) {
+      const nd = ndTxt || (x1 === null && x3 === null ? 'fija' : 'triangular');
+      const d = distribucionDeFila(nd, x1, x2, x3);
+      if (typeof d === 'string') { error(H.impactos, fila, letra(tm, d.startsWith('Distribución') ? 'Distribución' : 'Mínimo (días)'), d); continue; }
+      try {
+        construirDistribucion(d);
+      } catch (e) {
+        error(H.impactos, fila, letra(tm, 'Mínimo (días)'), (e as Error).message);
+        continue;
+      }
+      impacto.dias = d;
     }
-    r.impactos.push({ actividad: a.id, dias: d });
+    if (c1 !== null || c2 !== null || c3 !== null) {
+      const nd = c1 === null && c3 === null ? 'fija' : (ndTxt && ndTxt !== 'fija' ? ndTxt : 'triangular');
+      const d = distribucionDeFila(nd, c1, c2, c3);
+      if (typeof d === 'string') { error(H.impactos, fila, letra(tm, 'Costo mínimo'), d.replace('días', 'costo')); continue; }
+      try {
+        construirDistribucion(d);
+      } catch (e) {
+        error(H.impactos, fila, letra(tm, 'Costo mínimo'), (e as Error).message);
+        continue;
+      }
+      impacto.costo = d;
+    }
+    if (!impacto.dias && !impacto.costo) { error(H.impactos, fila, letra(tm, 'Más probable (días)'), 'Falta el impacto: en días, en costo o en los dos'); continue; }
+    r.impactos.push(impacto);
   }
   for (const r of riesgos) if (!conFilas.has(r.id)) avisos.push(`El riesgo «${r.id}» no tiene impactos en la hoja Impactos: no cambia nada.`);
+
+  // Costos (Q2.1).
+  const tco = tabla(H.costos, hojas[H.costos], COLUMNAS.costos);
+  const costos: PartidaCosto[] = [];
+  const idsCosto = new Set<string>();
+  for (const { fila, valores } of tco.filas) {
+    const id = texto(valor(tco, valores, 'ID'));
+    if (!id) { error(H.costos, fila, letra(tco, 'ID'), 'Falta el ID de la partida'); continue; }
+    if (idsCosto.has(normalizar(id))) { error(H.costos, fila, letra(tco, 'ID'), `La partida «${id}» está repetida`); continue; }
+    if (porId.has(normalizar(id)) || invalidas.has(normalizar(id))) { error(H.costos, fila, letra(tco, 'ID'), `«${id}» ya es el ID de una actividad: use otro para la partida`); continue; }
+    idsCosto.add(normalizar(id));
+    const tTxt = normalizar(valor(tco, valores, 'Tipo'));
+    const tipo = tTxt.includes('tiempo') ? 'tiempo' : tTxt.includes('recurso') ? 'recurso' : tTxt === '' || tTxt.startsWith('fij') ? 'fijo' : null;
+    if (!tipo) { error(H.costos, fila, letra(tco, 'Tipo'), `Tipo de costo desconocido «${texto(valor(tco, valores, 'Tipo'))}» (Fijo, Por tiempo o Por recurso)`); continue; }
+    const aid = texto(valor(tco, valores, 'Actividad'));
+    let actividad: string | undefined;
+    if (aid && !/^proyecto$/i.test(aid)) {
+      if (invalidas.has(normalizar(aid))) continue;
+      const a = porId.get(normalizar(aid));
+      if (!a) { error(H.costos, fila, letra(tco, 'Actividad'), `La actividad «${aid}» no existe (vacío: todo el proyecto)`); continue; }
+      actividad = a.id;
+    }
+    const v = numero(valor(tco, valores, 'Valor (monto o tarifa diaria)'));
+    if (v === null) { error(H.costos, fila, letra(tco, 'Valor (monto o tarifa diaria)'), 'Falta el valor (monto o tarifa diaria)'); continue; }
+    const uTxt = valor(tco, valores, 'Unidades');
+    const unidades = vacia(uTxt) ? undefined : numero(uTxt);
+    if (unidades === null || (tipo === 'recurso' && unidades !== undefined && unidades < 0)) { error(H.costos, fila, letra(tco, 'Unidades'), 'Las unidades tienen que ser un número'); continue; }
+    const m1 = numero(valor(tco, valores, 'Mínimo'));
+    const m2 = numero(valor(tco, valores, 'Más probable'));
+    const m3 = numero(valor(tco, valores, 'Máximo'));
+    const ndTxt = normalizar(valor(tco, valores, 'Distribución'));
+    let distribucion: DistribucionDuracion | undefined;
+    if (ndTxt || m1 !== null || m3 !== null) {
+      const d = distribucionDeFila(ndTxt || 'triangular', m1, m2 ?? v, m3);
+      if (typeof d === 'string') { error(H.costos, fila, letra(tco, d.startsWith('Distribución') ? 'Distribución' : 'Mínimo'), d); continue; }
+      try {
+        construirDistribucion(d);
+      } catch (e) {
+        error(H.costos, fila, letra(tco, 'Mínimo'), (e as Error).message);
+        continue;
+      }
+      distribucion = d;
+    }
+    const eTxt = valor(tco, valores, 'Escalamiento anual');
+    let escalamiento: number | undefined;
+    if (!vacia(eTxt)) {
+      const x = numero(eTxt);
+      if (x === null) { error(H.costos, fila, letra(tco, 'Escalamiento anual'), 'El escalamiento tiene que ser un porcentaje anual'); continue; }
+      escalamiento = Math.abs(x) >= 1 ? x / 100 : x;
+    }
+    costos.push({ id, nombre: texto(valor(tco, valores, 'Partida')) || id, tipo, actividad, valor: v, unidades: unidades ?? undefined, distribucion, escalamiento });
+  }
+
+  // Correlaciones (Q2.2): pares (A:C) y grupos (desde la E).
+  const conocido = (x: string) => porId.get(normalizar(x))?.id ?? costos.find((c) => normalizar(c.id) === normalizar(x))?.id;
+  // Una actividad o partida con su propio error no arrastra otro aquí.
+  const conError = (x: string) => invalidas.has(normalizar(x)) || (idsCosto.has(normalizar(x)) && !costos.some((c) => normalizar(c.id) === normalizar(x)));
+  const expandir = (x: string): string[] | null => {
+    const sel = /^(wbs|grupo)\s*[:=]?\s+(.+)$/i.exec(x);
+    if (sel) {
+      const clase = (sel[1] as string).toLowerCase();
+      const v = (sel[2] as string).trim();
+      return info.filter((i) => clase === 'wbs' ? i.wbs !== undefined && (i.wbs === v || i.wbs.startsWith(`${v}.`)) : i.grupo !== undefined && normalizar(i.grupo) === normalizar(v)).map((i) => i.id);
+    }
+    const id = conocido(x);
+    return id ? [id] : null;
+  };
+  const tcp = tabla(H.correlaciones, hojas[H.correlaciones], COLUMNAS.correlacionPares);
+  const correlaciones: CorrelacionPar[] = [];
+  for (const { fila, valores } of tcp.filas) {
+    const a = texto(valor(tcp, valores, 'Elemento A'));
+    const b = texto(valor(tcp, valores, 'Elemento B'));
+    const rho = numero(valor(tcp, valores, 'Coeficiente'));
+    if (conError(a) || conError(b)) continue;
+    const ia = conocido(a);
+    const ib = conocido(b);
+    if (!ia) { error(H.correlaciones, fila, letra(tcp, 'Elemento A'), a ? `«${a}» no es una actividad ni una partida de costo` : 'Falta el elemento A'); continue; }
+    if (!ib) { error(H.correlaciones, fila, letra(tcp, 'Elemento B'), b ? `«${b}» no es una actividad ni una partida de costo` : 'Falta el elemento B'); continue; }
+    if (rho === null || rho < -1 || rho > 1) { error(H.correlaciones, fila, letra(tcp, 'Coeficiente'), 'El coeficiente tiene que estar entre −1 y 1'); continue; }
+    correlaciones.push({ a: ia, b: ib, rho });
+  }
+  const tcg = tabla(H.correlaciones, hojas[H.correlaciones], COLUMNAS.correlacionGrupos, COLUMNA_GRUPOS_CORRELACION);
+  const gruposCorrelacion: GrupoCorrelacion[] = [];
+  for (const { fila, valores } of tcg.filas) {
+    const nombre = texto(valor(tcg, valores, 'Grupo')) || `Grupo ${fila}`;
+    const rho = numero(valor(tcg, valores, 'Coeficiente'));
+    if (rho === null || rho < -1 || rho > 1) { error(H.correlaciones, fila, letra(tcg, 'Coeficiente'), 'El coeficiente tiene que estar entre −1 y 1'); continue; }
+    const miembros: string[] = [];
+    let mal = false;
+    for (const parte of texto(valor(tcg, valores, 'Miembros')).split(/[,;]/).map((x) => x.trim()).filter(Boolean)) {
+      if (conError(parte)) continue;
+      const ids = expandir(parte);
+      if (!ids) { error(H.correlaciones, fila, letra(tcg, 'Miembros'), `«${parte}» no es una actividad, una partida, una WBS ni un grupo`); mal = true; break; }
+      for (const id of ids) if (!miembros.includes(id)) miembros.push(id);
+    }
+    if (mal) continue;
+    if (miembros.length < 2) { error(H.correlaciones, fila, letra(tcg, 'Miembros'), 'Un grupo necesita al menos dos miembros'); continue; }
+    gruposCorrelacion.push({ nombre, miembros, rho });
+  }
+
+  // Ramas (Q3.4).
+  const tra = tabla(H.ramas, hojas[H.ramas], COLUMNAS.ramas);
+  const ramas: (Ramificacion & { opciones: Ramificacion['opciones'][number][] })[] = [];
+  for (const { fila, valores } of tra.filas) {
+    const rama = texto(valor(tra, valores, 'Rama'));
+    const opcion = texto(valor(tra, valores, 'Opción'));
+    const p = proporcion(valor(tra, valores, 'Probabilidad'));
+    if (!rama) { error(H.ramas, fila, letra(tra, 'Rama'), 'Falta el nombre de la rama'); continue; }
+    if (!opcion) { error(H.ramas, fila, letra(tra, 'Opción'), 'Falta el nombre de la opción'); continue; }
+    if (p === null || p < 0 || p > 1) { error(H.ramas, fila, letra(tra, 'Probabilidad'), 'La probabilidad tiene que estar entre 0 % y 100 %'); continue; }
+    const acts: string[] = [];
+    let mal = false;
+    for (const parte of texto(valor(tra, valores, 'Actividades')).split(/[,;]/).map((x) => x.trim()).filter(Boolean)) {
+      const a = porId.get(normalizar(parte));
+      if (!a) { error(H.ramas, fila, letra(tra, 'Actividades'), `La actividad «${parte}» no existe`); mal = true; break; }
+      acts.push(a.id);
+    }
+    if (mal) continue;
+    let r = ramas.find((x) => normalizar(x.rama) === normalizar(rama));
+    if (!r) { r = { rama, opciones: [] }; ramas.push(r); }
+    r.opciones.push({ opcion, probabilidad: p, actividades: acts });
+  }
+  for (const r of ramas) {
+    const total = r.opciones.reduce((x, o) => x + o.probabilidad, 0);
+    if (Math.abs(total - 1) > 1e-6) error(H.ramas, 0, '', `Las opciones de la rama «${r.rama}» suman ${Math.round(total * 1000) / 10} %; tienen que sumar 100 %`);
+  }
 
   if (configuracion.hitos) {
     for (const h of configuracion.hitos) {
@@ -475,6 +706,11 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       incertidumbre,
       riesgos,
       configuracion,
+      costos,
+      correlaciones,
+      gruposCorrelacion,
+      ramas,
+      info,
     },
     errores,
     avisos,
@@ -530,7 +766,7 @@ export interface HojaNueva {
 export const FORMATO_FECHA = 'dd/mm/yyyy';
 
 interface ActividadEjemplo {
-  id: string; nombre: string; wbs: string; tipo: 'Tarea' | 'Hito'; dur: number; cal?: string; restr?: [string, string];
+  id: string; nombre: string; wbs: string; tipo: 'Tarea' | 'Hito'; dur: number; cal?: string; restr?: [string, string]; grupo?: string;
   tri?: [string, number, number, number, string?];
 }
 
@@ -542,7 +778,7 @@ const EJEMPLO: ActividadEjemplo[] = [
   { id: 'D', nombre: 'Cimentación', wbs: '2.2', tipo: 'Tarea', dur: 25, tri: ['PERT', 20, 25, 40] },
   { id: 'E', nombre: 'Estructura', wbs: '2.3', tipo: 'Tarea', dur: 50, cal: 'Lunes a sábado', tri: ['PERT', 42, 50, 70] },
   { id: 'F', nombre: 'Desencofrado', wbs: '2.4', tipo: 'Tarea', dur: 5, tri: ['Triangular', 4, 5, 8] },
-  { id: 'G', nombre: 'Instalaciones', wbs: '3.1', tipo: 'Tarea', dur: 30, tri: ['Triangular', 25, 30, 45] },
+  { id: 'G', nombre: 'Instalaciones', wbs: '3.1', tipo: 'Tarea', dur: 30, grupo: 'Instalaciones' },
   { id: 'H', nombre: 'Mampostería y fachada', wbs: '3.2', tipo: 'Tarea', dur: 35, tri: ['Triangular', 30, 35, 50] },
   { id: 'I', nombre: 'Cubierta', wbs: '3.3', tipo: 'Tarea', dur: 15, tri: ['Triangular', 12, 15, 22] },
   { id: 'M', nombre: 'Obra gris terminada', wbs: '3', tipo: 'Hito', dur: 0 },
@@ -557,20 +793,36 @@ const RELACIONES_EJEMPLO: [string, string, string, number, string?][] = [
   ['H', 'M', 'FC', 0], ['I', 'M', 'FC', 0], ['G', 'J', 'FC', 0], ['M', 'J', 'FC', 0], ['J', 'K', 'FC', 0], ['K', 'L', 'FC', 0],
 ];
 
-const RIESGOS_EJEMPLO: [string, string, string, string, string, string, number][] = [
-  ['R1', 'Lluvias fuertes durante la estructura', 'Temporada de lluvias', 'Paradas en vaciado y mampostería', 'Residente de obra', 'Clima', 0.35],
-  ['R2', 'Licencia devuelta para correcciones', 'Observaciones de la curaduría', 'Nueva radicación', 'Director de diseño', 'Permisos', 0.25],
-  ['R3', 'Suelo más blando de lo previsto', 'Estudio de suelos con pocas perforaciones', 'Rediseño de la cimentación', 'Ingeniero estructural', 'Técnico', 0.1],
-  ['R4', 'Cubierta prefabricada disponible (oportunidad)', 'Proveedor con existencias', 'Montaje más rápido', 'Compras', 'Oportunidad', 0.5],
+/** ID, descripción, causa, consecuencia, dueño, categoría, probabilidad, estado, probabilidad post, % impacto post, costo de mitigación, modo. */
+const RIESGOS_EJEMPLO: Celda[][] = [
+  ['R1', 'Lluvias fuertes durante la estructura', 'Temporada de lluvias', 'Paradas en vaciado y mampostería', 'Residente de obra', 'Clima', 0.35, 'Activo', 0.35, 0.5, 60_000_000, 'Extiende actividades'],
+  ['R2', 'Licencia devuelta para correcciones', 'Observaciones de la curaduría', 'Nueva radicación', 'Director de diseño', 'Permisos', 0.25, 'Activo', 0.1, null, 15_000_000, 'Extiende actividades'],
+  ['R3', 'Suelo más blando de lo previsto', 'Estudio de suelos con pocas perforaciones', 'Rediseño de la cimentación', 'Ingeniero estructural', 'Técnico', 0.1, 'Activo', null, null, null, 'Extiende actividades'],
+  ['R4', 'Cubierta prefabricada disponible (oportunidad)', 'Proveedor con existencias', 'Montaje más rápido', 'Compras', 'Oportunidad', 0.5, 'Activo', null, null, null, 'Extiende actividades'],
 ];
 
-const IMPACTOS_EJEMPLO: [string, string, string, number | null, number, number | null][] = [
-  ['R1', 'E', 'Triangular', 10, 15, 25],
-  ['R1', 'H', 'Triangular', 3, 5, 10],
-  ['R2', 'B', 'Triangular', 15, 20, 30],
-  ['R3', 'D', 'Triangular', 10, 20, 40],
-  ['R4', 'I', 'Fija', null, -4, null],
+/** Riesgo, actividad, distribución, días (mín, más probable, máx), costo (mín, más probable, máx). */
+const IMPACTOS_EJEMPLO: Celda[][] = [
+  ['R1', 'E', 'Triangular', 10, 15, 25, 20_000_000, 40_000_000, 80_000_000],
+  ['R1', 'H', 'Triangular', 3, 5, 10, null, null, null],
+  ['R2', 'B', 'Triangular', 15, 20, 30, null, null, null],
+  ['R3', 'D', 'Triangular', 10, 20, 40, 50_000_000, 120_000_000, 250_000_000],
+  ['R4', 'I', 'Fija', null, -4, null, null, -30_000_000, null],
 ];
+
+/** ID, partida, tipo, actividad, valor, unidades, distribución, mín, más probable, máx, escalamiento anual. */
+const COSTOS_EJEMPLO: Celda[][] = [
+  ['ADM', 'Administración y dirección de obra', 'Por tiempo', '', 2_500_000, null, 'Triangular', 2_300_000, 2_500_000, 2_900_000, null],
+  ['INT', 'Interventoría', 'Por tiempo', '', 1_200_000, null, 'Triangular', 1_100_000, 1_200_000, 1_400_000, null],
+  ['CIM', 'Cimentación: concreto y acero', 'Fijo', 'D', 600_000_000, null, 'Triangular', 560_000_000, 600_000_000, 720_000_000, 0.06],
+  ['EST', 'Estructura: concreto y acero', 'Fijo', 'E', 1_800_000_000, null, 'PERT', 1_700_000_000, 1_800_000_000, 2_150_000_000, 0.06],
+  ['GRUA', 'Grúa torre', 'Por recurso', 'E', 900_000, 1, null, null, null, null, null],
+  ['FACH', 'Mampostería y fachada', 'Fijo', 'H', 700_000_000, null, 'Triangular', 650_000_000, 700_000_000, 820_000_000, 0.06],
+  ['ACAB', 'Acabados', 'Fijo', 'J', 950_000_000, null, 'Triangular', 880_000_000, 950_000_000, 1_150_000_000, 0.06],
+];
+
+/** El presupuesto comprometido del ejemplo (COP). */
+const COSTO_META_EJEMPLO = 5_600_000_000;
 
 /** Las hojas del libro de cronograma, con el ejemplo de la obra, para empezar en `inicio` (número de serie, un lunes). */
 export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
@@ -586,13 +838,16 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         ['Parámetro', 'Valor', 'Para qué sirve'],
         [ETIQUETAS_CONFIG.inicio, inicio, 'Primer día del proyecto; nadie empieza antes.'],
         [ETIQUETAS_CONFIG.calendario, nombresCal[0] as string, 'El de las actividades que no dicen otro (hoja Calendario).'],
-        [ETIQUETAS_CONFIG.iteraciones, 5000, 'Cuántas veces se recalcula el cronograma (5.000 basta casi siempre).'],
+        [ETIQUETAS_CONFIG.iteraciones, 5000, 'Cuántas veces se recalcula el cronograma (5.000 basta casi siempre). «Automático»: sube de 1.000 a 20.000 hasta que el P80 se estabilice.'],
         [ETIQUETAS_CONFIG.semilla, 12345, 'Con la misma semilla salen los mismos números.'],
         [ETIQUETAS_CONFIG.muestreo, L.muestreo[0], 'Hipercubo latino: más preciso con las mismas iteraciones.'],
         [ETIQUETAS_CONFIG.redondeo, L.redondeo[0], 'Al día: duraciones enteras, como un cronograma real. Con decimales: sin redondear.'],
         [ETIQUETAS_CONFIG.duras, L.duras[0], '«Debe comenzar / terminar el» fijan fechas; ignorarlas deja que los retrasos se propaguen.'],
         [ETIQUETAS_CONFIG.meta, inicio + 392, 'La fecha comprometida: se calcula la probabilidad de cumplirla (puede quedar vacía).'],
         [ETIQUETAS_CONFIG.hitos, '', 'IDs separados por comas; vacío: los hitos intermedios (el fin del proyecto siempre se sigue).'],
+        [ETIQUETAS_CONFIG.moneda, 'COP', 'Solo para los títulos.'],
+        [ETIQUETAS_CONFIG.costoMeta, COSTO_META_EJEMPLO, 'El presupuesto comprometido: con la fecha meta da la probabilidad conjunta (JCL).'],
+        [ETIQUETAS_CONFIG.percentil, 0.8, 'La contingencia es este percentil del costo menos el costo base (P80 en la práctica).'],
       ],
       formatos: {},
       anchos: [36, 18, 90],
@@ -627,12 +882,12 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       nombre: HOJAS_CRONOGRAMA.actividades,
       valores: [
         [...COLUMNAS.actividades],
-        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, 'No'] as Celda[]),
+        ...EJEMPLO.map((a) => [a.id, a.nombre, a.wbs, a.tipo, a.dur, a.cal ?? '', a.restr?.[0] ?? '', a.restr ? fechaDeCelda(a.restr[1]) : null, 'No', a.grupo ?? ''] as Celda[]),
       ],
       formatos: { 7: FORMATO_FECHA, 4: '0' },
-      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12],
+      anchos: [8, 32, 8, 10, 14, 18, 24, 14, 12, 16],
       listas: { 3: L.tipoActividad, 5: listaCal, 6: L.restriccion, 8: L.siNo },
-      notas: { 4: 'En días laborables de su calendario. Un hito tiene 0.', 6: 'Vacío: lo antes posible.' },
+      notas: { 4: 'En días laborables de su calendario. Un hito tiene 0.', 6: 'Vacío: lo antes posible.', 9: 'Libre (tipo de obra, contratista): sirve para dar un rango a todo el grupo en Incertidumbre.' },
     },
     {
       nombre: HOJAS_CRONOGRAMA.relaciones,
@@ -650,27 +905,81 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
           const [d, x1, x2, x3, u] = a.tri as [string, number, number, number, string?];
           return [a.id, d, x1, x2, x3, u ?? 'Días', null] as Celda[];
         }),
+        ['WBS 3', 'Triangular', 90, 100, 150, '% de la base', null],
       ],
       formatos: {},
-      anchos: [10, 14, 14, 14, 14, 14, 14],
+      anchos: [16, 14, 14, 14, 14, 14, 14],
       listas: { 1: L.distribucion, 5: L.unidad },
-      notas: { 2: 'Trigen: aquí el P10 y en «Máximo o P90» el P90 (los expertos se quedan cortos en los extremos).', 5: '«% de la base»: 90, 100, 140 es del 90 % al 140 % de la duración.' },
+      notas: {
+        0: 'Un ID de actividad, o un grupo: «WBS 3» (y sus hijas, 3.1, 3.2…) o «Grupo Instalaciones». La fila de grupo vale para las que no tienen fila propia.',
+        2: 'Trigen: aquí el P10 y en «Máximo o P90» el P90 (los expertos se quedan cortos en los extremos).',
+        5: '«% de la base»: 90, 100, 140 es del 90 % al 140 % de la duración.',
+      },
     },
     {
       nombre: HOJAS_CRONOGRAMA.riesgos,
-      valores: [[...COLUMNAS.riesgos], ...RIESGOS_EJEMPLO.map((r) => [...r, 'Activo'] as Celda[])],
-      formatos: { 6: '0%' },
-      anchos: [6, 40, 30, 30, 20, 14, 12, 10],
-      listas: { 7: L.estadoRiesgo },
-      notas: { 6: 'De ocurrir en el proyecto (0 % a 100 %).' },
+      valores: [[...COLUMNAS.riesgos], ...RIESGOS_EJEMPLO.map((r) => [...r])],
+      formatos: { 6: '0%', 8: '0%', 9: '0%', 10: '#,##0' },
+      anchos: [6, 40, 30, 30, 20, 14, 12, 10, 14, 14, 16, 20],
+      listas: { 7: L.estadoRiesgo, 11: L.modoRiesgo },
+      notas: {
+        6: 'De ocurrir en el proyecto (0 % a 100 %).',
+        8: 'Escenario post mitigación: la probabilidad después de mitigar (vacía: la misma).',
+        9: 'Escenario post: qué parte del impacto queda (50 %: la mitad; vacío: todo).',
+        10: 'Lo que cuesta mitigar: se suma al costo del escenario post.',
+        11: '«Actividad insertada»: el riesgo entra en la red como una actividad nueva tras la afectada, en vez de alargarla.',
+      },
     },
     {
       nombre: HOJAS_CRONOGRAMA.impactos,
-      valores: [[...COLUMNAS.impactos], ...IMPACTOS_EJEMPLO.map((r) => [...r] as Celda[])],
-      formatos: {},
-      anchos: [8, 10, 12, 14, 18, 14],
+      valores: [[...COLUMNAS.impactos], ...IMPACTOS_EJEMPLO.map((r) => [...r])],
+      formatos: { 6: '#,##0', 7: '#,##0', 8: '#,##0' },
+      anchos: [8, 10, 12, 14, 18, 14, 16, 18, 16],
       listas: { 2: L.distribucionImpacto },
-      notas: { 1: 'Un riesgo puede afectar varias actividades: todas a la vez cuando ocurre.', 4: 'Días laborables que se suman. Negativo: una oportunidad.' },
+      notas: {
+        1: 'Un riesgo puede afectar varias actividades: todas a la vez cuando ocurre.',
+        4: 'Días laborables que se suman. Negativo: una oportunidad.',
+        7: 'Costo que suma si el riesgo ocurre (solo el más probable: un valor fijo). Negativo: un ahorro.',
+      },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.costos,
+      valores: [[...COLUMNAS.costos], ...COSTOS_EJEMPLO.map((r) => [...r])],
+      formatos: { 4: '#,##0', 7: '#,##0', 8: '#,##0', 9: '#,##0', 10: '0%' },
+      anchos: [8, 34, 12, 10, 22, 10, 12, 16, 16, 16, 14],
+      listas: { 2: L.tipoCosto, 3: `=${HOJAS_CRONOGRAMA.actividades}!$A$2:$A$500`, 6: L.distribucionCosto },
+      notas: {
+        2: 'Fijo: el monto. Por tiempo: tarifa diaria × duración simulada (de la actividad o del proyecto). Por recurso: unidades × tarifa × duración.',
+        3: 'Vacío: todo el proyecto (para lo que se paga mientras dure la obra).',
+        6: 'La incertidumbre del monto o de la tarifa, en las mismas unidades. Vacía: el valor fijo.',
+        10: 'Escalamiento anual según la fecha simulada en que se ejecuta (6 %: la obra que se retrasa un año cuesta un 6 % más).',
+      },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.correlaciones,
+      valores: [
+        [...COLUMNAS.correlacionPares, null, ...COLUMNAS.correlacionGrupos],
+        ['ADM', 'INT', 0.6, null, 'Obra húmeda', 'D, E, H', 0.5],
+        [null, null, null, null, 'Materiales', 'CIM, EST, FACH, ACAB', 0.7],
+      ],
+      formatos: { 2: '0.00', [COLUMNA_GRUPOS_CORRELACION + 2]: '0.00' },
+      anchos: [12, 12, 12, 3, 16, 30, 12],
+      listas: {},
+      notas: {
+        0: 'Pares de actividades (sus duraciones) o partidas (sus tarifas) que se mueven juntas: de −1 a 1.',
+        [COLUMNA_GRUPOS_CORRELACION + 1]: 'Todos los miembros con el mismo coeficiente: IDs separados por comas, «WBS 3» o «Grupo Instalaciones».',
+      },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.ramas,
+      valores: [[...COLUMNAS.ramas]],
+      formatos: { 2: '0%' },
+      anchos: [18, 18, 12, 40],
+      listas: {},
+      notas: {
+        0: 'Rutas alternativas: en cada iteración se sigue una sola opción de cada rama; las actividades de las otras no cuentan. Las opciones de una rama suman 100 %.',
+        3: 'IDs separados por comas. Ejemplo: rama «Permiso», opción «Negado» (30 %), actividades «B2, B3».',
+      },
     },
   ];
 }

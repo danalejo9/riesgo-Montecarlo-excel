@@ -10,7 +10,7 @@
  */
 
 import { cpmDeterministico } from './cpm.ts';
-import type { ModeloCronograma } from './modelo.ts';
+import { incertidumbreDe, type ModeloCronograma } from './modelo.ts';
 import { compilarRed, ErrorRed, RESTRICCIONES_DURAS } from './red.ts';
 
 export type Semaforo = 'verde' | 'amarillo' | 'rojo';
@@ -135,9 +135,8 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
     actividades: largas,
   });
 
-  const conIncertidumbre = new Set(modelo.incertidumbre.map((i) => i.actividad));
   const tareas = acts.filter((a) => a.duracion > 0);
-  const sinInc = tareas.filter((a) => !conIncertidumbre.has(a.id)).map((a) => a.id);
+  const sinInc = tareas.filter((a) => !incertidumbreDe(modelo, a.id)).map((a) => a.id);
   const fr = tareas.length ? sinInc.length / tareas.length : 0;
   criterios.push({
     id: 'incertidumbre',
