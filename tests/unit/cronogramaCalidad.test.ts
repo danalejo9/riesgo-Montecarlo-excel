@@ -45,5 +45,7 @@ describe('chequeo de calidad del cronograma', () => {
       { id: 'D', nombre: 'D', duracion: 3, predecesoras: [fc('B'), fc('C')] },
     ], ['A', 'B', 'C', 'D'].map((actividad) => ({ actividad, distribucion: tri }))));
     expect(r.criterios.filter((c) => c.estado !== 'verde').map((c) => c.id)).toEqual(['correlacion']);
+    const conCorr = chequearCalidad({ ...modelo([{ id: 'A', nombre: 'A', duracion: 3, predecesoras: [] }], [{ actividad: 'A', distribucion: tri }]), correlaciones: [{ a: 'A', b: 'A', rho: 0.5 }] });
+    expect(conCorr.criterios.find((c) => c.id === 'correlacion')?.estado).toBe('verde');
   });
 });

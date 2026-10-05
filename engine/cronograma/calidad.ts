@@ -147,11 +147,14 @@ export function chequearCalidad(modelo: ModeloCronograma): ChequeoCalidad {
     actividades: sinInc,
   });
 
+  const nCorr = (modelo.correlaciones?.length ?? 0) + (modelo.gruposCorrelacion?.length ?? 0);
   criterios.push({
     id: 'correlacion',
-    criterio: 'Correlación entre duraciones',
-    estado: 'amarillo',
-    detalle: 'Este cronograma no define correlaciones (llegan en la fase 2): con duraciones independientes, los resultados salen algo optimistas.',
+    criterio: 'Correlación entre duraciones o costos',
+    estado: nCorr > 0 ? 'verde' : 'amarillo',
+    detalle: nCorr > 0
+      ? `${nCorr} ${nCorr === 1 ? 'correlación definida' : 'correlaciones definidas (pares y grupos)'}.`
+      : 'No se define ninguna correlación (hoja Correlaciones): con duraciones independientes, los resultados salen optimistas.',
     actividades: [],
   });
 

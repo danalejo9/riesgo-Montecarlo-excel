@@ -29,7 +29,14 @@ export type DistribucionDuracion =
   | { tipo: 'fija'; valor: number };
 
 export interface IncertidumbreActividad {
+  /** Id de la actividad. Con `selector`, la fila vale para un grupo de actividades. */
   actividad: string;
+  /**
+   * Factor por grupo (Q2.6): la fila se aplica a las actividades de esa WBS
+   * (prefijo) o de ese grupo (columna «Grupo» de Actividades) que no tengan
+   * una distribución propia. La primera fila que coincide manda.
+   */
+  selector?: { wbs?: string; grupo?: string };
   distribucion: DistribucionDuracion;
   /**
    * Los parámetros son proporciones de la duración base (0,9 · 1 · 1,4 es
@@ -41,7 +48,9 @@ export interface IncertidumbreActividad {
 export interface ImpactoRiesgo {
   actividad: string;
   /** Días laborables que se suman a la duración si el riesgo ocurre (negativo: una oportunidad). */
-  dias: DistribucionDuracion;
+  dias?: DistribucionDuracion;
+  /** Costo que suma si el riesgo ocurre (negativo: un ahorro). */
+  costo?: DistribucionDuracion;
 }
 
 export interface RiesgoCronograma {
@@ -51,6 +60,69 @@ export interface RiesgoCronograma {
   probabilidad: number;
   /** Las actividades que afecta: todas a la vez en la iteración en que ocurre. */
   impactos: readonly ImpactoRiesgo[];
+  /** Escenario post mitigación (Q2.5): la probabilidad después de mitigar. */
+  probabilidadPost?: number;
+  /** Escenario post: proporción del impacto que queda (1 = igual, 0,5 = la mitad). */
+  factorImpactoPost?: number;
+  /** Escenario post: lo que cuesta mitigar (se suma al costo en el escenario post). */
+  costoMitigacion?: number;
+  /**
+   * Cómo entra en la red (Q3.4): alargando las actividades afectadas (por
+   * defecto) o como una actividad nueva insertada después de cada una, con
+   * sus mismas sucesoras fin–comienzo.
+   */
+  modo?: 'extension' | 'actividad';
+}
+
+export type TipoCosto = 'fijo' | 'tiempo' | 'recurso';
+
+/**
+ * Una partida de costo (Q2.1):
+ * - `fijo`: el valor (con su incertidumbre);
+ * - `tiempo`: tarifa por día laborable × duración simulada de la actividad
+ *   (o del proyecto, sin actividad): administración, vigilancia, alquileres;
+ * - `recurso`: unidades × tarifa × duración.
+ */
+export interface PartidaCosto {
+  id: string;
+  nombre: string;
+  tipo: TipoCosto;
+  /** Sin actividad: el proyecto entero. */
+  actividad?: string;
+  /** Monto (fijo) o tarifa diaria (tiempo, recurso). */
+  valor: number;
+  unidades?: number;
+  /** Incertidumbre del monto o de la tarifa, en las mismas unidades; sin ella, el valor fijo. */
+  distribucion?: DistribucionDuracion;
+  /** Escalamiento anual (0,05 = 5 % al año), según la fecha simulada de ejecución (Q3.5). */
+  escalamiento?: number;
+}
+
+/** Correlación de rangos entre dos actividades o partidas de costo (Q2.2). */
+export interface CorrelacionPar {
+  a: string;
+  b: string;
+  rho: number;
+}
+
+/** Un grupo con coeficiente común: todas las parejas de miembros con el mismo ρ. */
+export interface GrupoCorrelacion {
+  nombre: string;
+  miembros: readonly string[];
+  rho: number;
+}
+
+/** Ramificación probabilística (Q3.4): en cada iteración se sigue una opción. */
+export interface Ramificacion {
+  rama: string;
+  opciones: readonly { opcion: string; probabilidad: number; actividades: readonly string[] }[];
+}
+
+/** Lo que el motor de la red no necesita pero el análisis sí. */
+export interface InfoActividad {
+  id: string;
+  wbs?: string;
+  grupo?: string;
 }
 
 export type Redondeo = 'entero' | 'decimal';
@@ -66,8 +138,19 @@ export interface ConfiguracionCronograma {
   ignorarRestriccionesDuras: boolean;
   /** Fecha meta del proyecto (número de serie), si la hay. */
   fechaMeta?: number;
-  /** Ids de los hitos que se siguen además del fin del proyecto (por defecto, todos los hitos). */
+  /** Ids de los hitos que se siguen además del fin del proyecto (por defecto, los intermedios). */
   hitos?: readonly string[];
+  /** Costo meta (para la probabilidad conjunta, JCL). */
+  costoMeta?: number;
+  moneda?: string;
+  /**
+   * Iteraciones automáticas (Q3.6): se simula con 1.000, 2.000, 5.000,
+   * 10.000 y 20.000 hasta que el P80 del fin cambie menos del 0,5 % en el
+   * último bloque de 500.
+   */
+  iteracionesAutomaticas?: boolean;
+  /** Percentil de la contingencia de costo (por defecto 0,8). */
+  percentilContingencia?: number;
 }
 
 export const CONFIGURACION_POR_DEFECTO: ConfiguracionCronograma = {
@@ -83,6 +166,21 @@ export interface ModeloCronograma {
   incertidumbre: readonly IncertidumbreActividad[];
   riesgos: readonly RiesgoCronograma[];
   configuracion: ConfiguracionCronograma;
+  costos?: readonly PartidaCosto[];
+  correlaciones?: readonly CorrelacionPar[];
+  gruposCorrelacion?: readonly GrupoCorrelacion[];
+  ramas?: readonly Ramificacion[];
+  info?: readonly InfoActividad[];
+}
+
+/** ¿Algún riesgo trae datos del escenario post mitigación? */
+export function tienePostMitigacion(m: ModeloCronograma): boolean {
+  return m.riesgos.some((r) => r.probabilidadPost !== undefined || r.factorImpactoPost !== undefined || r.costoMitigacion !== undefined);
+}
+
+/** ¿Hay costos (partidas o impactos de costo)? */
+export function tieneCostos(m: ModeloCronograma): boolean {
+  return (m.costos?.length ?? 0) > 0 || m.riesgos.some((r) => r.impactos.some((i) => i.costo !== undefined));
 }
 
 /** Construye la distribución, en días; con `relativa`, escalada por la base. Lanza un error legible. */

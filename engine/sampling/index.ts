@@ -25,3 +25,4 @@ export function generarEntrada(
 ): Buffer {
   return metodo === 'lhs' ? muestrearLHS(dist, id, seed, n) : muestrearMonteCarlo(dist, id, seed, n);
 }
+export { correlacionMasCercana, autodescomposicion, type CorreccionHigham } from './higham.ts';
