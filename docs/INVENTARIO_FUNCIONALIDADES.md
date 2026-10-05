@@ -110,6 +110,7 @@ La columna **#** es el orden de trabajo. Los bloques de filas son las etapas.
 | 11h | U3.3 | ✅ (29/09, falta Excel real) **Catálogo visual de distribuciones** en el selector: forma en miniatura y cuándo usarla | **Tú** (29/09) |
 | 11i | U3.4 | ✅ (29/09, falta Excel real) **Lista de entradas y salidas** en ventana flotante | **Tú** (29/09) |
 | 11j | U3.5–U3.6 | ✅ (29/09, falta Excel real) Menú del clic derecho (marcar entrada, salida, ver distribución) y botón Detener en la cinta | **Tú** (29/09) |
+| 11n | Q0–Q3 | Sin empezar (05/10, plan en `docs/QRSA_PLAN.md`) **Riesgo integrado de cronograma y costo (QRSA)**: motor CPM por iteración, calendarios, relaciones FC/CC/FF/CF, criticidad, eliminación de riesgos, costos por tiempo, JCL, importación MS Project y P6 | **Tú** (especificación del 05/10) |
 | 11k | V1 | ✅ (03/10, falta Excel real) **Contingencia**: valor base (la hoja sin incertidumbre), probabilidad de cumplirlo y reserva P50/P80/P90 (coste) o lo que se obtiene (beneficio). Panel, hoja volcada y PDF | **Tú** (03/10) |
 | 11l | V2 | ✅ (03/10, falta Excel real) **Matriz de probabilidad e impacto** 5 × 5 del registro de riesgos, con severidad. Panel, hoja volcada y PDF | **Tú** (03/10) |
 | 11m | V3–V5 | Propuestas: comparar distribuciones en el explorador, asistente de juicio experto, atajos de teclado | Plan |

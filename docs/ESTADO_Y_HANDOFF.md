@@ -1287,6 +1287,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     Python con 400.000 iteraciones. **Siguiente**: la ronda del usuario
     (N1–N42).
 
+73. [ ] **QRSA: auditoría y plan (2026-10-05)**. El usuario entregó una
+    especificación de riesgo integrado de cronograma y costo (guardada en
+    `docs/QRSA_ESPECIFICACION.md`). Auditoría por secciones y plan Q0–Q3 en
+    `docs/QRSA_PLAN.md`: cumple distribuciones y arquitectura; parcial
+    riesgos, costos, correlación (falta Higham y grupos), simulación (LHS no
+    es el defecto, convergencia por media y no por P80), salidas; no existe
+    el núcleo (motor CPM, calendarios, importación, chequeo DCMA). Propuesta:
+    módulo `engine/cronograma/` con motor CPM propio, sin pasar por el grafo
+    de fórmulas. **Sin empezar**: pendiente de que el usuario confirme Q0
+    (arquitectura, calendarios, cronogramas de referencia de MS Project).
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).
