@@ -5,7 +5,8 @@
  * hace falta para leerlos de un vistazo.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, resumirCosto, simularCronograma, SimulacionCancelada,
   type ChequeoCalidad, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
@@ -18,7 +19,7 @@ import {
   crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
 import { Ayuda } from './ayuda.tsx';
-import { datosGanttDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
+import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
 import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
@@ -60,9 +61,27 @@ function serieAhora(): number {
   return (d.getTime() - d.getTimezoneOffset() * 60_000) / 86_400_000 + 25569;
 }
 
-export function Cronograma({ visible, pedido, alAtender, alFallar }: {
+interface AvanceSimulacion { hecho: number; total: number; iteraciones: number }
+
+/**
+ * Q14 (06/10): «7.000 de 35.000 iteraciones» hacía pensar que se simulaban
+ * 35.000. Primero va la simulación pedida; después, una vuelta más por cada
+ * riesgo (tornado por eliminación) y la de «después de mitigar».
+ */
+function textoAvance({ hecho, total, iteraciones }: AvanceSimulacion): string {
+  if (iteraciones <= 0 || hecho <= iteraciones) return `Simulación: ${miles(hecho)} de ${miles(iteraciones || total)} iteraciones`;
+  const vueltas = Math.round((total - iteraciones) / iteraciones);
+  const vuelta = Math.min(vueltas, Math.floor((hecho - iteraciones) / iteraciones) + 1);
+  return `Simulación de ${miles(iteraciones)} iteraciones hecha · tornado y antes/después de mitigar: vuelta ${vuelta} de ${vueltas}`;
+}
+
+export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, alAtender, alFallar }: {
   visible: boolean;
   pedido?: PedidoCronograma;
+  /** Dónde se dibujan los resultados (la pestaña Resultados del panel); sin él, aquí mismo. */
+  contenedorResultados?: HTMLElement | null;
+  /** Avisa al terminar una simulación (el panel pasa a Resultados). */
+  alSimulado?: () => void;
   /** Avisa de que el pedido de la cinta ya se atendió. */
   alAtender: () => void;
   alFallar: (e: unknown) => void;
@@ -70,7 +89,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
   const [estado, setEstado] = useState<Estado>(VACIO);
   const [existentes, setExistentes] = useState<string[] | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
-  const [avance, setAvance] = useState<{ hecho: number; total: number } | null>(null);
+  const [avance, setAvance] = useState<AvanceSimulacion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const control = useRef<AbortController | null>(null);
   /** G1: la vista compacta del Gantt (también antes de simular). */
@@ -95,7 +114,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
     void leerHojasCronograma().then((h) => {
       const l = leerCronograma(h);
       if (!vigente || !l.modelo) return;
-      setDatosGantt(datosGanttDe(l, controlGantt.qrsa));
+      setDatosGantt(datosGanttDe(l, controlGantt.qrsa, controlGantt.distribucionFin));
     }).catch(() => {});
     return () => { vigente = false; };
   }, [visible, existentes]);
@@ -108,7 +127,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       setDatosGantt(null);
       return null;
     }
-    setDatosGantt(datosGanttDe(lectura, controlGantt.qrsa));
+    setDatosGantt(datosGanttDe(lectura, controlGantt.qrsa, controlGantt.distribucionFin));
     setEstado((e) => ({ ...e, errores: [], avisos: lectura.avisos }));
     return lectura.modelo;
   }, []);
@@ -187,11 +206,13 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       setEstado((e) => ({ ...e, calidad, modelo }));
       if (calidad.bloquea) return;
       setOcupado('Simulando…');
-      const sim = await simularCronograma(modelo, { senal: c.signal, progreso: (hecho, total) => setAvance({ hecho, total }) });
+      const sim = await simularCronograma(modelo, { senal: c.signal, progreso: (hecho, total, iteraciones) => setAvance({ hecho, total, iteraciones }) });
       const { fin, hitos } = resumenesDe(sim, modelo);
       setEstado((e) => ({ ...e, sim, fin, hitos, indices: indicesActividades(sim) }));
+      alSimulado?.();
       // El Gantt toma la criticidad y el rango P10–P90 de cada actividad.
       controlGantt.qrsa = qrsaDeSimulacion(sim);
+      controlGantt.distribucionFin = distribucionFinDe(sim, modelo.configuracion.fechaMeta) ?? undefined;
       setDatosGantt((d) => (d ? { ...d, qrsa: controlGantt.qrsa } : d));
       window.dispatchEvent(new Event(REFRESCAR_GANTT));
       setOcupado('Escribiendo la hoja de resultados…');
@@ -204,7 +225,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
       setAvance(null);
       control.current = null;
     }
-  }, [alFallar, leer]);
+  }, [alFallar, alSimulado, leer]);
 
   // G3: la ventana del Gantt pide simular («Correr QRSA»).
   useEffect(() => {
@@ -291,7 +312,7 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
               <div className="barra" role="progressbar" aria-valuenow={Math.round(porcentaje(avance.hecho, avance.total))} aria-valuemin={0} aria-valuemax={100}>
                 <div className="relleno" style={{ width: `${porcentaje(avance.hecho, avance.total)}%` }} />
               </div>
-              <p className="tenue">{miles(avance.hecho)} de {miles(avance.total)} iteraciones (con las del tornado por eliminación)</p>
+              <p className="tenue">{textoAvance(avance)}</p>
               <button type="button" className="secundario" onClick={() => control.current?.abort()}>Cancelar</button>
             </>
           )}
@@ -335,8 +356,21 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
         </section>
       )}
 
-      {sim && fin && (
-        <>
+      {sim && fin && contenedorResultados && (
+        <p className="aviso-ok">
+          Simulado: {miles(sim.iteraciones)} iteraciones. Los resultados están en la pestaña{' '}
+          <button type="button" className="enlace" onClick={() => alSimulado?.()}>Resultados</button>.
+        </p>
+      )}
+
+      {sim && fin && conPortal(contenedorResultados, (
+        <div className="cronograma">
+          <h2 className="titulo-resultados-cronograma">Resultados del cronograma</h2>
+          <p className="tenue">
+            {miles(sim.iteraciones)} iteraciones{estado.modelo ? ` · semilla ${estado.modelo.configuracion.semilla} · ${estado.modelo.configuracion.metodo === 'lhs' ? 'hipercubo latino' : 'Monte Carlo'}` : ''}
+            {' '}(se cambian en Configuración ⚙ → Simulación del cronograma).
+          </p>
+          {sim.avisos.filter((a) => a.startsWith('Iteraciones automáticas')).map((a) => <p key={a} className="aviso-ok">{a}</p>)}
           <section>
             <h2>Fin del proyecto</h2>
             <Ayuda tema="finCronograma" />
@@ -425,14 +459,21 @@ export function Cronograma({ visible, pedido, alAtender, alFallar }: {
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>
             <button type="button" className="secundario" onClick={() => descargar('iteraciones-cronograma.csv', csvIteraciones(sim))}>Iteraciones en CSV</button>
+            <button type="button" className="secundario" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))}
+              title="El Gantt con la criticidad, el rango P10–P90 de cada actividad y las fechas de fin posibles debajo">Ver Gantt</button>
           </div>
           <p className="tenue">
             {miles(sim.iteraciones)} iteraciones en {numero(sim.milisegundos / 1000, 3)} s. Todo el detalle está en la hoja «Resultados_Cronograma».
           </p>
-        </>
-      )}
+        </div>
+      ))}
     </section>
   );
+}
+
+/** Los resultados van a la pestaña Resultados si el panel dio dónde; si no, aquí. */
+function conPortal(contenedor: HTMLElement | null | undefined, hijos: ReactNode): ReactNode {
+  return contenedor ? createPortal(hijos, contenedor) : hijos;
 }
 
 function Calidad({ calidad }: { calidad: ChequeoCalidad }) {

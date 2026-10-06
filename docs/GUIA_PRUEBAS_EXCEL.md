@@ -57,6 +57,12 @@
 > - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
 >   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
 >   cierra Excel y repite `npm run stop` y `npm start`.
+> - **Nuevo (06/10, tras tu ronda Q)**: **Q9 a Q26 reescritas** con la hoja,
+>   la celda o la sección exacta de cada paso (repite **Q14, Q18, Q20 y Q21**,
+>   que no se podían seguir) y **GT31 a GT33** (el Gantt carga a la primera,
+>   fechas de fin bajo el Gantt, Configuración y Resultados unificados).
+>   Antes de Q9, lee el recuadro **«Dónde está cada cosa»** al principio de
+>   Q9.
 > - **Nuevo (06/10)**: **R1 a R4** (correlaciones imposibles, P80,
 >   percentiles configurables y modo compatible) y **GT19 a GT30** (el Gantt
 >   con seguimiento, líneas base, rutas de holgura, riesgo, imprimir y
@@ -699,114 +705,198 @@ días laborables»: B y E) y 1 en amarillo («Desfases positivos»: 2 de 16
 relaciones). La correlación sale en verde (3 definidas) y «Actividades sin
 incertidumbre» también: Instalaciones (G) toma el rango de la fila «WBS 3».
 
-**Q9. Simular cronograma.** Con 5.000 iteraciones y la semilla 12345,
-esperado **exacto**:
+**Dónde está cada cosa** (vale para todo el bloque Q y GT):
+- **Hojas del libro**: las pestañas de abajo en Excel (Config, Actividades,
+  Costos, Riesgos…). Las celdas se dan como «Config!B4» = hoja Config,
+  columna B, fila 4.
+- **Panel**: la ventana de la derecha (Riesgo → Modelo la abre). Arriba
+  tiene las pestañas **Modelo · Resultados · Cronograma · Diagnóstico** y el
+  engranaje **⚙** (Configuración).
+- **Pestaña Cronograma** del panel: los botones (Crear, Revisar calidad,
+  Simular cronograma, Ver Gantt, Importar), la calidad y el Gantt compacto.
+- **Pestaña Resultados** del panel: desde el 06/10, al terminar de simular
+  el cronograma el panel **salta solo a Resultados**, que empieza con el
+  título **«Resultados del cronograma»** y debajo, en este orden, las
+  secciones: Fin del proyecto · Costo del proyecto · Fecha y costo a la vez
+  · Antes y después de mitigar · Riesgos: tornado por eliminación ·
+  Actividades más críticas · Rutas críticas más frecuentes · Cronograma
+  ajustado · **Avisos de la simulación y correlación lograda** (cerrada:
+  pulsa el ▸ para abrirla) · botones Informe ejecutivo (PDF) e Iteraciones
+  en CSV.
+- **Iteraciones, semilla y muestreo del cronograma**: en **⚙ → Simulación
+  del cronograma** (o en Config!B4, B5 y B6: es lo mismo). La sección
+  «Simulación» de más abajo en ⚙ es la del modelo de celdas RIESGO, no la
+  del cronograma.
 
-| Qué | Valor |
-|---|---|
-| Fecha determinística | 22/11/2027 |
-| Probabilidad de cumplirla | 5,1 % (5,08 %) |
-| Probabilidad de cumplir la meta (31/01/2028) | 65,3 % |
-| P50 · P80 | 18/01/2028 · 16/02/2028 |
-| Media y desviación | 257,0 días ± 24,8 |
-| Costo base · P80 · contingencia | 5.034.578.244 · 5.598.359.651 · 563.781.406 COP |
-| Probabilidad de cumplir el costo meta | 80,1 % |
-| JCL (fecha y costo meta a la vez) | 58,6 % |
-| Tornado (baja el P80) | R1 8 d, R2 6 d, R3 3 d, R4 0 d |
-| Sin ningún riesgo | P80 de 260,2 días |
+**Q9. Simular cronograma.** Comprueba en **⚙ → Simulación del cronograma**
+que dice **5 mil**, semilla **12.345** e **Hipercubo latino**. Vuelve a la
+pestaña **Cronograma** y pulsa **Simular cronograma**. Mientras simula dice
+«Simulación: … de 5.000 iteraciones» y después «tornado y antes/después de
+mitigar: vuelta 1 de 6…» (son repeticiones para el tornado, no más
+iteraciones). Al terminar, el panel pasa a **Resultados**. Esperado
+**exacto**:
 
-Debajo: curva S, histograma, percentiles del fin y del hito «Obra gris
-terminada» (P80 20/12/2027), costo, la dispersión costo–fecha con las dos
-metas, antes y después de mitigar, los dos tornados (días y costo), las
-actividades más críticas, las rutas críticas más frecuentes (la primera,
-62,8 %) y el cronograma ajustado. Anota cuántos segundos dice al final.
+| Dónde (pestaña Resultados) | Qué | Valor |
+|---|---|---|
+| Debajo del título | Iteraciones | «5000 iteraciones · semilla 12345 · hipercubo latino» |
+| Fin del proyecto | Fecha determinística | 22/11/2027 |
+| Fin del proyecto | Probabilidad de cumplirla | 5,08 % |
+| Fin del proyecto | Probabilidad de cumplir la meta (31/01/2028) | 65,3 % |
+| Fin del proyecto | P50 · P80 | 18/01/2028 · 16/02/2028 |
+| Fin del proyecto | Media y desviación | 257 días ± 24,8 |
+| Costo del proyecto | Costo base · P80 · contingencia | 5.034.578.244 · 5.598.359.651 · 563.781.406 COP |
+| Costo del proyecto | Probabilidad de cumplir el costo meta | 80,1 % |
+| Fecha y costo a la vez | JCL | 58,6 % |
+| Riesgos: tornado | Barras (baja el P80) | R1 8 d, R2 6 d, R3 3 d, R4 0 d |
+| Riesgos: tornado | Texto debajo | «Sin ningún riesgo, el P80 sería 260,2 días…» |
+| Fin del proyecto, tabla de percentiles | P80 de «Obra gris terminada» | 20/12/2027 |
+| Rutas críticas más frecuentes | La primera | 62,8 % |
 
-**Q10. La hoja de resultados.** Se crea (o se rehace)
-**Resultados_Cronograma**: supuestos (versión 0.8.0), advertencias con su
-color, fin e hito con P10 a P90, costo, JCL, pre/post, rutas, correlación
-pedida y lograda, cronograma ajustado P50/P80, tornado con columnas de
-costo, índices por actividad y convergencia; a la derecha, **tres
-gráficos** (curva S del fin, curva S del costo y dispersión costo–fecha).
+En la pestaña **Cronograma** queda un aviso verde: «Simulado: 5000
+iteraciones. Los resultados están en la pestaña Resultados». Anota cuántos
+segundos dice la última línea de Resultados.
 
-**Q11. Un error lleva a su celda.** En Actividades pon la duración de B
-(fila 5) en −2 y pulsa Revisar calidad. Esperado: «Actividades, E5: La
-duración tiene que ser un número mayor o igual que 0». Pulsa el enlace:
-Excel va a E5. Devuélvela a 45.
+**Q10. La hoja de resultados.** En Excel, abre la hoja
+**Resultados_Cronograma** (se crea o se rehace en cada simulación). Arriba,
+«Supuestos de la corrida»: Versión del complemento **0.9.0**, Iteraciones
+5.000, Semilla 12345, Muestreo Hipercubo latino. Debajo: advertencias con
+su color, fin e hito con P10 a P90, costo, JCL, pre/post, rutas,
+correlación pedida y lograda, cronograma ajustado P50/P80, tornado con
+columnas de costo, índices por actividad y convergencia. A la derecha,
+**tres gráficos** (curva S del fin, curva S del costo y dispersión
+costo–fecha).
 
-**Q12. Cambiar el calendario.** Pon el calendario de E (Estructura) en
-«Lunes a viernes» y simula: la fecha determinística se **retrasa**.
-Devuélvelo a «Lunes a sábado».
+**Q11. Un error lleva a su celda.** Escribe **−2** en **Actividades!E5**
+(duración de B, Licencia de construcción) y pulsa **Revisar calidad** en la
+pestaña Cronograma. Esperado: un recuadro rojo «Hay que corregir el
+cronograma» con «Actividades, E5: La duración tiene que ser un número mayor
+o igual que 0». Pulsa el enlace «Actividades, E5»: Excel selecciona E5.
+Vuelve a escribir **45**.
 
-**Q13. Desde la cinta, con el panel cerrado.** Cierra el panel y pulsa
-**Simular cronograma** en la cinta: se abre el panel en Cronograma y simula.
+**Q12. Cambiar el calendario.** En **Actividades!F9** (calendario de E,
+Estructura) elige «Lunes a viernes» en la lista y pulsa **Simular
+cronograma**. Esperado en Resultados → Fin del proyecto: la fecha
+determinística pasa de 22/11/2027 a **03/12/2027**. Vuelve a poner «Lunes a
+sábado» en F9.
 
-**Q14. Cancelar.** En Config pon 100000 iteraciones, simula y pulsa
-**Cancelar** a mitad: dice «Simulación cancelada». Devuelve 5000.
+**Q13. Desde la cinta, con el panel cerrado.** Cierra el panel (la ✕ de
+arriba a la derecha) y pulsa **Simular cronograma** en la cinta (Riesgo →
+grupo Cronograma). Esperado: se abre el panel, simula y termina en
+**Resultados** con las cifras de Q9.
+
+**Q14. Cambiar las iteraciones y cancelar.** En **⚙ → Simulación del
+cronograma** pulsa **50 mil** (Config!B4 pasa a 50000). Ve a la pestaña
+Cronograma, pulsa **Simular cronograma** y, a mitad de la barra, **Cancelar**.
+Esperado: «Simulación cancelada.» Vuelve a **⚙** y pulsa **5 mil**.
 
 ### Q15–Q26. Costo, mitigación, importación y lo avanzado (fases Q2 y Q3)
 
-Sigue en el mismo libro, con inicio 04/01/2027.
+Sigue en el mismo libro, con inicio 04/01/2027 y meta 31/01/2028. Cada
+prueba que cambia algo dice cómo dejarlo como estaba: hazlo antes de la
+siguiente, o las cifras no coincidirán.
 
-**Q15. Antes y después de mitigar.** En la sección «Antes y después de
-mitigar» del panel: el P80 del fin pasa de 16/02/2028 a 04/02/2028 (gana
-8 días) y la probabilidad de cumplir la meta de 65,3 % a 76,1 %; el costo
-P80 **sube** un poco (5.598 a 5.622 millones), porque las mitigaciones
-(75 millones) cuestan más de lo que ahorran en costo. Las dos curvas S van
-superpuestas.
+**Q15. Antes y después de mitigar.** Simula (pestaña Cronograma → Simular
+cronograma) y en **Resultados → Antes y después de mitigar** comprueba: el
+P80 del fin pasa de 16/02/2028 a 04/02/2028 (gana 12 días de calendario, 8
+laborables) y la probabilidad de cumplir la meta de 65,3 % a 76,1 %; el
+costo P80 **sube** un poco (5,6 a 5,62 mil millones) porque las
+mitigaciones cuestan más de lo que ahorran. Dos curvas S: la continua es
+«Esta simulación» y la punteada «Post mitigación».
 
-**Q16. Costo por tiempo.** En Costos, cambia la tarifa de ADM de 2.500.000 a
-3.500.000 (y su mínimo, más probable y máximo en 1.000.000 más cada uno) y
-simula: el costo base sube unos 218 millones (1.000.000 × 218 días). Vuelve
-a los valores de antes.
+**Q16. Costo por tiempo.** En la hoja **Costos**, fila 2 (ADM,
+Administración): cambia **E2** de 2500000 a **3500000** y simula. Esperado
+en **Resultados → Costo del proyecto**: Costo base **5.252.578.244 COP**
+(218 millones más: 1.000.000 × 218 días). Ahora cambia también **H2, I2 y
+J2** (mínimo, más probable y máximo) sumándoles 1.000.000 a cada uno y
+simula otra vez: el costo base no cambia, pero el **P80** y la
+**probabilidad de cumplir el costo meta** sí (bajan del 80,1 % a un 43 %
+aprox.). Devuelve E2, H2, I2 y J2 a lo que tenían.
 
-**Q17. Correlación imposible.** En Correlaciones añade los pares D–E 0,9,
-E–H 0,9 y D–H −0,9. Simula: no falla; en «Avisos de la simulación» dice que
-se usó la matriz posible más cercana (Higham), y la tabla de correlación
-lograda enseña lo aplicado. Borra esos tres pares.
+**Q17. Correlación imposible.** En la hoja **Correlaciones**, debajo del
+par ADM–INT, escribe tres filas en las columnas A, B y C:
+`D` `E` `0,9` · `E` `H` `0,9` · `D` `H` `-0,9` (la última **negativa**).
+Simula. Esperado: no falla. En **Resultados → Avisos de la simulación y
+correlación lograda** (ábrela con ▸) salen cuatro avisos: tres «La
+correlación entre D y E está dos veces (0,5 y 0,9); se usa 0,9» (porque D,
+E y H ya están en el grupo «Obra húmeda» con 0,5, en Correlaciones!E2:G2)
+y uno «Las correlaciones entre D, E, H no pueden darse a la vez; se usó la
+matriz posible más cercana (Higham): el coeficiente que más cambió, 0,4».
+En la tabla de debajo, D–E dice Pedida 0,9 y Aplicada 0,5. Borra las tres
+filas.
 
-**Q18. Factor por grupo.** En Actividades pon «Siembra» en la columna Grupo
-de C (Adecuación del terreno), borra la fila de C en Incertidumbre y añade
-una fila «Grupo Siembra», Triangular, 90, 100, 200, «% de la base». Revisar
-calidad: C no sale como «sin incertidumbre». Deshaz los cambios.
+**Q18. Factor por grupo.** Sirve para dar una misma incertidumbre a varias
+actividades sin escribir una fila por cada una. Pasos:
+1. En **Actividades!J7** (columna Grupo, fila de C, Adecuación del
+   terreno) escribe `Siembra`.
+2. En la hoja **Incertidumbre**, borra la fila 4 (la de C): clic derecho
+   en el número 4 → Eliminar.
+3. En la primera fila vacía de Incertidumbre escribe: A `Grupo Siembra`,
+   B `Triangular`, C `90`, D `100`, E `200`, F `% de la base`.
+4. Pestaña Cronograma → **Revisar calidad**.
 
-**Q19. Riesgo como actividad insertada.** En Riesgos pon el Modo de R3 en
-«Actividad insertada» y simula: en la hoja de resultados, tabla «Índices por
-actividad», aparece la fila «R3@D · Riesgo R3: … (tras D)». Devuélvelo a «Extiende
-actividades».
+Esperado: en «Calidad del cronograma», «Actividades sin incertidumbre
+asignada» sale en **verde** («Todas las tareas tienen una distribución»).
+Para comparar, si solo haces el paso 2 (sin la fila del grupo), sale en
+amarillo: «1 de 11 tareas (9 %) con duración fija: C». Deshaz los tres
+cambios (Ctrl+Z o a mano).
 
-**Q20. Ramificación.** En Ramas escribe dos filas: «Permiso», «Rápido», 70 %,
-«C» y «Permiso», «Lento», 30 %, «I». Simula: funciona y los resultados
-cambian (en cada iteración solo una de las dos actividades cuenta). Pon
-70 % y 40 % para ver el error «suman 110 %». Borra las filas.
+**Q19. Riesgo como actividad insertada.** En la hoja **Riesgos**, celda
+**L4** (columna Modo, fila de R3), elige «Actividad insertada» y simula.
+Esperado: en la hoja **Resultados_Cronograma**, tabla «Índices por
+actividad», aparece una fila **R3@D · Riesgo R3: Suelo más blando de lo
+previsto (tras D)**. Vuelve a poner «Extiende actividades» en L4.
 
-**Q21. Iteraciones automáticas.** En Config pon «Automático» en
-Iteraciones y simula: en los avisos dice con cuántas iteraciones se
-estabilizó el P80. Devuelve 5000.
+**Q20. Ramificación.** Una rama es una decisión que aún no se conoce: en
+cada iteración se sortea una opción y solo cuentan sus actividades. Antes
+de nada, anota de Resultados el P50, el P80 y la probabilidad de la meta
+(18/01/2028, 16/02/2028, 65,3 %). Después, en la hoja **Ramas**, filas 2 y
+3, columnas A a D:
 
-**Q22. Informe ejecutivo.** Pulsa **Informe ejecutivo (PDF)**: se abre en
-el navegador con supuestos, advertencias, fecha de fin, costo, JCL,
-pre/post, los riesgos y las actividades más críticas y las rutas; «Imprimir
-o guardar como PDF» lo deja en A4.
+| A Rama | B Opción | C Probabilidad | D Actividades |
+|---|---|---|---|
+| Licencia | Trámite normal | 70 % | B |
+| Licencia | Ya aprobada | 30 % | C |
 
-**Q23. CSV.** Pulsa **Iteraciones en CSV**: se descarga
-`iteraciones-cronograma.csv` (5.000 filas, separado por «;», se abre con
-Excel). Si en Excel de escritorio no se descarga nada, dímelo: probaremos
-otra vía.
+Simula. Esperado en Resultados: **Fin del proyecto** P50 · P80 =
+**27/12/2027 · 07/02/2028** y probabilidad de cumplir la meta **75,2 %**
+(antes 65,3 %): en el 30 % de las iteraciones no hay trámite de licencia.
+En **Actividades más críticas**, B baja de 84 % a **59 %** de criticidad y C
+sube de 0 % a **24 %**. Cambia C3 a **40 %** y simula: sale el error «Las
+opciones de la rama «Licencia» suman 110 %; tienen que sumar 100 %». Borra
+las dos filas.
 
-**Q24. Importar de MS Project.** Pulsa **Importar MS Project o P6…** y
-elige `tests\fixtures\qrsa\R2-relaciones.xml`. Esperado: «MS Project XML:
-7 actividades, 1 hito, 9 relaciones, 1 calendario; empieza el 04/01/2027».
-Pulsa **Empezar de cero** y simula: fecha determinística 25/02/2027 (la del
-bloque Q1–Q4). Prueba también **Reemplazar** con `R3-calendario.xml`:
-como Incertidumbre y Riesgos remiten a las actividades de antes, salen
-errores con su celda (eso es lo esperado).
+**Q21. Iteraciones automáticas.** En **⚙ → Simulación del cronograma**
+pulsa **Automático** (Config!B4 pasa a «Automático») y simula. Esperado: en
+Resultados, justo debajo del título, un aviso verde «Iteraciones
+automáticas: el P80 se estabilizó con 2.000 iteraciones (cambió 0,36 % en
+el último bloque)», y la línea de iteraciones dice 2000. Vuelve a **5 mil**.
 
-**Q25. Importar de Primavera P6.** En un libro nuevo, importa
-`R1-simple.xer` y simula: fecha determinística 21/01/2027.
+**Q22. Informe ejecutivo.** Al final de Resultados pulsa **Informe ejecutivo
+(PDF)**: se abre en el navegador con supuestos, advertencias, fecha de fin,
+costo, JCL, pre/post, los riesgos, las actividades más críticas y las
+rutas; «Imprimir o guardar como PDF» lo deja en A4.
 
-**Q26. Un libro de la versión anterior.** Si tienes un libro creado con la
-0.7 (sin Costos, Correlaciones ni Ramas), el botón dice **Añadir las hojas
-que faltan**: las añade vacías y lo demás sigue igual.
+**Q23. CSV.** Al final de Resultados pulsa **Iteraciones en CSV**: se
+descarga `iteraciones-cronograma.csv` (5.000 filas, separado por «;», se
+abre con Excel).
+
+**Q24. Importar de MS Project.** Pestaña Cronograma → **Importar MS Project o
+P6…** y elige, en la carpeta del proyecto,
+`tests\fixtures\qrsa\R2-relaciones.xml`. Esperado: «MS Project XML: 7
+actividades, 1 hito, 9 relaciones, 1 calendario; empieza el 04/01/2027».
+Pulsa **Empezar de cero** y simula: Resultados → Fin del proyecto, fecha
+determinística **25/02/2027**. Prueba también **Reemplazar** con
+`R3-calendario.xml`: como Incertidumbre y Riesgos remiten a las actividades
+de antes, salen errores con su celda (eso es lo esperado).
+
+**Q25. Importar de Primavera P6.** En un **libro nuevo en blanco**, pestaña
+Cronograma → Importar → `tests\fixtures\qrsa\R1-simple.xer` → Crear las
+hojas, y simula: fecha determinística **21/01/2027**.
+
+**Q26. Un libro de una versión anterior.** Solo si tienes un libro de
+cronograma creado antes del 05/10 (sin Costos, Correlaciones ni Ramas): el
+primer botón dice **Añadir las hojas que faltan** y las añade vacías. Si no
+tienes ninguno, márcala «no aplica».
 
 ### V3 y V4. Comparar en el explorador y asistente de juicio experto
 
@@ -1089,6 +1179,36 @@ avance (comienzo y fin reales, %), las fechas límite y la fecha de corte
 **GT30. Muchas actividades.** Si tienes un cronograma grande (cientos de
 actividades), impórtalo y abre el Gantt: anota cuánto dice «calculado en …
 ms» y si el desplazamiento va fluido.
+
+### GT31–GT33. Arreglos y mejoras de la ronda del 06/10
+
+En el libro de cronograma del ejemplo (inicio 04/01/2027, meta 31/01/2028).
+
+**GT31. La ventana carga a la primera.** Con Excel recién abierto, pestaña
+Cronograma del panel → **Ver Gantt**. Esperado: en uno o dos segundos se ve
+el Gantt; ya no se queda en «Leyendo el cronograma…» hasta cambiar de
+pestaña.
+
+**GT32. Fechas de fin posibles bajo el Gantt.** Simula el cronograma
+(pestaña Cronograma → Simular cronograma); el panel pasa a Resultados: al
+final, junto a «Iteraciones en CSV», pulsa **Ver Gantt**. Pulsa
+**Ajustar todo**. Esperado: debajo de las barras, una franja **«Fechas de
+fin posibles»** con una barra por semana, en el mismo eje de fechas que el
+Gantt (al desplazar a izquierda o derecha se mueve con él). Azules las
+semanas hasta la meta, naranjas las de después; líneas punteadas P50 y P80
+y una morada «Meta». El texto de la izquierda dice «5.000 iteraciones · cada
+barra, una semana · P50 18/01/2028 · P80 16/02/2028 · Meta 31/01/2028:
+probabilidad de cumplirla 65,3 %», la misma de Resultados. La casilla
+«Fechas de fin posibles» la oculta y la vuelve a mostrar.
+
+**GT33. Configuración y Resultados unificados.** Con el libro de cronograma
+abierto, **⚙** muestra arriba **«Simulación del cronograma»** con 5 mil,
+semilla 12.345 e Hipercubo latino. Pulsa **1 mil**: en Excel, Config!B4
+pasa a 1000. Simula: el panel salta a **Resultados**, que empieza con
+«Resultados del cronograma» y «1000 iteraciones · semilla 12345 · hipercubo
+latino». Si en el mismo libro simulas también el modelo (pestaña Modelo →
+Simular), arriba de Resultados aparece «Ver los resultados de: Modelo ·
+Cronograma» para pasar de uno a otro. Vuelve a **5 mil**.
 
 ## A. Lo básico, en la hoja «Modelo»
 

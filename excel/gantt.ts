@@ -30,6 +30,23 @@ export interface DatosGantt {
   qrsa?: Record<string, QrsaActividad>;
   /** G3: líneas base guardadas, por id (posición 0 = LB1). */
   lineasBase?: Record<string, (LineaBase | null)[]>;
+  /** 06/10: la distribución del fin del proyecto de la última simulación, para dibujarla bajo el Gantt. */
+  distribucionFin?: DistribucionFin;
+}
+
+/** El fin del proyecto en cada iteración, contado por semanas (como la demostración animada). */
+export interface DistribucionFin {
+  /** Serie del primer día de la primera semana. */
+  desde: number;
+  /** Iteraciones que terminan en cada semana (7 días desde `desde`). */
+  semanas: number[];
+  iteraciones: number;
+  p50: number;
+  p80: number;
+  /** El fin en 201 cuantiles (p0, p0,5 … p100): la probabilidad de cumplir una fecha sin las semanas. */
+  cuantiles: number[];
+  /** La fecha meta de la simulación y la proporción exacta de iteraciones que la cumplen (la misma de Resultados). */
+  meta?: { fecha: number; p: number };
 }
 
 /** De la última simulación, por actividad. */
@@ -59,11 +76,12 @@ export function probabilidadDeCumplir(cuantiles: readonly number[], fecha: numbe
 }
 
 /** Lo que se manda al Gantt, desde una lectura de las hojas (null si tiene errores). */
-export function datosGanttDe(l: LecturaCronograma, qrsa?: DatosGantt['qrsa']): DatosGantt | null {
+export function datosGanttDe(l: LecturaCronograma, qrsa?: DatosGantt['qrsa'], distribucionFin?: DistribucionFin): DatosGantt | null {
   if (!l.modelo) return null;
   return {
     version: 1, modelo: l.modelo, orden: l.orden ?? [], vinculosResumen: l.vinculosResumen ?? [],
     ...(qrsa ? { qrsa } : {}),
+    ...(distribucionFin ? { distribucionFin } : {}),
     ...(l.lineasBase && Object.keys(l.lineasBase).length ? { lineasBase: l.lineasBase } : {}),
   };
 }
@@ -472,4 +490,23 @@ export function qrsaDeSimulacion(sim: { red: RedCompilada; criticidad: Float64Ar
     };
   }
   return out;
+}
+
+/**
+ * El fin del proyecto en cada iteración (el mismo de Resultados) contado por
+ * semanas, con su P50 y su P80. La primera semana empieza el día del fin más
+ * temprano.
+ */
+export function distribucionFinDe(sim: { fin: { serie: ArrayLike<number> } }, fechaMeta?: number): DistribucionFin | null {
+  const n = sim.fin.serie.length;
+  if (n === 0) return null;
+  const orden = Float64Array.from(sim.fin.serie).sort();
+  const q = (p: number) => orden[Math.min(n - 1, Math.max(0, Math.ceil(p * n) - 1))] as number;
+  const desde = Math.floor(orden[0] as number);
+  const semanas = new Array<number>(Math.floor(((orden[n - 1] as number) - desde) / 7) + 1).fill(0);
+  for (const x of orden) semanas[Math.floor((x - desde) / 7)]! += 1;
+  const cuantiles = Array.from({ length: 201 }, (_, k) => (k === 0 ? orden[0] as number : q(k / 200)));
+  let cumplen = 0;
+  if (fechaMeta !== undefined) for (const x of orden) if (x <= fechaMeta) cumplen++;
+  return { desde, semanas, iteraciones: n, p50: q(0.5), p80: q(0.8), cuantiles, ...(fechaMeta !== undefined ? { meta: { fecha: fechaMeta, p: cumplen / n } } : {}) };
 }

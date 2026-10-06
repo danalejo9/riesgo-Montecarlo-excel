@@ -89,6 +89,20 @@ function Explorador() {
     hablarAlPanel('explorador.html', { accion: 'listo' });
   }, []);
 
+  // Office puede perder el primer aviso («listo») si llega antes de que el
+  // panel escuche la ventana: mientras falte el cronograma, se vuelve a pedir
+  // (prueba GT2 del 06/10: se quedaba en «Leyendo el cronograma…»).
+  const sinCronograma = pestana === 'gantt' && !gantt && !estadoGantt.error;
+  useEffect(() => {
+    if (!sinCronograma) return;
+    let veces = 0;
+    const t = window.setInterval(() => {
+      if (++veces > 8) { window.clearInterval(t); return; }
+      hablarAlPanel('explorador.html', { accion: 'gantt-releer' });
+    }, 1500);
+    return () => window.clearInterval(t);
+  }, [sinCronograma]);
+
   const pestanas = (
     <nav className="pestanas pestanas-ventana">
       {(['distribucion', 'lista', 'gantt'] as const).map((p) => (

@@ -18,6 +18,7 @@ export interface RespuestaGantt {
 export class ControlGantt {
   readonly historial = new HistorialGantt();
   qrsa: DatosGantt['qrsa'];
+  distribucionFin: DatosGantt['distribucionFin'];
   private leerHojas: () => Promise<Record<string, MatrizHoja | undefined>>;
   private escribir: (cambios: readonly CambioHoja[]) => Promise<void>;
 
@@ -28,7 +29,7 @@ export class ControlGantt {
   }
 
   private datosDe(l: LecturaCronograma): DatosGantt | null {
-    return datosGanttDe(l, this.qrsa);
+    return datosGanttDe(l, this.qrsa, this.distribucionFin);
   }
 
   private estado(extra: Partial<EstadoEdicion> = {}): EstadoEdicion {

@@ -27,6 +27,9 @@ import {
 } from '../engine/modelo/index.ts';
 import { leerNumero, miles } from './formato.ts';
 import { aplicarModo } from '../excel/modoLibro.ts';
+import { cambiosAjustesCronograma, leerAjustesCronograma, type AjustesCronograma } from '../excel/ajustesCronograma.ts';
+import { aplicarCambiosEnLibro, leerHojaConfig } from '../excel/cronogramaLibro.ts';
+import type { MatrizHoja } from '../excel/cronogramaHojas.ts';
 import { modoLibroEnMemoria } from '../excel/modoLibroCompartido.ts';
 import {
   guardarCongelarPantalla,
@@ -69,6 +72,8 @@ export function Configuracion({
       <ModoDelLibro />
 
       <Rendimiento hilosUltimaSimulacion={hilosUltimaSimulacion} />
+
+      <SimulacionDelCronograma />
 
       <section>
         <h2>Simulación</h2>
@@ -356,6 +361,68 @@ function Rendimiento({ hilosUltimaSimulacion }: { hilosUltimaSimulacion?: number
 }
 
 /** Iteraciones: accesos rápidos más un campo libre. */
+const PRESETS_CRONOGRAMA = [1_000, 5_000, 10_000, 50_000];
+
+/**
+ * Q14 (06/10): en un libro de cronograma, sus iteraciones, semilla y
+ * muestreo se cambian aquí también. Siguen en la hoja Config (con el libro);
+ * esta sección lee la hoja y escribe en ella.
+ */
+function SimulacionDelCronograma() {
+  const [hoja, setHoja] = useState<MatrizHoja | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const releer = () => leerHojaConfig().then(setHoja).catch(() => setHoja(null));
+  useEffect(() => { void releer(); }, []);
+  if (!hoja) return null;
+  const a = leerAjustesCronograma(hoja);
+  const cambiar = (nuevos: Partial<AjustesCronograma>) => {
+    setError(null);
+    void aplicarCambiosEnLibro(cambiosAjustesCronograma(hoja, nuevos)).then(releer)
+      .catch((e: unknown) => setError(`No se pudo escribir en la hoja Config: ${e instanceof Error ? e.message : String(e)}`));
+  };
+  return (
+    <section>
+      <h2>Simulación del cronograma</h2>
+      <p className="tenue">
+        Para el botón <b>Simular cronograma</b>. Se guarda en la hoja <b>Config</b> del libro (filas Iteraciones, Semilla y
+        Muestreo): cambiarlo aquí o allí es lo mismo.
+      </p>
+      <div className="parametros">
+        <div className="campo">
+          <span className="tenue">Iteraciones</span>
+          <div className="presets" role="group" aria-label="Iteraciones del cronograma">
+            {PRESETS_CRONOGRAMA.map((n) => (
+              <button key={n} type="button" className={n === a.iteraciones ? 'activo' : 'plano'} aria-pressed={n === a.iteraciones}
+                onClick={() => cambiar({ iteraciones: n })}>{n / 1000} mil</button>
+            ))}
+            <button type="button" className={a.iteraciones === 'auto' ? 'activo' : 'plano'} aria-pressed={a.iteraciones === 'auto'}
+              onClick={() => cambiar({ iteraciones: 'auto' })}>Automático</button>
+          </div>
+          {a.iteraciones !== 'auto' && (
+            <CampoEntero etiqueta="Otra cantidad" valor={a.iteraciones} minimo={100} maximo={1_000_000}
+              alCambiar={(iteraciones) => cambiar({ iteraciones })} />
+          )}
+          <span className="tenue ayuda">
+            {a.iteraciones === 'auto'
+              ? 'Sube de 1.000 a 20.000 hasta que el P80 se estabilice; los avisos dicen con cuántas se quedó.'
+              : 'El tornado repite la simulación una vez por riesgo (con ese riesgo quitado): el progreso cuenta también esas vueltas.'}
+          </span>
+        </div>
+        <CampoEntero etiqueta="Semilla" ayuda="La misma semilla da el mismo resultado." valor={a.semilla} minimo={0}
+          alCambiar={(semilla) => cambiar({ semilla })} />
+        <label className="campo">
+          <span className="tenue">Muestreo</span>
+          <select value={a.muestreo} onChange={(e) => cambiar({ muestreo: e.target.value as AjustesCronograma['muestreo'] })}>
+            <option value="lhs">Hipercubo latino</option>
+            <option value="monte-carlo">Monte Carlo</option>
+          </select>
+        </label>
+      </div>
+      {error && <p className="aviso-error">{error}</p>}
+    </section>
+  );
+}
+
 function CampoIteraciones({
   etiqueta,
   valor,

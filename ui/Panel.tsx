@@ -33,7 +33,7 @@ import { huellaModelo, restaurarResultados, serializarResultados } from '../exce
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
-import { abrirVentana, enviarEnTrozos, type Ventana } from '../excel/ventana.ts';
+import { abrirVentana, enviarEnTrozos, ventanaAbierta, type Ventana } from '../excel/ventana.ts';
 import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import type { RespuestaGantt } from './gantt/controlGantt.ts';
 import type { OperacionGantt } from '../excel/edicionGantt.ts';
@@ -99,6 +99,10 @@ const AGRUPAR_CAMBIOS_MS = 1000;
 export function Panel() {
   const [entorno, setEntorno] = useState<EntornoOffice | null>(null);
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDeFragmento(window.location.hash));
+  // Q (06/10): los resultados del cronograma van también en Resultados, como los del modelo.
+  const [cronogramaSimulado, setCronogramaSimulado] = useState(false);
+  const [verResultados, setVerResultados] = useState<'modelo' | 'cronograma'>('modelo');
+  const [contenedorCronograma, setContenedorCronograma] = useState<HTMLDivElement | null>(null);
   const [modelo, setModelo] = useState<ModeloRiesgo | null>(null);
   const [modeloInvalido, setModeloInvalido] = useState<{ errores: string[]; crudo: string } | null>(null);
   const [resultado, setResultado] = useState<ResultadoSimulacionPanel | null>(null);
@@ -330,7 +334,8 @@ export function Panel() {
       } catch (e) {
         r = { estadoGantt: { deshacer: controlGantt.historial.puedeDeshacer, rehacer: controlGantt.historial.puedeRehacer, mensaje: null, error: `No se pudo: ${mensajeDe(e)}`, ocupado: false } };
       }
-      const v = explorador.current?.ventana;
+      // La ventana puede pedir antes de que `explorador` quede guardado.
+      const v = explorador.current?.ventana ?? ventanaAbierta('explorador.html');
       if (v) enviarEnTrozos(v, r);
     });
   }, []);
@@ -461,6 +466,7 @@ export function Panel() {
       setResultado(conHuella);
       if (conHuella.ok) {
         setPestana('resultados');
+        setVerResultados('modelo');
         // E8: las celdas con RIESGO.* se conocen ahora; se pintan con su color.
         recordarCeldasRiesgo((conHuella.entradasDeFunciones ?? []).map((e) => e.ref));
         void aplicarResaltado(modelo).catch(() => {});
@@ -677,11 +683,21 @@ export function Panel() {
           !modeloInvalido && <p className="tenue">Leyendo el modelo del libro…</p>
         ))}
 
-      {pestana === 'resultados' && !(resultado?.ok === true) && !simulando && (
+      {pestana === 'resultados' && resultado?.ok === true && cronogramaSimulado && (
+        <nav className="selector-resultados" aria-label="Qué resultados ver">
+          <span className="tenue">Ver los resultados de</span>
+          {(['modelo', 'cronograma'] as const).map((v) => (
+            <button key={v} type="button" className={verResultados === v ? 'activo' : 'plano'} aria-pressed={verResultados === v}
+              onClick={() => setVerResultados(v)}>{v === 'modelo' ? 'Modelo' : 'Cronograma'}</button>
+          ))}
+        </nav>
+      )}
+
+      {pestana === 'resultados' && !(resultado?.ok === true) && !cronogramaSimulado && !simulando && (
         <section>
           <h2>Todavía no hay resultados</h2>
           <p className="tenue">
-            Simula desde la pestaña Modelo y aparecerán aquí. Los resultados
+            Simula desde la pestaña Modelo (o el cronograma, desde la pestaña Cronograma) y aparecerán aquí. Los resultados
             viven mientras el panel está abierto: para conservarlos, vuélcalos a
             una hoja del libro.
           </p>
@@ -689,7 +705,7 @@ export function Panel() {
         </section>
       )}
 
-      {pestana === 'resultados' && resultado?.ok === true && modelo && (
+      {pestana === 'resultados' && resultado?.ok === true && modelo && (verResultados === 'modelo' || !cronogramaSimulado) && (
         <Resultados
           modelo={modelo}
           resultado={resultado}
@@ -730,11 +746,21 @@ export function Panel() {
         />
       )}
 
+      {/* Aquí dibuja la pestaña Cronograma sus resultados (portal): siempre montado. */}
+      <div ref={setContenedorCronograma}
+        hidden={!(pestana === 'resultados' && cronogramaSimulado && (verResultados === 'cronograma' || resultado?.ok !== true))} />
+
       {/* Siempre montada (oculta en las demás pestañas): así no pierde los resultados al cambiar de pestaña. */}
       <div hidden={pestana !== 'cronograma'}>
         <Cronograma
           visible={pestana === 'cronograma'}
           pedido={pedidoCronograma}
+          contenedorResultados={contenedorCronograma}
+          alSimulado={() => {
+            setCronogramaSimulado(true);
+            setVerResultados('cronograma');
+            setPestana('resultados');
+          }}
           alAtender={() => setPedidoCronograma(undefined)}
           alFallar={(e) => setError(mensajeDe(e))}
         />

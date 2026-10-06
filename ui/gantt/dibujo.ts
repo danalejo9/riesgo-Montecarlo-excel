@@ -7,7 +7,7 @@
  * Devuelve las flechas dibujadas (en píxeles de pantalla) para el ratón.
  */
 
-import type { FilaGantt, VistaGantt } from '../../excel/gantt.ts';
+import type { DistribucionFin, FilaGantt, VistaGantt } from '../../excel/gantt.ts';
 import {
   centroFila, encabezados, filasVisibles, rectBarra, rutaFlecha, sentidoPunta, x as xDe, type Escala, type Geometria, type Punto, type Rect,
 } from './trazado.ts';
@@ -463,4 +463,64 @@ export function dibujar(ctx: CanvasRenderingContext2D, e: EscenaGantt): FlechaDi
   }
   ctx.restore();
   return flechas;
+}
+
+/**
+ * La distribución del fin del proyecto bajo la línea de tiempo (06/10, como
+ * la demostración animada): una barra por semana con la altura del número de
+ * iteraciones que terminan en ella, en el mismo eje que las barras del Gantt.
+ * Hasta la meta, azul; después, naranja. Líneas del P50, el P80 y la meta.
+ */
+export interface EscenaDistribucion {
+  dist: DistribucionFin;
+  escala: Escala;
+  scrollLeft: number;
+  ancho: number;
+  alto: number;
+  meta: number | null;
+}
+
+export function dibujarDistribucion(ctx: CanvasRenderingContext2D, e: EscenaDistribucion): void {
+  const { dist, escala, ancho, alto } = e;
+  const X = (s: number) => xDe(escala, s) - e.scrollLeft;
+  ctx.clearRect(0, 0, ancho, alto);
+  ctx.fillStyle = COLORES.fondo;
+  ctx.fillRect(0, 0, ancho, alto);
+  const base = alto - 14;
+  const arriba = 16;
+  const max = Math.max(1, ...dist.semanas);
+  ctx.strokeStyle = COLORES.borde;
+  ctx.beginPath();
+  ctx.moveTo(0, base + 0.5);
+  ctx.lineTo(ancho, base + 0.5);
+  ctx.stroke();
+  dist.semanas.forEach((n, i) => {
+    if (n === 0) return;
+    const s0 = dist.desde + 7 * i;
+    const x0 = X(s0);
+    const x1 = X(s0 + 7);
+    if (x1 < 0 || x0 > ancho) return;
+    const h = ((base - arriba) * n) / max;
+    ctx.fillStyle = e.meta !== null && s0 + 6 > e.meta ? COLORES.casiCritica : COLORES.tarea;
+    ctx.fillRect(x0 + 0.5, base - h, Math.max(1, x1 - x0 - 1), h);
+  });
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  ctx.textBaseline = 'top';
+  const linea = (s: number, color: string, texto: string, fila: number, discontinua: boolean) => {
+    const xx = Math.round(X(s)) + 0.5;
+    if (xx < -50 || xx > ancho + 50) return;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(discontinua ? [4, 3] : []);
+    ctx.beginPath();
+    ctx.moveTo(xx, 2);
+    ctx.lineTo(xx, base);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = color;
+    ctx.fillText(texto, xx + 3, 2 + fila * 12);
+  };
+  // Cada línea a su fecha: el fin de ese día.
+  linea(e.dist.p50 + 1, COLORES.texto, 'P50', 0, true);
+  linea(e.dist.p80 + 1, COLORES.texto, 'P80', 0, true);
+  if (e.meta !== null) linea(e.meta + 1, COLORES.meta, 'Meta', 1, false);
 }

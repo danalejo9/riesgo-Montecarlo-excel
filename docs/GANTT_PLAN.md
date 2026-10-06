@@ -181,3 +181,12 @@ MSPDI de ida y vuelta y CSV (`ganttExportar.test.ts`), paginación
 (`ganttTrazado.test.ts`). Pendiente para después: selección múltiple,
 copiar y pegar filas, menú contextual, reordenar columnas, arrastrar el
 borde del avance, agrupar con encabezados de grupo.
+
+**06/10, tras la ronda Q del usuario.** Debajo de las barras, tras
+simular, la franja «Fechas de fin posibles» (como la demostración animada):
+una barra por semana en el mismo eje, azules hasta la meta, naranjas
+después, líneas P50/P80/Meta y la probabilidad de cumplir la meta (la misma
+de Resultados); «Ajustar todo» llega hasta la última fecha simulada. La
+ventana vuelve a pedir el cronograma si el primer aviso se pierde (se
+quedaba en «Leyendo el cronograma…»). Guía GT31–GT32.
+

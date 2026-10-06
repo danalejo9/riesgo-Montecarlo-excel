@@ -8,13 +8,13 @@
  * la valida, la escribe en las hojas y devuelve el cronograma nuevo.
  */
 
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 
-import { construirVista, explicarCritica, impulsoraHacia, type DatosGantt, type EstadoEdicion, type DefinicionCritica, type FilaGantt, type RelacionGantt, type VistaGantt } from '../../excel/gantt.ts';
+import { construirVista, explicarCritica, impulsoraHacia, probabilidadDeCumplir, type DatosGantt, type DistribucionFin, type EstadoEdicion, type DefinicionCritica, type FilaGantt, type RelacionGantt, type VistaGantt } from '../../excel/gantt.ts';
 import type { OperacionGantt } from '../../excel/edicionGantt.ts';
 import { cadena, leerPredecesoras, type CalendarioLaboral, type TipoRelacion, type TipoRestriccion } from '../../engine/cronograma/index.ts';
 import { leerFecha, textoFecha } from '../../engine/modelo/fechas.ts';
-import { COLORES, COLORES_RUTA, colorCalor, dibujar, rectEnPantalla, type ArrastreGantt, type EscenaGantt, type FlechaDibujada, type Resaltado } from './dibujo.ts';
+import { COLORES, COLORES_RUTA, colorCalor, dibujar, dibujarDistribucion, rectEnPantalla, type ArrastreGantt, type EscenaGantt, type FlechaDibujada, type Resaltado } from './dibujo.ts';
 import { ajustarTodo, distanciaAFlecha, filasVisibles, GEOMETRIA, PX_MAX, PX_MIN, serieEn, tipoVinculo, ZOOMS, zonaBarra, type Escala } from './trazado.ts';
 import './gantt.css';
 
@@ -231,10 +231,16 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const linea = useRef<HTMLDivElement | null>(null);
   const grid = useRef<HTMLDivElement | null>(null);
   const lienzo = useRef<HTMLCanvasElement | null>(null);
+  /** 06/10: la distribución del fin, bajo la línea de tiempo. */
+  const lienzoDist = useRef<HTMLCanvasElement | null>(null);
+  const [verDistribucion, setVerDistribucion] = useState(true);
   const [px, setPx] = useState<number | null>(null);
   const origen = vista ? vista.inicio - 30 : 0;
   const escala: Escala = { origen, px: px ?? 6 };
-  const anchoTotal = vista ? Math.max(800, (vista.fin + 200 - origen) * escala.px) : 800;
+  // Con la distribución del fin, el eje llega hasta la última fecha simulada.
+  const distFin = calculados.distribucionFin;
+  const finEje = vista ? Math.max(vista.fin, distFin ? distFin.desde + 7 * distFin.semanas.length : -Infinity) : 0;
+  const anchoTotal = vista ? Math.max(800, (finEje + 200 - origen) * escala.px) : 800;
   const altoTotal = AE + filas.length * G.altoFila + 40;
   const [tam, setTam] = useState({ ancho: 600, alto: 400 });
   const cuadro = useRef(0);
@@ -260,7 +266,7 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   useLayoutEffect(() => {
     if (!vista || ajustado.current || !linea.current) return;
     ajustado.current = true;
-    const a = ajustarTodo(vista.inicio, vista.fin, Math.max(300, linea.current.clientWidth - 40));
+    const a = ajustarTodo(vista.inicio, finEje, Math.max(300, linea.current.clientWidth - 40));
     setPx(a.px);
     requestAnimationFrame(() => {
       if (linea.current) linea.current.scrollLeft = Math.max(0, (a.origen - (vista.inicio - 30)) * a.px);
@@ -290,12 +296,12 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
   const ajustarTodoAhora = useCallback(() => {
     const el = linea.current;
     if (!el || !vista) return;
-    const a = ajustarTodo(vista.inicio, vista.fin, Math.max(300, el.clientWidth - 40));
+    const a = ajustarTodo(vista.inicio, finEje, Math.max(300, el.clientWidth - 40));
     setPx(a.px);
     requestAnimationFrame(() => {
       if (linea.current) linea.current.scrollLeft = Math.max(0, (a.origen - origen) * a.px);
     });
-  }, [vista, origen]);
+  }, [vista, origen, finEje]);
 
   const irA = useCallback((serie: number) => {
     const el = linea.current;
@@ -367,6 +373,22 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     flechas.current = dibujar(ctx, e);
+    const cd = lienzoDist.current;
+    const dist = calculados.distribucionFin;
+    if (cd && dist) {
+      const alto = ALTO_DISTRIBUCION;
+      if (cd.width !== Math.round(e.ancho * dpr) || cd.height !== Math.round(alto * dpr)) {
+        cd.width = Math.round(e.ancho * dpr);
+        cd.height = Math.round(alto * dpr);
+        cd.style.width = `${e.ancho}px`;
+        cd.style.height = `${alto}px`;
+      }
+      const c2 = cd.getContext('2d');
+      if (c2) {
+        c2.setTransform(dpr, 0, 0, dpr, 0, 0);
+        dibujarDistribucion(c2, { dist, escala, scrollLeft: e.scrollLeft, ancho: e.ancho, alto, meta: calculados.modelo.configuracion.fechaMeta ?? null });
+      }
+    }
   };
   useLayoutEffect(() => pintar.current());
 
@@ -821,6 +843,11 @@ export function Gantt({ datos, editable, estado, alOperar, alDeshacer, alRehacer
         </div>
       </div>
 
+      {calculados.distribucionFin && (
+        <DistribucionBajoGantt dist={calculados.distribucionFin} meta={calculados.modelo.configuracion.fechaMeta ?? null}
+          anchoIzquierda={anchoGrid + 5} ver={verDistribucion} alCambiar={setVerDistribucion} lienzo={lienzoDist} />
+      )}
+
       <div className="gantt-pie">
         <div className="gantt-detalles">
           <div className="gantt-pie-titulo">
@@ -1213,6 +1240,34 @@ function Leyenda({ hayQrsa, rutas, calor }: { hayQrsa: boolean; rutas: boolean; 
         {rutas && <li>Rutas de holgura: {COLORES_RUTA.slice(0, 5).map((c, i) => <span key={c} style={{ color: c, fontWeight: 700, marginRight: 4 }}>{i + 1}</span>)}… (gris: más allá de la 10)</li>}
         {calor && <li>Criticidad: {[0, 0.25, 0.5, 0.75, 1].map((x) => <span key={x} className="ley-barra" style={{ background: colorCalor(x), width: 14, marginRight: 2 }} title={`${x * 100} %`} />)} 0 % → 100 %</li>}
       </ul>
+    </div>
+  );
+}
+
+const ALTO_DISTRIBUCION = 100;
+
+/**
+ * 06/10: las fechas de fin posibles bajo el Gantt, en el mismo eje (se
+ * desplaza con la línea de tiempo). Sale tras simular el cronograma.
+ */
+function DistribucionBajoGantt({ dist, meta, anchoIzquierda, ver, alCambiar, lienzo }: {
+  dist: DistribucionFin; meta: number | null; anchoIzquierda: number; ver: boolean; alCambiar: (v: boolean) => void;
+  lienzo: RefObject<HTMLCanvasElement | null>;
+}) {
+  const pMeta = meta === null ? null : dist.meta?.fecha === meta ? dist.meta.p : probabilidadDeCumplir(dist.cuantiles, meta);
+  return (
+    <div className="gantt-distribucion">
+      <div className="gantt-distribucion-texto" style={{ width: anchoIzquierda }}>
+        <label><input type="checkbox" checked={ver} onChange={(e) => alCambiar(e.target.checked)} /> <b>Fechas de fin posibles</b></label>
+        {ver && (
+          <div className="tenue">
+            {dist.iteraciones.toLocaleString('es-CO')} iteraciones · cada barra, una semana.<br />
+            P50 {textoFecha(dist.p50)} · P80 {textoFecha(dist.p80)}
+            {meta !== null && pMeta !== null && <><br />Meta {textoFecha(meta)}: probabilidad de cumplirla {(100 * pMeta).toLocaleString('es-CO', { maximumFractionDigits: 1 })} %. En naranja, las semanas después de la meta.</>}
+          </div>
+        )}
+      </div>
+      {ver && <canvas ref={lienzo} className="gantt-lienzo-distribucion" aria-label="Distribución de la fecha de fin del proyecto" />}
     </div>
   );
 }

@@ -267,3 +267,9 @@
 }
 .fila-vista { display: flex; justify-content: space-between; gap: 8px; }
 .menu-columnas input[type='text'] { width: 100%; margin-bottom: 4px; }
+
+/* 06/10: la distribución del fin bajo la línea de tiempo. */
+.gantt-distribucion { display: flex; border: 1px solid #d4d4d4; border-top: 0; background: #fff; color: #262626; }
+.gantt-distribucion-texto { flex: 0 0 auto; padding: 6px 8px; box-sizing: border-box; font-size: 12px; line-height: 1.4; border-right: 1px solid #d4d4d4; }
+.gantt-distribucion-texto .tenue { color: #616161; }
+.gantt-lienzo-distribucion { display: block; }

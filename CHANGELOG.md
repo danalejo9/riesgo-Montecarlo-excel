@@ -5,6 +5,38 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Ronda Q del usuario: Configuración y Resultados unificados, fechas de fin bajo el Gantt (2026-10-06)
+
+**Añadido**
+- **⚙ Configuración → «Simulación del cronograma»** (solo en un libro de
+  cronograma): iteraciones (1, 5, 10, 50 mil, Automático u otra cantidad),
+  semilla y muestreo. Se escriben en la hoja Config (B4–B6): un solo sitio
+  para cambiarlos (`excel/ajustesCronograma.ts`). Antes se cambiaban en ⚙ y
+  el cronograma seguía con los de la hoja (prueba Q14).
+- **Los resultados del cronograma van a la pestaña Resultados**, como los
+  del modelo; al simular, el panel salta a Resultados. Con los dos simulados,
+  «Ver los resultados de: Modelo · Cronograma». Cabecera con iteraciones,
+  semilla y muestreo; el aviso de iteraciones automáticas, a la vista (Q21);
+  botón Ver Gantt.
+- **Fechas de fin posibles bajo el Gantt** (como la demostración animada):
+  histograma semanal del fin en el mismo eje de las barras, azul hasta la
+  meta y naranja después, P50, P80, meta y su probabilidad
+  (`distribucionFinDe`, `dibujarDistribucion`).
+
+**Cambiado**
+- Progreso de la simulación del cronograma: «Simulación: 3.000 de 5.000» y
+  después «tornado y antes/después de mitigar: vuelta 2 de 6» (antes «7.000
+  de 35.000 iteraciones», que parecía que simulaba 35.000).
+- Avisos de correlación con coma decimal («0,5 y 0,9»).
+- Guía Q9–Q26 reescrita con la hoja, la celda y la sección exactas de cada
+  paso y los valores esperados calculados (Q20 con una rama que sí cambia
+  los resultados: P80 07/02/2028, meta 75,2 %). GT31–GT33 nuevas.
+
+**Corregido**
+- La ventana del Gantt se quedaba en «Leyendo el cronograma…» la primera
+  vez: el aviso de que estaba lista podía llegar antes de que el panel la
+  escuchara. Ahora la ventana lo vuelve a pedir.
+
 ### Diagnóstico del arranque (2026-10-06)
 
 **Corregido**

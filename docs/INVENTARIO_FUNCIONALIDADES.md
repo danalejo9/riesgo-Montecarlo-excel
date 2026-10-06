@@ -188,9 +188,10 @@ Especificación en `docs/QRSA_ESPECIFICACION.md`, plan en `docs/QRSA_PLAN.md`.
 | Fase | Qué | Estado |
 |---|---|---|
 | Q0 | Decisiones (motor CPM propio, calendarios, desfases, redondeo) y cronogramas de referencia R1–R3 | ✅ decidido; falta tu comprobación en ProjectLibre (guía Q1–Q4) |
-| Q1 | Libro de cronograma, CPM, simulación, calidad, salidas, pestaña y cinta | ✅ en código; falta tu prueba (guía Q5–Q14) |
-| Q2 | Costos (fijos, por tiempo, por recurso), correlación por grupos y Higham, pre/post mitigación, JCL, factores por grupo, MS Project XML | ✅ en código; falta tu prueba (guía Q15–Q24) |
-| Q3 | XER de Primavera, rutas críticas frecuentes, ramificación, escalamiento, cronograma P80, informe ejecutivo, convergencia automática | ✅ en código; falta tu prueba (guía Q19–Q26) |
+| Q1 | Libro de cronograma, CPM, simulación, calidad, salidas, pestaña y cinta | ✅ probado por ti el 06/10 (Q5–Q13 OK); Q14 rehecha: iteraciones desde ⚙ |
+| Q2 | Costos (fijos, por tiempo, por recurso), correlación por grupos y Higham, pre/post mitigación, JCL, factores por grupo, MS Project XML | ✅ probado el 06/10 (Q15–Q17, Q22–Q24 OK); repetir Q18 con la guía nueva |
+| Q3 | XER de Primavera, rutas críticas frecuentes, ramificación, escalamiento, cronograma P80, informe ejecutivo, convergencia automática | ✅ probado el 06/10 (Q19, Q25 OK); repetir Q20 y Q21 con la guía nueva |
+| Q4 | Ronda del 06/10: Configuración (⚙) controla iteraciones, semilla y muestreo del cronograma (hoja Config); resultados del cronograma en la pestaña Resultados (selector Modelo/Cronograma); progreso que separa simulación y tornado | ✅ en código; falta tu prueba (guía GT33) |
 
 ### Bloque G: diagrama de Gantt con diagnóstico de ruta crítica — G1, G2 y G3 ✅ en código (05/10 y 06/10)
 
@@ -201,6 +202,8 @@ Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 | G1 | Vista compacta en el panel y pestaña Gantt en la ventana: grid, escala de dos niveles con zoom, barras de tarea, hito y resumen, flechas de los 4 tipos, crítica y casi crítica, holgura, tooltip, no laborables, líneas de hoy, inicio, fin y meta, filtro de ruta crítica, leyenda, botón Gantt en la cinta | ✅ en código; falta tu prueba (guía GT1–GT7) |
 | G2 | Edición en grid y en barras, vínculos arrastrando, insertar, borrar, sangría, mover, deshacer y rehacer, automático/manual, ruta más larga frente a holgura total, ruta impulsora, «¿por qué es crítica?», calidad con semáforo e ícono por fila | ✅ en código; falta tu prueba (guía GT8–GT18) |
 | G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | ✅ en código; falta tu prueba (guía GT19–GT30) |
+| G4 | Fechas de fin posibles bajo el Gantt (histograma semanal en el mismo eje, P50, P80, meta), la ventana carga a la primera | ✅ en código; falta tu prueba (guía GT31–GT32) |
+| G5 | Editor de calendarios en ventana (propuesto el 06/10, en espera de tu decisión) | Propuesto |
 
 ### Después de la versión 1.0
 

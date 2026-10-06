@@ -133,7 +133,8 @@ export interface SimulacionCronograma {
 }
 
 export interface OpcionesSimulacion {
-  progreso?: (hecho: number, total: number) => void;
+  /** `iteraciones`: las de la simulación principal; el resto de `total` son las vueltas del tornado y de «después de mitigar». */
+  progreso?: (hecho: number, total: number, iteraciones: number) => void;
   senal?: AbortSignal;
 }
 
@@ -337,7 +338,7 @@ function correlacionar(
     if (!(rho >= -1 && rho <= 1)) throw new ErrorModeloCronograma('Correlaciones', origen, `el coeficiente tiene que estar entre −1 y 1 (${rho})`);
     const k = clave(a, b);
     const previo = pares.get(k);
-    if (previo && previo.rho !== rho) avisos.push(`La correlación entre ${a} y ${b} está dos veces (${previo.rho} y ${rho}); se usa ${rho}.`);
+    if (previo && previo.rho !== rho) avisos.push(`La correlación entre ${a} y ${b} está dos veces (${coma(previo.rho)} y ${coma(rho)}); se usa ${coma(rho)}.`);
     pares.set(k, { a, b, rho });
   };
   for (const g of modelo.gruposCorrelacion ?? []) {
@@ -404,7 +405,7 @@ function correlacionar(
     }
     const corr = correlacionMasCercana(objetivo);
     if (corr.cambioMaximo > 0) {
-      avisos.push(`Las correlaciones entre ${ids.join(', ')} no pueden darse a la vez; se usó la matriz posible más cercana (Higham): el coeficiente que más cambió, ${Math.round(corr.cambioMaximo * 100) / 100}.`);
+      avisos.push(`Las correlaciones entre ${ids.join(', ')} no pueden darse a la vez; se usó la matriz posible más cercana (Higham): el coeficiente que más cambió, ${coma(Math.round(corr.cambioMaximo * 100) / 100)}.`);
     }
     const nuevos = correlacionarImanConover(ids.map((id) => muestraDe.get(id) as Float64Array), corr.matriz, semilla, `cronograma|${ids.join('|')}`);
     ids.forEach((id, i) => (asignar.get(id) as (b: Float64Array) => void)(nuevos[i] as Float64Array));
@@ -614,6 +615,9 @@ function duracionesBase(pre: Preparado): Float64Array {
   return d;
 }
 
+/** Un número para un aviso, con coma decimal. */
+const coma = (x: number) => x.toLocaleString('es-CO', { maximumFractionDigits: 4 });
+
 export async function simularCronograma(modelo: ModeloCronograma, opciones: OpcionesSimulacion = {}): Promise<SimulacionCronograma> {
   const t0 = performance.now();
   const cfg = modelo.configuracion;
@@ -629,9 +633,10 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
 
   let hecho = 0;
   let total = 0;
+  let iteraciones = 0;
   const avanzar = (k: number) => {
     hecho += k;
-    opciones.progreso?.(Math.min(hecho, total), total);
+    opciones.progreso?.(Math.min(hecho, total), total, iteraciones);
   };
 
   // Iteraciones automáticas: se sube hasta que el P80 se estabiliza.
@@ -645,6 +650,7 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
     hitos = hitosASeguir(modelo, red, pre.riesgoInsertado);
     hecho = 0;
     total = n * (1 + extra);
+    iteraciones = n;
     principal = await correr(modelo, pre, { quitar: -1, post: false, completa: true }, hitos, avanzar, opciones.senal);
     if (!cfg.iteracionesAutomaticas) break;
     const conv = convergenciaP80(principal.finDias);

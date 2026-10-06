@@ -178,6 +178,22 @@ export async function leerHojasCronograma(): Promise<Record<string, MatrizHoja |
   });
 }
 
+/** Solo la hoja Config, o `null` si el libro no es de cronograma (para Configuración). */
+export async function leerHojaConfig(): Promise<MatrizHoja | null> {
+  return Excel.run(async (context) => {
+    const hoja = context.workbook.worksheets.getItemOrNullObject(HOJAS_CRONOGRAMA.config);
+    const rango = hoja.getUsedRangeOrNullObject(true);
+    hoja.load('isNullObject');
+    rango.load(['isNullObject', 'values', 'rowIndex', 'columnIndex']);
+    await context.sync();
+    if (hoja.isNullObject) return null;
+    if (rango.isNullObject) return [];
+    const filas: unknown[][] = Array.from({ length: rango.rowIndex }, () => []);
+    for (const f of rango.values) filas.push([...Array.from({ length: rango.columnIndex }, () => null), ...f]);
+    return filas;
+  });
+}
+
 /** Selecciona una celda (para llevar al usuario a un error). */
 export async function irACelda(hoja: string, columna: string, fila: number): Promise<void> {
   await Excel.run(async (context) => {

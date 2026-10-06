@@ -1408,6 +1408,20 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     9090) y arranque limpio en la guía, sección 0. **Siguiente**: que el
     usuario confirme que Excel abre con la pestaña Riesgo y siga con la
     ronda (R1–R4, GT1–GT30).
+82. [x] **Ronda Q del usuario (Q5–Q26, 2026-10-06)**. OK: Q5–Q13, Q15–Q17,
+    Q19, Q22–Q25; Q26 no aplica. No se podían seguir: Q14 (cambiaba las
+    iteraciones en ⚙ y el cronograma usaba Config), Q18 y Q20 (la rama de
+    la guía era con actividades sin criticidad: nada cambiaba), Q21 (el
+    aviso estaba en un desplegable cerrado). Hecho: ⚙ «Simulación del
+    cronograma» escribe en Config (`excel/ajustesCronograma.ts`); resultados
+    del cronograma en la pestaña Resultados por portal (`contenedorResultados`
+    en `Cronograma.tsx`, selector en `Panel.tsx`); progreso por fases;
+    fechas de fin bajo el Gantt (`distribucionFinDe`, `dibujarDistribucion`,
+    `DistribucionBajoGantt`); la ventana reintenta `gantt-releer`. Guía Q9–Q26
+    reescrita con ubicaciones exactas; GT31–GT33. Propuestas del usuario
+    pendientes de decisión: editor de calendarios (y otras tablas) en
+    ventana; animación de iteraciones en el Gantt. **Siguiente**: el usuario
+    repite Q14, Q18, Q20, Q21 y hace GT1–GT33 y R1–R4.
 
 **Siguiente acción al retomar**, en orden de valor:
 
