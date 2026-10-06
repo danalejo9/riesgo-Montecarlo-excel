@@ -145,6 +145,10 @@ npm start
   al escribir `=RIESGO.MEDIA` Excel no la propone, cierra Excel, repite
   `npm run stop` y `npm start` y vuelve a abrir el libro.
 
+> **06/10: corregido el cierre de Excel al cargar el complemento** (el menú
+> del clic derecho estaba mal colocado en el manifiesto; ahora es 0.9.1.0).
+> Tras el `git pull`, haz el arranque limpio de abajo una vez.
+
 ### Si Excel se cierra solo, no aparece la pestaña Riesgo o el panel dice «The service is unavailable»
 
 *Añadido el 06/10.* Arranque limpio, en este orden:

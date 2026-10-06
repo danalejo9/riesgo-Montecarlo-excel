@@ -7,6 +7,12 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ### Diagnóstico del arranque (2026-10-06)
 
+**Corregido**
+- **Excel para Windows se cerraba al cargar el complemento** (desde U3.5,
+  29/09): el menú del clic derecho (`ExtensionPoint` ContextMenu) estaba en
+  `<AllFormFactors>`, donde Office solo admite las funciones personalizadas.
+  Pasa a `<DesktopFormFactor>`, tras la cinta. Manifiesto 0.9.1.0.
+
 **Añadido**
 - `npm run revisar` (`scripts/revisar-entorno.mjs`): antes de abrir Excel
   comprueba los certificados de desarrollo y qué responde en el puerto 9090

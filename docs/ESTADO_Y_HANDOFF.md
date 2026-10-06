@@ -1400,6 +1400,14 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     avance; filtros, orden y vistas guardables. Probado en el banco de punta
     a punta. **Siguiente**: el usuario recorre R1–R4 y GT19–GT30; después,
     los idiomas (propuesta en la respuesta del 06/10).
+81. [x] **Excel se cerraba al cargar el complemento (2026-10-06)**. El
+    usuario no podía arrancar: `npm start` abría Excel y se cerraba. Causa:
+    el menú del clic derecho (U3.5, 29/09) estaba en `<AllFormFactors>`,
+    que solo admite funciones personalizadas; pasa a `<DesktopFormFactor>`
+    (manifiesto 0.9.1.0). Nuevo `npm run revisar` (certificados y puerto
+    9090) y arranque limpio en la guía, sección 0. **Siguiente**: que el
+    usuario confirme que Excel abre con la pestaña Riesgo y siga con la
+    ronda (R1–R4, GT1–GT30).
 
 **Siguiente acción al retomar**, en orden de valor:
 

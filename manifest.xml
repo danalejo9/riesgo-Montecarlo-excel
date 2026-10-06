@@ -40,7 +40,7 @@
           xsi:type="TaskPaneApp">
 
   <Id>6c55c606-966a-443c-b0af-ad9b854af48f</Id>
-  <Version>0.9.0.0</Version>
+  <Version>0.9.1.0</Version>
   <ProviderName>Riesgo Monte Carlo</ProviderName>
   <DefaultLocale>es-ES</DefaultLocale>
   <DisplayName DefaultValue="Riesgo Monte Carlo" />
@@ -96,59 +96,6 @@
               <SourceLocation resid="Funciones.Metadata.Url" />
             </Metadata>
             <Namespace resid="Funciones.Namespace" />
-          </ExtensionPoint>
-          <!--
-            U3.5: el menú del clic derecho en una celda. Las mismas acciones de
-            la cinta (runtime compartido): marcar sin abrir el panel y abrir el
-            explorador. En un menú contextual solo se admite un control Menu.
-          -->
-          <ExtensionPoint xsi:type="ContextMenu">
-            <OfficeMenu id="ContextMenuCell">
-              <Control xsi:type="Menu" id="menuContextual">
-                <Label resid="menuContextual.Label" />
-                <Supertip>
-                  <Title resid="menuContextual.Label" />
-                  <Description resid="menuContextual.Tooltip" />
-                </Supertip>
-                <Icon>
-                  <bt:Image size="16" resid="Icono.16" />
-                  <bt:Image size="32" resid="Icono.32" />
-                  <bt:Image size="80" resid="Icono.80" />
-                </Icon>
-                <Items>
-                  <Item id="ctxEntrada">
-                    <Label resid="ctxEntrada.Label" />
-                    <Supertip>
-                      <Title resid="ctxEntrada.Label" />
-                      <Description resid="ctxEntrada.Tooltip" />
-                    </Supertip>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>marcarEntrada</FunctionName>
-                    </Action>
-                  </Item>
-                  <Item id="ctxSalida">
-                    <Label resid="ctxSalida.Label" />
-                    <Supertip>
-                      <Title resid="ctxSalida.Label" />
-                      <Description resid="ctxSalida.Tooltip" />
-                    </Supertip>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>marcarSalida</FunctionName>
-                    </Action>
-                  </Item>
-                  <Item id="ctxDistribucion">
-                    <Label resid="ctxDistribucion.Label" />
-                    <Supertip>
-                      <Title resid="ctxDistribucion.Label" />
-                      <Description resid="ctxDistribucion.Tooltip" />
-                    </Supertip>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>verDistribucion</FunctionName>
-                    </Action>
-                  </Item>
-                </Items>
-              </Control>
-            </OfficeMenu>
           </ExtensionPoint>
         </AllFormFactors>
         <DesktopFormFactor>
@@ -702,6 +649,62 @@
               </Group>
               <Label resid="PestanaRiesgo.Label" />
             </CustomTab>
+          </ExtensionPoint>
+          <!--
+            U3.5: el menú del clic derecho en una celda. Las mismas acciones de
+            la cinta (runtime compartido): marcar sin abrir el panel y abrir el
+            explorador. En un menú contextual solo se admite un control Menu.
+            Va en DesktopFormFactor: en AllFormFactors solo se admiten las
+            funciones personalizadas, y ahí Excel para Windows se cerraba al
+            cargar el complemento (06/10).
+          -->
+          <ExtensionPoint xsi:type="ContextMenu">
+            <OfficeMenu id="ContextMenuCell">
+              <Control xsi:type="Menu" id="menuContextual">
+                <Label resid="menuContextual.Label" />
+                <Supertip>
+                  <Title resid="menuContextual.Label" />
+                  <Description resid="menuContextual.Tooltip" />
+                </Supertip>
+                <Icon>
+                  <bt:Image size="16" resid="Icono.16" />
+                  <bt:Image size="32" resid="Icono.32" />
+                  <bt:Image size="80" resid="Icono.80" />
+                </Icon>
+                <Items>
+                  <Item id="ctxEntrada">
+                    <Label resid="ctxEntrada.Label" />
+                    <Supertip>
+                      <Title resid="ctxEntrada.Label" />
+                      <Description resid="ctxEntrada.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>marcarEntrada</FunctionName>
+                    </Action>
+                  </Item>
+                  <Item id="ctxSalida">
+                    <Label resid="ctxSalida.Label" />
+                    <Supertip>
+                      <Title resid="ctxSalida.Label" />
+                      <Description resid="ctxSalida.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>marcarSalida</FunctionName>
+                    </Action>
+                  </Item>
+                  <Item id="ctxDistribucion">
+                    <Label resid="ctxDistribucion.Label" />
+                    <Supertip>
+                      <Title resid="ctxDistribucion.Label" />
+                      <Description resid="ctxDistribucion.Tooltip" />
+                    </Supertip>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>verDistribucion</FunctionName>
+                    </Action>
+                  </Item>
+                </Items>
+              </Control>
+            </OfficeMenu>
           </ExtensionPoint>
         </DesktopFormFactor>
       </Host>
