@@ -1422,6 +1422,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     pendientes de decisión: editor de calendarios (y otras tablas) en
     ventana; animación de iteraciones en el Gantt. **Siguiente**: el usuario
     repite Q14, Q18, Q20, Q21 y hace GT1–GT33 y R1–R4.
+83. [x] **Editores en ventana (2026-10-06)**, pedidos por el usuario
+    (no quiso la animación del Gantt). `excel/editoresCronograma.ts`
+    (leerEditores, cambiosDe con bloques «rango», revisarPedido,
+    erroresTrasGuardar con `leerCronograma`, festivos de Colombia,
+    calendariosEnUso); `ControlGantt.guardarEditor` (mismo historial);
+    `ui/editores/` (EditorCalendarios, EditorRiesgos, EditorRamas,
+    comunes); pestañas Calendarios, Riesgos y Ramas en `explorador.tsx`;
+    botones en la pestaña Cronograma (`abrirVentanaCronograma`). Probado en
+    el banco de punta a punta (renombrar, festivo, R3, impacto, rama,
+    deshacer). Guía GT34–GT37. **Siguiente**: que el usuario defina qué
+    mejoras visuales valen la pena (lista en la respuesta del 06/10).
 
 **Siguiente acción al retomar**, en orden de valor:
 

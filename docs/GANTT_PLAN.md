@@ -190,3 +190,8 @@ de Resultados); «Ajustar todo» llega hasta la última fecha simulada. La
 ventana vuelve a pedir el cronograma si el primer aviso se pierde (se
 quedaba en «Leyendo el cronograma…»). Guía GT31–GT32.
 
+**06/10, editores en ventana.** Junto a la pestaña Gantt, Calendarios,
+Riesgos y Ramas: formularios que leen las hojas y, al guardar, reescriben
+el bloque con un cambio «rango» validado con `leerCronograma`; el mismo
+historial (Deshacer) que el Gantt. La animación de iteraciones se descartó.
+

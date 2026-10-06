@@ -270,6 +270,16 @@ export async function aplicarCambiosEnLibro(cambios: readonly CambioHoja[]): Pro
       const h = hoja(c.hoja);
       if (c.op === 'celda') {
         h.getRangeByIndexes(c.fila, c.col, 1, 1).values = [[(c.valor ?? '') as string | number | boolean]];
+      } else if (c.op === 'rango') {
+        if (!c.valores.length || !c.valores[0]?.length) continue;
+        const alto = c.valores.length;
+        const ancho = Math.max(...c.valores.map((f) => f.length));
+        const r = h.getRangeByIndexes(c.fila, c.col, alto, ancho);
+        r.values = c.valores.map((f) => Array.from({ length: ancho }, (_, j) => (f[j] ?? '') as string | number | boolean));
+        for (const [k, formato] of Object.entries(c.formatos ?? {})) {
+          // Desde la fila 2: el encabezado se queda como texto.
+          if (alto > 1) h.getRangeByIndexes(c.fila + 1, c.col + Number(k), alto - 1, 1).numberFormat = Array.from({ length: alto - 1 }, () => [formato]);
+        }
       } else if (c.op === 'insertar') {
         h.getRangeByIndexes(c.fila, 0, 1, 1).getEntireRow().insert(Excel.InsertShiftDirection.down);
         if (c.valores.length) h.getRangeByIndexes(c.fila, 0, 1, c.valores.length).values = [c.valores.map((v) => (v ?? '') as string | number | boolean)];

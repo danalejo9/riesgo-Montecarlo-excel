@@ -17,6 +17,11 @@ import { CurvaAcumulada, Histograma } from './Resultados.tsx';
 import { Gantt } from './gantt/Gantt.tsx';
 import { ESTADO_INICIAL, type DatosGantt, type EstadoEdicion } from '../excel/gantt.ts';
 import type { OperacionGantt } from '../excel/edicionGantt.ts';
+import type { DatosEditores, PedidoGuardar } from '../excel/editoresCronograma.ts';
+import { EditorCalendarios } from './editores/EditorCalendarios.tsx';
+import { EditorRamas } from './editores/EditorRamas.tsx';
+import { EditorRiesgos } from './editores/EditorRiesgos.tsx';
+import './editores/editores.css';
 import './estilos.css';
 import './explorador.css';
 
@@ -33,9 +38,16 @@ interface Mensaje {
   /** G1/G2: el cronograma para el Gantt y cómo va la edición. */
   gantt?: DatosGantt;
   estadoGantt?: EstadoEdicion;
+  /** 06/10: calendarios, riesgos y ramas para sus editores. */
+  editores?: DatosEditores;
 }
 
-type Pestana = 'distribucion' | 'lista' | 'gantt';
+type Pestana = 'distribucion' | 'lista' | 'gantt' | 'calendarios' | 'riesgos' | 'ramas';
+const PESTANAS: readonly Pestana[] = ['distribucion', 'lista', 'gantt', 'calendarios', 'riesgos', 'ramas'];
+const NOMBRES: Record<Pestana, string> = {
+  distribucion: 'Distribución', lista: 'Entradas y salidas', gantt: 'Gantt', calendarios: 'Calendarios', riesgos: 'Riesgos', ramas: 'Ramas',
+};
+const DE_CRONOGRAMA = new Set<Pestana>(['gantt', 'calendarios', 'riesgos', 'ramas']);
 
 function comoMensaje(d: unknown): Mensaje | null {
   const m = d as Mensaje | null;
@@ -45,7 +57,8 @@ function comoMensaje(d: unknown): Mensaje | null {
     ...(vistaValida ? { vista: m.vista, comparables: Array.isArray(m.comparables) ? m.comparables : [] } : {}),
     ...(typeof m.motivo === 'string' ? { motivo: m.motivo } : {}),
     ...(m.lista && Array.isArray(m.lista.entradas) ? { lista: m.lista } : {}),
-    ...(m.pestana === 'lista' || m.pestana === 'distribucion' || m.pestana === 'gantt' ? { pestana: m.pestana } : {}),
+    ...(m.pestana && PESTANAS.includes(m.pestana) ? { pestana: m.pestana } : {}),
+    ...(m.editores && Array.isArray(m.editores.riesgos) && m.editores.calendarios ? { editores: m.editores } : {}),
     ...(m.gantt && m.gantt.version === 1 && Array.isArray(m.gantt.orden) ? { gantt: m.gantt } : {}),
     ...(m.estadoGantt && typeof m.estadoGantt === 'object' ? { estadoGantt: m.estadoGantt } : {}),
   };
@@ -59,6 +72,7 @@ function Explorador() {
   const [pestana, setPestana] = useState<Pestana>('distribucion');
   const [gantt, setGantt] = useState<DatosGantt | null>(null);
   const [estadoGantt, setEstadoGantt] = useState<EstadoEdicion>(ESTADO_INICIAL);
+  const [editores, setEditores] = useState<DatosEditores | null>(null);
   const [comparables, setComparables] = useState<Comparable[]>([]);
   /** V3: la distribución superpuesta (su id); se conserva al cambiar de celda si sigue disponible. */
   const [comparar, setComparar] = useState<string>('');
@@ -70,6 +84,7 @@ function Explorador() {
       if (m.pestana) setPestana(m.pestana);
       if (m.gantt) setGantt(m.gantt);
       if (m.estadoGantt) setEstadoGantt(m.estadoGantt);
+      if (m.editores) setEditores(m.editores);
       if (m.vista) {
         const v = m.vista;
         setVista(v);
@@ -92,7 +107,7 @@ function Explorador() {
   // Office puede perder el primer aviso («listo») si llega antes de que el
   // panel escuche la ventana: mientras falte el cronograma, se vuelve a pedir
   // (prueba GT2 del 06/10: se quedaba en «Leyendo el cronograma…»).
-  const sinCronograma = pestana === 'gantt' && !gantt && !estadoGantt.error;
+  const sinCronograma = DE_CRONOGRAMA.has(pestana) && (pestana === 'gantt' ? !gantt : !editores) && !estadoGantt.error;
   useEffect(() => {
     if (!sinCronograma) return;
     let veces = 0;
@@ -105,16 +120,35 @@ function Explorador() {
 
   const pestanas = (
     <nav className="pestanas pestanas-ventana">
-      {(['distribucion', 'lista', 'gantt'] as const).map((p) => (
-        <button key={p} type="button" className={p === pestana ? 'activa' : ''} onClick={() => {
+      {PESTANAS.map((p) => (
+        <button key={p} type="button" className={`${p === pestana ? 'activa' : ''}${p === 'gantt' ? ' separada' : ''}`} onClick={() => {
           setPestana(p);
-          if (p === 'gantt' && !gantt) hablarAlPanel('explorador.html', { accion: 'gantt-releer' });
+          if (DE_CRONOGRAMA.has(p) && (p === 'gantt' ? !gantt : !editores)) hablarAlPanel('explorador.html', { accion: 'gantt-releer' });
         }}>
-          {p === 'distribucion' ? 'Distribución' : p === 'lista' ? 'Entradas y salidas' : 'Gantt'}
+          {NOMBRES[p]}
         </button>
       ))}
     </nav>
   );
+  if (pestana === 'calendarios' || pestana === 'riesgos' || pestana === 'ramas') {
+    const guardar = (pedido: PedidoGuardar) => {
+      setEstadoGantt((e) => ({ ...e, ocupado: true, error: null, mensaje: null }));
+      hablarAlPanel('explorador.html', { accion: 'editores-guardar', pedido });
+    };
+    const deshacer = () => {
+      setEstadoGantt((e) => ({ ...e, ocupado: true, error: null, mensaje: null }));
+      hablarAlPanel('explorador.html', { accion: 'gantt-deshacer' });
+    };
+    return (
+      <main className="explorador ventana-gantt">
+        {pestanas}
+        {!editores ? <p className={estadoGantt.error ? 'aviso-error' : 'tenue'}>{estadoGantt.error ?? 'Leyendo las hojas del cronograma…'}</p>
+          : pestana === 'calendarios' ? <EditorCalendarios datos={editores} estado={estadoGantt} alGuardar={(datos) => guardar({ tipo: 'calendarios', datos })} alDeshacer={deshacer} />
+          : pestana === 'riesgos' ? <EditorRiesgos datos={editores} estado={estadoGantt} alGuardar={(datos) => guardar({ tipo: 'riesgos', datos })} alDeshacer={deshacer} />
+          : <EditorRamas datos={editores} estado={estadoGantt} alGuardar={(datos) => guardar({ tipo: 'ramas', datos })} alDeshacer={deshacer} />}
+      </main>
+    );
+  }
   if (pestana === 'gantt') {
     const pedir = (d: object) => {
       setEstadoGantt((e) => ({ ...e, ocupado: true, error: null, mensaje: null }));

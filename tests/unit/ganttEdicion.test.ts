@@ -182,4 +182,25 @@ describe('control del panel (leer, editar, deshacer)', () => {
     expect(r5.estadoGantt.error).toMatch(/cambiaron fuera del Gantt/);
     expect(r5.estadoGantt.deshacer).toBeNull();
   });
+
+  it('los editores guardan en el mismo historial; lo que dejaría la hoja con errores no se escribe', async () => {
+    const { ControlGantt } = await import('../../ui/gantt/controlGantt.ts');
+    let libro = ejemplo();
+    const c = new ControlGantt(async () => libro, async (cambios) => { libro = aplicarCambios(libro, cambios) as Hojas; });
+    const r0 = await c.leer();
+    expect(r0.editores?.riesgos).toHaveLength(4);
+    const riesgos = r0.editores!.riesgos.map((r) => (r.id === 'R3' ? { ...r, probabilidad: 0.3 } : r));
+    const r1 = await c.guardarEditor({ tipo: 'riesgos', datos: riesgos });
+    expect(r1.estadoGantt.error).toBeNull();
+    expect(r1.estadoGantt.deshacer).toBe('Editar los riesgos');
+    expect(r1.editores?.riesgos.find((r) => r.id === 'R3')?.probabilidad).toBe(0.3);
+    await c.deshacer();
+    expect((await c.leer()).editores?.riesgos.find((r) => r.id === 'R3')?.probabilidad).toBe(0.1);
+    // Quitar el calendario que usa E: no se escribe.
+    const antes = JSON.stringify(libro);
+    const cal = r0.editores!.calendarios;
+    const r2 = await c.guardarEditor({ tipo: 'calendarios', datos: { ...cal, calendarios: cal.calendarios.slice(0, 1) } });
+    expect(r2.estadoGantt.error).toMatch(/No se guardó/);
+    expect(JSON.stringify(libro)).toBe(antes);
+  });
 });

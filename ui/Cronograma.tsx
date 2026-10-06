@@ -21,7 +21,7 @@ import {
 import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
-import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
+import { abrirVentanaCronograma, ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
@@ -271,6 +271,15 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           title="Un XML de MS Project (o de ProjectLibre) o un XER de Primavera P6">
           Importar MS Project o P6…
         </button>
+      </div>
+      <div className="botonera">
+        <span className="tenue">Editar en una ventana:</span>
+        <button type="button" className="secundario" onClick={() => abrirVentanaCronograma('calendarios')} disabled={faltan}
+          title="Días laborables, festivos y excepciones, con un año a la vista">Calendarios…</button>
+        <button type="button" className="secundario" onClick={() => abrirVentanaCronograma('riesgos')} disabled={faltan}
+          title="Cada riesgo con sus impactos y su mitigación, en un formulario">Riesgos…</button>
+        <button type="button" className="secundario" onClick={() => abrirVentanaCronograma('ramas')} disabled={faltan}
+          title="Opciones que aún no se conocen, con su probabilidad y sus actividades">Ramas…</button>
         <input ref={archivo} type="file" accept=".xml,.xer" hidden onChange={(e) => {
           const f = e.target.files?.[0];
           e.target.value = '';

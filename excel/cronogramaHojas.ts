@@ -165,15 +165,15 @@ export function letraColumna(i: number): string {
   return s;
 }
 
-function vacia(v: unknown): boolean {
+export function vacia(v: unknown): boolean {
   return v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 }
 
-function texto(v: unknown): string {
+export function texto(v: unknown): string {
   return vacia(v) ? '' : String(v).trim();
 }
 
-function numero(v: unknown): number | null {
+export function numero(v: unknown): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
   if (typeof v === 'string' && v.trim() !== '') {
     const t = v.trim().replace(/\s/g, '');
@@ -197,7 +197,7 @@ export function fechaDeCelda(v: unknown): number | null {
   return null;
 }
 
-function siNo(v: unknown, porDefecto: boolean): boolean {
+export function siNo(v: unknown, porDefecto: boolean): boolean {
   if (typeof v === 'boolean') return v;
   const t = normalizar(v);
   if (t === '') return porDefecto;
@@ -205,7 +205,7 @@ function siNo(v: unknown, porDefecto: boolean): boolean {
 }
 
 /** Proporción: 0,35 o 35 (%). */
-function proporcion(v: unknown): number | null {
+export function proporcion(v: unknown): number | null {
   const x = numero(v);
   if (x === null) return null;
   return x > 1 && x <= 100 ? x / 100 : x;

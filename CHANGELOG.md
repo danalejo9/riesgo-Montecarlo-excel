@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Editores en ventana: calendarios, riesgos y ramas (2026-10-06)
+
+**Añadido**
+- Pestaña Cronograma → «Editar en una ventana: Calendarios…, Riesgos…,
+  Ramas…»: tres pestañas nuevas en la ventana flotante (junto al Gantt).
+  - **Calendarios**: días laborables de cada calendario, el año a la vista
+    (12 meses; un clic marca o quita un festivo o un día trabajado),
+    festivos y excepciones de ese año editables, «añadir los festivos de
+    Colombia» de varios años sin repetir. Renombrar un calendario lo
+    renombra en Actividades y Config; no deja quitar uno que se usa.
+  - **Riesgos**: lista y formulario por riesgo (descripción, causa,
+    consecuencia, dueño, categoría, probabilidad, estado, modo) con su tabla
+    de impactos (actividad, distribución, días y costo) y la mitigación.
+  - **Ramas**: cada rama con sus opciones, probabilidad, actividades (con
+    lista para añadir) y la suma a la vista.
+- Las hojas siguen siendo la verdad: «Guardar en las hojas» reescribe el
+  bloque (cambio «rango», nuevo en `CambioHoja`), validado antes con el
+  mismo lector que la simulación; queda en el historial del Gantt
+  (Deshacer). `excel/editoresCronograma.ts`, `ui/editores/`.
+
 ### Ronda Q del usuario: Configuración y Resultados unificados, fechas de fin bajo el Gantt (2026-10-06)
 
 **Añadido**

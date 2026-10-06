@@ -57,6 +57,9 @@
 > - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
 >   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
 >   cierra Excel y repite `npm run stop` y `npm start`.
+> - **Nuevo (06/10, editores)**: **GT34 a GT37**, los editores en ventana
+>   de calendarios, riesgos y ramas (pestaña Cronograma → «Editar en una
+>   ventana»).
 > - **Nuevo (06/10, tras tu ronda Q)**: **Q9 a Q26 reescritas** con la hoja,
 >   la celda o la sección exacta de cada paso (repite **Q14, Q18, Q20 y Q21**,
 >   que no se podían seguir) y **GT31 a GT33** (el Gantt carga a la primera,
@@ -1209,6 +1212,68 @@ pasa a 1000. Simula: el panel salta a **Resultados**, que empieza con
 latino». Si en el mismo libro simulas también el modelo (pestaña Modelo →
 Simular), arriba de Resultados aparece «Ver los resultados de: Modelo ·
 Cronograma» para pasar de uno a otro. Vuelve a **5 mil**.
+
+### GT34–GT37. Editores en ventana: calendarios, riesgos y ramas
+
+*Añadido el 06/10.* En un libro de cronograma **nuevo** del ejemplo (inicio
+04/01/2027, meta 31/01/2028). En la pestaña **Cronograma** del panel, debajo
+de los botones, hay una fila «Editar en una ventana: **Calendarios…**,
+**Riesgos…**, **Ramas…**». Cada uno abre la ventana flotante en su pestaña
+(la misma ventana del Gantt: arriba están las pestañas Gantt, Calendarios,
+Riesgos y Ramas). Nada se escribe en las hojas hasta pulsar **Guardar en las
+hojas**, abajo; el pie dice «Cambios sin guardar» o «Igual que las hojas».
+
+**GT34. Calendarios: la vista del año.** Pulsa **Calendarios…**. Esperado:
+arriba, la tabla con «Lunes a viernes» (L a V marcados; «Lo usan: Config
+(calendario del proyecto)», botón Quitar desactivado) y «Lunes a sábado» (L
+a S; «Lo usan: E»). Debajo, el año con los 12 meses: los sábados y domingos
+en gris, los festivos en rojo. Con los botones ‹ › ve al **año 2027**:
+Marzo tiene en rojo el 22 (San José), el 25 y el 26 (Semana Santa).
+
+**GT35. Calendarios: marcar un festivo y renombrar.**
+1. En el año 2027, **Marzo**, pulsa el **1** (lunes): se pone rojo y abajo,
+   en «Festivos y excepciones de 2027», aparece una fila nueva «Festivo».
+   Pulsa el 1 otra vez: se quita. Vuelve a pulsarlo para dejarlo.
+2. En la tabla de arriba cambia el nombre «Lunes a sábado» por `Seis días`.
+3. Pulsa **Guardar en las hojas**. Esperado: «Editar los calendarios:
+   escrito en las hojas Calendario, Actividades.»
+4. En Excel: la hoja **Calendario** tiene en A3 «Seis días» y una fila con
+   la fecha 01/03/2027 «Festivo»; en **Actividades!F9** (calendario de E)
+   dice «Seis días».
+5. Pestaña **Gantt** de la misma ventana: la línea de estado dice **fin
+   23/11/2027** (un día más que el 22/11/2027: el 1 de marzo cae en la
+   licencia, que es crítica).
+6. Vuelve a **Calendarios** y pulsa **Deshacer: Editar los calendarios**:
+   vuelven «Lunes a sábado» y el fin 22/11/2027.
+7. Prueba a quitar «Lunes a sábado» (botón Quitar de su fila): está
+   desactivado porque lo usa E.
+
+**GT36. Riesgos.** Pulsa la pestaña **Riesgos** de la ventana. A la
+izquierda, R1 a R4 con su probabilidad. Pulsa **R3**: a la derecha, su
+formulario (descripción, causa, consecuencia, dueño, categoría,
+probabilidad 10, estado, modo), la tabla de impactos (D · Cimentación,
+Triangular 10 · 20 · 40 días y su costo) y la mitigación.
+1. Cambia **Probabilidad (%)** a `30` y pulsa **Guardar en las hojas**:
+   «Editar los riesgos: escrito en las hojas Riesgos, Impactos». En Excel,
+   **Riesgos!G4** = 30 %.
+2. Simula (panel → Cronograma → Simular cronograma). En Resultados → Fin del
+   proyecto: P50 · P80 = **24/01/2028 · 23/02/2028** y probabilidad de la
+   meta **58,4 %** (antes 65,3 %).
+3. Pulsa **+ Impacto** en R3, elige «E · Estructura», Triangular 2 · 3 · 5:
+   antes de guardar, pon el máximo en `1`: abajo sale en rojo «R3 en E:
+   mínimo ≤ más probable ≤ máximo» y Guardar se desactiva. Pulsa
+   **Descartar los cambios**.
+4. Deja R3 en 10 % (Deshacer o escribiendo 10 y guardando).
+
+**GT37. Ramas.** Pestaña **Ramas** → **+ Rama**. Escribe Rama `Licencia`;
+opción 1 `Trámite normal`, 70, y en «+ actividad…» elige «B · Licencia de
+construcción»; opción 2 `Ya aprobada`, `40`, actividad «C · Adecuación del
+terreno». Esperado: al lado del nombre, en rojo, «Suman 110 % (tienen que
+sumar 100 %)» y Guardar desactivado. Cambia 40 por `30`: «Suman 100 % ✓».
+Guarda: en Excel la hoja **Ramas** tiene las dos filas (Licencia ·
+Trámite normal · 70 % · B; Licencia · Ya aprobada · 30 % · C). Simula: P80
+**07/02/2028** y meta **75,2 %** (como Q20). Deshaz con **Deshacer: Editar
+las ramas** (la hoja Ramas queda solo con el encabezado).
 
 ## A. Lo básico, en la hoja «Modelo»
 

@@ -1,0 +1,53 @@
+/*
+ * Editores en ventana (calendarios, riesgos, ramas). Heredan el aspecto del
+ * panel (estilos.css), parecido a Excel.
+ */
+.editor { display: flex; flex-direction: column; gap: 6px; font-size: 13px; padding-bottom: 8px; }
+.editor section { margin: 4px 0; }
+.editor h2 { margin: 6px 0; }
+.editor h3 { font-size: 13px; margin: 12px 0 4px; }
+.editor input[type='text'], .editor select { width: auto; font-size: 13px; padding: 2px 4px; }
+.tabla-editor { border-collapse: collapse; margin: 4px 0; }
+.tabla-editor th, .tabla-editor td { border-bottom: 1px solid var(--borde); padding: 3px 6px; text-align: left; vertical-align: top; }
+.tabla-editor th { background: #f3f3f3; color: #262626; font-weight: 600; }
+.tabla-editor td.centro, .tabla-editor th:not(:first-child) { text-align: center; }
+.tabla-editor tr.elegida td { background: #ddebf7; color: #262626; }
+.tabla-editor td input[type='text'] { width: 100%; min-width: 120px; box-sizing: border-box; }
+.fila-controles { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.fila-controles h2 { margin-right: 8px; }
+.fila-controles label { display: inline-flex; gap: 4px; align-items: center; }
+
+/* El año: 12 meses en rejilla. */
+.anio { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 16px; margin: 6px 0; }
+.mes { background: #fff; color: #262626; border: 1px solid #d4d4d4; padding: 4px; }
+.nombre-mes { font-weight: 600; text-align: center; margin-bottom: 2px; }
+.rejilla-mes { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.rejilla-mes .cabeza { font-size: 10px; color: #616161; text-align: center; }
+.dia { font-size: 11px; padding: 2px 0; min-width: 0; border: 1px solid transparent; background: #fff; color: #262626; cursor: pointer; text-align: center; border-radius: 2px; }
+button.dia:hover { border-color: #217346; }
+.dia.no-laborable { background: #e7e6e6; color: #7f7f7f; }
+.dia.festivo { background: #c00000; color: #fff; font-weight: 600; }
+.dia.trabajado { background: #548235; color: #fff; font-weight: 600; }
+.leyenda-calendario .dia { display: inline-block; width: 18px; margin: 0 4px 0 10px; cursor: default; }
+
+/* Riesgos: lista a la izquierda, formulario a la derecha. */
+.dos-columnas { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr); gap: 16px; }
+@media (max-width: 800px) { .dos-columnas { grid-template-columns: minmax(0, 1fr); } }
+.lista-editor ul { list-style: none; margin: 0 0 6px; padding: 0; }
+.lista-editor li button { display: block; width: 100%; text-align: left; padding: 4px 6px; border: 1px solid transparent; background: none; color: inherit; font: inherit; cursor: pointer; }
+.lista-editor li button.elegida { background: #ddebf7; color: #262626; border-color: #9dc3e6; }
+.campos-editor { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.campos-editor label { display: inline-flex; gap: 4px; align-items: center; }
+.campos-editor label.ancho { flex: 1 1 100%; }
+.campos-editor label.ancho input { flex: 1 1 auto; }
+
+/* Ramas. */
+.tarjeta-rama { border: 1px solid var(--borde); padding: 6px 10px; }
+
+/* El pie. */
+.pie-editor { position: sticky; bottom: 0; background: var(--fondo); border-top: 1px solid var(--borde); padding: 6px 0 2px; }
+.pie-editor .pendiente { color: #9c5700; font-weight: 600; }
+.lista-problemas { margin: 0 0 4px; padding-left: 18px; }
+.pestanas-ventana button.separada { margin-left: 12px; }
+.editor > button, .editor section > button { align-self: flex-start; width: auto; }
+.desplazable-x { overflow-x: auto; max-width: 100%; }

@@ -34,7 +34,8 @@ import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
 import { abrirVentana, enviarEnTrozos, ventanaAbierta, type Ventana } from '../excel/ventana.ts';
-import { ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
+import { ABRIR_GANTT, controlGantt, PESTANAS_CRONOGRAMA, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA, type PestanaVentana } from './gantt/controlPanel.ts';
+import type { PedidoGuardar } from '../excel/editoresCronograma.ts';
 import type { RespuestaGantt } from './gantt/controlGantt.ts';
 import type { OperacionGantt } from '../excel/edicionGantt.ts';
 import { codificarJson } from '../excel/codificacion.ts';
@@ -48,7 +49,7 @@ interface MensajeExplorador {
   comparables?: Comparable[];
   motivo?: string;
   lista?: ListaModelo;
-  pestana?: 'distribucion' | 'lista' | 'gantt';
+  pestana?: PestanaVentana;
 }
 import { rangoDesdeDireccion } from '../excel/rangos.ts';
 import { actualizarCintaIteraciones, actualizarCintaSimulando, ITERACIONES_CINTA } from '../excel/cinta.ts';
@@ -310,11 +311,12 @@ export function Panel() {
   // le devuelve el cronograma; las peticiones se atienden de una en una.
   const ganttPendiente = useRef(false);
   const colaGantt = useRef<Promise<void>>(Promise.resolve());
-  const atenderGantt = useCallback((pedido: { accion?: string; op?: OperacionGantt; opciones?: Record<string, unknown> }) => {
+  const atenderGantt = useCallback((pedido: { accion?: string; op?: OperacionGantt; opciones?: Record<string, unknown>; pedido?: PedidoGuardar }) => {
     colaGantt.current = colaGantt.current.then(async () => {
       let r: RespuestaGantt;
       try {
-        if (pedido.accion === 'gantt' && pedido.op) r = await controlGantt.operar(pedido.op);
+        if (pedido.accion === 'editores-guardar' && pedido.pedido) r = await controlGantt.guardarEditor(pedido.pedido);
+        else if (pedido.accion === 'gantt' && pedido.op) r = await controlGantt.operar(pedido.op);
         else if (pedido.accion === 'gantt-deshacer') r = await controlGantt.deshacer();
         else if (pedido.accion === 'gantt-rehacer') r = await controlGantt.rehacer();
         else if (pedido.accion === 'gantt-imprimir') {
@@ -339,7 +341,8 @@ export function Panel() {
       if (v) enviarEnTrozos(v, r);
     });
   }, []);
-  const abrirExplorador = useCallback(async (pestanaVentana: 'distribucion' | 'lista' | 'gantt' = 'distribucion') => {
+  const abrirExplorador = useCallback(async (pestanaVentana: PestanaVentana = 'distribucion') => {
+    const deCronograma = PESTANAS_CRONOGRAMA.includes(pestanaVentana);
     let direccion = '';
     try {
       direccion = (await leerSeleccion()).direccion;
@@ -358,16 +361,16 @@ export function Panel() {
     mensaje = { ...mensaje, pestana: pestanaVentana };
     const abierta = explorador.current;
     if (abierta && abierta.ventana.enviar(mensaje)) {
-      if (pestanaVentana === 'gantt') atenderGantt({ accion: 'gantt-releer' });
+      if (deCronograma) atenderGantt({ accion: 'gantt-releer' });
       return;
     }
     // El cronograma no va en la URL (puede ser grande): se manda cuando la ventana avisa que escucha.
-    ganttPendiente.current = pestanaVentana === 'gantt';
+    ganttPendiente.current = deCronograma;
     const ventana = await abrirVentana('explorador.html', await codificarJson(mensaje), {
-      alto: pestanaVentana === 'gantt' ? 90 : 75,
-      ancho: pestanaVentana === 'gantt' ? 90 : 60,
+      alto: deCronograma ? 90 : 75,
+      ancho: deCronograma ? 90 : 60,
       alRecibir: (texto) => {
-        let pedido: { accion?: string; ref?: string; op?: OperacionGantt; opciones?: Record<string, unknown> } = {};
+        let pedido: { accion?: string; ref?: string; op?: OperacionGantt; opciones?: Record<string, unknown>; pedido?: PedidoGuardar } = {};
         try {
           pedido = JSON.parse(texto) as typeof pedido;
         } catch {
@@ -380,7 +383,7 @@ export function Panel() {
           }
           return;
         }
-        if (pedido.accion?.startsWith('gantt')) {
+        if (pedido.accion?.startsWith('gantt') || pedido.accion?.startsWith('editores')) {
           atenderGantt(pedido);
           return;
         }
@@ -416,7 +419,11 @@ export function Panel() {
   }, [mensajeExplorador, atenderGantt]);
   // La pestaña Cronograma pide abrir el Gantt, o refrescarlo tras simular (si está abierto).
   useEffect(() => {
-    const abrir = () => void abrirExplorador('gantt').catch((e) => setError(`No se pudo abrir el Gantt: ${mensajeDe(e)}`));
+    const abrir = (e: Event) => {
+      const p = (e as CustomEvent).detail;
+      const pestanaVentana: PestanaVentana = PESTANAS_CRONOGRAMA.includes(p) ? p : 'gantt';
+      void abrirExplorador(pestanaVentana).catch((x) => setError(`No se pudo abrir la ventana: ${mensajeDe(x)}`));
+    };
     const refrescar = () => { if (explorador.current) atenderGantt({ accion: 'gantt-releer' }); };
     window.addEventListener(ABRIR_GANTT, abrir);
     window.addEventListener(REFRESCAR_GANTT, refrescar);

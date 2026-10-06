@@ -203,7 +203,7 @@ Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 | G2 | Edición en grid y en barras, vínculos arrastrando, insertar, borrar, sangría, mover, deshacer y rehacer, automático/manual, ruta más larga frente a holgura total, ruta impulsora, «¿por qué es crítica?», calidad con semáforo e ícono por fila | ✅ en código; falta tu prueba (guía GT8–GT18) |
 | G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | ✅ en código; falta tu prueba (guía GT19–GT30) |
 | G4 | Fechas de fin posibles bajo el Gantt (histograma semanal en el mismo eje, P50, P80, meta), la ventana carga a la primera | ✅ en código; falta tu prueba (guía GT31–GT32) |
-| G5 | Editor de calendarios en ventana (propuesto el 06/10, en espera de tu decisión) | Propuesto |
+| G5 | Editores en ventana: calendarios (año a la vista, festivos de Colombia), riesgos con impactos y mitigación, ramas | ✅ en código; falta tu prueba (guía GT34–GT37) |
 
 ### Después de la versión 1.0
 

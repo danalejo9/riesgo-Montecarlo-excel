@@ -23,7 +23,9 @@ const NOMBRE_RESTRICCION: Record<TipoRestriccion, string> = {
 export type CambioHoja =
   | { hoja: string; op: 'celda'; fila: number; col: number; valor: unknown; antes: unknown }
   | { hoja: string; op: 'insertar'; fila: number; valores: unknown[] }
-  | { hoja: string; op: 'borrar'; fila: number; antes: unknown[] };
+  | { hoja: string; op: 'borrar'; fila: number; antes: unknown[] }
+  /** Un bloque rectangular de una vez (los editores de calendarios, riesgos y ramas). `formatos`: formato de número por columna del bloque. */
+  | { hoja: string; op: 'rango'; fila: number; col: number; valores: unknown[][]; antes: unknown[][]; formatos?: Record<number, string> };
 
 export type OperacionGantt =
   | { op: 'campo'; id: string; campo: CampoGantt; valor: string | number | null }
@@ -68,6 +70,12 @@ export function aplicarCambios(hojas: Readonly<Record<string, MatrizHoja | undef
     } else if (c.op === 'insertar') {
       while (m.length < c.fila) m.push([]);
       m.splice(c.fila, 0, [...c.valores]);
+    } else if (c.op === 'rango') {
+      c.valores.forEach((f, i) => {
+        while (m.length <= c.fila + i) m.push([]);
+        const r = m[c.fila + i] as unknown[];
+        f.forEach((v, j) => { r[c.col + j] = v === '' || v === undefined ? null : v; });
+      });
     } else {
       m.splice(c.fila, 1);
     }
@@ -80,6 +88,7 @@ export function invertirCambios(cambios: readonly CambioHoja[]): CambioHoja[] {
   return [...cambios].reverse().map((c): CambioHoja => {
     if (c.op === 'celda') return { ...c, valor: c.antes, antes: c.valor };
     if (c.op === 'insertar') return { hoja: c.hoja, op: 'borrar', fila: c.fila, antes: c.valores };
+    if (c.op === 'rango') return { ...c, valores: c.antes, antes: c.valores };
     return { hoja: c.hoja, op: 'insertar', fila: c.fila, valores: c.antes };
   });
 }
