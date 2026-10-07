@@ -21,6 +21,9 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - **V9**: los enteros siempre con separador de miles («5.000 iteraciones»;
   antes, en español de España, «5000»).
 - Colores de tema `--meta` y `--oportunidad` (también en oscuro).
+- **V5**: «Riesgos: probabilidad e impacto» en los resultados del cronograma:
+  la misma matriz 5 × 5 del registro del modelo, con el impacto como los días
+  medios que el riesgo suma a sus actividades si ocurre.
 
 ### Editores en ventana: calendarios, riesgos y ramas (2026-10-06)
 

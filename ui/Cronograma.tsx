@@ -22,7 +22,8 @@ import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
 import { abrirVentanaCronograma, ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
-import { abrirEnNavegador, CurvaAcumulada, Histograma, type LineaReferencia } from './Resultados.tsx';
+import { abrirEnNavegador, CurvaAcumulada, Histograma, MatrizRiesgosTabla, type LineaReferencia } from './Resultados.tsx';
+import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
 import { histogramaDeMuestra } from '../engine/stats/muestra.ts';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
@@ -423,6 +424,18 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
             )}
           </section>
 
+          {estado.modelo && estado.modelo.riesgos.length > 0 && (
+            <section>
+              <h2>Riesgos: probabilidad e impacto</h2>
+              <MatrizRiesgosTabla filas={filasMatriz(estado.modelo)} />
+              <p className="tenue">
+                Impacto: los días que el riesgo suma de media a sus actividades si ocurre (las oportunidades, en valor
+                absoluto). Cuánto mueve de verdad la entrega lo dice el tornado de arriba: un riesgo grande en una
+                actividad con holgura puede no moverla.
+              </p>
+            </section>
+          )}
+
           <section>
             <h2>Actividades más críticas</h2>
             <Ayuda tema="criticidad" />
@@ -583,6 +596,18 @@ function mediaAproximada(d: DistribucionDuracion): number {
     case 'discreta': return d.valores.reduce((s, v, i) => s + v * (d.pesos[i] ?? 0), 0) / (d.pesos.reduce((s, p) => s + p, 0) || 1);
     case 'fija': return d.valor;
   }
+}
+
+/** V5 (07/10): los riesgos del cronograma como filas de la matriz de probabilidad e impacto. */
+function filasMatriz(modelo: ModeloCronograma): FilaRiesgo[] {
+  return modelo.riesgos.map((r) => {
+    const dias = r.impactos.reduce((suma, i) => suma + (i.dias ? mediaAproximada(i.dias) : 0), 0);
+    const oportunidad = esOportunidad(modelo, r.id);
+    return {
+      celda: `Riesgos · ${r.id}`, nombre: `${r.id} · ${r.nombre}${oportunidad && !/oportunidad/i.test(r.nombre) ? ' (oportunidad)' : ''}`, probabilidad: r.probabilidad,
+      impacto: `${numero(dias, 3)} días`, impactoMedio: dias, impactoDesviacion: null, valorEsperado: r.probabilidad * dias, desviacion: null,
+    };
+  });
 }
 
 /** V3 (07/10): las tres cifras grandes arriba, como en los resultados del modelo. */
