@@ -10,7 +10,7 @@ import type { IteracionesSimuladas } from '../excel/iteraciones.ts';
 import { estres, TRAMOS_ESTRES } from '../excel/estres.ts';
 import type { ResultadoSalida } from '../excel/informe.ts';
 import type { PuntoCDF } from '../engine/stats/index.ts';
-import { formatoDe, numero, type FormatoValor } from './formato.ts';
+import { formatoDe, miles, numero, type FormatoValor } from './formato.ts';
 
 const ANCHO = 280;
 /** Colores de serie que hay en el CSS (`--serie-1` … `--serie-4`); se repiten. */
@@ -67,7 +67,7 @@ export function Dispersion({ iteraciones, idSalida, formato }: { iteraciones: It
         <text className="eje" x={M.izquierda + 2} y={ALTO - M.abajo - 3}>{formato.valor(y0)}</text>
       </svg>
       <figcaption className="tenue">
-        Cada punto es una iteración ({puntos.length.toLocaleString('es-ES')} primeras): en horizontal, {entrada.nombre}; en vertical, la salida.
+        Cada punto es una iteración ({miles(puntos.length)} primeras): en horizontal, {entrada.nombre}; en vertical, la salida.
         Una nube inclinada es una relación fuerte; una sin forma, que esa entrada apenas la mueve.
       </figcaption>
     </figure>
@@ -321,7 +321,7 @@ export function Estres({
           </div>
           <p className="tenue">
             {r.limites ? `${entrada.nombre} entre ${fe.valor(r.limites.desde)} y ${fe.valor(r.limites.hasta)}: ` : ''}
-            {r.estres.n.toLocaleString('es-ES')} de {r.base.n.toLocaleString('es-ES')} iteraciones. Sin volver a simular: son las
+            {miles(r.estres.n)} de {miles(r.base.n)} iteraciones. Sin volver a simular: son las
             iteraciones en que la entrada cayó ahí, con el resto de entradas como vinieran.
           </p>
         </>

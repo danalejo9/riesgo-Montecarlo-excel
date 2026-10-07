@@ -741,7 +741,7 @@ iteraciones). Al terminar, el panel pasa a **Resultados**. Esperado
 
 | Dónde (pestaña Resultados) | Qué | Valor |
 |---|---|---|
-| Debajo del título | Iteraciones | «5000 iteraciones · semilla 12345 · hipercubo latino» |
+| Debajo del título | Iteraciones | «5.000 iteraciones · semilla 12345 · hipercubo latino» |
 | Fin del proyecto | Fecha determinística | 22/11/2027 |
 | Fin del proyecto | Probabilidad de cumplirla | 5,08 % |
 | Fin del proyecto | Probabilidad de cumplir la meta (31/01/2028) | 65,3 % |
@@ -755,7 +755,7 @@ iteraciones). Al terminar, el panel pasa a **Resultados**. Esperado
 | Fin del proyecto, tabla de percentiles | P80 de «Obra gris terminada» | 20/12/2027 |
 | Rutas críticas más frecuentes | La primera | 62,8 % |
 
-En la pestaña **Cronograma** queda un aviso verde: «Simulado: 5000
+En la pestaña **Cronograma** queda un aviso verde: «Simulado: 5.000
 iteraciones. Los resultados están en la pestaña Resultados». Anota cuántos
 segundos dice la última línea de Resultados.
 
@@ -872,7 +872,7 @@ las dos filas.
 pulsa **Automático** (Config!B4 pasa a «Automático») y simula. Esperado: en
 Resultados, justo debajo del título, un aviso verde «Iteraciones
 automáticas: el P80 se estabilizó con 2.000 iteraciones (cambió 0,36 % en
-el último bloque)», y la línea de iteraciones dice 2000. Vuelve a **5 mil**.
+el último bloque)», y la línea de iteraciones dice 2.000. Vuelve a **5 mil**.
 
 **Q22. Informe ejecutivo.** Al final de Resultados pulsa **Informe ejecutivo
 (PDF)**: se abre en el navegador con supuestos, advertencias, fecha de fin,
@@ -1208,7 +1208,7 @@ probabilidad de cumplirla 65,3 %», la misma de Resultados. La casilla
 abierto, **⚙** muestra arriba **«Simulación del cronograma»** con 5 mil,
 semilla 12.345 e Hipercubo latino. Pulsa **1 mil**: en Excel, Config!B4
 pasa a 1000. Simula: el panel salta a **Resultados**, que empieza con
-«Resultados del cronograma» y «1000 iteraciones · semilla 12345 · hipercubo
+«Resultados del cronograma» y «1.000 iteraciones · semilla 12345 · hipercubo
 latino». Si en el mismo libro simulas también el modelo (pestaña Modelo →
 Simular), arriba de Resultados aparece «Ver los resultados de: Modelo ·
 Cronograma» para pasar de uno a otro. Vuelve a **5 mil**.

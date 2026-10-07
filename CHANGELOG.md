@@ -5,6 +5,23 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Mejoras visuales de los resultados del cronograma, V1–V4 y V9 (2026-10-07)
+
+**Cambiado**
+- **V1**: el histograma del fin del proyecto va en **fechas** (antes en días
+  laborables, 186 a 360); las fechas que pasan de la meta, en gris claro.
+- **V2**: la curva S y el histograma del fin llevan la línea de la **meta**
+  (morada, con su fecha) y la del **P80** (punteada). `LineaReferencia` en
+  `CurvaAcumulada` e `Histograma`; sus nombres no se pisan.
+- **V3**: arriba de «Resultados del cronograma», tres cifras grandes: P80 del
+  fin, probabilidad de cumplir la meta y contingencia de costo.
+- **V4**: tornado con **amenazas en rojo y oportunidades en verde**, la
+  etiqueta «oportunidad» delante del nombre, leyenda y la explicación del 0
+  («no mueve el P80, cae en una ruta con holgura»).
+- **V9**: los enteros siempre con separador de miles («5.000 iteraciones»;
+  antes, en español de España, «5000»).
+- Colores de tema `--meta` y `--oportunidad` (también en oscuro).
+
 ### Editores en ventana: calendarios, riesgos y ramas (2026-10-06)
 
 **Añadido**

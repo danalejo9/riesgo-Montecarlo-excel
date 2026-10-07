@@ -27,6 +27,10 @@
   --serie-2: #eb6834;
   --serie-3: #1baf7a;
   --serie-4: #eda100;
+  /* La meta (fecha o costo comprometido), igual que en el Gantt. */
+  --meta: #7030a0;
+  /* Oportunidad (riesgo que ayuda). */
+  --oportunidad: #2e8b57;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,6 +48,8 @@
     --serie-2: #d95926;
     --serie-3: #199e70;
     --serie-4: #c98500;
+    --meta: #b48ad6;
+    --oportunidad: #4cc38a;
   }
 }
 
@@ -578,7 +584,7 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .tornado-eliminacion .nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tornado-eliminacion .barra-fondo { height: 10px; background: var(--borde); border-radius: 2px; overflow: hidden; }
 .tornado-eliminacion .barra-valor { display: block; height: 100%; background: var(--baja); }
-.tornado-eliminacion .barra-valor.negativa { background: var(--luz-verde); }
+.tornado-eliminacion .barra-valor.negativa { background: var(--oportunidad); }
 .tornado-eliminacion .cifra { text-align: right; font-variant-numeric: tabular-nums; }
 /* Q2/Q3: dispersión JCL y Gantt ajustado. */
 .zona-jcl { fill: color-mix(in srgb, var(--luz-verde) 18%, transparent); }
@@ -593,3 +599,18 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .asistente-experto { border-left: 3px solid var(--acento); padding: 6px 10px; margin: 6px 0; background: color-mix(in srgb, var(--acento) 5%, transparent); }
 .opciones-confianza { border: 0; padding: 0; margin: 6px 0; display: grid; gap: 2px; }
 .asistente-experto .casilla { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+
+/* V2 (07/10): líneas de referencia con nombre (meta, P80). */
+.linea-ref line { stroke: var(--texto); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.linea-ref.meta line { stroke: var(--meta); stroke-dasharray: none; stroke-width: 1.5; }
+.linea-ref text { font-size: 9px; fill: var(--tenue); paint-order: stroke; stroke: var(--fondo); stroke-width: 3px; stroke-linejoin: round; }
+.linea-ref.meta text { fill: var(--meta); font-weight: 600; }
+
+/* V4 (07/10): amenazas y oportunidades en el tornado del cronograma. */
+.etiqueta-oportunidad { color: var(--oportunidad); font-size: 11px; }
+.muestra-barra { display: inline-block; width: 14px; height: 8px; margin-right: 4px; border-radius: 2px; vertical-align: middle; }
+.muestra-barra.amenaza { background: var(--baja); }
+.muestra-barra.oportunidad { background: var(--oportunidad); }
+/* V3: cifras del cronograma, la fecha no cabe en 70 px. */
+.cifras-cronograma { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.tornado-eliminacion.en-dinero li { grid-template-columns: minmax(0, 11fr) minmax(0, 8fr) 64px; }

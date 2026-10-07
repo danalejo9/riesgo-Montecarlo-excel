@@ -604,15 +604,32 @@ const MARGEN = { arriba: 8, derecha: 8, abajo: 20, izquierda: 34 };
  * 4,2 M" **es** el uso de esta curva, y sin cursor hay que estimarlo a ojo
  * contra el eje.
  */
+/** Una línea vertical con su nombre sobre un gráfico (la meta, el P80 del cronograma). */
+export interface LineaReferencia {
+  x: number;
+  etiqueta: string;
+  /** 'meta' (morada, continua) o 'percentil' (punteada). */
+  tipo?: 'meta' | 'percentil';
+}
+
+/** Las líneas visibles de izquierda a derecha; con dos o más, la primera escribe su nombre a su izquierda (no se pisan). */
+function ordenarLineas(lineas: readonly LineaReferencia[] | undefined, visible: (x: number) => boolean): { l: LineaReferencia; izquierda: boolean }[] {
+  const v = (lineas ?? []).filter((l) => visible(l.x)).sort((a, b) => a.x - b.x);
+  return v.map((l, k) => ({ l, izquierda: v.length > 1 && k === 0 }));
+}
+
 export function CurvaAcumulada({
   puntos,
   referencia,
   etiquetaReferencia,
   formato = formatoDe(false),
+  lineas,
 }: {
   puntos: readonly PuntoCDF[];
   referencia?: readonly PuntoCDF[];
   etiquetaReferencia?: string;
+  /** Líneas verticales con nombre (V2: la meta y el P80). */
+  lineas?: readonly LineaReferencia[];
   /** Números o fechas (T7). */
   formato?: FormatoValor;
 }) {
@@ -666,6 +683,12 @@ export function CurvaAcumulada({
           />
         )}
         <polyline className="curva" points={linea} />
+        {ordenarLineas(lineas, (x) => Number.isFinite(x) && x >= min && x <= max).map(({ l, izquierda }, k) => (
+          <g key={`${l.etiqueta}-${k}`} className={`linea-ref ${l.tipo ?? 'percentil'}`}>
+            <line x1={aX(l.x)} y1={MARGEN.arriba} x2={aX(l.x)} y2={ALTO - MARGEN.abajo} />
+            <text x={aX(l.x) + (izquierda ? -3 : 3)} y={MARGEN.arriba + 9} textAnchor={izquierda ? 'end' : 'start'}>{l.etiqueta}</text>
+          </g>
+        ))}
 
         {cerca && (
           <g>
@@ -1619,6 +1642,7 @@ export function Histograma({
   marcas,
   muestraOrdenada,
   formato = formatoDe(false),
+  lineas,
 }: {
   barras: readonly BinHistograma[];
   umbral?: UmbralRiskModel;
@@ -1633,6 +1657,8 @@ export function Histograma({
   muestraOrdenada?: ArrayLike<number>;
   /** Números o fechas (T7). */
   formato?: FormatoValor;
+  /** Líneas verticales con nombre (V2). */
+  lineas?: readonly LineaReferencia[];
 }) {
   const [cerca, setCerca] = useState<number | null>(null);
   const min = (barras[0] as BinHistograma).x0;
@@ -1729,6 +1755,12 @@ export function Histograma({
         {dentro(marcas?.media) && linea(marcas?.media as number, 'marca-media', 'media', (marcas?.media as number) < (min + max) / 2 ? 'start' : 'end')}
         {dentro(marcas?.mediana) && Math.abs(aX(marcas?.mediana as number) - aX(marcas?.media ?? Infinity)) > 3 &&
           linea(marcas?.mediana as number, 'marca-mediana', 'mediana', (marcas?.mediana as number) < (min + max) / 2 ? 'end' : 'start')}
+        {ordenarLineas(lineas, dentro).map(({ l, izquierda }, k) => (
+          <g key={`${l.etiqueta}-${k}`} className={`linea-ref ${l.tipo ?? 'percentil'}`}>
+            <line x1={aX(l.x)} y1={arriba} x2={aX(l.x)} y2={base} />
+            <text x={aX(l.x) + (izquierda ? -3 : 3)} y={arriba + 8} textAnchor={izquierda ? 'end' : 'start'}>{l.etiqueta}</text>
+          </g>
+        ))}
         {tramos && (
           <g className="delimitadores">
             {[tramos.desde, tramos.hasta].map((x, k) => (

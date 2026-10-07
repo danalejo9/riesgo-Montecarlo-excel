@@ -5,11 +5,11 @@
  * hace falta para leerlos de un vistazo.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, resumirCosto, simularCronograma, SimulacionCancelada,
-  type ChequeoCalidad, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
+  type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { csvIteraciones, codificarInformeCronograma, datosInformeCronograma } from '../excel/informeCronograma.ts';
 import { hojasImportadas, importarCronograma, resumenImportacion, type CronogramaImportado } from '../excel/importarCronograma.ts';
@@ -22,7 +22,8 @@ import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
 import { abrirVentanaCronograma, ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
-import { abrirEnNavegador, CurvaAcumulada, Histograma } from './Resultados.tsx';
+import { abrirEnNavegador, CurvaAcumulada, Histograma, type LineaReferencia } from './Resultados.tsx';
+import { histogramaDeMuestra } from '../engine/stats/muestra.ts';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
 
 export type AccionCronograma = 'crear' | 'calidad' | 'simular' | 'gantt';
@@ -380,6 +381,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
             {' '}(se cambian en Configuración ⚙ → Simulación del cronograma).
           </p>
           {sim.avisos.filter((a) => a.startsWith('Iteraciones automáticas')).map((a) => <p key={a} className="aviso-ok">{a}</p>)}
+          {estado.modelo && <CifrasCronograma sim={sim} fin={fin} modelo={estado.modelo} />}
           <section>
             <h2>Fin del proyecto</h2>
             <Ayuda tema="finCronograma" />
@@ -394,8 +396,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
                 <tr><td>Media y desviación</td><td>{dias(fin.media)} ± {numero(fin.desviacion, 3)}</td></tr>
               </tbody>
             </table>
-            <CurvaAcumulada puntos={fin.curvaS.map(([x, p]) => ({ x, p }))} formato={FECHA} />
-            <Histograma barras={fin.histograma} etiqueta="Duración del proyecto (días laborables)" />
+            <CurvaAcumulada puntos={fin.curvaS.map(([x, p]) => ({ x, p }))} formato={FECHA} lineas={lineasFin(fin, estado.modelo?.configuracion.fechaMeta)} />
+            <HistogramaFechasFin sim={sim} fin={fin} meta={estado.modelo?.configuracion.fechaMeta} />
             <TablaPercentiles resumenes={[fin, ...hitos]} />
           </section>
 
@@ -407,11 +409,11 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
             {sim.eliminacion.length === 0 ? <p className="tenue">El cronograma no tiene riesgos activos.</p> : (
               <>
                 <p className="tenue">Cuánto bajaría el P80 del fin (en días) si el riesgo desapareciera, con los mismos números aleatorios.</p>
-                <TornadoEliminacion filas={sim.eliminacion.map((e) => ({ id: e.id, nombre: e.nombre, valor: e.reduccionP80, ocurrencia: e.ocurrencia }))} unidad="d" />
+                <TornadoEliminacion filas={sim.eliminacion.map((e) => ({ id: e.id, nombre: e.nombre, valor: e.reduccionP80, ocurrencia: e.ocurrencia, oportunidad: esOportunidad(estado.modelo, e.id) }))} unidad="d" />
                 {sim.costo && (
                   <>
                     <p className="tenue">Y cuánto bajaría el costo P{Math.round(100 * (estado.modelo?.configuracion.percentilContingencia ?? 0.8))} (la contingencia):</p>
-                    <TornadoEliminacion filas={[...sim.eliminacion].sort((a, b) => (b.reduccionP80Costo ?? 0) - (a.reduccionP80Costo ?? 0)).map((e) => ({ id: e.id, nombre: e.nombre, valor: e.reduccionP80Costo ?? 0, ocurrencia: e.ocurrencia }))} unidad="$" />
+                    <TornadoEliminacion filas={[...sim.eliminacion].sort((a, b) => (b.reduccionP80Costo ?? 0) - (a.reduccionP80Costo ?? 0)).map((e) => ({ id: e.id, nombre: e.nombre, valor: e.reduccionP80Costo ?? 0, ocurrencia: e.ocurrencia, oportunidad: esOportunidad(estado.modelo, e.id) }))} unidad="$" />
                   </>
                 )}
                 {sim.sinRiesgos && (
@@ -530,20 +532,96 @@ function TablaPercentiles({ resumenes }: { resumenes: readonly ResumenTiempo[] }
   );
 }
 
-function TornadoEliminacion({ filas, unidad }: { filas: readonly { id: string; nombre: string; valor: number; ocurrencia: number }[]; unidad: 'd' | '$' }) {
+/**
+ * V4 (07/10): amenazas en rojo y oportunidades en verde. Una oportunidad
+ * acorta o ahorra: quitarla sube el P80 (barra hacia la izquierda, en
+ * verde). Un riesgo con 0 no mueve el P80: cae en una ruta con holgura.
+ */
+function TornadoEliminacion({ filas, unidad }: { filas: readonly { id: string; nombre: string; valor: number; ocurrencia: number; oportunidad?: boolean }[]; unidad: 'd' | '$' }) {
   const mayor = Math.max(...filas.map((f) => Math.abs(f.valor)), 0.0001);
+  const hayCeros = filas.some((f) => Math.abs(f.valor) < 1e-9);
   return (
-    <ul className="tornado-eliminacion">
-      {filas.map((f) => (
-        <li key={f.id}>
-          <span className="nombre" title={f.nombre}>{f.id} · {f.nombre}</span>
-          <span className="barra-fondo">
-            <span className={`barra-valor${f.valor < 0 ? ' negativa' : ''}`} style={{ width: `${(100 * Math.abs(f.valor)) / mayor}%` }} />
-          </span>
-          <span className="cifra">{unidad === 'd' ? `${numero(f.valor, 3)} d` : dineroCorto(f.valor)}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={`tornado-eliminacion${unidad === '$' ? ' en-dinero' : ''}`}>
+        {filas.map((f) => (
+          <li key={f.id} className={f.oportunidad ? 'oportunidad' : 'amenaza'}>
+            <span className="nombre" title={`${f.nombre}${f.oportunidad ? ' (oportunidad)' : ''}`}>{f.oportunidad ? <span className="etiqueta-oportunidad">oportunidad · </span> : null}{f.id} · {f.nombre}</span>
+            <span className="barra-fondo">
+              <span className={`barra-valor${f.oportunidad || f.valor < 0 ? ' negativa' : ''}`} style={{ width: `${(100 * Math.abs(f.valor)) / mayor}%` }} />
+            </span>
+            <span className="cifra">{unidad === 'd' ? `${numero(f.valor, 3)} d` : dineroCorto(f.valor)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="leyenda-curvas tenue">
+        <span><span className="muestra-barra amenaza" />amenaza (retrasa o encarece)</span>
+        <span><span className="muestra-barra oportunidad" />oportunidad (acorta o ahorra)</span>
+        {hayCeros && <span>· 0: no mueve el P80, cae en una ruta con holgura</span>}
+      </p>
+    </>
+  );
+}
+
+/** Una oportunidad: todos sus impactos acortan (o ahorran). */
+function esOportunidad(modelo: ModeloCronograma | null, id: string): boolean {
+  const r = modelo?.riesgos.find((x) => x.id === id);
+  if (!r || r.impactos.length === 0) return false;
+  return r.impactos.every((i) => {
+    const d = i.dias ? mediaAproximada(i.dias) : 0;
+    const c = i.costo ? mediaAproximada(i.costo) : 0;
+    return d <= 0 && c <= 0 && (d < 0 || c < 0);
+  });
+}
+
+/** El centro de una distribución de impacto (para saber su signo). */
+function mediaAproximada(d: DistribucionDuracion): number {
+  switch (d.tipo) {
+    case 'triangular': case 'pert': return (d.min + d.moda + d.max) / 3;
+    case 'trigen': return (d.bajo + d.moda + d.alto) / 3;
+    case 'uniforme': return (d.min + d.max) / 2;
+    case 'lognormal': return d.media;
+    case 'discreta': return d.valores.reduce((s, v, i) => s + v * (d.pesos[i] ?? 0), 0) / (d.pesos.reduce((s, p) => s + p, 0) || 1);
+    case 'fija': return d.valor;
+  }
+}
+
+/** V3 (07/10): las tres cifras grandes arriba, como en los resultados del modelo. */
+function CifrasCronograma({ sim, fin, modelo }: { sim: SimulacionCronograma; fin: ResumenTiempo; modelo: ModeloCronograma }) {
+  const cfg = modelo.configuracion;
+  const rc = sim.costo && sim.costoBase !== null ? resumirCosto(sim.costo, sim.costoBase, cfg.percentilContingencia, cfg.costoMeta) : null;
+  const p80 = fin.percentiles.find((p) => Math.abs(p.p - 0.8) < 1e-9)?.serie ?? NaN;
+  return (
+    <div className="cifras cifras-cronograma">
+      <div><span className="cifra">{FECHA.valor(p80)}</span><span className="cifra-nombre">P80 del fin (8 de cada 10 veces antes)</span></div>
+      {fin.probabilidadMeta !== null && cfg.fechaMeta !== undefined && (
+        <div><span className="cifra">{pct(fin.probabilidadMeta)}</span><span className="cifra-nombre">de cumplir la meta ({FECHA.valor(cfg.fechaMeta)})</span></div>
+      )}
+      {rc && (
+        <div><span className="cifra">{dineroCorto(rc.contingencia)}</span><span className="cifra-nombre">contingencia de costo (P{Math.round(100 * rc.pContingencia)} − base)</span></div>
+      )}
+    </div>
+  );
+}
+
+/** V2: la meta y el P80 sobre la curva S del fin. */
+function lineasFin(fin: ResumenTiempo, meta: number | undefined): LineaReferencia[] {
+  const p80 = fin.percentiles.find((p) => Math.abs(p.p - 0.8) < 1e-9)?.serie;
+  return [
+    ...(meta !== undefined ? [{ x: meta, etiqueta: `Meta ${FECHA.valor(meta)}`, tipo: 'meta' as const }] : []),
+    ...(p80 !== undefined ? [{ x: p80, etiqueta: 'P80', tipo: 'percentil' as const }] : []),
+  ];
+}
+
+/** V1 (07/10): el histograma del fin en fechas (antes, en días laborables), con lo que pasa de la meta apagado. */
+function HistogramaFechasFin({ sim, fin, meta }: { sim: SimulacionCronograma; fin: ResumenTiempo; meta: number | undefined }) {
+  const barras = useMemo(() => histogramaDeMuestra(Float64Array.from(sim.fin.serie).sort(), 30), [sim]);
+  if (barras.length === 0) return null;
+  return (
+    <>
+      <Histograma barras={barras} etiqueta="Fecha de fin del proyecto" formato={FECHA} lineas={lineasFin(fin, meta)}
+        {...(meta !== undefined ? { umbral: { value: meta + 1, direction: 'below' as const } } : {})} />
+      {meta !== undefined && <p className="tenue">Fechas de fin posibles; en gris claro, las que pasan de la meta.</p>}
+    </>
   );
 }
 

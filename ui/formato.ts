@@ -39,8 +39,12 @@ export function numero(n: number, significativas = 5): string {
 }
 
 /** Un contador: iteraciones, celdas, fórmulas. Siempre entero y con puntos. */
+/**
+ * Entero con separador de miles siempre: «5.000» (en español de España, sin
+ * `useGrouping: 'always'`, salía «5000» y «12.000»: V9, 07/10).
+ */
 export function miles(n: number): string {
-  return Math.round(n).toLocaleString('es-ES');
+  return Math.round(n).toLocaleString('es-ES', { useGrouping: 'always' } as Intl.NumberFormatOptions);
 }
 
 /**
