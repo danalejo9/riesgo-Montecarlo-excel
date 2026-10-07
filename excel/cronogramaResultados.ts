@@ -8,7 +8,7 @@
  */
 
 import {
-  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
   type ChequeoCalidad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { FORMATO_FECHA, type Celda } from './cronogramaHojas.ts';
@@ -175,6 +175,28 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
       titulo('Confianza conjunta costo–plazo (JCL)');
       fila(['Cumplen la fecha meta y el costo meta a la vez', j.jcl], [null, PCT]);
       fila(['Solo la fecha meta · solo el costo meta', j.soloPlazo, j.soloCosto], [null, PCT, PCT]);
+    }
+  }
+
+  // W2: reserva de contingencia y de dónde sale, en los tres niveles.
+  if (sim.eliminacion.length || sim.sinRiesgos) {
+    const reservas = NIVELES_RESERVA.map((p) => reservaContingencia(sim, p));
+    const conCosto = reservas[0]?.costo !== null;
+    const niv = NIVELES_RESERVA.map((p) => `P${Math.round(p * 100)}`);
+    titulo('Reserva de contingencia y de dónde sale');
+    fila(['Las partes suman la reserva: incertidumbre (sin riesgos), cada riesgo (las oportunidades restan) y, si queda, el efecto conjunto.']);
+    fila(['', ...niv.map((n) => `Días ${n}`), ...(conCosto ? niv.map((n) => `Costo ${n}`) : [])], [], true);
+    const filaNivel = (nombre: string, dias: (r: (typeof reservas)[number]) => number, costo: (r: (typeof reservas)[number]) => number | null, negrita = false) =>
+      fila([nombre, ...reservas.map(dias), ...(conCosto ? reservas.map(costo) : [])], [null, DIAS, DIAS, DIAS, MONEDA, MONEDA, MONEDA], negrita);
+    filaNivel('Plan (determinístico, costo base)', (r) => r.plan.dias, (r) => r.plan.costo);
+    filaNivel('Objetivo (percentil)', (r) => r.objetivo.dias, (r) => r.objetivo.costo);
+    filaNivel('Reserva', (r) => r.dias, (r) => r.costo, true);
+    // Las partes de los tres niveles (el efecto conjunto puede salir solo en alguno).
+    const ids = [...new Set(reservas.flatMap((r) => r.partes.map((x) => x.id)))];
+    for (const id of ids) {
+      const parte = (r: (typeof reservas)[number]) => r.partes.find((x) => x.id === id);
+      const nombre = reservas.map(parte).find(Boolean)?.nombre ?? id;
+      filaNivel(id === 'incertidumbre' || id === 'conjunto' ? nombre : `${id} · ${nombre}`, (r) => parte(r)?.dias ?? 0, (r) => parte(r)?.costo ?? 0);
     }
   }
 

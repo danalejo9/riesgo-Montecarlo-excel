@@ -74,6 +74,9 @@ export interface EliminacionRiesgo {
   p80Costo: number | null;
   reduccionMediaCosto: number | null;
   reduccionP80Costo: number | null;
+  /** W2: P50, P80 y P90 del fin (días) y del costo sin este riesgo, en el orden de `NIVELES_RESERVA`. */
+  nivelesDias: number[];
+  nivelesCosto: number[] | null;
 }
 
 export interface CorrelacionLograda {
@@ -127,7 +130,7 @@ export interface SimulacionCronograma {
   /** Tornado por eliminación, de mayor a menor reducción del P80. */
   eliminacion: EliminacionRiesgo[];
   /** Sin ningún riesgo (solo la incertidumbre de las duraciones). */
-  sinRiesgos: { media: number; p80: number; mediaCosto: number | null; p80Costo: number | null } | null;
+  sinRiesgos: { media: number; p80: number; mediaCosto: number | null; p80Costo: number | null; nivelesDias: number[]; nivelesCosto: number[] | null } | null;
   /** Media y P80 del fin con todo. */
   media: number;
   p80: number;
@@ -154,6 +157,15 @@ export interface OpcionesSimulacion {
 }
 
 const BLOQUE = 500;
+
+/** W2: los niveles de confianza de la reserva de contingencia. */
+export const NIVELES_RESERVA = [0.5, 0.8, 0.9] as const;
+
+/** P50, P80 y P90 de una muestra (PERCENTIL.INC). */
+export function nivelesDe(v: Float64Array): number[] {
+  const o = Float64Array.from(v).sort();
+  return NIVELES_RESERVA.map((p) => percentilOrdenado(o, p));
+}
 const ITERACIONES_AUTOMATICAS = [1000, 2000, 5000, 10000, 20000];
 
 function pausa(): Promise<void> {
@@ -736,13 +748,14 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
         mediaCosto: sc?.media ?? null, p80Costo: sc?.p80 ?? null,
         reduccionMediaCosto: sc && todoCosto ? todoCosto.media - sc.media : null,
         reduccionP80Costo: sc && todoCosto ? todoCosto.p80 - sc.p80 : null,
+        nivelesDias: nivelesDe(c.finDias), nivelesCosto: c.costo ? nivelesDe(c.costo) : null,
       });
     }
     eliminacion.sort((a, b) => b.reduccionP80 - a.reduccionP80 || b.reduccionMedia - a.reduccionMedia || (b.reduccionP80Costo ?? 0) - (a.reduccionP80Costo ?? 0));
     const sr = await correr(modelo, pre, { quitar: -2, post: false, completa: false }, hitos, avanzar, opciones.senal);
     const s = mediaYP80(sr.finDias);
     const sc = sr.costo ? mediaYP80(sr.costo, pContingencia) : null;
-    sinRiesgos = { media: s.media, p80: s.p80, mediaCosto: sc?.media ?? null, p80Costo: sc?.p80 ?? null };
+    sinRiesgos = { media: s.media, p80: s.p80, mediaCosto: sc?.media ?? null, p80Costo: sc?.p80 ?? null, nivelesDias: nivelesDe(sr.finDias), nivelesCosto: sr.costo ? nivelesDe(sr.costo) : null };
   }
 
   let post: EscenarioPost | null = null;

@@ -144,6 +144,24 @@ function Informe() {
         </section>
       )}
 
+      {d.reserva && d.reserva.partes.length > 1 && (
+        <section>
+          <h2>Reserva de contingencia al P{Math.round(d.reserva.nivel * 100)} y de dónde sale</h2>
+          <p>
+            Sobre el plan ({FECHA.valor(d.reserva.plan.fecha)}{d.reserva.plan.costo !== null ? `, ${dinero(d.reserva.plan.costo)}` : ''}) hay que reservar
+            <strong> {numero(d.reserva.dias, 4)} días laborables</strong>{d.reserva.costo !== null ? <> y <strong>{dinero(d.reserva.costo)}</strong></> : null}.
+          </p>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>Parte</th><th>Días</th>{d.reserva.costo !== null && <th>Costo</th>}</tr></thead>
+            <tbody>
+              {d.reserva.partes.map((x) => (
+                <tr key={x.id}><th scope="row">{x.tipo === 'amenaza' || x.tipo === 'oportunidad' ? `${x.id} · ${x.nombre}` : x.nombre}</th><td>{numero(x.dias, 3)}</td>{d.reserva?.costo !== null && <td>{x.costo === null ? '—' : dinero(x.costo)}</td>}</tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {d.riesgos.length > 0 && (
         <section>
           <h2>Los riesgos que más pesan (eliminación)</h2>

@@ -8,7 +8,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
+  chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
+  type NivelReserva,
   type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { csvIteraciones, codificarInformeCronograma, datosInformeCronograma } from '../excel/informeCronograma.ts';
@@ -425,6 +426,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
             )}
           </section>
 
+          {estado.modelo && <ReservaContingencia sim={sim} modelo={estado.modelo} />}
+
           {estado.modelo && estado.modelo.riesgos.length > 0 && (
             <section>
               <h2>Riesgos: probabilidad e impacto</h2>
@@ -573,6 +576,58 @@ function TornadoEliminacion({ filas, unidad }: { filas: readonly { id: string; n
         {hayCeros && <span>· 0: no mueve el P80, cae en una ruta con holgura</span>}
       </p>
     </>
+  );
+}
+
+/** W2: la reserva de tiempo y de dinero para el nivel elegido, y de dónde sale. */
+function ReservaContingencia({ sim, modelo }: { sim: SimulacionCronograma; modelo: ModeloCronograma }) {
+  const [nivel, setNivel] = useState<NivelReserva>(0.8);
+  const r = useMemo(() => reservaContingencia(sim, nivel), [sim, nivel]);
+  const mon = modelo.configuracion.moneda ? ` ${modelo.configuracion.moneda}` : '';
+  const partes = r.partes.filter((p) => Math.abs(p.dias) > 1e-9 || Math.abs(p.costo ?? 0) > 1e-6);
+  const barras = (valor: (p: (typeof partes)[number]) => number, unidad: 'd' | '$') => {
+    const mayor = Math.max(...partes.map((p) => Math.abs(valor(p))), 1e-9);
+    return (
+      <ul className={`tornado-eliminacion${unidad === '$' ? ' en-dinero' : ''}`}>
+        {partes.map((p) => (
+          <li key={p.id} className={p.tipo === 'oportunidad' ? 'oportunidad' : 'amenaza'}>
+            <span className="nombre" title={p.nombre}>{p.tipo === 'amenaza' || p.tipo === 'oportunidad' ? `${p.id} · ${p.nombre}` : p.nombre}</span>
+            <span className="barra-fondo"><span className={`barra-valor${valor(p) < 0 ? ' negativa' : ''}`} style={{ width: `${(100 * Math.abs(valor(p))) / mayor}%` }} /></span>
+            <span className="cifra">{unidad === 'd' ? `${numero(valor(p), 3)} d` : dineroCorto(valor(p))}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+  return (
+    <section>
+      <h2>Reserva de contingencia</h2>
+      <Ayuda tema="reserva" />
+      <div className="botonera" role="group" aria-label="Nivel de confianza">
+        {NIVELES_RESERVA.map((p) => (
+          <button key={p} type="button" className={p === nivel ? '' : 'secundario'} aria-pressed={p === nivel} onClick={() => setNivel(p)}>P{Math.round(p * 100)}</button>
+        ))}
+      </div>
+      <table className="tabla-resumen sin-clic">
+        <tbody>
+          <tr><td>Plan (sin incertidumbre ni riesgos)</td><td>{FECHA.valor(r.plan.fecha)} · {dias(r.plan.dias)}{r.plan.costo !== null ? ` · ${dineroCorto(r.plan.costo)}${mon}` : ''}</td></tr>
+          <tr><td>P{Math.round(nivel * 100)}</td><td>{FECHA.valor(r.objetivo.fecha)} · {dias(r.objetivo.dias)}{r.objetivo.costo !== null ? ` · ${dineroCorto(r.objetivo.costo)}${mon}` : ''}</td></tr>
+          <tr><td>Reserva</td><td><strong>{dias(r.dias)}</strong>{r.costo !== null ? <> · <strong>{dineroCorto(r.costo)}{mon}</strong></> : null}</td></tr>
+        </tbody>
+      </table>
+      {partes.length > 0 && (
+        <>
+          <p className="tenue">De dónde sale la reserva de tiempo (las partes suman la reserva; las oportunidades restan):</p>
+          {barras((p) => p.dias, 'd')}
+          {r.costo !== null && (
+            <>
+              <p className="tenue">Y la de dinero:</p>
+              {barras((p) => p.costo ?? 0, '$')}
+            </>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

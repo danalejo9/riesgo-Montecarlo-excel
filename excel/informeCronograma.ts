@@ -8,8 +8,8 @@
 
 import type { DatosGantt } from './gantt.ts';
 import {
-  comparacionPrePost, confianzaConjunta, indicesActividades, resumirCosto, resumirHitosContractuales, resumirTiempo,
-  type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type ResumenHitoContractual, type SimulacionCronograma,
+  comparacionPrePost, confianzaConjunta, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type NivelReserva, type Reserva, type ResumenHitoContractual, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
@@ -50,6 +50,8 @@ export interface DatosInformeCronograma {
   rutas: { proporcion: number; actividades: string[] }[];
   /** W1: hitos contractuales (opcional: los informes guardados antes no lo traen). */
   contractuales?: ResumenHitoContractual[];
+  /** W2: la reserva de contingencia al percentil de la contingencia (o P80) y su reparto. */
+  reserva?: Reserva;
   avisos: string[];
   /** V6 (07/10): el cronograma para dibujar el Gantt con las fechas de fin posibles. */
   gantt?: DatosGantt;
@@ -109,6 +111,7 @@ export function datosInformeCronograma(sim: SimulacionCronograma, modelo: Modelo
     criticas: indicesActividades(sim).filter((x) => !sim.riesgoInsertado[sim.red.indice.get(x.id) ?? -1]).slice(0, 10).map((x) => ({ id: x.id, nombre: x.nombre, criticidad: x.criticidad, ssi: x.ssi })),
     rutas: sim.rutas,
     ...(sim.contractuales.length ? { contractuales: resumirHitosContractuales(sim) } : {}),
+    reserva: reservaContingencia(sim, (NIVELES_RESERVA as readonly number[]).includes(cfg.percentilContingencia ?? 0.8) ? (cfg.percentilContingencia ?? 0.8) as NivelReserva : 0.8),
     avisos: sim.avisos,
   };
 }

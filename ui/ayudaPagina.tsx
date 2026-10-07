@@ -34,6 +34,7 @@ const TITULOS: Record<TemaAyuda, string> = {
   jcl: 'Cronograma: confianza conjunta (JCL)',
   prePost: 'Cronograma: antes y después de mitigar',
   hitosContrato: 'Cronograma: hitos contractuales y multas',
+  reserva: 'Cronograma: reserva de contingencia y su reparto',
   comparar: 'Comparar salidas',
 };
 
