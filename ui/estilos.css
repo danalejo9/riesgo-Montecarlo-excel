@@ -586,6 +586,13 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .tornado-eliminacion .barra-valor { display: block; height: 100%; background: var(--baja); }
 .tornado-eliminacion .barra-valor.negativa { background: var(--oportunidad); }
 .tornado-eliminacion .cifra { text-align: right; font-variant-numeric: tabular-nums; }
+/* W4: sesgo de convergencia. */
+.convergencia .barra-valor { background: var(--serie-1); }
+.convergencia li.producto .barra-valor { background: var(--tenue); }
+.convergencia li.conjunta .barra-valor { background: var(--baja); }
+.convergencia li.conjunta .nombre { font-weight: 600; }
+.en-palabras { border-left: 3px solid var(--acento); padding: 4px 10px; margin: 8px 0; }
+.en-palabras p { margin: 4px 0; }
 /* Q2/Q3: dispersión JCL y Gantt ajustado. */
 .zona-jcl { fill: color-mix(in srgb, var(--luz-verde) 18%, transparent); }
 .punto-dispersion { fill: var(--serie-1); opacity: .55; }

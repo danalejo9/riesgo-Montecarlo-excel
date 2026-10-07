@@ -50,6 +50,8 @@ export const AYUDA = {
     'Se simulan los dos escenarios con los mismos números aleatorios: antes de mitigar (probabilidades e impactos actuales) y después (probabilidad post, la parte del impacto que queda, más lo que cuesta mitigar). La diferencia es solo la de la mitigación. Si el costo post sale mayor, la mitigación cuesta más de lo que ahorra en costo, aunque gane tiempo.',
   clima:
     'Los días que el clima hace perder cada mes (hoja Clima) se sortean mes a mes en cada iteración: una actividad expuesta avanza más despacio en los meses malos, así que la misma actividad sufre más en temporada de lluvias que en la seca. Para medir cuánto pesa, se vuelve a simular sin el clima con los mismos números aleatorios.',
+  convergencia:
+    'Donde se juntan varias rutas, la actividad solo empieza a tiempo si llegan todas. Aunque cada ruta llegue a tiempo casi siempre, la probabilidad de que lleguen todas a la vez es menor: es el sesgo de convergencia, y es la razón principal de que la fecha del cronograma casi nunca se cumpla. La barra gris es lo que daría si las rutas fueran independientes; la roja, lo que pasó en la simulación (con las correlaciones y los riesgos comunes).',
   escenarios:
     'Cada escenario de la hoja Escenarios (acelerar una actividad, trabajar los sábados, quitar un riesgo, aplicar una mitigación…) se simula con los mismos números aleatorios que la base: lo que no cambia sortea exactamente lo mismo, así que la diferencia de cada iteración es solo la del cambio. Por eso el margen de error del adelanto es mucho menor que el de comparar dos simulaciones independientes. Todo se compara en fechas, porque trabajar los sábados cambia el calendario.',
   reserva:

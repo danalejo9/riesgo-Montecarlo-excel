@@ -8,7 +8,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  chequearCalidad, comparacionPrePost, compararEscenarios, narrativaEscenarios, type ComparacionEscenarios, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
+  chequearCalidad, comparacionPrePost, compararEscenarios, narrativaEscenarios, type ComparacionEscenarios,
+  actividadesDeRamas, convergenciasDe, narrativaCronograma, type ConvergenciaSimulada, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
   type NivelReserva,
   type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
@@ -432,6 +433,12 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           </p>
           {sim.avisos.filter((a) => a.startsWith('Iteraciones automáticas')).map((a) => <p key={a} className="aviso-ok">{a}</p>)}
           {estado.modelo && <CifrasCronograma sim={sim} fin={fin} modelo={estado.modelo} />}
+          {estado.modelo && (
+            <section className="en-palabras" aria-label="El resultado en palabras">
+              <h2>En pocas palabras</h2>
+              {narrativaCronograma(sim, estado.modelo).map((t) => <p key={t}>{t}</p>)}
+            </section>
+          )}
           <section>
             <h2>Fin del proyecto</h2>
             <Ayuda tema="finCronograma" />
@@ -514,6 +521,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
               </table>
             </div>
           </section>
+          {estado.modelo && <SesgoConvergencia convergencias={convergenciasDe(sim, actividadesDeRamas(estado.modelo))} />}
+
           {sim.rutas.length > 0 && (
             <section>
               <h2>Rutas críticas más frecuentes</h2>
@@ -782,6 +791,46 @@ function descargar(nombre: string, texto: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** W4: la convergencia que más pesa, en barras, y las siguientes en una tabla. */
+function SesgoConvergencia({ convergencias }: { convergencias: readonly ConvergenciaSimulada[] }) {
+  const con = convergencias.filter((c) => c.sesgo >= 0.01);
+  const c = con[0];
+  if (!c) return null;
+  const barra = (clase: string, nombre: string, p: number) => (
+    <li key={`${clase}-${nombre}`} className={clase}>
+      <span className="nombre" title={nombre}>{nombre}</span>
+      <span className="barra-fondo"><span className="barra-valor" style={{ width: `${100 * p}%` }} /></span>
+      <span className="cifra">{pct(p)}</span>
+    </li>
+  );
+  return (
+    <section>
+      <h2>Sesgo de convergencia</h2>
+      <Ayuda tema="convergencia" />
+      <p className="tenue">
+        En «{c.id} · {c.nombre}» se juntan {c.ramas.length} rutas. Probabilidad de llegar a tiempo para empezar el {FECHA.valor(c.inicioPlan)}:
+      </p>
+      <ul className="tornado-eliminacion convergencia">
+        {c.ramas.map((r) => barra('rama', `${r.id} · ${r.nombre}`, r.probATiempo))}
+        {barra('producto', 'Todas, si fueran independientes', c.probProducto)}
+        {barra('conjunta', `${c.id} empieza a tiempo`, c.probATiempo)}
+      </ul>
+      {con.length > 1 && (
+        <div className="tabla-desplazable">
+          <table className="tabla-resumen sin-clic">
+            <thead><tr><th>Convergencia</th><th>Rutas</th><th>La más floja</th><th>Empieza a tiempo</th></tr></thead>
+            <tbody>
+              {con.slice(1, 6).map((x) => (
+                <tr key={x.id}><td>{x.id} · {x.nombre}</td><td>{x.ramas.length}</td><td>{pct(Math.min(...x.ramas.map((r) => r.probATiempo)))}</td><td><strong>{pct(x.probATiempo)}</strong></td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }
 
 /** W7: la base y cada escenario, con el adelanto del P80 y su margen. */

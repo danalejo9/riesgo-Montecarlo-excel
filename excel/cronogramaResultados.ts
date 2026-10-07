@@ -8,7 +8,7 @@
  */
 
 import {
-  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  actividadesDeRamas, convergenciasDe, narrativaCronograma, comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
   type ChequeoCalidad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { FORMATO_FECHA, type Celda } from './cronogramaHojas.ts';
@@ -93,6 +93,9 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
   fila(['Clima probabilístico', modelo.clima ? `Sí: ${modelo.clima.afecta.length} actividades expuestas` : 'No']);
   fila(['Actividades / relaciones / riesgos', `${sim.red.n} / ${sim.red.relPred.length} / ${modelo.riesgos.length}`]);
   fila(['Tiempo de cálculo (s)', sim.milisegundos / 1000], [null, '0.00']);
+
+  titulo('En palabras');
+  for (const t of narrativaCronograma(sim, modelo)) fila([t]);
 
   titulo('Advertencias de calidad del cronograma');
   const avisos = calidad.criterios.filter((c) => c.estado !== 'verde');
@@ -220,6 +223,19 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
     }
     const mit = modelo.riesgos.reduce((a, r) => a + (r.costoMitigacion ?? 0), 0);
     if (mit > 0) fila(['Costo de la mitigación (incluido en el post)', mit], [null, MONEDA]);
+  }
+
+  // W4: sesgo de convergencia.
+  const convs = convergenciasDe(sim, actividadesDeRamas(modelo)).filter((c) => c.sesgo >= 0.01);
+  if (convs.length) {
+    titulo('Sesgo de convergencia (donde se juntan varias rutas)');
+    fila(['Actividad', 'Inicio del plan', 'Empieza a tiempo', 'Si fueran independientes', 'Ruta', 'Llega a tiempo'], [], true);
+    for (const c of convs.slice(0, 10)) {
+      c.ramas.forEach((r, k) => {
+        fila([k === 0 ? `${c.id} · ${c.nombre}` : null, k === 0 ? c.inicioPlan : null, k === 0 ? c.probATiempo : null, k === 0 ? c.probProducto : null, `${r.id} · ${r.nombre}`, r.probATiempo],
+          [null, FORMATO_FECHA, PCT, PCT, null, PCT]);
+      });
+    }
   }
 
   // Rutas críticas más frecuentes (Q3.2).

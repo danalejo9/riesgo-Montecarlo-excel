@@ -355,3 +355,66 @@ export function resumirHitosContractuales(sim: SimulacionCronograma): ResumenHit
     };
   });
 }
+
+export interface RamaConvergencia {
+  id: string;
+  nombre: string;
+  /** P(la ruta llega a tiempo: la predecesora termina a tiempo para empezar en la fecha del plan). */
+  probATiempo: number;
+}
+
+export interface ConvergenciaSimulada {
+  id: string;
+  nombre: string;
+  /** Inicio en el cronograma determinístico (número de serie). */
+  inicioPlan: number;
+  /** P(empieza en la fecha del plan o antes): exige que lleguen todas sus rutas. */
+  probATiempo: number;
+  /** Lo mismo si las rutas fueran independientes: el producto de las de cada una. */
+  probProducto: number;
+  ramas: RamaConvergencia[];
+  /** La ruta más floja menos la convergencia: cuánto quita juntarse. */
+  sesgo: number;
+}
+
+/**
+ * W4: el sesgo de convergencia (*merge bias*). En cada actividad pendiente
+ * donde se juntan dos o más rutas fin–comienzo sin desfase, la probabilidad
+ * de que cada ruta llegue a tiempo (a la fecha del plan) y la de que la
+ * actividad empiece a tiempo, que exige que lleguen todas. Se calcula con las
+ * fechas de cada iteración que ya guarda la simulación; de mayor a menor sesgo.
+ */
+export function convergenciasDe(sim: SimulacionCronograma, excluir: ReadonlySet<string> = new Set()): ConvergenciaSimulada[] {
+  const red = sim.red;
+  const n = sim.iteraciones;
+  const out: ConvergenciaSimulada[] = [];
+  for (let s = 0; s < red.n; s++) {
+    if (red.estado[s] !== 0 || sim.riesgoInsertado[s] || excluir.has(red.ids[s] as string)) continue;
+    const preds: number[] = [];
+    for (let k = red.entradaInicio[s] as number; k < (red.entradaInicio[s + 1] as number); k++) {
+      const r = red.relEntrada[k] as number;
+      const p = red.relPred[r] as number;
+      if (red.relTipo[r] === 0 && red.relDesfase[r] === 0 && red.relTranscurrido[r] === 0 && !sim.riesgoInsertado[p] && !excluir.has(red.ids[p] as string)) preds.push(p);
+    }
+    if (preds.length < 2) continue;
+    const plan = sim.deterministico.filas[s]?.inicio as number;
+    const inicioS = sim.fechas.inicio[s] as Float32Array;
+    let conv = 0;
+    for (let i = 0; i < n; i++) if ((inicioS[i] as number) <= plan) conv++;
+    const ramas = preds.map((p) => {
+      const fin = sim.fechas.fin[p] as Float32Array;
+      // Un hito termina el mismo día en que empieza su sucesora; una tarea, el día laborable anterior.
+      const hito = (sim.deterministico.filas[p]?.duracion ?? 1) === 0;
+      let a = 0;
+      for (let i = 0; i < n; i++) if (hito ? (fin[i] as number) <= plan : (fin[i] as number) < plan) a++;
+      return { id: red.ids[p] as string, nombre: red.nombres[p] as string, probATiempo: a / n };
+    });
+    const probATiempo = conv / n;
+    out.push({
+      id: red.ids[s] as string, nombre: red.nombres[s] as string, inicioPlan: plan, probATiempo,
+      probProducto: ramas.reduce((x, r) => x * r.probATiempo, 1), ramas,
+      sesgo: Math.min(...ramas.map((r) => r.probATiempo)) - probATiempo,
+    });
+  }
+  return out.sort((a, b) => b.sesgo - a.sesgo);
+}

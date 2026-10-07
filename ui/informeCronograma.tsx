@@ -45,6 +45,13 @@ function Informe() {
         </p>
       </header>
 
+      {d.enPalabras && d.enPalabras.length > 0 && (
+        <section>
+          <h2>En pocas palabras</h2>
+          {d.enPalabras.map((t) => <p key={t}>{t}</p>)}
+        </section>
+      )}
+
       <section>
         <h2>Supuestos</h2>
         <dl className="datos">{d.supuestos.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
@@ -185,6 +192,24 @@ function Informe() {
           </>
         )}
       </section>
+
+      {d.convergencias && d.convergencias.length > 0 && (
+        <section>
+          <h2>Sesgo de convergencia</h2>
+          <p className="tenue">Donde se juntan varias rutas, la actividad solo empieza a tiempo si llegan todas.</p>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>Actividad</th><th>Ruta</th><th>Llega a tiempo</th></tr></thead>
+            <tbody>
+              {d.convergencias.map((c) => (
+                <Fragment key={c.id}>
+                  {c.ramas.map((r) => <tr key={r.id}><th scope="row">{c.id} · {c.nombre}</th><td>{r.id} · {r.nombre}</td><td>{pct(r.probATiempo)}</td></tr>)}
+                  <tr><th scope="row">{c.id} · {c.nombre}</th><td><strong>Empieza a tiempo ({FECHA.valor(c.inicioPlan)})</strong></td><td><strong>{pct(c.probATiempo)}</strong> (independientes: {pct(c.probProducto)})</td></tr>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {d.avisos.length > 0 && <section><h2>Avisos de la simulación</h2><ul>{d.avisos.map((a, i) => <li key={i}>{a}</li>)}</ul></section>}
 

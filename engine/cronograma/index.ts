@@ -12,3 +12,4 @@ export * from './jerarquia.ts';
 export * from './reserva.ts';
 export * from './clima.ts';
 export * from './escenarios.ts';
+export * from './narrativa.ts';
