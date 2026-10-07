@@ -204,6 +204,7 @@ Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 | G3 | Seguimiento (fecha de corte, avance), líneas base, rutas de holgura múltiples, mapa de calor y probabilidad en hitos, exportar MSPDI/CSV, PNG y PDF paginado, vistas guardables | ✅ en código; falta tu prueba (guía GT19–GT30) |
 | G4 | Fechas de fin posibles bajo el Gantt (histograma semanal en el mismo eje, P50, P80, meta), la ventana carga a la primera | ✅ en código; falta tu prueba (guía GT31–GT32) |
 | G5 | Editores en ventana: calendarios (año a la vista, festivos de Colombia), riesgos con impactos y mitigación, ramas | ✅ en código; falta tu prueba (guía GT34–GT37) |
+| G6 | Resultados del cronograma más claros (fechas, meta y P80, cifras grandes, amenazas y oportunidades, matriz de riesgos) y el Gantt en el informe ejecutivo | ✅ en código; falta tu prueba (guía GT38–GT40) |
 
 ### Después de la versión 1.0
 

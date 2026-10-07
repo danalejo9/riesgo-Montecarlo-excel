@@ -24,6 +24,10 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 - **V5**: «Riesgos: probabilidad e impacto» en los resultados del cronograma:
   la misma matriz 5 × 5 del registro del modelo, con el impacto como los días
   medios que el riesgo suma a sus actividades si ocurre.
+- **V6**: el informe ejecutivo del cronograma trae, en su propia página, «Cronograma
+  y fechas de fin posibles»: el Gantt (hasta 60 filas) con la ruta crítica y
+  el rango P10–P90, y la franja semanal de las fechas de fin en el mismo eje
+  (`ui/gantt/GanttInforme.tsx`); su curva S lleva también la meta y el P80.
 
 ### Editores en ventana: calendarios, riesgos y ramas (2026-10-06)
 

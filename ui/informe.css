@@ -46,3 +46,9 @@
 .informe .tornado { max-width: 520px; }
 .informe .datos { align-content: start; }
 .dos-columnas { align-items: start; }
+
+/* V6 (07/10): el Gantt del informe del cronograma. */
+.gantt-informe { margin: 4px 0; }
+.gantt-informe canvas { display: block; max-width: 100%; height: auto !important; border: 1px solid #d4d4d4; background: #fff; }
+.gantt-informe canvas + canvas { border-top: 0; }
+@media print { .salto-antes { break-before: page; } }

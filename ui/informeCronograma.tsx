@@ -9,7 +9,8 @@ import { createRoot } from 'react-dom/client';
 
 import { decodificarInformeCronograma, type DatosInformeCronograma } from '../excel/informeCronograma.ts';
 import { formatoDe, numero } from './formato.ts';
-import { CurvaAcumulada } from './Resultados.tsx';
+import { CurvaAcumulada, type LineaReferencia } from './Resultados.tsx';
+import { GanttInforme } from './gantt/GanttInforme.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -75,9 +76,20 @@ function Informe() {
             puntos={d.fin.curvaS.map(([x, q]) => ({ x, p: q }))}
             {...(d.fin.curvaSPost ? { referencia: d.fin.curvaSPost.map(([x, q]) => ({ x, p: q })), etiquetaReferencia: 'Post mitigación' } : {})}
             formato={FECHA}
+            lineas={[
+              ...(d.fin.fechaMeta !== null ? [{ x: d.fin.fechaMeta, etiqueta: `Meta ${FECHA.valor(d.fin.fechaMeta)}`, tipo: 'meta' } as LineaReferencia] : []),
+              ...(p(0.8) ? [{ x: (p(0.8) as { serie: number }).serie, etiqueta: 'P80', tipo: 'percentil' } as LineaReferencia] : []),
+            ]}
           />
         </div>
       </section>
+
+      {d.gantt && (
+        <section className="salto-antes">
+          <h2>Cronograma y fechas de fin posibles</h2>
+          <GanttInforme datos={d.gantt} />
+        </section>
+      )}
 
       {d.costo && (
         <section>

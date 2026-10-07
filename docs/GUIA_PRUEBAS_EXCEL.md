@@ -57,6 +57,9 @@
 > - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
 >   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
 >   cierra Excel y repite `npm run stop` y `npm start`.
+> - **Nuevo (07/10)**: **GT38 a GT40**, resultados del cronograma más claros
+>   (fechas, meta y P80 en las curvas, cifras grandes, amenazas y
+>   oportunidades, matriz de riesgos) y el Gantt dentro del informe ejecutivo.
 > - **Nuevo (06/10, editores)**: **GT34 a GT37**, los editores en ventana
 >   de calendarios, riesgos y ramas (pestaña Cronograma → «Editar en una
 >   ventana»).
@@ -1274,6 +1277,38 @@ Guarda: en Excel la hoja **Ramas** tiene las dos filas (Licencia ·
 Trámite normal · 70 % · B; Licencia · Ya aprobada · 30 % · C). Simula: P80
 **07/02/2028** y meta **75,2 %** (como Q20). Deshaz con **Deshacer: Editar
 las ramas** (la hoja Ramas queda solo con el encabezado).
+
+### GT38–GT40. Resultados del cronograma más claros y el Gantt en el informe
+
+*Añadido el 07/10.* En el libro de cronograma del ejemplo (inicio 04/01/2027,
+meta 31/01/2028), simula (pestaña Cronograma → Simular cronograma). El panel
+pasa a **Resultados**.
+
+**GT38. Las cifras, las curvas y el tornado.** Arriba, debajo de «5.000
+iteraciones · semilla 12345 · hipercubo latino», tres recuadros:
+**16/02/2028** (P80 del fin), **65,3 %** (de cumplir la meta 31/01/2028) y
+**564 M** (contingencia de costo). En «Fin del proyecto»:
+- la curva S tiene una línea **morada «Meta 31/01/2028»** y una punteada
+  **«P80»**, con sus nombres sin pisarse;
+- el histograma de debajo va **en fechas** (de 04/10/2027 a 16/06/2028),
+  con las mismas dos líneas y las barras de después de la meta en gris claro.
+
+En «Riesgos: tornado por eliminación», R1 a R3 en rojo; R4 dice
+«**oportunidad** · R4 · Cubierta prefabricada…» con 0 d (debajo, la leyenda
+explica el 0); en el tornado de costo, R4 va en **verde** (−18,4 M).
+
+**GT39. Matriz de probabilidad e impacto.** Debajo del tornado, «Riesgos:
+probabilidad e impacto»: la cuadrícula 5 × 5 con **2 y 3** en Baja · Muy
+alto, **1** en Media · Muy alto y **4** en Alta · Medio; debajo, la lista
+numerada con la severidad de cada uno.
+
+**GT40. El Gantt en el informe ejecutivo.** Al final de Resultados, pulsa
+**Informe ejecutivo (PDF)**. Después de «Fecha de fin» (con la meta y el P80
+en su curva), en una página nueva, «**Cronograma y fechas de fin
+posibles**»: el Gantt de las 18 filas con la ruta crítica en rojo y el rango
+P10–P90 de cada actividad, y debajo, en el mismo eje, las barras semanales
+de las fechas de fin (azules hasta la meta, naranjas después). «Imprimir o
+guardar como PDF» lo deja en A4.
 
 ## A. Lo básico, en la hoja «Modelo»
 

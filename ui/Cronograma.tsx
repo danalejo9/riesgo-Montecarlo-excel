@@ -215,7 +215,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
       // El Gantt toma la criticidad y el rango P10–P90 de cada actividad.
       controlGantt.qrsa = qrsaDeSimulacion(sim);
       controlGantt.distribucionFin = distribucionFinDe(sim, modelo.configuracion.fechaMeta) ?? undefined;
-      setDatosGantt((d) => (d ? { ...d, qrsa: controlGantt.qrsa } : d));
+      setDatosGantt((d) => (d ? { ...d, qrsa: controlGantt.qrsa, ...(controlGantt.distribucionFin ? { distribucionFin: controlGantt.distribucionFin } : {}) } : d));
       window.dispatchEvent(new Event(REFRESCAR_GANTT));
       setOcupado('Escribiendo la hoja de resultados…');
       await escribirResultadosCronograma(hojaResultados({ sim, modelo, calidad, ahora: serieAhora(), version: VERSION_COMPLEMENTO }));
@@ -478,7 +478,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           <div className="botonera">
             <button type="button" onClick={() => {
               if (!estado.modelo || !calidad) return;
-              void codificarInformeCronograma(datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO))
+              void codificarInformeCronograma(datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined))
                 .then((codigo) => abrirEnNavegador(`${new URL('/informeCronograma.html', window.location.href).href}#d=${codigo}`))
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>

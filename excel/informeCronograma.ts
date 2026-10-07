@@ -6,6 +6,7 @@
  * la página `ui/informeCronograma.html` lee de la dirección, comprimidos.
  */
 
+import type { DatosGantt } from './gantt.ts';
 import {
   comparacionPrePost, confianzaConjunta, indicesActividades, resumirCosto, resumirTiempo,
   type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type SimulacionCronograma,
@@ -48,6 +49,8 @@ export interface DatosInformeCronograma {
   criticas: { id: string; nombre: string; criticidad: number; ssi: number }[];
   rutas: { proporcion: number; actividades: string[] }[];
   avisos: string[];
+  /** V6 (07/10): el cronograma para dibujar el Gantt con las fechas de fin posibles. */
+  gantt?: DatosGantt;
 }
 
 function reducir(curva: [number, number][], max = 200): [number, number][] {
@@ -59,7 +62,7 @@ function reducir(curva: [number, number][], max = 200): [number, number][] {
   return r;
 }
 
-export function datosInformeCronograma(sim: SimulacionCronograma, modelo: ModeloCronograma, calidad: ChequeoCalidad, version: string, ahora = new Date()): DatosInformeCronograma {
+export function datosInformeCronograma(sim: SimulacionCronograma, modelo: ModeloCronograma, calidad: ChequeoCalidad, version: string, ahora = new Date(), gantt?: DatosGantt): DatosInformeCronograma {
   const cfg = modelo.configuracion;
   const fin = resumirTiempo(sim.fin, sim.deterministico.fin, cfg.fechaMeta);
   const post = sim.post ? resumirTiempo(sim.post.fin, sim.deterministico.fin, cfg.fechaMeta) : null;
@@ -67,6 +70,7 @@ export function datosInformeCronograma(sim: SimulacionCronograma, modelo: Modelo
   const j = sim.costo && cfg.fechaMeta !== undefined && cfg.costoMeta !== undefined ? confianzaConjunta(sim.fin.serie, sim.costo, cfg.fechaMeta, cfg.costoMeta, 1) : null;
   return {
     version: 1,
+    ...(gantt ? { gantt } : {}),
     generado: ahora.toISOString(),
     complemento: version,
     moneda: cfg.moneda ?? '',

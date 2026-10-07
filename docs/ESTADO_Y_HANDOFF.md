@@ -1433,6 +1433,17 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     el banco de punta a punta (renombrar, festivo, R3, impacto, rama,
     deshacer). Guía GT34–GT37. **Siguiente**: que el usuario defina qué
     mejoras visuales valen la pena (lista en la respuesta del 06/10).
+84. [x] **Mejoras visuales V1–V6 y V9 (2026-10-07)**, aprobadas por el
+    usuario («las que me dices me parecen bien»; V7 y V8 quedaron fuera).
+    Histograma del fin en fechas (`HistogramaFechasFin`), `LineaReferencia`
+    en `CurvaAcumulada` e `Histograma` (meta y P80), `CifrasCronograma`,
+    tornado con amenazas/oportunidades (`esOportunidad`), matriz 5 × 5 para
+    los riesgos del cronograma (`filasMatriz` + `MatrizRiesgosTabla`), el
+    Gantt en el informe ejecutivo (`GanttInforme`, campo `gantt` de
+    `DatosInformeCronograma`) y `miles()` con separador siempre. Tokens
+    `--meta` y `--oportunidad`. Probado en el banco. Guía GT38–GT40.
+    **Siguiente**: la ronda del usuario (Q14, Q18, Q20, Q21, GT1–GT40,
+    R1–R4).
 
 **Siguiente acción al retomar**, en orden de valor:
 
