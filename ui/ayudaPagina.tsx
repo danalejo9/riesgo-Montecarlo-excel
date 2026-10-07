@@ -36,6 +36,7 @@ const TITULOS: Record<TemaAyuda, string> = {
   hitosContrato: 'Cronograma: hitos contractuales y multas',
   reserva: 'Cronograma: reserva de contingencia y su reparto',
   clima: 'Cronograma: clima probabilístico',
+  escenarios: 'Cronograma: escenarios «¿qué pasa si?»',
   comparar: 'Comparar salidas',
 };
 

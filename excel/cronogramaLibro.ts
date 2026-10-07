@@ -204,17 +204,17 @@ export async function irACelda(hoja: string, columna: string, fila: number): Pro
   });
 }
 
-/** Rehace la hoja `Resultados_Cronograma`. */
-export async function escribirResultadosCronograma(r: HojaResultados): Promise<void> {
+/** Rehace la hoja `Resultados_Cronograma` (o la que se diga, con el mismo formato). */
+export async function escribirResultadosCronograma(r: HojaResultados, nombre: string = HOJA_RESULTADOS): Promise<void> {
   await Excel.run(async (context) => {
-    const previa = context.workbook.worksheets.getItemOrNullObject(HOJA_RESULTADOS);
+    const previa = context.workbook.worksheets.getItemOrNullObject(nombre);
     previa.load('isNullObject');
     await context.sync();
     if (!previa.isNullObject) {
       previa.delete();
       await context.sync();
     }
-    const hoja = context.workbook.worksheets.add(HOJA_RESULTADOS);
+    const hoja = context.workbook.worksheets.add(nombre);
     const filas = r.valores.length;
     const ancho = r.valores[0]?.length ?? 1;
     const todo = hoja.getRangeByIndexes(0, 0, filas, ancho);

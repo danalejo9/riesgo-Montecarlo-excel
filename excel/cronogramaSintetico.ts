@@ -56,5 +56,6 @@ export function hojasSinteticas(inicio: number, n = 2000, relacionesPorActividad
     [H.ramas]: vacia(H.ramas),
     [H.hitosContrato]: vacia(H.hitosContrato),
     [H.clima]: vacia(H.clima),
+    [H.escenarios]: vacia(H.escenarios),
   };
 }

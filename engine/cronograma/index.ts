@@ -11,3 +11,4 @@ export * from './sintaxis.ts';
 export * from './jerarquia.ts';
 export * from './reserva.ts';
 export * from './clima.ts';
+export * from './escenarios.ts';

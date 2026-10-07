@@ -157,6 +157,8 @@ export interface OpcionesSimulacion {
   /** `iteraciones`: las de la simulación principal; el resto de `total` son las vueltas del tornado y de «después de mitigar». */
   progreso?: (hecho: number, total: number, iteraciones: number) => void;
   senal?: AbortSignal;
+  /** W7: solo la corrida principal (sin tornado, sin «sin riesgos», sin post ni «sin clima»), para los escenarios. */
+  soloPrincipal?: boolean;
 }
 
 const BLOQUE = 500;
@@ -701,7 +703,7 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
   const R = modelo.riesgos.length;
   const pContingencia = cfg.percentilContingencia ?? 0.8;
   const conClima = climaActivo(modelo.clima);
-  const extra = (R > 0 ? R + 1 : 0) + (conPost ? 1 : 0) + (conClima ? 1 : 0);
+  const extra = opciones.soloPrincipal ? 0 : (R > 0 ? R + 1 : 0) + (conPost ? 1 : 0) + (conClima ? 1 : 0);
 
   let hecho = 0;
   let total = 0;
@@ -752,7 +754,7 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
 
   const eliminacion: EliminacionRiesgo[] = [];
   let sinRiesgos: SimulacionCronograma['sinRiesgos'] = null;
-  if (R > 0) {
+  if (R > 0 && !opciones.soloPrincipal) {
     for (let ri = 0; ri < R; ri++) {
       const c = await correr(modelo, pre, { quitar: ri, post: false, completa: false }, hitos, avanzar, opciones.senal);
       const s = mediaYP80(c.finDias);
@@ -778,14 +780,14 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
   }
 
   let sinClima: SimulacionCronograma['sinClima'] = null;
-  if (pre.clima) {
+  if (pre.clima && !opciones.soloPrincipal) {
     const c = await correr(modelo, pre, { quitar: -1, post: false, completa: false, sinClima: true }, hitos, avanzar, opciones.senal);
     const s = mediaYP80(c.finDias);
     sinClima = { media: s.media, p80: s.p80 };
   }
 
   let post: EscenarioPost | null = null;
-  if (conPost) {
+  if (conPost && !opciones.soloPrincipal) {
     const c = await correr(modelo, pre, { quitar: -1, post: true, completa: false }, hitos, avanzar, opciones.senal);
     const s = mediaYP80(c.finDias);
     post = { fin: { id: 'FIN', nombre: 'Fin del proyecto (post mitigación)', serie: c.finSerie, dias: c.finDias }, costo: c.costo, media: s.media, p80: s.p80 };

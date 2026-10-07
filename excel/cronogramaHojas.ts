@@ -10,7 +10,7 @@
  */
 
 import {
-  construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES, MESES, type MesClima,
+  CAMBIOS, construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES, MESES, type MesClima,
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
@@ -32,6 +32,7 @@ export const HOJAS_CRONOGRAMA = {
   lineasBase: 'Lineas_Base',
   hitosContrato: 'Hitos_Contrato',
   clima: 'Clima',
+  escenarios: 'Escenarios',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -92,6 +93,7 @@ export const COLUMNAS = {
   hitosContrato: ['Hito (ID)', 'Fecha contractual', 'Multa por día de retraso', 'Tope de la multa', 'Nota'],
   clima: ['Mes', 'Días perdidos mínimo', 'Días perdidos más probable', 'Días perdidos máximo'],
   climaAfecta: ['Afecta a'],
+  escenarios: ['Escenario', 'Cambio', 'Sobre (ID)', 'Valor', 'Nota'],
 } as const;
 
 /** G3: hasta tres líneas base. */
@@ -1003,6 +1005,28 @@ const COSTO_META_EJEMPLO = 5_600_000_000;
 /** Días desde el inicio hasta la fecha meta del ejemplo (también la fecha contractual de la entrega). */
 const DIAS_META_EJEMPLO = 392;
 
+/** W7: la hoja Escenarios con unas filas de ejemplo y, a la derecha, la lista de cambios posibles. */
+export function hojaEscenarios(filas: readonly Celda[][]): HojaNueva {
+  const leyenda: Celda[][] = [['Cambios posibles', 'Sobre qué y qué valor'], ...CAMBIOS.map((c) => [c.texto, `${c.sobre === 'actividad' ? 'Actividad, «WBS x» o «Grupo y»' : c.sobre === 'riesgo' ? 'Riesgo' : c.sobre === 'partida' ? 'Partida de costo' : 'Proyecto'}: ${c.valor}`] as Celda[])];
+  const valores: Celda[][] = [];
+  for (let i = 0; i < Math.max(filas.length + 1, leyenda.length); i++) {
+    const izq: Celda[] = i === 0 ? [...COLUMNAS.escenarios] : [...(filas[i - 1] ?? [null, null, null, null, null])];
+    while (izq.length < 5) izq.push(null);
+    valores.push([...izq, null, ...(leyenda[i] ?? [null, null])]);
+  }
+  return {
+    nombre: HOJAS_CRONOGRAMA.escenarios,
+    valores,
+    formatos: { 3: 'General' },
+    anchos: [28, 22, 16, 12, 44, 3, 22, 80],
+    listas: { 1: CAMBIOS.map((c) => c.texto) },
+    notas: {
+      0: 'Las filas con el mismo nombre forman un escenario. Cada uno se simula con los mismos números aleatorios que la base: la diferencia es solo la del cambio.',
+      2: 'El ID de la actividad, el riesgo o la partida (varios, separados por «;»). Para sábados o domingos, un calendario; vacío: todos.',
+    },
+  };
+}
+
 /** Las hojas del libro de cronograma, con el ejemplo de la obra, para empezar en `inicio` (número de serie, un lunes). */
 export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
   const anio = fechaDeSerie(inicio).anio;
@@ -1188,6 +1212,14 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         [COLUMNA_AFECTA_CLIMA]: 'Las actividades a la intemperie, una por fila: un ID, «WBS 2» (y sus hijas) o «Grupo Obra». Vacía: el clima no afecta a nada.',
       },
     },
+    hojaEscenarios([
+      ['Trabajar los sábados', 'Trabajar sábados', '', 'Sí', 'Un turno más por semana en toda la obra'],
+      ['Acelerar la estructura', 'Duración en %', 'E', -0.2, 'Una cuadrilla más: 20 % menos de duración…'],
+      ['Acelerar la estructura', 'Valor de la partida', 'GRUA', 1_300_000, '…y la grúa cuesta más por día'],
+      ['Sin el riesgo de la licencia', 'Quitar riesgo', 'R2', null, '¿Cuánto vale eliminarlo del todo?'],
+      ['Todas las mitigaciones', 'Aplicar mitigación', 'R1; R2', null, 'Con la probabilidad y el impacto post de la hoja Riesgos'],
+      ['Mampostería en paralelo', 'Predecesoras', 'H', 'F CC', 'Empezar la fachada a la vez que el desencofrado'],
+    ]),
     {
       nombre: HOJAS_CRONOGRAMA.ramas,
       valores: [[...COLUMNAS.ramas]],

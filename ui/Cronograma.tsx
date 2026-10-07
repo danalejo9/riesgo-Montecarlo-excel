@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
+  chequearCalidad, comparacionPrePost, compararEscenarios, narrativaEscenarios, type ComparacionEscenarios, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
   type NivelReserva,
   type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
@@ -16,6 +16,7 @@ import { csvIteraciones, codificarInformeCronograma, datosInformeCronograma } fr
 import { hojasImportadas, importarCronograma, resumenImportacion, type CronogramaImportado } from '../excel/importarCronograma.ts';
 import { HOJAS_CRONOGRAMA, leerCronograma, type ErrorHoja } from '../excel/cronogramaHojas.ts';
 import { hojaResultados, resumenesDe } from '../excel/cronogramaResultados.ts';
+import { HOJA_RESULTADOS_ESCENARIOS, hojaResultadosEscenarios, leerEscenarios } from '../excel/escenariosCronograma.ts';
 import {
   crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
@@ -95,6 +96,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
   const [avance, setAvance] = useState<AvanceSimulacion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const control = useRef<AbortController | null>(null);
+  /** W7: la última comparación de escenarios. */
+  const [escenarios, setEscenarios] = useState<ComparacionEscenarios | null>(null);
   /** G1: la vista compacta del Gantt (también antes de simular). */
   const [datosGantt, setDatosGantt] = useState<DatosGantt | null>(null);
 
@@ -230,6 +233,45 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
     }
   }, [alFallar, alSimulado, leer]);
 
+  /** W7: simula la base y cada escenario de la hoja Escenarios con los mismos números aleatorios. */
+  const compararLosEscenarios = useCallback(async () => {
+    setOcupado('Leyendo el cronograma y los escenarios…');
+    setAviso(null);
+    const c = new AbortController();
+    control.current = c;
+    try {
+      const hojas = await leerHojasCronograma();
+      const lectura = leerCronograma(hojas);
+      if (!lectura.modelo) {
+        setEstado({ ...VACIO, errores: lectura.errores, avisos: lectura.avisos });
+        return;
+      }
+      const le = leerEscenarios(hojas[HOJAS_CRONOGRAMA.escenarios], lectura.modelo);
+      if (le.errores.length) {
+        setEstado((e) => ({ ...e, errores: le.errores }));
+        return;
+      }
+      if (le.escenarios.length === 0) {
+        setAviso('La hoja Escenarios no tiene ningún escenario: escriba una fila por cambio (las del mismo nombre van juntas).');
+        return;
+      }
+      setEstado((e) => ({ ...e, errores: [] }));
+      setOcupado(`Comparando ${le.escenarios.length} escenario${le.escenarios.length === 1 ? '' : 's'} con la base…`);
+      const comp = await compararEscenarios(lectura.modelo, le.escenarios, { senal: c.signal, progreso: (hecho, total) => setAvance({ hecho, total, iteraciones: 0 }) });
+      setEscenarios(comp);
+      alSimulado?.();
+      setOcupado('Escribiendo la hoja de escenarios…');
+      await escribirResultadosCronograma(hojaResultadosEscenarios(comp, (x) => FECHA.valor(x)), HOJA_RESULTADOS_ESCENARIOS);
+    } catch (e) {
+      if (e instanceof SimulacionCancelada) setAviso('Comparación cancelada.');
+      else alFallar(e);
+    } finally {
+      setOcupado(null);
+      setAvance(null);
+      control.current = null;
+    }
+  }, [alFallar, alSimulado]);
+
   // G3: la ventana del Gantt pide simular («Correr QRSA»).
   useEffect(() => {
     const f = () => { if (ocupado === null) void simular(); };
@@ -269,6 +311,10 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
         <button type="button" className="secundario" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))} disabled={faltan}
           title="El diagrama completo, con la tabla editable y el diagnóstico de la ruta crítica, en una ventana">
           Ver Gantt
+        </button>
+        <button type="button" className="secundario" onClick={() => void compararLosEscenarios()} disabled={ocupado !== null || faltan}
+          title="Simula cada escenario de la hoja Escenarios con los mismos números aleatorios que la base y los compara">
+          Comparar escenarios
         </button>
         <button type="button" className="secundario" onClick={() => archivo.current?.click()} disabled={ocupado !== null}
           title="Un XML de MS Project (o de ProjectLibre) o un XER de Primavera P6">
@@ -374,6 +420,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           <button type="button" className="enlace" onClick={() => alSimulado?.()}>Resultados</button>.
         </p>
       )}
+
+      {escenarios && conPortal(contenedorResultados, <ComparacionDeEscenarios c={escenarios} />)}
 
       {sim && fin && conPortal(contenedorResultados, (
         <div className="cronograma">
@@ -734,6 +782,38 @@ function descargar(nombre: string, texto: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** W7: la base y cada escenario, con el adelanto del P80 y su margen. */
+function ComparacionDeEscenarios({ c }: { c: ComparacionEscenarios }) {
+  const frases = narrativaEscenarios(c, (x) => FECHA.valor(x));
+  return (
+    <section className="cronograma">
+      <h2>Escenarios «¿qué pasa si?»</h2>
+      <Ayuda tema="escenarios" />
+      <p className="tenue">{miles(c.iteraciones)} iteraciones con los mismos números aleatorios que la base. El detalle está en la hoja «{HOJA_RESULTADOS_ESCENARIOS}».</p>
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th>Escenario</th><th>Fin P80</th><th>Adelanto del P80</th><th>Adelanto medio</th><th>Termina antes</th></tr></thead>
+          <tbody>
+            <tr><td>Base</td><td>{FECHA.valor(c.base.p80)}</td><td>—</td><td>—</td><td>—</td></tr>
+            {c.escenarios.map((e) => (
+              <tr key={e.nombre}>
+                <td title={e.cambios.join('; ')}>{e.nombre}</td>
+                <td>{FECHA.valor(e.p80)}</td>
+                <td><strong>{numero(e.adelantoP80, 3)} d</strong></td>
+                <td>{numero(e.adelantoMedio, 3)} ± {numero(e.ic95, 2)} d</td>
+                <td>{pct(e.probAntes)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul>{frases.map((f) => <li key={f}>{f}</li>)}</ul>
+      {c.problemas.length > 0 && <ul className="tenue">{c.problemas.map((p) => <li key={p}>{p}</li>)}</ul>}
+      <p className="tenue">El margen «±» es el de la diferencia iteración a iteración (al 95 %); con dos simulaciones independientes sería de ±{numero(Math.max(0, ...c.escenarios.map((e) => e.ic95Independientes)), 2)} días.</p>
+    </section>
+  );
 }
 
 /** W1: por hito contractual, la probabilidad de cumplir su fecha y la multa esperada. */
