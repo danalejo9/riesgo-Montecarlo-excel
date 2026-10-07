@@ -38,6 +38,13 @@ export const HOJAS_CRONOGRAMA = {
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
+/** V11: las hojas que cambian el resultado (no las de salida ni las de seguimiento). */
+export const HOJAS_ENTRADA_CRONOGRAMA: ReadonlySet<string> = new Set([
+  HOJAS_CRONOGRAMA.config, HOJAS_CRONOGRAMA.calendario, HOJAS_CRONOGRAMA.actividades, HOJAS_CRONOGRAMA.relaciones, HOJAS_CRONOGRAMA.incertidumbre,
+  HOJAS_CRONOGRAMA.riesgos, HOJAS_CRONOGRAMA.impactos, HOJAS_CRONOGRAMA.costos, HOJAS_CRONOGRAMA.correlaciones, HOJAS_CRONOGRAMA.ramas,
+  HOJAS_CRONOGRAMA.hitosContrato, HOJAS_CRONOGRAMA.clima,
+]);
+
 export type Celda = string | number | boolean | null;
 export type MatrizHoja = readonly (readonly unknown[])[];
 

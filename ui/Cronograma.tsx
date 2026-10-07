@@ -23,6 +23,7 @@ import { HOJA_RESULTADOS_ESCENARIOS, hojaResultadosEscenarios, leerEscenarios } 
 import { rellenarRangos } from '../excel/rangosCronograma.ts';
 import { EJEMPLOS_LIBRO, hojasDeEjemplo } from '../excel/sectoresCronograma.ts';
 import { PrimerUso } from './PrimerUsoCronograma.tsx';
+import { ControlesVistaPrevia, TarjetaVistaPrevia, useVistaPrevia } from './VistaPreviaPlazo.tsx';
 import { guardarEnSeguimiento, instantaneasDe, leerSeguimiento, tendencia, type Instantanea } from '../excel/seguimientoCronograma.ts';
 import {
   aplicarCambiosEnLibro, crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, proximoLunes, VERSION_COMPLEMENTO,
@@ -107,6 +108,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
   const control = useRef<AbortController | null>(null);
   /** V10: el registro de la última lectura (para la hoja de resultados, sin esperar al estado). */
   const registroLeido = useRef<RiesgoRegistro[]>([]);
+  /** V11: la vista previa del plazo mientras se edita. */
+  const previa = useVistaPrevia(ocupado);
   /** V5: las instantáneas guardadas en la hoja Seguimiento. */
   const [seguimiento, setSeguimiento] = useState<Instantanea[]>([]);
   /** W7: la última comparación de escenarios. */
@@ -418,6 +421,11 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           if (f) void elegirArchivo(f);
         }} />
       </div>
+
+      {!faltan && existentes !== null && (
+        <ControlesVistaPrevia prefs={previa.prefs} cambiar={previa.cambiar} sinEventos={previa.sinEventos} deshabilitado={ocupado !== null} />
+      )}
+      {previa.vista && !faltan && <TarjetaVistaPrevia v={previa.vista} completa={fin} />}
 
       {importado && (
         <section className="importacion">

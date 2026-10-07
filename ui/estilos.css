@@ -590,6 +590,12 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .matriz-registro td { color: #1a1a1a; font-size: 11px; }
 .matriz-registro caption { text-align: left; font-size: 12px; padding: 4px 0; }
 .texto-error { color: var(--baja); font-weight: 600; }
+/* V11: vista previa del plazo. */
+.controles-vista-previa { font-size: 12px; margin: 6px 0; }
+.vista-previa { border: 1px dashed var(--borde); border-radius: 4px; padding: 6px 10px; margin: 8px 0; font-size: 12px; }
+.vista-previa p { margin: 2px 0; }
+.etiqueta-vista-previa { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+.nota-vista-previa { font-size: 11px; }
 /* W6: primeros pasos y elegir el ejemplo. */
 .primer-uso { border-left: 3px solid var(--acento); padding: 4px 10px; margin: 8px 0; }
 .primer-uso h3 { margin: 4px 0; font-size: 13px; }
