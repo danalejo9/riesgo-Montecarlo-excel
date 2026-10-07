@@ -5,7 +5,7 @@
  */
 
 import { esSalidaDeTexto } from '../excel/analisisTexto.ts';
-import { Fragment, StrictMode, useEffect, useState } from 'react';
+import { Fragment, StrictMode, useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarInforme, type DatosInforme, type SalidaInforme } from '../excel/informeImprimible.ts';
@@ -15,6 +15,8 @@ import {
   MatrizRiesgosTabla, MedidasDeRiesgo, Arana, CurvaAcumulada, Histograma, PrecisionSalida, TablaComparacion, Tornado } from './Resultados.tsx';
 import type { Contingencia } from '../excel/contingencia.ts';
 import { Abanico, CajasSalidas, CurvasSuperpuestas, TornadoCambio } from './Graficos.tsx';
+import { SECCIONES_COSTOS, seccionesVisibles, type IdSeccionCostos } from '../excel/plantillaInforme.ts';
+import { EstiloPlantilla, Portada } from './plantillaImpresa.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -44,23 +46,11 @@ function Informe() {
   }
 
   const a = datos.ajustes;
-  return (
-    <main className="informe">
-      <div className="solo-pantalla barra-informe">
-        <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
-        <span className="tenue">En el cuadro de impresión, elige «Guardar como PDF» como impresora.</span>
-      </div>
-
-      <header className="portada">
-        <h1>{datos.titulo}</h1>
-        <p className="tenue">
-          {new Date(datos.generado).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}
-          {datos.libro ? ` · ${datos.libro}` : ''}
-        </p>
-        {datos.descripcion && <p className="descripcion-proyecto">{datos.descripcion}</p>}
-      </header>
-
-      <section>
+  const comparables = datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length;
+  // V3: las secciones en el orden y con la visibilidad de la plantilla.
+  const secciones: Record<IdSeccionCostos, () => ReactNode> = {
+    ajustes: () => (
+      <section key="ajustes">
         <h2>Cómo se calculó</h2>
         <dl className="datos">
           <dt>Iteraciones</dt><dd>{miles(a.iteraciones)}{a.tandas && a.tandas.length > 1 ? ` (hasta la precisión: ${a.tandas.map(miles).join(' → ')})` : ''}</dd>
@@ -70,8 +60,9 @@ function Informe() {
           <dt>Tiempo</dt><dd>{duracion(a.tiempoMs)}</dd>
         </dl>
       </section>
-
-      <section>
+    ),
+    entradas: () => (
+      <section key="entradas">
         <h2>Entradas inciertas</h2>
         <table className="comparacion tabla-informe">
           <thead><tr><th>Entrada</th><th>Celda</th><th>Distribución</th><th>Correlaciones</th></tr></thead>
@@ -82,23 +73,38 @@ function Informe() {
           </tbody>
         </table>
       </section>
+    ),
+    registro: () => (datos.registroRiesgos && datos.registroRiesgos.length > 0 ? <RegistroImpreso key="registro" filas={datos.registroRiesgos} /> : null),
+    salidas: () => (
+      <Fragment key="salidas">
+        {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} pc={percentilesClave(datos)} {...(datos.baseFija ? { baseFija: datos.baseFija } : {})} />)}
+      </Fragment>
+    ),
+    comparar: () => (comparables >= 2 ? (
+      <section key="comparar" className="salida-informe">
+        <h2>Comparar salidas</h2>
+        <div className="dos-columnas graficos-informe">
+          <div><h3>Caja y bigotes</h3><CajasSalidas salidas={datos.salidas} /></div>
+          <div><h3>Curvas acumuladas</h3><CurvasSuperpuestas salidas={datos.salidas} /></div>
+        </div>
+        {comparables >= 3 && <div><h3>Abanico</h3><Abanico salidas={datos.salidas} /></div>}
+      </section>
+    ) : null),
+  };
+  return (
+    <main className="informe">
+      <EstiloPlantilla p={datos.plantilla} />
+      <div className="solo-pantalla barra-informe">
+        <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
+        <span className="tenue">En el cuadro de impresión, elige «Guardar como PDF» como impresora.</span>
+      </div>
 
-      {datos.registroRiesgos && datos.registroRiesgos.length > 0 && <RegistroImpreso filas={datos.registroRiesgos} />}
+      <Portada p={datos.plantilla} titulo={datos.titulo}
+        fecha={`${new Date(datos.generado).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}${datos.libro ? ` · ${datos.libro}` : ''}`}>
+        {datos.descripcion && <p className="descripcion-proyecto">{datos.descripcion}</p>}
+      </Portada>
 
-      {datos.salidas.map((s, i) => <SalidaImpresa key={s.id} salida={s} referencia={datos.referencia} primera={i === 0} pc={percentilesClave(datos)} {...(datos.baseFija ? { baseFija: datos.baseFija } : {})} />)}
-
-      {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 2 && (
-        <section className="salida-informe">
-          <h2>Comparar salidas</h2>
-          <div className="dos-columnas graficos-informe">
-            <div><h3>Caja y bigotes</h3><CajasSalidas salidas={datos.salidas} /></div>
-            <div><h3>Curvas acumuladas</h3><CurvasSuperpuestas salidas={datos.salidas} /></div>
-          </div>
-          {datos.salidas.filter((s) => s.resumen.n > 0 && !s.categorias?.length).length >= 3 && (
-            <div><h3>Abanico</h3><Abanico salidas={datos.salidas} /></div>
-          )}
-        </section>
-      )}
+      {seccionesVisibles(datos.plantilla?.seccionesCostos, SECCIONES_COSTOS).map((id) => secciones[id]())}
 
       <footer className="tenue pie-informe">
         Percentiles aproximados (t-digest). Sensibilidad por correlación de rangos y regresión sobre las primeras

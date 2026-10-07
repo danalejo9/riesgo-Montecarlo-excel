@@ -19,6 +19,7 @@
  * cuando empezó: con un `useState` capturaría el `false` inicial para siempre.
  */
 
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { leerEntorno, type EntornoOffice } from '../excel/entorno.ts';
@@ -576,7 +577,7 @@ export function Panel() {
           setPestana('resultados');
           return mostrarPanel();
         }
-        const codigo = await codificarInforme(datosDelInforme(m, r, { referencia: escenarioActivo(esc) }));
+        const codigo = await codificarInforme({ ...datosDelInforme(m, r, { referencia: escenarioActivo(esc) }), plantilla: await plantillaDelLibro() });
         abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
       }),
       // Q1: el grupo Cronograma de la cinta lleva a su pestaña y hace la acción.

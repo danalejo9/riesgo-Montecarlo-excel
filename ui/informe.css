@@ -17,7 +17,6 @@
 @media (max-width: 600px) { .dos-columnas { grid-template-columns: 1fr; } }
 
 @media print {
-  @page { size: A4; margin: 14mm; }
   /* En papel siempre en claro, aunque el sistema esté en modo oscuro. */
   :root {
     color-scheme: light;
@@ -46,6 +45,11 @@
 .informe .tornado { max-width: 520px; }
 .informe .datos { align-content: start; }
 .dos-columnas { align-items: start; }
+
+/* V3: la portada de la plantilla. */
+.marca-informe { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-weight: 600; }
+.logo-informe { max-height: 56px; max-width: 220px; object-fit: contain; }
+.subtitulo-informe { font-size: 15px; margin: 0 0 4px; }
 
 /* V6 (07/10): el Gantt del informe del cronograma. */
 .gantt-informe { margin: 4px 0; }

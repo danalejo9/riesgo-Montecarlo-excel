@@ -5,6 +5,7 @@
  * hace falta para leerlos de un vistazo.
  */
 
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -637,7 +638,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           <div className="botonera">
             <button type="button" onClick={() => {
               if (!estado.modelo || !calidad) return;
-              void codificarInformeCronograma(datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined, estado.registro))
+              const datos = datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined, estado.registro);
+              void plantillaDelLibro().then((plantilla) => codificarInformeCronograma({ ...datos, plantilla }))
                 .then((codigo) => abrirEnNavegador(`${new URL('/informeCronograma.html', window.location.href).href}#d=${codigo}`))
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>

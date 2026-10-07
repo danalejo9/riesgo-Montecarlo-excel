@@ -4,13 +4,15 @@
  * top 10 de riesgos y de actividades críticas, maquetado para una hoja A4.
  * «Imprimir → Guardar como PDF» hace el resto.
  */
-import { Fragment, StrictMode, useEffect, useState } from 'react';
+import { Fragment, StrictMode, useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { decodificarInformeCronograma, type DatosInformeCronograma } from '../excel/informeCronograma.ts';
 import { formatoDe, numero } from './formato.ts';
 import { CurvaAcumulada, type LineaReferencia } from './Resultados.tsx';
 import { GanttInforme } from './gantt/GanttInforme.tsx';
+import { SECCIONES_CRONOGRAMA, seccionesVisibles, type IdSeccionCronograma } from '../excel/plantillaInforme.ts';
+import { EstiloPlantilla, Portada } from './plantillaImpresa.tsx';
 import './estilos.css';
 import './informe.css';
 
@@ -28,36 +30,21 @@ function Informe() {
   if (!d) return <main className="informe"><h1>No hay informe que enseñar</h1><p>Se abre desde la pestaña Cronograma del complemento, después de simular.</p></main>;
   const dinero = (x: number) => `${Math.round(x).toLocaleString('es-CO')}${d.moneda ? ` ${d.moneda}` : ''}`;
   const p = (q: number) => d.fin.percentiles.find((x) => Math.abs(x.p - q) < 1e-9);
-  return (
-    <main className="informe">
-      <div className="solo-pantalla barra-informe">
-        <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
-        <span className="tenue">En el cuadro de impresión, elige «Guardar como PDF» como impresora.</span>
-      </div>
-      <header className="portada">
-        <h1>Análisis de riesgo del cronograma</h1>
-        <p className="tenue">{new Date(d.generado).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' })}</p>
-        <p className="descripcion-proyecto">
-          Con las duraciones base, el proyecto termina el <strong>{FECHA.valor(d.fin.deterministica)}</strong>: esa fecha se cumple
-          en el <strong>{pct(d.fin.probabilidadDeterministica)}</strong> de las iteraciones. Con un 80 % de confianza termina el
-          <strong> {FECHA.valor(p(0.8)?.serie ?? NaN)}</strong>
-          {d.costo ? <> y cuesta <strong>{dinero(d.costo.percentiles.find((x) => x.p === 0.8)?.valor ?? NaN)}</strong> (contingencia de {dinero(d.costo.contingencia)} sobre el costo base)</> : null}.
-        </p>
-      </header>
-
-      {d.enPalabras && d.enPalabras.length > 0 && (
+  // V3: las secciones en el orden y con la visibilidad de la plantilla.
+  const secciones: Record<IdSeccionCronograma, () => ReactNode> = {
+    enPalabras: () => d.enPalabras && d.enPalabras.length > 0 ? (
         <section>
           <h2>En pocas palabras</h2>
           {d.enPalabras.map((t) => <p key={t}>{t}</p>)}
         </section>
-      )}
-
+      ) : null,
+    supuestos: () => (
       <section>
         <h2>Supuestos</h2>
         <dl className="datos">{d.supuestos.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}</dl>
       </section>
-
-      {d.advertencias.length > 0 && (
+      ),
+    calidad: () => d.advertencias.length > 0 ? (
         <section>
           <h2>Advertencias de calidad del cronograma</h2>
           <ul className="semaforos">
@@ -66,8 +53,8 @@ function Informe() {
             ))}
           </ul>
         </section>
-      )}
-
+      ) : null,
+    fin: () => (
       <section>
         <h2>Fecha de fin</h2>
         <div className="dos-columnas">
@@ -90,8 +77,8 @@ function Informe() {
           />
         </div>
       </section>
-
-      {d.contractuales && d.contractuales.length > 0 && (
+      ),
+    contractuales: () => d.contractuales && d.contractuales.length > 0 ? (
         <section>
           <h2>Hitos contractuales</h2>
           <table className="comparacion tabla-informe">
@@ -109,16 +96,14 @@ function Informe() {
             </tbody>
           </table>
         </section>
-      )}
-
-      {d.gantt && (
+      ) : null,
+    gantt: () => d.gantt ? (
         <section className="salto-antes">
           <h2>Cronograma y fechas de fin posibles</h2>
           <GanttInforme datos={d.gantt} />
         </section>
-      )}
-
-      {d.costo && (
+      ) : null,
+    costo: () => d.costo ? (
         <section>
           <h2>Costo</h2>
           <div className="dos-columnas">
@@ -134,9 +119,8 @@ function Informe() {
             <CurvaAcumulada puntos={d.costo.curvaS.map(([x, q]) => ({ x, p: q }))} />
           </div>
         </section>
-      )}
-
-      {d.prePost.length > 0 && (
+      ) : null,
+    prePost: () => d.prePost.length > 0 ? (
         <section>
           <h2>Antes y después de mitigar</h2>
           <table className="comparacion tabla-informe">
@@ -149,9 +133,8 @@ function Informe() {
             </tbody>
           </table>
         </section>
-      )}
-
-      {d.reserva && d.reserva.partes.length > 1 && (
+      ) : null,
+    reserva: () => d.reserva && d.reserva.partes.length > 1 ? (
         <section>
           <h2>Reserva de contingencia al P{Math.round(d.reserva.nivel * 100)} y de dónde sale</h2>
           <p>
@@ -167,9 +150,8 @@ function Informe() {
             </tbody>
           </table>
         </section>
-      )}
-
-      {d.riesgos.length > 0 && (
+      ) : null,
+    riesgos: () => d.riesgos.length > 0 ? (
         <section>
           <h2>Los riesgos que más pesan (eliminación)</h2>
           <table className="comparacion tabla-informe">
@@ -177,8 +159,8 @@ function Informe() {
             <tbody>{d.riesgos.map((r) => <tr key={r.id}><th scope="row">{r.id} · {r.nombre}</th><td>{pct(r.ocurrencia)}</td><td>{numero(r.reduccionP80, 3)}</td>{d.costo && <td>{r.reduccionP80Costo === null ? '—' : dinero(r.reduccionP80Costo)}</td>}</tr>)}</tbody>
           </table>
         </section>
-      )}
-
+      ) : null,
+    criticas: () => (
       <section>
         <h2>Actividades más críticas</h2>
         <table className="comparacion tabla-informe">
@@ -192,8 +174,8 @@ function Informe() {
           </>
         )}
       </section>
-
-      {d.registro && d.registro.length > 0 && (
+      ),
+    registro: () => d.registro && d.registro.length > 0 ? (
         <section>
           <h2>Registro de riesgos</h2>
           <table className="comparacion tabla-informe">
@@ -210,9 +192,8 @@ function Informe() {
             </tbody>
           </table>
         </section>
-      )}
-
-      {d.convergencias && d.convergencias.length > 0 && (
+      ) : null,
+    convergencias: () => d.convergencias && d.convergencias.length > 0 ? (
         <section>
           <h2>Sesgo de convergencia</h2>
           <p className="tenue">Donde se juntan varias rutas, la actividad solo empieza a tiempo si llegan todas.</p>
@@ -228,9 +209,26 @@ function Informe() {
             </tbody>
           </table>
         </section>
-      )}
+      ) : null,
+    avisos: () => d.avisos.length > 0 ? <section><h2>Avisos de la simulación</h2><ul>{d.avisos.map((a, i) => <li key={i}>{a}</li>)}</ul></section> : null,
+  };
+  return (
+    <main className="informe">
+      <EstiloPlantilla p={d.plantilla} />
+      <div className="solo-pantalla barra-informe">
+        <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
+        <span className="tenue">En el cuadro de impresión, elige «Guardar como PDF» como impresora.</span>
+      </div>
+      <Portada p={d.plantilla} titulo="Análisis de riesgo del cronograma" fecha={new Date(d.generado).toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' })}>
+        <p className="descripcion-proyecto">
+          Con las duraciones base, el proyecto termina el <strong>{FECHA.valor(d.fin.deterministica)}</strong>: esa fecha se cumple
+          en el <strong>{pct(d.fin.probabilidadDeterministica)}</strong> de las iteraciones. Con un 80 % de confianza termina el
+          <strong> {FECHA.valor(p(0.8)?.serie ?? NaN)}</strong>
+          {d.costo ? <> y cuesta <strong>{dinero(d.costo.percentiles.find((x) => x.p === 0.8)?.valor ?? NaN)}</strong> (contingencia de {dinero(d.costo.contingencia)} sobre el costo base)</> : null}.
+        </p>
+      </Portada>
 
-      {d.avisos.length > 0 && <section><h2>Avisos de la simulación</h2><ul>{d.avisos.map((a, i) => <li key={i}>{a}</li>)}</ul></section>}
+      {seccionesVisibles(d.plantilla?.seccionesCronograma, SECCIONES_CRONOGRAMA).map((id) => <Fragment key={id}>{secciones[id]()}</Fragment>)}
 
       <footer className="tenue pie-informe">
         Ruta crítica recalculada en cada iteración (sesgo de convergencia incluido); tornado por eliminación con los mismos números

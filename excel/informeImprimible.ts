@@ -24,6 +24,7 @@ import { claseSugerida, contingencia, type Contingencia } from './contingencia.t
 import { esSalidaDeTexto } from './analisisTexto.ts';
 import { lecturaDeSalida, lecturaDeTexto } from './lectura.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
+import type { PlantillaInforme } from './plantillaInforme.ts';
 
 export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' | 'muestraTexto'> {
   umbral?: { texto: string; probabilidad: number };
@@ -38,6 +39,8 @@ export interface SalidaInforme extends Omit<ResultadoSalida, 'muestraOrdenada' |
 export interface DatosInforme {
   version: 1;
   titulo: string;
+  /** V3: la plantilla del libro (portada, logo, pie, papel y secciones); sin ella, la de siempre. */
+  plantilla?: PlantillaInforme;
   /** La descripción del proyecto, si el modelo la tiene (C7). */
   descripcion?: string;
   generado: string;

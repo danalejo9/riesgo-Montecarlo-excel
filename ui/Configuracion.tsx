@@ -10,6 +10,7 @@
  *   reciba el libro tiene que poder repetir exactamente la misma simulación.
  */
 
+import { EditorPlantilla } from './PlantillaInforme.tsx';
 import { useEffect, useState } from 'react';
 
 import {
@@ -74,6 +75,8 @@ export function Configuracion({
       <Rendimiento hilosUltimaSimulacion={hilosUltimaSimulacion} />
 
       <SimulacionDelCronograma />
+
+      <EditorPlantilla />
 
       <section>
         <h2>Simulación</h2>

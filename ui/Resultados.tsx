@@ -28,6 +28,7 @@
  * derecho a saber por qué, y qué función del libro lo obligó.
  */
 
+import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import type { ModeloRiesgo, SalidaRiskModel } from '../engine/modelo/index.ts';
@@ -122,7 +123,7 @@ export function Resultados({
   const abrirInforme = async () => {
     setFalloVolcado(null);
     try {
-      const codigo = await codificarInforme(datosDelInforme(modelo, resultado, { referencia: referencia ?? null }));
+      const codigo = await codificarInforme({ ...datosDelInforme(modelo, resultado, { referencia: referencia ?? null }), plantilla: await plantillaDelLibro() });
       const url = `${new URL('/informe.html', window.location.href).href}#d=${codigo}`;
       abrirEnNavegador(url);
     } catch (e) {

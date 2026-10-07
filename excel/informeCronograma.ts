@@ -12,10 +12,13 @@ import {
   type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type NivelReserva, type Reserva, type ResumenHitoContractual, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
+import type { PlantillaInforme } from './plantillaInforme.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
 
 export interface DatosInformeCronograma {
   version: 1;
+  /** V3: la plantilla del libro (portada, logo, pie, papel y secciones); sin ella, la de siempre. */
+  plantilla?: PlantillaInforme;
   generado: string;
   complemento: string;
   moneda: string;
