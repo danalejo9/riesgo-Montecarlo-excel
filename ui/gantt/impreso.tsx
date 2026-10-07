@@ -13,7 +13,7 @@ import { createRoot } from 'react-dom/client';
 
 import { decodificarJson } from '../../excel/codificacion.ts';
 import { construirVista, type DatosGantt, type DefinicionCritica, type FilaGantt, type VistaGantt } from '../../excel/gantt.ts';
-import { csvGantt, exportarMspdi } from '../../excel/exportarGantt.ts';
+import { aWindows1252, csvGantt, exportarMspdi, exportarXer } from '../../excel/exportarGantt.ts';
 import { textoFecha } from '../../engine/modelo/fechas.ts';
 import { COLORES, dibujar, type EscenaGantt } from './dibujo.ts';
 import { ajustarTodo, areaPagina, GEOMETRIA, paginar, PAPELES, type Papel } from './trazado.ts';
@@ -62,6 +62,8 @@ function Impreso() {
         <button type="button" className="principal" onClick={() => window.print()}>Imprimir o guardar como PDF</button>
         <button type="button" className="secundario" onClick={() => descargarPng(vista, pedido)}>Imagen (PNG)</button>
         <button type="button" className="secundario" onClick={() => descargar(`${pedido.titulo}.xml`, exportarMspdi(pedido.datos, vista, pedido.titulo), 'application/xml')}>MS Project (XML)</button>
+        <button type="button" className="secundario" onClick={() => descargarBlob(`${pedido.titulo}.xer`, new Blob([aWindows1252(exportarXer(pedido.datos, vista, pedido.titulo).texto)], { type: 'application/octet-stream' }))}
+          title="Para abrir o importar en Primavera P6; con simulación, el P50, el P80 y la criticidad van en campos de usuario">Primavera P6 (XER)</button>
         <button type="button" className="secundario" onClick={() => descargar(`${pedido.titulo}.csv`, csvGantt(vista), 'text/csv;charset=utf-8')}>Tabla (CSV)</button>
         <span className="tenue">{paginas.length} {paginas.length === 1 ? 'página' : 'páginas'} · en el cuadro de impresión, elige «Guardar como PDF».</span>
       </div>
