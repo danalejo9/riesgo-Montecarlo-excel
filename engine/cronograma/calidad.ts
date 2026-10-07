@@ -60,6 +60,50 @@ function lista(ids: string[], max = 12): string {
   return ids.length <= max ? ids.join(', ') : `${ids.slice(0, max).join(', ')} y ${ids.length - max} más`;
 }
 
+/** V6: un rango más estrecho que esto (ancho / más probable) se marca como estrecho. */
+export const ANCHO_ESTRECHO = 0.15;
+
+/**
+ * V6: los rangos que se estimaron con optimismo. Tres señales, sobre las
+ * tareas con rango propio o de grupo: estrechos (el ancho no llega al 15 %
+ * del más probable), sesgados a acortar (más margen por debajo que por
+ * encima: en la práctica las duraciones se alargan más de lo que se acortan)
+ * y todos con los mismos porcentajes (se pusieron en bloque, no uno a uno).
+ */
+function rangosOptimistas(modelo: ModeloCronograma, tareas: readonly string[]): CriterioCalidad {
+  const tres: { id: string; lo: number; ml: number; hi: number }[] = [];
+  for (const id of tareas) {
+    const d = incertidumbreDe(modelo, id)?.distribucion;
+    if (!d) continue;
+    const t = d.tipo === 'triangular' || d.tipo === 'pert' ? [d.min, d.moda, d.max]
+      : d.tipo === 'trigen' ? [d.bajo, d.moda, d.alto]
+        : d.tipo === 'uniforme' ? [d.min, (d.min + d.max) / 2, d.max] : null;
+    if (t && (t[1] as number) > 0 && (t[0] as number) < (t[2] as number)) tres.push({ id, lo: t[0] as number, ml: t[1] as number, hi: t[2] as number });
+  }
+  const n = tres.length;
+  const estrechas = tres.filter((x) => (x.hi - x.lo) / x.ml < ANCHO_ESTRECHO).map((x) => x.id);
+  const optimistas = tres.filter((x) => x.ml - x.lo > x.hi - x.ml + 1e-9).map((x) => x.id);
+  const clave = (x: (typeof tres)[number]) => `${Math.round(((x.ml - x.lo) / x.ml) * 100)}/${Math.round(((x.hi - x.ml) / x.ml) * 100)}`;
+  const porcentajes = new Set(tres.map(clave));
+  const malas = n > 0 && (estrechas.length / n > 0.25 || optimistas.length / n > 0.25);
+  const iguales = n >= 5 && porcentajes.size === 1;
+  const partes: string[] = [];
+  if (estrechas.length) partes.push(`${estrechas.length} de ${n} con un rango de menos del ${Math.round(ANCHO_ESTRECHO * 100)} % (${lista(estrechas)})`);
+  if (optimistas.length) partes.push(`${optimistas.length} de ${n} con más margen para acortarse que para alargarse (${lista(optimistas)})`);
+  if (iguales) {
+    const [a, b] = ([...porcentajes][0] as string).split('/');
+    partes.push(`todas con los mismos porcentajes (−${a} % y +${b} %): sirven de partida, pero conviene afinarlas una a una`);
+  }
+  return {
+    id: 'rangos',
+    criterio: 'Rangos realistas (sin sesgo optimista)',
+    estado: malas || iguales ? 'amarillo' : 'verde',
+    detalle: n === 0 ? 'No hay rangos que revisar.' : partes.length === 0 ? 'Sin señales de optimismo en los rangos.'
+      : `${partes.join('; ')}. Los rangos estimados suelen quedarse cortos y cargados hacia lo bueno: el P80 sale antes de lo que será.`,
+    actividades: malas ? [...new Set([...estrechas, ...optimistas])] : iguales ? tres.map((x) => x.id) : [],
+  };
+}
+
 export function chequearCalidad(modelo: ModeloCronograma, umbrales: Partial<UmbralesCalidad> = {}): ChequeoCalidad {
   const U = { ...UMBRALES_POR_DEFECTO, ...umbrales };
   const acts = modelo.red.actividades;
@@ -175,6 +219,8 @@ export function chequearCalidad(modelo: ModeloCronograma, umbrales: Partial<Umbr
     detalle: sinInc.length === 0 ? 'Todas las tareas tienen una distribución.' : `${sinInc.length} de ${tareas.length} tareas (${pct(fr)}) con duración fija: ${lista(sinInc)}. Los resultados salen optimistas.`,
     actividades: sinInc,
   });
+
+  criterios.push(rangosOptimistas(modelo, tareas.map((a) => a.id)));
 
   const nCorr = (modelo.correlaciones?.length ?? 0) + (modelo.gruposCorrelacion?.length ?? 0);
   criterios.push({

@@ -19,8 +19,9 @@ import { hojasImportadas, importarCronograma, resumenImportacion, type Cronogram
 import { HOJAS_CRONOGRAMA, leerCronograma, type ErrorHoja } from '../excel/cronogramaHojas.ts';
 import { hojaResultados, resumenesDe } from '../excel/cronogramaResultados.ts';
 import { HOJA_RESULTADOS_ESCENARIOS, hojaResultadosEscenarios, leerEscenarios } from '../excel/escenariosCronograma.ts';
+import { rellenarRangos } from '../excel/rangosCronograma.ts';
 import {
-  crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
+  aplicarCambiosEnLibro, crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
 import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
@@ -182,7 +183,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
     setOcupado('Importando…');
     try {
       const escritas = await importarAlLibro(hojasImportadas(importado), importado.inicio, importado.calendarioProyecto, deCero, importado.fechaCorte);
-      setAviso(`Importado (${importado.formato}): ${textoResumen(importado)}. Hojas escritas: ${escritas.join(', ')}. Complete Incertidumbre y Riesgos y simule.`);
+      setAviso(`Importado (${importado.formato}): ${textoResumen(importado)}. Hojas escritas: ${escritas.join(', ')}. Complete Incertidumbre y Riesgos y simule («Rellenar rangos vacíos» da un punto de partida para la incertidumbre).`);
       setImportado(null);
       setEstado(VACIO);
       await refrescarExistentes();
@@ -279,6 +280,27 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
     }
   }, [alFallar, alSimulado]);
 
+  /** V6: añade a Incertidumbre un rango de partida para cada tarea que no tiene ninguno. */
+  const rellenar = useCallback(async () => {
+    setOcupado('Rellenando los rangos vacíos…');
+    setAviso(null);
+    try {
+      const r = rellenarRangos(await leerHojasCronograma());
+      if (!r.ok) { setAviso(r.error); return; }
+      if (r.cambios.length) await aplicarCambiosEnLibro(r.cambios);
+      const tipos = Object.entries(r.porTipo).map(([t, k]) => `${k} de «${t}»`);
+      const porDefecto = r.actividades - Object.values(r.porTipo).reduce((s, k) => s + k, 0);
+      setAviso(r.actividades === 0
+        ? 'Todas las tareas ya tienen un rango (propio o de su grupo).'
+        : `Se añadieron ${r.actividades} rangos en Incertidumbre (en % de la base)${tipos.length ? `: ${tipos.join(', ')}` : ''}${porDefecto ? `${tipos.length ? ' y' : ':'} ${porDefecto} con −10 % / +25 %` : ''}. Son un punto de partida: afínelos con el equipo.${r.creaBiblioteca ? ' Los porcentajes por tipo están en la hoja nueva Rangos_Tipo.' : ''}`);
+      await refrescarExistentes();
+    } catch (e) {
+      alFallar(e);
+    } finally {
+      setOcupado(null);
+    }
+  }, [alFallar, refrescarExistentes]);
+
   // G3: la ventana del Gantt pide simular («Correr QRSA»).
   useEffect(() => {
     const f = () => { if (ocupado === null) void simular(); };
@@ -318,6 +340,10 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
         <button type="button" className="secundario" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))} disabled={faltan}
           title="El diagrama completo, con la tabla editable y el diagnóstico de la ruta crítica, en una ventana">
           Ver Gantt
+        </button>
+        <button type="button" className="secundario" onClick={() => void rellenar()} disabled={ocupado !== null || faltan}
+          title="Añade a Incertidumbre un rango de partida (por tipo de trabajo, hoja Rangos_Tipo) para cada tarea que no tiene ninguno: lo normal tras importar de MS Project o P6">
+          Rellenar rangos vacíos
         </button>
         <button type="button" className="secundario" onClick={() => void compararLosEscenarios()} disabled={ocupado !== null || faltan}
           title="Simula cada escenario de la hoja Escenarios con los mismos números aleatorios que la base y los compara">

@@ -10,7 +10,7 @@
  */
 
 import {
-  CAMBIOS, construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES, MESES, type MesClima,
+  BIBLIOTECA_RANGOS, CAMBIOS, construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES, MESES, type MesClima,
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
@@ -33,6 +33,7 @@ export const HOJAS_CRONOGRAMA = {
   hitosContrato: 'Hitos_Contrato',
   clima: 'Clima',
   escenarios: 'Escenarios',
+  rangosTipo: 'Rangos_Tipo',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -96,6 +97,7 @@ export const COLUMNAS = {
   clima: ['Mes', 'Días perdidos mínimo', 'Días perdidos más probable', 'Días perdidos máximo'],
   climaAfecta: ['Afecta a'],
   escenarios: ['Escenario', 'Cambio', 'Sobre (ID)', 'Valor', 'Nota'],
+  rangosTipo: ['Tipo', 'Palabras clave (grupo o nombre)', 'Menos', 'Más', 'Nota'],
 } as const;
 
 /** G3: hasta tres líneas base. */
@@ -1026,6 +1028,22 @@ const COSTO_META_EJEMPLO = 5_600_000_000;
 /** Días desde el inicio hasta la fecha meta del ejemplo (también la fecha contractual de la entrega). */
 const DIAS_META_EJEMPLO = 392;
 
+/** La hoja Rangos_Tipo con la biblioteca. */
+export function hojaRangosTipo(): HojaNueva {
+  return {
+    nombre: HOJAS_CRONOGRAMA.rangosTipo,
+    valores: [[...COLUMNAS.rangosTipo], ...BIBLIOTECA_RANGOS.map((t) => [t.tipo, t.claves.join(', '), t.menos, t.mas, t.nota] as Celda[])],
+    formatos: { 2: '0%', 3: '0%' },
+    anchos: [34, 60, 10, 10, 44],
+    listas: {},
+    notas: {
+      0: 'Valores de partida, no datos de referencia: ajústelos con el histórico. «Rellenar rangos vacíos» usa la primera fila cuyas palabras clave aparezcan en el grupo o el nombre de la actividad.',
+      2: 'Cuánto puede acortarse la actividad (10 %: hasta el 90 % de la duración).',
+      3: 'Cuánto puede alargarse (30 %: hasta el 130 %). Suele ser más que «Menos».',
+    },
+  };
+}
+
 /** W7: la hoja Escenarios con unas filas de ejemplo y, a la derecha, la lista de cambios posibles. */
 export function hojaEscenarios(filas: readonly Celda[][]): HojaNueva {
   const leyenda: Celda[][] = [['Cambios posibles', 'Sobre qué y qué valor'], ...CAMBIOS.map((c) => [c.texto, `${c.sobre === 'actividad' ? 'Actividad, «WBS x» o «Grupo y»' : c.sobre === 'riesgo' ? 'Riesgo' : c.sobre === 'partida' ? 'Partida de costo' : 'Proyecto'}: ${c.valor}`] as Celda[])];
@@ -1244,6 +1262,7 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       ['Todas las mitigaciones', 'Aplicar mitigación', 'R1; R2', null, 'Con la probabilidad y el impacto post de la hoja Riesgos'],
       ['Mampostería en paralelo', 'Predecesoras', 'H', 'F CC', 'Empezar la fachada a la vez que el desencofrado'],
     ]),
+    hojaRangosTipo(),
     {
       nombre: HOJAS_CRONOGRAMA.ramas,
       valores: [[...COLUMNAS.ramas]],
