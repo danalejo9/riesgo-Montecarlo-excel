@@ -90,6 +90,7 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
   fila(['Muestreo', cfg.metodo === 'lhs' ? 'Hipercubo latino' : 'Monte Carlo']);
   fila(['Duraciones simuladas', cfg.redondeo === 'entero' ? 'Redondeadas al día' : 'Con decimales']);
   fila(['Restricciones duras', cfg.ignorarRestriccionesDuras ? 'Ignoradas en la simulación' : 'Respetadas']);
+  fila(['Clima probabilístico', modelo.clima ? `Sí: ${modelo.clima.afecta.length} actividades expuestas` : 'No']);
   fila(['Actividades / relaciones / riesgos', `${sim.red.n} / ${sim.red.relPred.length} / ${modelo.riesgos.length}`]);
   fila(['Tiempo de cálculo (s)', sim.milisegundos / 1000], [null, '0.00']);
 
@@ -152,6 +153,14 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
         ...(conCosto && mc !== null && sim.sinRiesgos.mediaCosto !== null && p80c !== null && sim.sinRiesgos.p80Costo !== null ? [mc - sim.sinRiesgos.mediaCosto, p80c - sim.sinRiesgos.p80Costo] : [])],
         [null, null, null, DIAS, DIAS, DIAS, DIAS, MONEDA, MONEDA]);
     }
+  }
+
+  if (sim.sinClima) {
+    titulo('Clima (V8)');
+    fila(['', 'Media (días)', 'P80 (días)'], [], true);
+    fila(['Con el clima', sim.media, sim.p80], [null, DIAS, DIAS]);
+    fila(['Sin el clima (con los riesgos)', sim.sinClima.media, sim.sinClima.p80], [null, DIAS, DIAS]);
+    fila(['Lo que suma el clima', sim.media - sim.sinClima.media, sim.p80 - sim.sinClima.p80], [null, DIAS, DIAS]);
   }
 
   // Costo (Q2.1, Q2.3) y probabilidad conjunta (Q2.4).

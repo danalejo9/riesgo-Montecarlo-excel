@@ -8,6 +8,7 @@
 import { discrete, lognormal, pert, triangular, trigen, uniform, type Distribution } from '../distributions/index.ts';
 import type { MetodoMuestreo } from '../sampling/index.ts';
 import type { DefinicionRed } from './red.ts';
+import type { Clima } from './clima.ts';
 
 /**
  * Distribución de una duración o de un impacto, en días laborables.
@@ -198,6 +199,8 @@ export interface ModeloCronograma {
   ramas?: readonly Ramificacion[];
   info?: readonly InfoActividad[];
   hitosContractuales?: readonly HitoContractual[];
+  /** V8: clima probabilístico (hoja Clima). */
+  clima?: Clima;
 }
 
 /** ¿Algún riesgo trae datos del escenario post mitigación? */

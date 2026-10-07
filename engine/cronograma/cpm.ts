@@ -54,6 +54,13 @@ export interface OpcionesCpm {
   holguraLibre?: boolean;
   /** Solo la ida: fechas tempranas y fin (las corridas del tornado no necesitan holguras). */
   soloIda?: boolean;
+  /**
+   * V8 (clima): la duración que de verdad toma la actividad `a` si empieza en
+   * el índice `inicio` de su calendario con `d` días de trabajo (los días
+   * perdidos de cada mes la alargan). Solo en la ida y en las que no están
+   * terminadas; sin ella, la duración es la dada.
+   */
+  duracionEn?: (a: number, inicio: number, d: number) => number;
 }
 
 export const TOLERANCIA_CRITICA = 1e-9;
@@ -123,7 +130,7 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
   let fin = -Infinity;
   for (let o = 0; o < n; o++) {
     const a = orden[o] as number;
-    const d = duracion[a] as number;
+    let d = duracion[a] as number;
     const c = calendarios[cal[a] as number] as CalendarioLaboral;
     const st = estado ? estado[a] as number : 0;
     if (st === 2) {
@@ -154,6 +161,7 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
           if (v > desde) desde = v;
         }
       }
+      if (opciones.duracionEn && rest > 0) rest = opciones.duracionEn(a, desde, rest);
       es[a] = e0;
       ef[a] = desde + rest;
       dur[a] = desde + rest - e0;
@@ -161,19 +169,14 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
       if (t > fin) fin = t;
       continue;
     }
-    let lb = c.cuenta(red.inicio);
-    if (hayCorte) lb = Math.max(lb, c.cuenta(corte));
-    for (let k = entradaInicio[a] as number; k < (entradaInicio[a + 1] as number); k++) {
-      const v = limiteRelacion(red, relEntrada[k] as number, a, d, es, ef);
-      if (v > lb) lb = v;
-    }
-    const rt = resTipo[a] as number;
-    if (rt !== 0) {
-      const f = resFecha[a] as number;
-      if (rt === 1) lb = Math.max(lb, c.cuenta(f));
-      else if (rt === 2) lb = Math.max(lb, c.cuenta(f) + 1 - d);
-      else if (rt === 5 && !ignorarDuras) lb = c.cuenta(f);
-      else if (rt === 6 && !ignorarDuras) lb = c.cuenta(f) + 1 - d;
+    let lb = inicioTemprano(red, a, d, c, corte, hayCorte, ignorarDuras, es, ef);
+    if (opciones.duracionEn && d > 0) {
+      // El clima alarga según el mes en que cae; con FF o CF el comienzo depende de la duración.
+      const d2 = opciones.duracionEn(a, lb, d);
+      if (d2 !== d) {
+        d = d2;
+        lb = inicioTemprano(red, a, d, c, corte, hayCorte, ignorarDuras, es, ef);
+      }
     }
     es[a] = lb;
     ef[a] = lb + d;
@@ -250,6 +253,27 @@ export function calcularCpm(red: RedCompilada, duracion: Float64Array, esp: Espa
   }
 
   if (opciones.holguraLibre) calcularHolguraLibre(red, dur, esp);
+}
+
+/** El inicio temprano de una actividad pendiente: el proyecto, la fecha de corte, sus predecesoras y su restricción. */
+function inicioTemprano(
+  red: RedCompilada, a: number, d: number, c: CalendarioLaboral, corte: number, hayCorte: boolean, ignorarDuras: boolean, es: Float64Array, ef: Float64Array,
+): number {
+  let lb = c.cuenta(red.inicio);
+  if (hayCorte) lb = Math.max(lb, c.cuenta(corte));
+  for (let k = red.entradaInicio[a] as number; k < (red.entradaInicio[a + 1] as number); k++) {
+    const v = limiteRelacion(red, red.relEntrada[k] as number, a, d, es, ef);
+    if (v > lb) lb = v;
+  }
+  const rt = red.resTipo[a] as number;
+  if (rt !== 0) {
+    const f = red.resFecha[a] as number;
+    if (rt === 1) lb = Math.max(lb, c.cuenta(f));
+    else if (rt === 2) lb = Math.max(lb, c.cuenta(f) + 1 - d);
+    else if (rt === 5 && !ignorarDuras) lb = c.cuenta(f);
+    else if (rt === 6 && !ignorarDuras) lb = c.cuenta(f) + 1 - d;
+  }
+  return lb;
 }
 
 function calcularHolguraLibre(red: RedCompilada, duracion: Float64Array, esp: EspacioCpm): void {

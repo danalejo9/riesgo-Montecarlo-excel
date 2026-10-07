@@ -420,11 +420,22 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
                   </>
                 )}
                 {sim.sinRiesgos && (
-                  <p className="tenue">Sin ningún riesgo, el P80 sería {dias(sim.sinRiesgos.p80)} ({numero(sim.p80 - sim.sinRiesgos.p80, 3)} días menos): el resto es incertidumbre de las duraciones.</p>
+                  <p className="tenue">Sin ningún riesgo, el P80 sería {dias(sim.sinRiesgos.p80)} ({numero(sim.p80 - sim.sinRiesgos.p80, 3)} días menos): el resto es incertidumbre de las duraciones{sim.sinClima ? ' y el clima' : ''}.</p>
                 )}
               </>
             )}
           </section>
+
+          {sim.sinClima && (
+            <section>
+              <h2>Clima</h2>
+              <Ayuda tema="clima" />
+              <p>
+                El clima suma <strong>{numero(sim.p80 - sim.sinClima.p80, 3)} días</strong> al P80 ({numero(sim.media - sim.sinClima.media, 3)} a la media):
+                sin él, el P80 sería {dias(sim.sinClima.p80)}. Afecta a {estado.modelo?.clima?.afecta.length ?? 0} actividades.
+              </p>
+            </section>
+          )}
 
           {estado.modelo && <ReservaContingencia sim={sim} modelo={estado.modelo} />}
 

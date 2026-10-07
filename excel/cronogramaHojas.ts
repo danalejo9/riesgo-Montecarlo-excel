@@ -10,7 +10,7 @@
  */
 
 import {
-  construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES,
+  construirDistribucion, festivosColombiaEntre, LUNES_A_VIERNES, MESES, type MesClima,
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
@@ -31,6 +31,7 @@ export const HOJAS_CRONOGRAMA = {
   ramas: 'Ramas',
   lineasBase: 'Lineas_Base',
   hitosContrato: 'Hitos_Contrato',
+  clima: 'Clima',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -89,6 +90,8 @@ export const COLUMNAS = {
   ramas: ['Rama', 'Opción', 'Probabilidad', 'Actividades'],
   lineasBase: ['ID', 'LB1 comienzo', 'LB1 fin', 'LB2 comienzo', 'LB2 fin', 'LB3 comienzo', 'LB3 fin'],
   hitosContrato: ['Hito (ID)', 'Fecha contractual', 'Multa por día de retraso', 'Tope de la multa', 'Nota'],
+  clima: ['Mes', 'Días perdidos mínimo', 'Días perdidos más probable', 'Días perdidos máximo'],
+  climaAfecta: ['Afecta a'],
 } as const;
 
 /** G3: hasta tres líneas base. */
@@ -96,6 +99,8 @@ export const LINEAS_BASE = 3;
 
 /** La tabla de excepciones del calendario empieza en la columna J. */
 export const COLUMNA_EXCEPCIONES = 9;
+/** En la hoja Clima, la lista de actividades expuestas está en la columna F. */
+export const COLUMNA_AFECTA_CLIMA = 5;
 /** La tabla de grupos de correlación empieza en la columna E. */
 export const COLUMNA_GRUPOS_CORRELACION = 4;
 
@@ -796,6 +801,49 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     hitosContractuales.push({ actividad: a.id, fecha: f, ...(multa ? { multaDia: multa } : {}), ...(tope !== undefined ? { tope } : {}) });
   }
 
+  // V8: clima probabilístico.
+  let clima: { meses: MesClima[]; afecta: string[] } | undefined;
+  if (hojas[H.clima]) {
+    const tcl = tabla(H.clima, hojas[H.clima], COLUMNAS.clima);
+    const meses: MesClima[] = MESES.map(() => ({ min: 0, masProbable: 0, max: 0 }));
+    let bien = true;
+    for (const { fila, valores } of tcl.filas) {
+      const nombre = normalizar(valor(tcl, valores, 'Mes'));
+      const k = MESES.findIndex((m) => normalizar(m) === nombre || (nombre.length >= 3 && normalizar(m).startsWith(nombre.slice(0, 3))));
+      if (k < 0) { error(H.clima, fila, letra(tcl, 'Mes'), `«${texto(valor(tcl, valores, 'Mes'))}» no es un mes`); bien = false; continue; }
+      const x1 = numero(valor(tcl, valores, 'Días perdidos mínimo')) ?? 0;
+      const x3 = numero(valor(tcl, valores, 'Días perdidos máximo')) ?? 0;
+      const x2 = numero(valor(tcl, valores, 'Días perdidos más probable')) ?? (x1 + x3) / 2;
+      if (!(x1 >= 0 && x1 <= x2 && x2 <= x3 && x3 <= 31)) {
+        error(H.clima, fila, letra(tcl, 'Días perdidos mínimo'), `${MESES[k]}: hace falta 0 ≤ mínimo ≤ más probable ≤ máximo ≤ 31 días`);
+        bien = false;
+        continue;
+      }
+      meses[k] = { min: x1, masProbable: x2, max: x3 };
+    }
+    const tca = tabla(H.clima, hojas[H.clima], COLUMNAS.climaAfecta, COLUMNA_AFECTA_CLIMA);
+    const afecta: string[] = [];
+    for (const { fila, valores } of tca.filas) {
+      const parte = texto(valor(tca, valores, 'Afecta a'));
+      if (!parte || invalidas.has(normalizar(parte))) continue;
+      const sel = /^(wbs|grupo)\s*[:=]?\s+(.+)$/i.exec(parte);
+      let ids: string[];
+      if (sel) {
+        const clase = (sel[1] as string).toLowerCase();
+        const v = (sel[2] as string).trim();
+        ids = info.filter((i) => clase === 'wbs' ? i.wbs !== undefined && (i.wbs === v || i.wbs.startsWith(`${v}.`)) : i.grupo !== undefined && normalizar(i.grupo) === normalizar(v)).map((i) => i.id);
+        if (ids.length === 0) avisos.push(`${H.clima}, fila ${fila}: ninguna actividad tiene ${clase === 'wbs' ? `la WBS ${v}` : `el grupo «${v}»`}.`);
+      } else {
+        const a = porId.get(normalizar(parte));
+        if (!a) { error(H.clima, fila, letra(tca, 'Afecta a'), `«${parte}» no es una actividad, una WBS («WBS 2») ni un grupo («Grupo Obra»)`); bien = false; continue; }
+        ids = [a.id];
+      }
+      for (const id of ids) if (!afecta.includes(id) && !excluidas.has(id)) afecta.push(id);
+    }
+    if (bien && afecta.length > 0 && meses.some((m) => m.max > 0)) clima = { meses, afecta };
+    else if (bien && afecta.length > 0) avisos.push(`${H.clima}: todos los meses están en 0; el clima no cambia nada.`);
+  }
+
   if (configuracion.hitos) {
     for (const h of configuracion.hitos) {
       if (!porId.has(normalizar(h))) error(H.config, hi?.fila ?? 0, 'B', `El hito «${h}» no existe en Actividades`);
@@ -835,6 +883,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       ramas,
       info,
       ...(hitosContractuales.length ? { hitosContractuales } : {}),
+      ...(clima ? { clima } : {}),
     },
     errores,
     avisos,
@@ -1123,6 +1172,20 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         0: 'La actividad cuyo fin fija el contrato (una entrega, un acta). No mueve el cronograma: se mide contra ella.',
         2: 'Por día natural de retraso. Vacía: solo se calcula la probabilidad de cumplir la fecha.',
         3: 'La multa no pasa de este valor (la cláusula penal suele topar en un % del contrato).',
+      },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.clima,
+      valores: [
+        [...COLUMNAS.clima, null, ...COLUMNAS.climaAfecta],
+        ...MESES.map((m) => [m, 0, 0, 0, null, null] as Celda[]),
+      ],
+      formatos: {},
+      anchos: [14, 20, 26, 22, 3, 30],
+      listas: {},
+      notas: {
+        0: 'Días laborables que el clima hace perder cada mes del año. En cada iteración se sortean mes a mes (una PERT); la actividad expuesta avanza más despacio ese mes. Todo en 0: sin clima.',
+        [COLUMNA_AFECTA_CLIMA]: 'Las actividades a la intemperie, una por fila: un ID, «WBS 2» (y sus hijas) o «Grupo Obra». Vacía: el clima no afecta a nada.',
       },
     },
     {

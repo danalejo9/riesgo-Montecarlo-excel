@@ -48,6 +48,8 @@ export const AYUDA = {
     'La confianza conjunta (JCL): la proporción de iteraciones que cumplen a la vez la fecha meta y el costo meta. Siempre es menor que cada probabilidad por separado, porque un proyecto que se atrasa suele costar más. Es el número que pide la práctica de riesgo integrado (AACE 57R-09).',
   prePost:
     'Se simulan los dos escenarios con los mismos números aleatorios: antes de mitigar (probabilidades e impactos actuales) y después (probabilidad post, la parte del impacto que queda, más lo que cuesta mitigar). La diferencia es solo la de la mitigación. Si el costo post sale mayor, la mitigación cuesta más de lo que ahorra en costo, aunque gane tiempo.',
+  clima:
+    'Los días que el clima hace perder cada mes (hoja Clima) se sortean mes a mes en cada iteración: una actividad expuesta avanza más despacio en los meses malos, así que la misma actividad sufre más en temporada de lluvias que en la seca. Para medir cuánto pesa, se vuelve a simular sin el clima con los mismos números aleatorios.',
   reserva:
     'Cuánto tiempo y cuánto dinero hay que reservar sobre el plan (el cronograma y el costo sin incertidumbre ni riesgos) para llegar al nivel de confianza elegido, y de dónde sale. «Incertidumbre» es lo que haría falta aunque no ocurriera ningún riesgo (la corrida sin riesgos). El resto se reparte entre los riesgos según lo que mide quitar cada uno y volver a simular con los mismos números: las oportunidades restan, y las partes suman exactamente la reserva.',
   hitosContrato:

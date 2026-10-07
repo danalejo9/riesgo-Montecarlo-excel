@@ -87,6 +87,7 @@ export function datosInformeCronograma(sim: SimulacionCronograma, modelo: Modelo
       ['Duraciones simuladas', cfg.redondeo === 'entero' ? 'Redondeadas al día' : 'Con decimales'],
       ['Restricciones duras', cfg.ignorarRestriccionesDuras ? 'Ignoradas' : 'Respetadas'],
       ['Correlaciones', String((modelo.correlaciones?.length ?? 0) + (modelo.gruposCorrelacion?.length ?? 0))],
+      ...(modelo.clima && sim.sinClima ? [['Clima probabilístico', `${modelo.clima.afecta.length} actividades expuestas; suma ${(sim.p80 - sim.sinClima.p80).toLocaleString('es-CO', { maximumFractionDigits: 1 })} días al P80`] as [string, string]] : []),
       ['Versión del complemento', version],
     ],
     advertencias: calidad.criterios.filter((c) => c.estado !== 'verde').map((c) => ({ criterio: c.criterio, estado: c.estado, detalle: c.detalle })),

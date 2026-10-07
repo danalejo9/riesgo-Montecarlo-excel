@@ -10,3 +10,4 @@ export * from './rutas.ts';
 export * from './sintaxis.ts';
 export * from './jerarquia.ts';
 export * from './reserva.ts';
+export * from './clima.ts';

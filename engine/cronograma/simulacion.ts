@@ -29,6 +29,7 @@ import { construirDistribucion, incertidumbreDe, multaDe, tieneCostos, tienePost
 import { compilarRed, type ActividadRed, type DefinicionRed, type RedCompilada } from './red.ts';
 import type { CalendarioLaboral } from './calendario.ts';
 import { convergenciaP80 } from './analisis.ts';
+import { ClimaSimulado, climaActivo } from './clima.ts';
 
 export class SimulacionCancelada extends Error {
   constructor() {
@@ -129,6 +130,8 @@ export interface SimulacionCronograma {
   fechas: { inicio: Float32Array[]; fin: Float32Array[] };
   /** Tornado por eliminación, de mayor a menor reducción del P80. */
   eliminacion: EliminacionRiesgo[];
+  /** V8: sin el clima (con todo lo demás), si hay clima; para medir cuánto pesa. */
+  sinClima: { media: number; p80: number } | null;
   /** Sin ningún riesgo (solo la incertidumbre de las duraciones). */
   sinRiesgos: { media: number; p80: number; mediaCosto: number | null; p80Costo: number | null; nivelesDias: number[]; nivelesCosto: number[] | null } | null;
   /** Media y P80 del fin con todo. */
@@ -214,6 +217,8 @@ interface Preparado {
   correlacionLograda: CorrelacionLograda[];
   /** Hitos contractuales con el índice de su actividad. */
   contractuales: { h: HitoContractual; a: number }[];
+  /** V8: el clima, si hay. */
+  clima: ClimaSimulado | null;
   avisos: string[];
 }
 
@@ -358,9 +363,12 @@ function preparar(modelo: ModeloCronograma, red: RedCompilada, n: number): Prepa
     return { h, a };
   });
 
+  // V8: clima.
+  const clima = climaActivo(modelo.clima) ? new ClimaSimulado(modelo.clima, red.indice, red.n, n, semilla, metodo, modelo.red.inicio) : null;
+
   // Correlación (Q2.2).
   const correlacionLograda = correlacionar(modelo, red, dur, costos, semilla, avisos);
-  return { red, n, dur, u, impactosDias, impactosCosto, costos, ramaDe, eleccion, opcionBase, riesgoInsertado, correlacionLograda, contractuales, avisos };
+  return { red, n, dur, u, impactosDias, impactosCosto, costos, ramaDe, eleccion, opcionBase, riesgoInsertado, correlacionLograda, contractuales, clima, avisos };
 }
 
 /** Aplica las correlaciones declaradas (pares y grupos) a las muestras, en su sitio. */
@@ -463,6 +471,8 @@ interface Escenario {
   quitar: number;
   post: boolean;
   completa: boolean;
+  /** V8: sin el clima (para medir cuánto pesa). */
+  sinClima?: boolean;
 }
 
 interface Corrida {
@@ -535,7 +545,14 @@ async function correr(
   const contratoSerie = completa ? pre.contractuales.map(() => new Float64Array(n)) : [];
   const contratoMulta = completa ? pre.contractuales.map(() => new Float64Array(n)) : [];
   // Con costos que escalan o por actividad hacen falta las fechas: la ida basta.
-  const opciones = { ignorarDuras: ignorarRestriccionesDuras, soloIda: !completa };
+  let iteracion = 0;
+  const clima = esc.sinClima ? null : pre.clima;
+  const opciones = {
+    ignorarDuras: ignorarRestriccionesDuras, soloIda: !completa,
+    ...(clima ? {
+      duracionEn: (a: number, inicioA: number, d: number) => (clima.expuesta[a] ? clima.duracion(red.calendarios[red.cal[a] as number] as CalendarioLaboral, inicioA, d, iteracion) : d),
+    } : {}),
+  };
   const prob = modelo.riesgos.map((_, ri) => probabilidadDe(modelo, ri, esc.post));
   const factor = modelo.riesgos.map((_, ri) => factorDe(modelo, ri, esc.post));
   const mitigacion = esc.post ? modelo.riesgos.reduce((s, r) => s + (r.costoMitigacion ?? 0), 0) : 0;
@@ -550,6 +567,7 @@ async function correr(
       await pausa();
       if (senal?.aborted) throw new SimulacionCancelada();
     }
+    iteracion = i;
     const ocurre = (ri: number) => esc.quitar !== -2 && ri !== esc.quitar && (pre.u[ri] as Float64Array)[i] as number < (prob[ri] as number);
     for (let a = 0; a < red.n; a++) {
       const rama = pre.ramaDe[a];
@@ -576,7 +594,7 @@ async function correr(
     finDias[i] = fd;
     finSerie[i] = fs;
     if (costo) {
-      let c = costoDe(pre, i, red.conAvance ? esp.dur : dur, serieIni, serieFin, inicioSerie, fs, fd, true) + mitigacion;
+      let c = costoDe(pre, i, red.conAvance || clima ? esp.dur : dur, serieIni, serieFin, inicioSerie, fs, fd, true) + mitigacion;
       for (const imp of pre.impactosCosto) {
         if (imp.actividad >= 0) {
           const rama = pre.ramaDe[imp.actividad];
@@ -682,7 +700,8 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
   const conPost = tienePostMitigacion(modelo);
   const R = modelo.riesgos.length;
   const pContingencia = cfg.percentilContingencia ?? 0.8;
-  const extra = (R > 0 ? R + 1 : 0) + (conPost ? 1 : 0);
+  const conClima = climaActivo(modelo.clima);
+  const extra = (R > 0 ? R + 1 : 0) + (conPost ? 1 : 0) + (conClima ? 1 : 0);
 
   let hecho = 0;
   let total = 0;
@@ -758,6 +777,13 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
     sinRiesgos = { media: s.media, p80: s.p80, mediaCosto: sc?.media ?? null, p80Costo: sc?.p80 ?? null, nivelesDias: nivelesDe(sr.finDias), nivelesCosto: sr.costo ? nivelesDe(sr.costo) : null };
   }
 
+  let sinClima: SimulacionCronograma['sinClima'] = null;
+  if (pre.clima) {
+    const c = await correr(modelo, pre, { quitar: -1, post: false, completa: false, sinClima: true }, hitos, avanzar, opciones.senal);
+    const s = mediaYP80(c.finDias);
+    sinClima = { media: s.media, p80: s.p80 };
+  }
+
   let post: EscenarioPost | null = null;
   if (conPost) {
     const c = await correr(modelo, pre, { quitar: -1, post: true, completa: false }, hitos, avanzar, opciones.senal);
@@ -775,7 +801,7 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
     hitos: hitos.map((a, h) => ({ id: red.ids[a] as string, nombre: red.nombres[a] as string, serie: principal.hitosSerie[h] as Float64Array, dias: principal.hitosDias[h] as Float64Array })),
     criticidad, duraciones: principal.duraciones as Float32Array[],
     fechas: { inicio: principal.inicio as Float32Array[], fin: principal.fin as Float32Array[] },
-    eliminacion, sinRiesgos, media: todo.media, p80: todo.p80,
+    eliminacion, sinRiesgos, sinClima, media: todo.media, p80: todo.p80,
     costo: principal.costo, costoBase, post, rutas, riesgoInsertado: pre.riesgoInsertado,
     correlacionLograda: pre.correlacionLograda,
     contractuales: pre.contractuales.map((x, h) => ({
