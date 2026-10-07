@@ -5,6 +5,55 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Consolidación de ramas: lo que faltaba de la otra versión del cronograma (2026-10-07)
+
+Las ramas `main`, `develop`, `claude/market-analysis-…`,
+`claude/nifty-thompson-…` y `claude/optimistic-hamilton-…` quedan en una sola
+(`main`). La base es el motor QRSA de `nifty-thompson`. Lo que tenía
+`optimistic-hamilton` y faltaba aquí se rehízo sobre este motor, con sus
+pruebas (guía GT41–GT55). Lo único que no se portó fue el muestreo en
+varios hilos ni la PERT rápida.
+
+**Añadido**
+- **Hitos contractuales y multas** (hoja `Hitos_Contrato`): probabilidad de
+  cumplir cada fecha del contrato, P80 y retraso. La multa por día, con tope,
+  entra en el costo de cada iteración y también en la contingencia y el JCL.
+- **Reserva de contingencia** al P50, P80 o P90
+  (`engine/cronograma/reserva.ts`), repartida entre la incertidumbre, cada
+  amenaza, las oportunidades y el efecto conjunto. Las partes suman la
+  reserva exactamente.
+- **Clima probabilístico** (hoja `Clima`): días perdidos por mes en una PERT,
+  aplicados a las actividades expuestas en la pasada adelante del CPM
+  (`OpcionesCpm.duracionEn`). Hay una corrida sin clima que mide su efecto.
+- **Escenarios «¿qué pasa si?»** (hoja `Escenarios`, botón «Comparar
+  escenarios», hoja `Resultados_Escenarios`). Los escenarios usan los mismos
+  números aleatorios que la base, así que las diferencias se deben al
+  cambio y no al azar.
+- **Sesgo de convergencia** (`convergenciasDe`) y **«En pocas palabras»**
+  (`narrativa.ts`): resumen en frases en el panel, la hoja y el informe.
+- **Registro de riesgos completo**: estados Activo / En seguimiento /
+  Cerrado, próxima revisión, impacto cualitativo, zonas y matrices antes y
+  después de mitigar.
+- **Rellenar rangos vacíos** a partir de la biblioteca de la hoja
+  `Rangos_Tipo`, y el criterio de calidad «Rangos realistas (sin sesgo
+  optimista)».
+- **Seguimiento en el tiempo** (hoja `Seguimiento`, botón «Guardar en el
+  seguimiento»): la tendencia de P50 y P80 de un corte a otro.
+- **Exportar a Primavera P6 (XER)**. El MSPDI lleva además P50, P80 y la
+  criticidad como campos personalizados.
+- **Validación con casos publicados** (`npm run validacion:cronograma`,
+  `docs/VALIDACION_CRONOGRAMA.md`): 13 casos y 41 comprobaciones.
+- **Ejemplos por sector**: vivienda, vía, edificio público y software, más
+  la pantalla «Primeros pasos».
+- **Informe PDF configurable** (⚙ → «Plantilla del informe PDF»): portada,
+  logo, pie, color, papel y qué secciones van y en qué orden. Vale para los
+  dos informes.
+- **Vista previa del plazo** mientras se editan las hojas: pocas
+  iteraciones, unos segundos después del último cambio.
+- **`RIESGO.CRONOGRAMA(hito; medida)`** en el modelo de costos. Las medidas
+  son fecha, días, retraso, multa y costo, y salen de la misma iteración
+  de la simulación del cronograma.
+
 ### Mejoras visuales de los resultados del cronograma, V1–V4 y V9 (2026-10-07)
 
 **Cambiado**

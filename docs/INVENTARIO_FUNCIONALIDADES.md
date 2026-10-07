@@ -205,6 +205,7 @@ Especificación en `docs/GANTT_ESPECIFICACION.md`, plan en `docs/GANTT_PLAN.md`.
 | G4 | Fechas de fin posibles bajo el Gantt (histograma semanal en el mismo eje, P50, P80, meta), la ventana carga a la primera | ✅ en código; falta tu prueba (guía GT31–GT32) |
 | G5 | Editores en ventana: calendarios (año a la vista, festivos de Colombia), riesgos con impactos y mitigación, ramas | ✅ en código; falta tu prueba (guía GT34–GT37) |
 | G6 | Resultados del cronograma más claros (fechas, meta y P80, cifras grandes, amenazas y oportunidades, matriz de riesgos) y el Gantt en el informe ejecutivo | ✅ en código; falta tu prueba (guía GT38–GT40) |
+| G7 | Consolidación del 07/10 (de la otra rama, rehecho sobre este motor): hitos contractuales y multas, reserva de contingencia, clima, escenarios, sesgo de convergencia, «en pocas palabras», registro de riesgos completo, rellenar rangos, seguimiento, XER de P6, validación publicada, ejemplos por sector, informe configurable, vista previa, `RIESGO.CRONOGRAMA` | ✅ en código; falta tu prueba (guía GT41–GT55) |
 
 ### Después de la versión 1.0
 

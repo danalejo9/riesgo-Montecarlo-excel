@@ -1310,6 +1310,118 @@ P10–P90 de cada actividad, y debajo, en el mismo eje, las barras semanales
 de las fechas de fin (azules hasta la meta, naranjas después). «Imprimir o
 guardar como PDF» lo deja en A4.
 
+### GT41–GT55. Lo que se trajo de la otra rama (consolidación del 07/10)
+
+*Añadido el 07/10.* Las ramas del repositorio se unieron en una sola. Lo que
+tenía la otra versión del cronograma y faltaba aquí se rehízo sobre este
+motor. Usa un libro de cronograma **nuevo** (pestaña Cronograma → Crear
+libro de cronograma, ejemplo «Obra»), porque trae hojas nuevas: Hitos_Contrato,
+Clima, Escenarios, Rangos_Tipo y Seguimiento. Para que las cifras coincidan,
+en Config pon el inicio en **04/01/2027** y deja 5.000 iteraciones y la
+semilla 12345.
+
+**GT41. Primer uso y ejemplos por sector.** En un libro sin hojas de
+cronograma, la pestaña Cronograma muestra «Primeros pasos» (cinco pasos).
+Junto a «Crear libro de cronograma» hay un desplegable de ejemplos: Obra
+(edificio de 14 actividades) y los cuatro sectores (vivienda, vía, edificio
+y software). Crea
+uno de sector (por ejemplo «Vía») en un libro aparte: Revisar calidad no
+debe dar nada en rojo y Simular cronograma debe funcionar, con su hito
+contractual y su meta ya puestos.
+
+**GT42. Hitos contractuales y multas.** En la hoja Hitos_Contrato del ejemplo
+de la obra, L (Entrega) tiene fecha 31/01/2028, multa de 4.000.000 por día y
+tope de 280.000.000. Simula. En Resultados, la sección «Hitos contractuales»
+muestra L · Entrega con **63,9 %** de cumplir, P80 **17/02/2028 (+17 d)** y una
+multa esperada de unos **35,3 M COP**. Debajo dice que la multa ya está
+dentro del costo. Borra la multa, vuelve a simular: la columna de la multa
+desaparece y el costo baja.
+
+**GT43. Reserva de contingencia.** En «Reserva de contingencia», con **P80**
+elegido, la reserva es de **60 días laborables**. Se reparte así:
+incertidumbre de duraciones ≈ 42, R1 ≈ 8, R2 ≈ 6, R3 ≈ 3 y R4 (oportunidad) 0.
+Las partes suman exactamente 60. Cambia a P50 (≈ 39 días) y a P90
+(≈ 72 días). La hoja de resultados y el informe ejecutivo traen la misma tabla.
+
+**GT44. En pocas palabras.** Arriba de los resultados, el recuadro verde «En
+pocas palabras» trae frases como estas, con las fechas del libro:
+- «Hay un 80 % de probabilidad de terminar el 16/02/2028 o antes».
+- «La fecha meta (31/01/2028) se cumple en el 65 % de las iteraciones».
+- «hace falta una reserva de 60 días laborables».
+- «El riesgo que más pesa es «Lluvias fuertes durante la estructura»».
+
+**GT45. Sesgo de convergencia.** Si en alguna actividad se juntan rutas que
+retrasan el fin, la sección «Sesgo de convergencia» la lista con la
+probabilidad de que cada ruta llegue a tiempo y la de que lleguen todas. En
+el ejemplo de la obra el sesgo es pequeño: puede no aparecer. En el de «Vía»
+aparece en «Desmonte y limpieza».
+
+**GT46. Registro de riesgos.** La hoja Riesgos tiene dos columnas nuevas,
+«Próxima revisión» e «Impacto cualitativo», y el estado «En seguimiento»
+(R2 lo trae). En Resultados, «Registro de riesgos» muestra la matriz antes
+y después de mitigar y la tabla con dueño, estado, zona y próxima revisión.
+Cambia el estado de R3 a «Cerrado» y simula: R3 sale de la simulación.
+
+**GT47. Clima.** En la hoja Clima, pon 2 / 4 / 8 días perdidos (mínimo, más
+probable, máximo) en Mayo, Junio y Julio. En la columna F («Afecta a»)
+escribe **E** (la estructura). Simula: aparece la sección «Clima» con «El
+clima suma N días al P80», y el tornado dice «…incertidumbre de las
+duraciones y el clima». Si dejas F vacía, el clima no cambia nada.
+
+**GT48. Escenarios.** La hoja Escenarios trae cinco escenarios de ejemplo.
+Pulsa **Comparar escenarios**. Se crea la hoja Resultados_Escenarios y el
+panel muestra «Escenarios «¿qué pasa si?»». Comprueba:
+- «Trabajar los sábados» adelanta el P80 unos **54 días**, y la meta pasa a
+  cumplirse en el **97 %**.
+- «Acelerar la estructura» lo adelanta unos 13 días.
+- «Sin el riesgo de la licencia», unos 8.
+
+Escribe un cambio mal formado (por ejemplo «Quitar riesgo» sobre «R9»): el
+panel señala la celda.
+
+**GT49. Rellenar rangos vacíos.** Borra dos filas de la hoja Incertidumbre y
+pulsa **Rellenar rangos vacíos**. Se añaden los rangos de esas actividades
+según su tipo, tomado de la hoja Rangos_Tipo. Pulsa otra vez: «Todas las
+tareas ya tienen un rango». En Revisar calidad, el criterio «Rangos realistas
+(sin sesgo optimista)» avisa si un rango es demasiado estrecho; por ejemplo,
+pon el máximo igual al más probable.
+
+**GT50. Seguimiento.** Tras simular, pulsa **Guardar en el seguimiento**. Se
+añade una fila con la fecha de corte a la hoja Seguimiento. Cambia algo,
+simula y guarda otra vez. En Resultados, «Seguimiento en el tiempo» dibuja
+la tendencia de P50 y P80 con los cortes.
+
+**GT51. Vista previa mientras edito.** Marca «Vista previa del plazo mientras
+edito». Cambia la duración de E en la hoja Actividades. A los 3 s aparece
+«Vista previa a las …» con P50, P80 y las probabilidades (1.000
+iteraciones). Desmárcala y deja de recalcular.
+
+**GT52. Exportar a P6.** Ver Gantt → **Imprimir y exportar…** → **Primavera
+P6 (XER)**. Se descarga un .xer. Ábrelo en P6 o en un editor de texto:
+lleva las actividades, las relaciones y el calendario. El MSPDI (MS Project)
+ahora trae, además, los campos del análisis (P50, P80, criticidad) como
+campos personalizados.
+
+**GT53. Informe configurable.** En ⚙ Configuración, «Plantilla del informe
+PDF»: título, subtítulo, empresa, autor, logo, pie, color, tamaño y
+orientación del papel, y qué secciones van y en qué orden. Quita «Registro de
+riesgos», pon un logo y abre el Informe ejecutivo del cronograma: la portada
+lleva el logo y la sección quitada no sale. Lo mismo vale para el informe
+del modelo de costos.
+
+**GT54. RIESGO.CRONOGRAMA.** En el mismo libro que el cronograma, en una
+celda del modelo de costos, escribe `=RIESGO.CRONOGRAMA("L"; "retraso")`. Si
+quieres los días de todo el proyecto, usa `=RIESGO.CRONOGRAMA("Proyecto";
+"dias")`. Usa la celda en un costo, por ejemplo indirectos = días × tarifa, y
+simula el modelo de costos. Cada iteración toma la misma iteración del
+cronograma, y la media de los días debe coincidir con la del cronograma.
+Medidas: fecha, dias, retraso, multa, costo. Con un hito que no existe, la
+celda dice por qué.
+
+**GT55. Validación publicada.** `npm run validacion:cronograma` (consola)
+recalcula 13 casos publicados (GAO y referencias) y escribe
+`docs/VALIDACION_CRONOGRAMA.md`: 41 comprobaciones, todas OK.
+
 ## A. Lo básico, en la hoja «Modelo»
 
 **A1. Valores base.** Sin tocar nada:

@@ -1,6 +1,6 @@
 # Estado del proyecto y traspaso de contexto
 
-**Última actualización:** 2026-09-26 (roadmap reordenado con el estudio de mercado, ver §9 «Siguiente acción» y `FASE3_ROADMAP.md` §1.2)
+**Última actualización:** 2026-10-07 (ramas consolidadas en `main`, ver §9 punto 85); antes, 2026-09-26 (roadmap reordenado con el estudio de mercado, ver §9 «Siguiente acción» y `FASE3_ROADMAP.md` §1.2)
 **Fase actual:** Fases 1, 2 y 3 aprobadas. Implementación en curso: **E0, E1 y E2 terminadas; E3 empezada**. El motor tiene ya el **canal de valores completo** (los cinco tipos de celda de Excel) y el **Nivel 1 de funciones de criterio**; el libro de fidelidad pasa **31/31 sin excepciones**. Lo que queda de E3 necesita Excel de verdad (ver §9.12).
 **Cambio de destino (2026-09-15):** el proyecto deja de ser una herramienta personal y pasa a ser un **producto comercial para 100+ usuarios**. Lee el §10 antes que nada: invalida varios supuestos anteriores.
 **Documentos hermanos:**
@@ -1444,6 +1444,36 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     `--meta` y `--oportunidad`. Probado en el banco. Guía GT38–GT40.
     **Siguiente**: la ronda del usuario (Q14, Q18, Q20, Q21, GT1–GT40,
     R1–R4).
+
+85. [x] **Consolidación de ramas (2026-10-07)**, pedida por el usuario
+    («quiero dejar una sola rama consolidada»; eligió la opción 1 y
+    aprobó portar los puntos 1 a 15). La base es `claude/nifty-thompson`
+    (el motor QRSA de este documento), con `main` y
+    `claude/market-analysis` fusionadas. Lo que tenía
+    `claude/optimistic-hamilton` se rehízo sobre este motor, un commit por
+    función:
+    - hitos contractuales (`HitoContractual`, hoja Hitos_Contrato);
+    - reserva (`reserva.ts`);
+    - clima (`clima.ts`, `OpcionesCpm.duracionEn`, corrida `sinClima`);
+    - escenarios (`escenarios.ts`, `excel/escenariosCronograma.ts`);
+    - convergencia y narrativa (`convergenciasDe`, `narrativa.ts`);
+    - registro (`registro.ts`);
+    - rangos (`rangosTipo.ts`, `excel/rangosCronograma.ts`);
+    - seguimiento (`excel/seguimientoCronograma.ts`);
+    - XER (`exportarXer`);
+    - validación (`tests/validacion/`, `bench/validacion.ts`);
+    - sectores (`sectores.ts`, `excel/sectoresCronograma.ts`,
+      `PrimerUsoCronograma`);
+    - plantilla del informe (`plantillaInforme.ts`, `PlantillaInforme.tsx`);
+    - vista previa (`vistaPrevia.ts`, `excel/cambiosCronograma.ts`);
+    - `RIESGO.CRONOGRAMA` (`engine/cronograma/enCostos.ts`,
+      `excel/cronogramaEnCostos.ts`).
+
+    Fuera quedó el punto D (hilos y PERT rápida). La historia de
+    `optimistic-hamilton` se conserva con un merge `-s ours`: sus commits
+    están en `main`, pero su código no. Probado en el banco de punta a
+    punta, sin errores de página. Guía GT41–GT55. **Siguiente**: la ronda
+    del usuario (GT1–GT55, Q14, Q18, Q20, Q21, R1–R4).
 
 **Siguiente acción al retomar**, en orden de valor:
 
