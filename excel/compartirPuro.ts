@@ -104,8 +104,14 @@ export function planificarCompartir(
     tocadas.add(clave);
     plan.congelar.push({ direccion: direccion(f), clave, formula: texto(f) });
   }
-  plan.noConvertibles.push(...r.errores);
-  for (const e of r.errores) tocadas.add(e.slice(0, e.indexOf(': ')));
+  for (const e of r.errores) {
+    const clave = e.slice(0, e.indexOf(': '));
+    const f = porClave.get(clave);
+    tocadas.add(clave);
+    // W5: RIESGO.CRONOGRAMA toma sus muestras del cronograma al simular; sin el complemento, se queda con su valor.
+    if (f && /\b(?:RIESGO|RISK)\.CRONOGRAMA\s*\(/i.test(f.formula)) plan.congelar.push({ direccion: direccion(f), clave, formula: texto(f) });
+    else plan.noConvertibles.push(e);
+  }
   for (const clave of declaraciones.celdas) {
     const f = porClave.get(clave);
     if (!f || tocadas.has(clave)) continue;

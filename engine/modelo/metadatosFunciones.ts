@@ -6,7 +6,7 @@
  */
 
 import {
-  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_DECISION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_HISTOGRAMA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
+  FUNCION_CATEGORIA, FUNCION_CORRELACION, FUNCION_CRONOGRAMA, FUNCION_DECISION, FUNCION_DISCRETA, FUNCION_EMPIRICA, FUNCION_HISTOGRAMA, FUNCION_EVENTO, FUNCION_SALIDA, FUNCION_TRUNCAR, FUNCIONES_RESULTADO, FUNCIONES_RIESGO,
 } from './funcionesRiesgo.ts';
 
 /** Lo que enseñan fuera de la simulación (B2). */
@@ -147,6 +147,16 @@ export function metadatosFunciones(): object {
       description: FUNCION_DECISION.descripcion,
       result: { type: 'any', dimensionality: 'scalar' },
       parameters: FUNCION_DECISION.parametros.map((p) => ({ name: p.nombre, description: p.descripcion, type: 'any', dimensionality: 'matrix', repeating: true })),
+    }, {
+      // W5: el plazo del módulo Cronograma, iteración a iteración. Fuera de la simulación, el plan.
+      id: FUNCION_CRONOGRAMA.id,
+      name: FUNCION_CRONOGRAMA.id,
+      description: `${FUNCION_CRONOGRAMA.descripcion} Fuera de la simulación devuelve el valor del plan (o el valor fijo).`,
+      result: { type: 'number', dimensionality: 'scalar' },
+      options: VOLATIL,
+      parameters: FUNCION_CRONOGRAMA.parametros.map((p, i) => ({
+        name: p.nombre, description: p.descripcion, type: i === 2 ? 'number' : 'any', dimensionality: 'scalar', ...(i > 0 ? { optional: true } : {}),
+      })),
     }])),
   };
 }

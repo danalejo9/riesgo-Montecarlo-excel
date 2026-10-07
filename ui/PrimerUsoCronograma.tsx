@@ -53,6 +53,7 @@ export function PrimerUso({ hechos }: { hechos: readonly boolean[] }) {
           </li>
         ))}
       </ol>
+      <p className="tenue">Para llevar el plazo al modelo de costos, escriba <code>=RIESGO.CRONOGRAMA("Proyecto"; "dias")</code> en una celda: toma el valor de la misma iteración (también «fecha», o el «retraso» y la «multa» de un hito del contrato).</p>
       <button type="button" className="secundario" onClick={() => { guardarOculta(true); setOculta(true); }}>Ocultar</button>
     </div>
   );

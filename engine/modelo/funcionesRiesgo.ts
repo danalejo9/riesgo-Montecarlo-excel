@@ -258,6 +258,28 @@ export const FUNCION_DECISION = {
   parametros: [{ nombre: 'opciones', descripcion: 'Las opciones: números o textos, o un rango con ellas' }],
 } as const;
 
+/**
+ * `RIESGO.CRONOGRAMA(hito; medida; valor_fijo)` (W5): el plazo de un hito o
+ * del proyecto, tomado del módulo Cronograma **iteración a iteración** (ver
+ * `engine/cronograma/enCostos.ts`). No es una distribución que se escriba:
+ * sus muestras las da la simulación del cronograma del libro.
+ */
+export const FUNCION_CRONOGRAMA = {
+  id: 'CRONOGRAMA',
+  descripcion: 'El plazo simulado de un hito o del proyecto (módulo Cronograma), en la misma iteración que los costos.',
+  parametros: [
+    { nombre: 'hito', descripcion: 'ID o nombre de la actividad o hito; vacío o "Proyecto" para el fin del proyecto' },
+    { nombre: 'medida', descripcion: '"fecha" (por defecto), "dias", "retraso", "multa" o "costo"' },
+    { nombre: 'valor_fijo', descripcion: 'Opcional: lo que enseña la celda fuera de la simulación (si no, el valor del plan)' },
+  ],
+} as const;
+
+/**
+ * Da la distribución de un `RIESGO.CRONOGRAMA` (la pone quien tiene el
+ * cronograma del libro simulado), o el motivo por el que no se puede.
+ */
+export type ProveedorCronograma = (hito: string, medida: string) => { spec: DistributionSpec; media: number } | string;
+
 /** ¿Es `RIESGO.<id>` una función que declara algo (salida, correlación, decisión)? */
 export function esFuncionDeDeclaracion(id: string): boolean {
   return id === FUNCION_SALIDA.id || id === FUNCION_CORRELACION.id || id === FUNCION_DECISION.id;
@@ -417,7 +439,36 @@ export function leerFuncionRiesgo(formula: string, lector?: LectorDeRango, evalu
   return leerNodoRiesgo(raiz, lector, evaluar);
 }
 
-export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: LectorDeRango, evaluar?: EvaluadorDeArgumento): LecturaFuncionRiesgo {
+/**
+ * El hito y la medida de un `RIESGO.CRONOGRAMA`: textos o números escritos, o
+ * celdas con ellos. Si alguno no se puede leer así, el motivo.
+ */
+export function pedidoDeCronograma(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?: LectorDeRango): { hito: string; medida: string } | string {
+  if (raiz.args.length > 3) return 'RIESGO.CRONOGRAMA admite hasta 3 argumentos: hito; medida; valor_fijo';
+  const texto = (n: Nodo | undefined): string | null => {
+    if (n === undefined || n.tipo === 'vacio') return '';
+    if (n.tipo === 'texto') return n.valor;
+    if (n.tipo === 'numero') return String(n.valor);
+    if (n.tipo === 'celda' && lector) {
+      const v = lector(n)?.[0];
+      return v === null || v === undefined ? '' : String(v);
+    }
+    return null;
+  };
+  const hito = texto(raiz.args[0]);
+  const medida = texto(raiz.args[1]);
+  if (hito === null || medida === null) {
+    return 'el hito y la medida de RIESGO.CRONOGRAMA tienen que ser textos escritos ("H3"; "fecha") o celdas con ellos';
+  }
+  return { hito: hito.trim(), medida: medida.trim() };
+}
+
+export function leerNodoRiesgo(
+  raiz: Extract<Nodo, { tipo: 'funcion' }>,
+  lector?: LectorDeRango,
+  evaluar?: EvaluadorDeArgumento,
+  cronograma?: ProveedorCronograma,
+): LecturaFuncionRiesgo {
   const id = idDeFuncionRiesgo(raiz.nombre) as string;
   const numero = (n: Nodo | undefined): number | null => (n === undefined ? null : constante(n) ?? evaluar?.(n) ?? null);
   if (esFuncionDeResultado(id)) {
@@ -429,6 +480,13 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
   if (id === FUNCION_EVENTO.id) {
     // Solo llega aquí mal escrita: bien escrita, `expandirEventos` ya la ha convertido.
     return { ok: false, motivo: 'RIESGO.EVENTO necesita 2 argumentos: probabilidad; impacto' };
+  }
+  if (id === FUNCION_CRONOGRAMA.id) {
+    const pedido = pedidoDeCronograma(raiz, lector);
+    if (typeof pedido === 'string') return { ok: false, motivo: pedido };
+    if (!cronograma) return { ok: false, motivo: 'RIESGO.CRONOGRAMA necesita el cronograma del libro (hoja «Actividades»)' };
+    const r = cronograma(pedido.hito, pedido.medida);
+    return typeof r === 'string' ? { ok: false, motivo: r } : { ok: true, id, spec: r.spec, media: r.media };
   }
   if (id === FUNCION_CATEGORIA.id || id === FUNCION_DISCRETA.id) {
     if (raiz.args.length !== 2) return { ok: false, motivo: `RIESGO.${id} necesita 2 argumentos: valores; pesos` };
@@ -483,7 +541,7 @@ export function leerNodoRiesgo(raiz: Extract<Nodo, { tipo: 'funcion' }>, lector?
   }
   const f = POR_ID.get(id);
   if (!f) {
-    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_EMPIRICA.id, FUNCION_HISTOGRAMA.id, FUNCION_TRUNCAR.id].join(', ')}` };
+    return { ok: false, motivo: `RIESGO.${id} no existe. Disponibles: ${[...FUNCIONES_RIESGO.map((x) => x.id), FUNCION_CATEGORIA.id, FUNCION_DISCRETA.id, FUNCION_EMPIRICA.id, FUNCION_HISTOGRAMA.id, FUNCION_TRUNCAR.id, FUNCION_CRONOGRAMA.id].join(', ')}` };
   }
   if (raiz.args.length !== f.parametros.length) {
     return { ok: false, motivo: `RIESGO.${id} necesita ${f.parametros.length} argumento(s): ${f.parametros.map((p) => p.nombre).join('; ')}` };

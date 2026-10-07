@@ -6,10 +6,11 @@
  */
 
 import { plantillaDelLibro } from '../excel/almacenPlantilla.ts';
+import { guardarPlanEnLibro } from '../excel/almacenPlanCronograma.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  chequearCalidad, comparacionPrePost, compararEscenarios, narrativaEscenarios, type ComparacionEscenarios,
+  chequearCalidad, comparacionPrePost, compararEscenarios, publicarPlan, narrativaEscenarios, type ComparacionEscenarios,
   actividadesDeRamas, convergenciasDe, narrativaCronograma, type ConvergenciaSimulada,
   colorDe, COLUMNAS_CONSOLIDADA, evaluarRegistro, type Clase, type Registro, type RiesgoRegistro, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
   type NivelReserva,
@@ -234,6 +235,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
       const calidad = chequearCalidad(modelo);
       setEstado((e) => ({ ...e, calidad, modelo }));
       if (calidad.bloquea) return;
+      // W5: el plan, para lo que enseña RIESGO.CRONOGRAMA en el modelo de costos; queda guardado en el libro.
+      void publicarPlan(modelo).then(guardarPlanEnLibro).catch(() => undefined);
       setOcupado('Simulando…');
       const sim = await simularCronograma(modelo, { senal: c.signal, progreso: (hecho, total, iteraciones) => setAvance({ hecho, total, iteraciones }) });
       const { fin, hitos } = resumenesDe(sim, modelo);

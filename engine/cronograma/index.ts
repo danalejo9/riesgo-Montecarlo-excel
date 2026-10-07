@@ -16,3 +16,5 @@ export * from './narrativa.ts';
 export * from './registro.ts';
 export * from './rangosTipo.ts';
 export * from './sectores.ts';
+export * from './enCostos.ts';
+export { CLAVE_PLAN_CRONOGRAMA, leerPlanPublicado, valorDelPlan, normalizarTexto, NOMBRES_PROYECTO, type PlanCronogramaPublicado } from './planPublicado.ts';

@@ -14,7 +14,7 @@
 
 import type { FormulaCelda, Grafo } from '../engine/graph/index.ts';
 import type { Nodo } from '../engine/parser/ast.ts';
-import { analizarRiesgoEnGrafo, type EntradaRiskModel } from '../engine/modelo/index.ts';
+import { analizarRiesgoEnGrafo, type EntradaRiskModel, type ProveedorCronograma } from '../engine/modelo/index.ts';
 import { NOMBRE_CUANTIL } from '../engine/functions/riesgo.ts';
 
 export interface EntradasDeFunciones {
@@ -41,6 +41,8 @@ export interface EntradasDeFunciones {
   noCompatibles: Map<string, string>;
   /** Celdas con `RIESGO.EVENTO` (T8, registro de riesgos). */
   eventos: string[];
+  /** W5: las entradas `RIESGO.CRONOGRAMA`, por id, con su hito y su medida. */
+  cronograma: Map<string, { hito: string; medida: string }>;
 }
 
 /**
@@ -55,8 +57,10 @@ export function entradasDeFunciones(
   clavesSalida: readonly string[],
   /** El nombre legible de la celda (E5); sin él, la entrada se llama como su clave. */
   nombrar?: (clave: string, hoja: string, col: number, fila: number) => string,
+  /** W5: las muestras de `RIESGO.CRONOGRAMA`. */
+  cronograma?: ProveedorCronograma,
 ): EntradasDeFunciones {
-  const r = analizarRiesgoEnGrafo(grafo, { clavesEntradaPanel, clavesSalida, ...(nombrar ? { nombrar } : {}) });
+  const r = analizarRiesgoEnGrafo(grafo, { clavesEntradaPanel, clavesSalida, ...(nombrar ? { nombrar } : {}), ...(cronograma ? { cronograma } : {}) });
   return {
     entradas: r.entradas,
     claves: r.claves,
@@ -70,6 +74,7 @@ export function entradasDeFunciones(
     motivosReescritura: r.motivosReescritura,
     noCompatibles: r.noCompatibles,
     eventos: r.eventos,
+    cronograma: r.cronograma,
   };
 }
 
