@@ -15,3 +15,4 @@ export * from './escenarios.ts';
 export * from './narrativa.ts';
 export * from './registro.ts';
 export * from './rangosTipo.ts';
+export * from './sectores.ts';

@@ -95,13 +95,13 @@ export interface CreacionLibro {
  * tiene algunas (un libro de la versión anterior, sin Costos ni
  * Correlaciones), añade solo las que faltan, vacías. Falla si están todas.
  */
-export async function crearLibroCronograma(inicio = proximoLunes()): Promise<CreacionLibro> {
+export async function crearLibroCronograma(inicio = proximoLunes(), plantilla: HojaNueva[] = hojasNuevasCronograma(inicio)): Promise<CreacionLibro> {
   const existentes = await hojasCronogramaExistentes();
   const todas = Object.values(HOJAS_CRONOGRAMA);
   if (existentes.length === todas.length) throw new Error('El libro ya tiene todas las hojas del cronograma. Bórrelas o use otro libro para crear uno nuevo.');
   const completado = existentes.length > 0;
   const tiene = new Set(existentes.map((n) => n.toLowerCase()));
-  const nuevas = hojasNuevasCronograma(inicio)
+  const nuevas = plantilla
     .filter((h) => !tiene.has(h.nombre.toLowerCase()))
     .map((h) => (completado ? { ...h, valores: [h.valores[0] as Celda[]] } : h));
   return Excel.run(async (context) => {

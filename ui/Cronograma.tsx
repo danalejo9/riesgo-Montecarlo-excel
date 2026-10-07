@@ -20,9 +20,11 @@ import { HOJAS_CRONOGRAMA, leerCronograma, type ErrorHoja } from '../excel/crono
 import { hojaResultados, resumenesDe } from '../excel/cronogramaResultados.ts';
 import { HOJA_RESULTADOS_ESCENARIOS, hojaResultadosEscenarios, leerEscenarios } from '../excel/escenariosCronograma.ts';
 import { rellenarRangos } from '../excel/rangosCronograma.ts';
+import { EJEMPLOS_LIBRO, hojasDeEjemplo } from '../excel/sectoresCronograma.ts';
+import { PrimerUso } from './PrimerUsoCronograma.tsx';
 import { guardarEnSeguimiento, instantaneasDe, leerSeguimiento, tendencia, type Instantanea } from '../excel/seguimientoCronograma.ts';
 import {
-  aplicarCambiosEnLibro, crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
+  aplicarCambiosEnLibro, crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, proximoLunes, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
 import { Ayuda } from './ayuda.tsx';
 import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } from '../excel/gantt.ts';
@@ -151,21 +153,25 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
     return lectura.modelo;
   }, []);
 
+  /** W6: el ejemplo con que se crea el libro (la obra o un sector). */
+  const [ejemplo, setEjemplo] = useState<(typeof EJEMPLOS_LIBRO)[number]['id']>('obra');
   const crear = useCallback(async () => {
     setOcupado('Creando las hojas…');
     setAviso(null);
     try {
-      const r = await crearLibroCronograma();
+      const inicio = proximoLunes();
+      const r = await crearLibroCronograma(inicio, hojasDeEjemplo(ejemplo, inicio));
+      const nombre = ejemplo === 'obra' ? 'la obra' : `«${EJEMPLOS_LIBRO.find((x) => x.id === ejemplo)?.nombre ?? ejemplo}»`;
       setAviso(r.completado
         ? `El libro ya tenía parte del cronograma: se añadieron, vacías, las hojas que faltaban (${r.creadas.join(', ')}).`
-        : `Hojas creadas: ${r.creadas.join(', ')}. Ya tienen un ejemplo de obra con costos y riesgos: cámbielo por su cronograma o simúlelo tal cual.`);
+        : `Hojas creadas: ${r.creadas.join(', ')}. Ya tienen el ejemplo de ${nombre} con costos, riesgos y un hito contractual: cámbielo por su cronograma o simúlelo tal cual.`);
       await refrescarExistentes();
     } catch (e) {
       alFallar(e);
     } finally {
       setOcupado(null);
     }
-  }, [alFallar, refrescarExistentes]);
+  }, [alFallar, refrescarExistentes, ejemplo]);
 
   const [importado, setImportado] = useState<CronogramaImportado | null>(null);
   const archivo = useRef<HTMLInputElement | null>(null);
@@ -355,6 +361,24 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
         desfases, calendarios con festivos de Colombia y riesgos que afectan varias actividades a la vez.
       </p>
 
+      <PrimerUso hechos={[
+        existentes !== null && existentes.length > 0,
+        calidad !== null,
+        (estado.modelo?.riesgos.length ?? 0) > 0 && (estado.modelo?.incertidumbre.length ?? 0) > 0,
+        sim !== null,
+        seguimiento.length > 0,
+      ]} />
+
+      {faltan && (
+        <label className="elegir-ejemplo">
+          Ejemplo para empezar{' '}
+          <select value={ejemplo} onChange={(e) => setEjemplo(e.target.value as typeof ejemplo)} disabled={ocupado !== null}>
+            {EJEMPLOS_LIBRO.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+          </select>
+          <span className="tenue"> {EJEMPLOS_LIBRO.find((x) => x.id === ejemplo)?.descripcion}</span>
+        </label>
+      )}
+
       <div className="botonera">
         <button type="button" className={faltan ? '' : 'secundario'} onClick={() => void crear()} disabled={ocupado !== null || !incompleto}
           title={incompleto ? '' : 'El libro ya tiene las hojas del cronograma'}>
@@ -414,8 +438,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
 
       {faltan && (
         <p className="tenue">
-          Este libro aún no tiene las hojas del cronograma. «Crear libro de cronograma» las añade con un ejemplo de obra
-          (14 actividades y 4 riesgos) para ver cómo se llenan.
+          Este libro aún no tiene las hojas del cronograma. «Crear libro de cronograma» las añade con el ejemplo elegido
+          (la obra de 14 actividades o uno de los cuatro sectores) para ver cómo se llenan.
         </p>
       )}
       {aviso && <p className="aviso-ok">{aviso}</p>}

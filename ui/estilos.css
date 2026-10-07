@@ -590,6 +590,13 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .matriz-registro td { color: #1a1a1a; font-size: 11px; }
 .matriz-registro caption { text-align: left; font-size: 12px; padding: 4px 0; }
 .texto-error { color: var(--baja); font-weight: 600; }
+/* W6: primeros pasos y elegir el ejemplo. */
+.primer-uso { border-left: 3px solid var(--acento); padding: 4px 10px; margin: 8px 0; }
+.primer-uso h3 { margin: 4px 0; font-size: 13px; }
+.primer-uso ol { margin: 4px 0 8px; padding-left: 18px; font-size: 12px; }
+.primer-uso li { margin-bottom: 3px; }
+.primer-uso li.hecho strong { color: var(--acento); }
+.elegir-ejemplo { display: block; margin: 6px 0; font-size: 12px; }
 /* V5: tendencia del seguimiento. */
 .linea-p80 { fill: none; stroke: var(--baja); stroke-width: 2; border-top-color: var(--baja); }
 .linea-p50 { fill: none; stroke: var(--serie-1); stroke-width: 2; border-top-color: var(--serie-1); }
