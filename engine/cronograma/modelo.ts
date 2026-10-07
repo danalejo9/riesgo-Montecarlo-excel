@@ -125,6 +125,32 @@ export interface InfoActividad {
   grupo?: string;
 }
 
+/**
+ * Hito contractual (W1): una actividad cuyo fin fija el contrato (una
+ * entrega, un acta, una puesta en servicio), con la multa por cada día
+ * natural de retraso y su tope (la cláusula penal). No es una restricción del
+ * cronograma (para eso está la fecha límite): es contra lo que se mide. Si
+ * el hito termina después de su fecha, la multa de esa iteración se suma al
+ * costo y entra en la contingencia y en la probabilidad conjunta (JCL).
+ */
+export interface HitoContractual {
+  actividad: string;
+  /** Fecha contractual (número de serie): el hito tiene que terminar ese día o antes. */
+  fecha: number;
+  /** Multa por día natural de retraso. */
+  multaDia?: number;
+  /** Tope de la multa (total). */
+  tope?: number;
+}
+
+/** La multa de un hito que termina el día `fin` (número de serie): días naturales de retraso × multa, con tope. */
+export function multaDe(h: HitoContractual, fin: number): number {
+  if (!h.multaDia) return 0;
+  const dias = Math.floor(fin) - Math.floor(h.fecha);
+  if (dias <= 0) return 0;
+  return Math.min(h.tope ?? Infinity, dias * h.multaDia);
+}
+
 export type Redondeo = 'entero' | 'decimal';
 
 export interface ConfiguracionCronograma {
@@ -171,6 +197,7 @@ export interface ModeloCronograma {
   gruposCorrelacion?: readonly GrupoCorrelacion[];
   ramas?: readonly Ramificacion[];
   info?: readonly InfoActividad[];
+  hitosContractuales?: readonly HitoContractual[];
 }
 
 /** ¿Algún riesgo trae datos del escenario post mitigación? */
@@ -180,7 +207,8 @@ export function tienePostMitigacion(m: ModeloCronograma): boolean {
 
 /** ¿Hay costos (partidas o impactos de costo)? */
 export function tieneCostos(m: ModeloCronograma): boolean {
-  return (m.costos?.length ?? 0) > 0 || m.riesgos.some((r) => r.impactos.some((i) => i.costo !== undefined));
+  return (m.costos?.length ?? 0) > 0 || m.riesgos.some((r) => r.impactos.some((i) => i.costo !== undefined))
+    || (m.hitosContractuales ?? []).some((h) => (h.multaDia ?? 0) > 0);
 }
 
 /** Construye la distribución, en días; con `relativa`, escalada por la base. Lanza un error legible. */

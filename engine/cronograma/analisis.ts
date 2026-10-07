@@ -308,3 +308,50 @@ export function comparacionPrePost(sim: SimulacionCronograma, fechaMeta?: number
   }
   return filas;
 }
+
+export interface ResumenHitoContractual {
+  id: string;
+  nombre: string;
+  /** Fecha contractual (número de serie). */
+  fecha: number;
+  /** Fin en el cronograma determinístico y si ya incumple. */
+  serieDeterministica: number;
+  /** P(terminar a más tardar en la fecha contractual). */
+  probabilidadCumplir: number;
+  /** P50 y P80 del fin (números de serie). */
+  p50: number;
+  p80: number;
+  /** Días naturales de retraso en el P80 (0 si cumple). */
+  retrasoP80: number;
+  multaDia: number | null;
+  tope: number | null;
+  /** Multa media (esperada) y P80 de la multa; `null` si el hito no tiene multa. */
+  multaMedia: number | null;
+  multaP80: number | null;
+}
+
+/** W1: por hito contractual, la probabilidad de cumplir su fecha, su P80 y la multa esperada. */
+export function resumirHitosContractuales(sim: SimulacionCronograma): ResumenHitoContractual[] {
+  return sim.contractuales.map((c) => {
+    const fechas = Float64Array.from(c.serie).sort();
+    const multas = Float64Array.from(c.multa).sort();
+    const conMulta = (c.hito.multaDia ?? 0) > 0;
+    let suma = 0;
+    for (let i = 0; i < multas.length; i++) suma += multas[i] as number;
+    const p80 = Math.floor(rangoCercano(fechas, 0.8));
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      fecha: c.hito.fecha,
+      serieDeterministica: c.serieDeterministica,
+      probabilidadCumplir: proporcionHasta(fechas, c.hito.fecha),
+      p50: Math.floor(rangoCercano(fechas, 0.5)),
+      p80,
+      retrasoP80: Math.max(0, p80 - Math.floor(c.hito.fecha)),
+      multaDia: c.hito.multaDia ?? null,
+      tope: c.hito.tope ?? null,
+      multaMedia: conMulta ? suma / multas.length : null,
+      multaP80: conMulta ? percentilOrdenado(multas, 0.8) : null,
+    };
+  });
+}

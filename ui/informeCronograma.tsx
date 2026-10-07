@@ -84,6 +84,26 @@ function Informe() {
         </div>
       </section>
 
+      {d.contractuales && d.contractuales.length > 0 && (
+        <section>
+          <h2>Hitos contractuales</h2>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>Hito</th><th>Fecha del contrato</th><th>Probabilidad de cumplir</th><th>Fin P80</th><th>Multa esperada</th></tr></thead>
+            <tbody>
+              {d.contractuales.map((h) => (
+                <tr key={h.id}>
+                  <th scope="row">{h.id} · {h.nombre}</th>
+                  <td>{FECHA.valor(h.fecha)}</td>
+                  <td>{pct(h.probabilidadCumplir)}</td>
+                  <td>{FECHA.valor(h.p80)}{h.retrasoP80 > 0 ? ` (+${h.retrasoP80} días)` : ''}</td>
+                  <td>{h.multaMedia === null ? '—' : dinero(h.multaMedia)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {d.gantt && (
         <section className="salto-antes">
           <h2>Cronograma y fechas de fin posibles</h2>

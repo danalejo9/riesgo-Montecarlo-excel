@@ -25,7 +25,7 @@ import { correlacionarImanConover, correlacionMasCercana, generarEntrada } from 
 import { uniform } from '../distributions/index.ts';
 import { spearman } from '../stats/index.ts';
 import { cpmDeterministico, calcularCpm, calendarioProyecto, crearEspacio, TOLERANCIA_CRITICA, type ResultadoCpm } from './cpm.ts';
-import { construirDistribucion, incertidumbreDe, tieneCostos, tienePostMitigacion, type ModeloCronograma, type PartidaCosto } from './modelo.ts';
+import { construirDistribucion, incertidumbreDe, multaDe, tieneCostos, tienePostMitigacion, type HitoContractual, type ModeloCronograma, type PartidaCosto } from './modelo.ts';
 import { compilarRed, type ActividadRed, type DefinicionRed, type RedCompilada } from './red.ts';
 import type { CalendarioLaboral } from './calendario.ts';
 import { convergenciaP80 } from './analisis.ts';
@@ -98,6 +98,19 @@ export interface EscenarioPost {
   p80: number;
 }
 
+/** Un hito contractual (W1) en la simulación principal: su fecha de fin y su multa en cada iteración. */
+export interface HitoContractualSimulado {
+  id: string;
+  nombre: string;
+  hito: HitoContractual;
+  /** Número de serie del día en que termina, por iteración. */
+  serie: Float64Array;
+  /** Multa de cada iteración (0 si cumple o si no tiene multa). */
+  multa: Float64Array;
+  /** Fin en el cronograma determinístico. */
+  serieDeterministica: number;
+}
+
 export interface SimulacionCronograma {
   red: RedCompilada;
   iteraciones: number;
@@ -128,6 +141,8 @@ export interface SimulacionCronograma {
   /** Actividades que son riesgos insertados en la red (Q3.4). */
   riesgoInsertado: boolean[];
   correlacionLograda: CorrelacionLograda[];
+  /** Hitos contractuales (W1), con su fin y su multa por iteración. */
+  contractuales: HitoContractualSimulado[];
   avisos: string[];
   milisegundos: number;
 }
@@ -185,6 +200,8 @@ interface Preparado {
   opcionBase: number[];
   riesgoInsertado: boolean[];
   correlacionLograda: CorrelacionLograda[];
+  /** Hitos contractuales con el índice de su actividad. */
+  contractuales: { h: HitoContractual; a: number }[];
   avisos: string[];
 }
 
@@ -322,9 +339,16 @@ function preparar(modelo: ModeloCronograma, red: RedCompilada, n: number): Prepa
     opcionBase.push(mejor);
   });
 
+  // Hitos contractuales (W1).
+  const contractuales = (modelo.hitosContractuales ?? []).map((h) => {
+    const a = red.indice.get(h.actividad);
+    if (a === undefined) throw new ErrorModeloCronograma('Hitos', h.actividad, `la actividad «${h.actividad}» no existe`);
+    return { h, a };
+  });
+
   // Correlación (Q2.2).
   const correlacionLograda = correlacionar(modelo, red, dur, costos, semilla, avisos);
-  return { red, n, dur, u, impactosDias, impactosCosto, costos, ramaDe, eleccion, opcionBase, riesgoInsertado, correlacionLograda, avisos };
+  return { red, n, dur, u, impactosDias, impactosCosto, costos, ramaDe, eleccion, opcionBase, riesgoInsertado, correlacionLograda, contractuales, avisos };
 }
 
 /** Aplica las correlaciones declaradas (pares y grupos) a las muestras, en su sitio. */
@@ -440,6 +464,9 @@ interface Corrida {
   inicio: Float32Array[] | null;
   fin: Float32Array[] | null;
   rutas: Map<string, { veces: number; actividades: number[] }>;
+  /** Por hito contractual: fin y multa de cada iteración (solo en la corrida completa). */
+  contratoSerie: Float64Array[];
+  contratoMulta: Float64Array[];
 }
 
 function probabilidadDe(modelo: ModeloCronograma, ri: number, post: boolean): number {
@@ -493,6 +520,8 @@ async function correr(
   const inicio = completa ? Array.from({ length: red.n }, () => new Float32Array(n)) : null;
   const fin = completa ? Array.from({ length: red.n }, () => new Float32Array(n)) : null;
   const rutas = new Map<string, { veces: number; actividades: number[] }>();
+  const contratoSerie = completa ? pre.contractuales.map(() => new Float64Array(n)) : [];
+  const contratoMulta = completa ? pre.contractuales.map(() => new Float64Array(n)) : [];
   // Con costos que escalan o por actividad hacen falta las fechas: la ida basta.
   const opciones = { ignorarDuras: ignorarRestriccionesDuras, soloIda: !completa };
   const prob = modelo.riesgos.map((_, ri) => probabilidadDe(modelo, ri, esc.post));
@@ -543,7 +572,19 @@ async function correr(
         }
         if (ocurre(imp.riesgo)) c += (imp.costo[i] as number) * (factor[imp.riesgo] as number);
       }
+      for (let h = 0; h < pre.contractuales.length; h++) {
+        const x = pre.contractuales[h] as { h: HitoContractual; a: number };
+        c += multaDe(x.h, serieFin(x.a));
+      }
       costo[i] = c;
+    }
+    if (completa) {
+      for (let h = 0; h < pre.contractuales.length; h++) {
+        const x = pre.contractuales[h] as { h: HitoContractual; a: number };
+        const f = serieFin(x.a);
+        (contratoSerie[h] as Float64Array)[i] = f;
+        (contratoMulta[h] as Float64Array)[i] = multaDe(x.h, f);
+      }
     }
     if (completa) {
       let h1 = 0x811c9dc5;
@@ -579,7 +620,7 @@ async function correr(
     }
   }
   avanzar(n % BLOQUE === 0 ? BLOQUE : n % BLOQUE);
-  return { finDias, finSerie, costo, hitosSerie, hitosDias, criticas, duraciones, inicio, fin, rutas };
+  return { finDias, finSerie, costo, hitosSerie, hitosDias, criticas, duraciones, inicio, fin, rutas, contratoSerie, contratoMulta };
 }
 
 /**
@@ -674,7 +715,8 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
   if (conCostos) {
     const filas = deterministico.filas;
     costoBase = costoDe(pre, 0, durBase, (a) => filas[a]?.inicio ?? 0, (a) => filas[a]?.fin ?? 0,
-      calendarioProyecto(red).base + Math.floor(red.inicio), deterministico.fin, deterministico.duracion, false);
+      calendarioProyecto(red).base + Math.floor(red.inicio), deterministico.fin, deterministico.duracion, false)
+      + pre.contractuales.reduce((s, x) => s + multaDe(x.h, filas[x.a]?.fin ?? 0), 0);
   }
 
   const eliminacion: EliminacionRiesgo[] = [];
@@ -722,6 +764,12 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
     fechas: { inicio: principal.inicio as Float32Array[], fin: principal.fin as Float32Array[] },
     eliminacion, sinRiesgos, media: todo.media, p80: todo.p80,
     costo: principal.costo, costoBase, post, rutas, riesgoInsertado: pre.riesgoInsertado,
-    correlacionLograda: pre.correlacionLograda, avisos, milisegundos: performance.now() - t0,
+    correlacionLograda: pre.correlacionLograda,
+    contractuales: pre.contractuales.map((x, h) => ({
+      id: red.ids[x.a] as string, nombre: red.nombres[x.a] as string, hito: x.h,
+      serie: principal.contratoSerie[h] as Float64Array, multa: principal.contratoMulta[h] as Float64Array,
+      serieDeterministica: deterministico.filas[x.a]?.fin ?? NaN,
+    })),
+    avisos, milisegundos: performance.now() - t0,
   };
 }

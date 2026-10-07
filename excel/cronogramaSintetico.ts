@@ -54,5 +54,6 @@ export function hojasSinteticas(inicio: number, n = 2000, relacionesPorActividad
     [H.costos]: vacia(H.costos),
     [H.correlaciones]: [base[H.correlaciones]?.[0] ?? []],
     [H.ramas]: vacia(H.ramas),
+    [H.hitosContrato]: vacia(H.hitosContrato),
   };
 }

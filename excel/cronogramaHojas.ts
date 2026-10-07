@@ -14,7 +14,7 @@ import {
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
-  type CorrelacionPar, type GrupoCorrelacion, type InfoActividad, type PartidaCosto, type Ramificacion,
+  type CorrelacionPar, type GrupoCorrelacion, type HitoContractual, type InfoActividad, type PartidaCosto, type Ramificacion,
 } from '../engine/cronograma/index.ts';
 import { fechaDeSerie, serieDeFecha } from '../engine/modelo/fechas.ts';
 
@@ -30,6 +30,7 @@ export const HOJAS_CRONOGRAMA = {
   correlaciones: 'Correlaciones',
   ramas: 'Ramas',
   lineasBase: 'Lineas_Base',
+  hitosContrato: 'Hitos_Contrato',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -87,6 +88,7 @@ export const COLUMNAS = {
   correlacionGrupos: ['Grupo', 'Miembros', 'Coeficiente'],
   ramas: ['Rama', 'Opción', 'Probabilidad', 'Actividades'],
   lineasBase: ['ID', 'LB1 comienzo', 'LB1 fin', 'LB2 comienzo', 'LB2 fin', 'LB3 comienzo', 'LB3 fin'],
+  hitosContrato: ['Hito (ID)', 'Fecha contractual', 'Multa por día de retraso', 'Tope de la multa', 'Nota'],
 } as const;
 
 /** G3: hasta tres líneas base. */
@@ -771,6 +773,29 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     if (Math.abs(total - 1) > 1e-6) error(H.ramas, 0, '', `Las opciones de la rama «${r.rama}» suman ${Math.round(total * 1000) / 10} %; tienen que sumar 100 %`);
   }
 
+  // W1: hitos contractuales y multas.
+  const thc = tabla(H.hitosContrato, hojas[H.hitosContrato], COLUMNAS.hitosContrato);
+  const hitosContractuales: HitoContractual[] = [];
+  for (const { fila, valores } of thc.filas) {
+    const id = texto(valor(thc, valores, 'Hito (ID)'));
+    if (!id) { error(H.hitosContrato, fila, letra(thc, 'Hito (ID)'), 'Falta el ID del hito'); continue; }
+    if ([...resumen].some((x) => normalizar(x) === normalizar(id))) { error(H.hitosContrato, fila, letra(thc, 'Hito (ID)'), `«${id}» es una actividad resumen: use el hito o la actividad que la cierra`); continue; }
+    if (invalidas.has(normalizar(id))) continue;
+    const a = porId.get(normalizar(id));
+    if (!a) { error(H.hitosContrato, fila, letra(thc, 'Hito (ID)'), `La actividad «${id}» no existe`); continue; }
+    if (hitosContractuales.some((h) => h.actividad === a.id)) { error(H.hitosContrato, fila, letra(thc, 'Hito (ID)'), `«${a.id}» ya está más arriba`); continue; }
+    const f = fechaDeCelda(valor(thc, valores, 'Fecha contractual'));
+    if (f === null) { error(H.hitosContrato, fila, letra(thc, 'Fecha contractual'), 'La fecha contractual no es una fecha válida'); continue; }
+    const mTxt = valor(thc, valores, 'Multa por día de retraso');
+    const tTxt = valor(thc, valores, 'Tope de la multa');
+    const multa = vacia(mTxt) ? undefined : numero(mTxt);
+    const tope = vacia(tTxt) ? undefined : numero(tTxt);
+    if (multa === null || (multa !== undefined && multa < 0)) { error(H.hitosContrato, fila, letra(thc, 'Multa por día de retraso'), 'La multa por día tiene que ser un número positivo'); continue; }
+    if (tope === null || (tope !== undefined && tope < 0)) { error(H.hitosContrato, fila, letra(thc, 'Tope de la multa'), 'El tope tiene que ser un número positivo'); continue; }
+    if (tope !== undefined && !multa) avisos.push(`${H.hitosContrato}, fila ${fila}: «${a.id}» tiene tope pero no multa por día; el tope no se usa.`);
+    hitosContractuales.push({ actividad: a.id, fecha: f, ...(multa ? { multaDia: multa } : {}), ...(tope !== undefined ? { tope } : {}) });
+  }
+
   if (configuracion.hitos) {
     for (const h of configuracion.hitos) {
       if (!porId.has(normalizar(h))) error(H.config, hi?.fila ?? 0, 'B', `El hito «${h}» no existe en Actividades`);
@@ -809,6 +834,7 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
       gruposCorrelacion,
       ramas,
       info,
+      ...(hitosContractuales.length ? { hitosContractuales } : {}),
     },
     errores,
     avisos,
@@ -925,6 +951,8 @@ const COSTOS_EJEMPLO: Celda[][] = [
 
 /** El presupuesto comprometido del ejemplo (COP). */
 const COSTO_META_EJEMPLO = 5_600_000_000;
+/** Días desde el inicio hasta la fecha meta del ejemplo (también la fecha contractual de la entrega). */
+const DIAS_META_EJEMPLO = 392;
 
 /** Las hojas del libro de cronograma, con el ejemplo de la obra, para empezar en `inicio` (número de serie, un lunes). */
 export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
@@ -945,7 +973,7 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
         [ETIQUETAS_CONFIG.muestreo, L.muestreo[0], 'Hipercubo latino: más preciso con las mismas iteraciones.'],
         [ETIQUETAS_CONFIG.redondeo, L.redondeo[0], 'Al día: duraciones enteras, como un cronograma real. Con decimales: sin redondear.'],
         [ETIQUETAS_CONFIG.duras, L.duras[0], '«Debe comenzar / terminar el» fijan fechas; ignorarlas deja que los retrasos se propaguen.'],
-        [ETIQUETAS_CONFIG.meta, inicio + 392, 'La fecha comprometida: se calcula la probabilidad de cumplirla (puede quedar vacía).'],
+        [ETIQUETAS_CONFIG.meta, inicio + DIAS_META_EJEMPLO, 'La fecha comprometida: se calcula la probabilidad de cumplirla (puede quedar vacía).'],
         [ETIQUETAS_CONFIG.hitos, '', 'IDs separados por comas; vacío: los hitos intermedios (el fin del proyecto siempre se sigue).'],
         [ETIQUETAS_CONFIG.moneda, 'COP', 'Solo para los títulos.'],
         [ETIQUETAS_CONFIG.costoMeta, COSTO_META_EJEMPLO, 'El presupuesto comprometido: con la fecha meta da la probabilidad conjunta (JCL).'],
@@ -1081,6 +1109,21 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       anchos: [10, 14, 14, 14, 14, 14, 14],
       listas: {},
       notas: { 0: 'Las líneas base se guardan desde el Gantt («Guardar línea base»): las fechas del cronograma en ese momento, para comparar después.' },
+    },
+    {
+      nombre: HOJAS_CRONOGRAMA.hitosContrato,
+      valores: [
+        [...COLUMNAS.hitosContrato],
+        ['L', inicio + DIAS_META_EJEMPLO, 4_000_000, 280_000_000, 'Entrega al cliente: cláusula penal del contrato (tope del 5 %).'],
+      ],
+      formatos: { 1: FORMATO_FECHA, 2: '#,##0', 3: '#,##0' },
+      anchos: [10, 16, 22, 18, 50],
+      listas: { 0: `=${HOJAS_CRONOGRAMA.actividades}!$A$2:$A$500` },
+      notas: {
+        0: 'La actividad cuyo fin fija el contrato (una entrega, un acta). No mueve el cronograma: se mide contra ella.',
+        2: 'Por día natural de retraso. Vacía: solo se calcula la probabilidad de cumplir la fecha.',
+        3: 'La multa no pasa de este valor (la cláusula penal suele topar en un % del contrato).',
+      },
     },
     {
       nombre: HOJAS_CRONOGRAMA.ramas,

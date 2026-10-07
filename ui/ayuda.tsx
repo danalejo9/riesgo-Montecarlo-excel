@@ -48,6 +48,8 @@ export const AYUDA = {
     'La confianza conjunta (JCL): la proporción de iteraciones que cumplen a la vez la fecha meta y el costo meta. Siempre es menor que cada probabilidad por separado, porque un proyecto que se atrasa suele costar más. Es el número que pide la práctica de riesgo integrado (AACE 57R-09).',
   prePost:
     'Se simulan los dos escenarios con los mismos números aleatorios: antes de mitigar (probabilidades e impactos actuales) y después (probabilidad post, la parte del impacto que queda, más lo que cuesta mitigar). La diferencia es solo la de la mitigación. Si el costo post sale mayor, la mitigación cuesta más de lo que ahorra en costo, aunque gane tiempo.',
+  hitosContrato:
+    'Los hitos que fija el contrato (hoja Hitos_Contrato), con su fecha y su multa por día natural de retraso. En cada iteración, si el hito termina tarde, la multa (con su tope) se suma al costo de esa iteración: entra en la contingencia y en la probabilidad conjunta. La fecha contractual no mueve el cronograma: es contra lo que se mide.',
   comparar:
     'Caja y bigotes, curvas acumuladas y abanico de todas las salidas numéricas en un mismo eje. Tiene sentido cuando están en las mismas unidades, como el flujo de caja de cada año.',
 } as const;

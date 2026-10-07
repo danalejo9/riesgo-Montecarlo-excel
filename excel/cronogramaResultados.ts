@@ -8,7 +8,7 @@
  */
 
 import {
-  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, resumirCosto, resumirTiempo,
+  comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, resumirCosto, resumirHitosContractuales, resumirTiempo,
   type ChequeoCalidad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { FORMATO_FECHA, type Celda } from './cronogramaHojas.ts';
@@ -122,6 +122,18 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
   };
   bloqueTiempo(fin, 'Fin del proyecto');
   for (const h of hitos) bloqueTiempo(h, `Hito: ${h.id} · ${h.nombre}`);
+
+  // W1: hitos contractuales y multas.
+  const contractuales = resumirHitosContractuales(sim);
+  if (contractuales.length) {
+    titulo('Hitos contractuales');
+    fila(['Hito', 'Fecha contractual', 'Probabilidad de cumplir', 'Fin P50', 'Fin P80', 'Retraso P80 (días naturales)', 'Multa por día', 'Multa esperada', 'Multa P80'], [], true);
+    for (const h of contractuales) {
+      fila([`${h.id} · ${h.nombre}`, h.fecha, h.probabilidadCumplir, h.p50, h.p80, h.retrasoP80, h.multaDia, h.multaMedia, h.multaP80],
+        [null, FORMATO_FECHA, PCT, FORMATO_FECHA, FORMATO_FECHA, '0', MONEDA, MONEDA, MONEDA]);
+    }
+    if (contractuales.some((h) => h.multaMedia !== null)) fila(['Las multas se suman al costo de cada iteración: están dentro de la contingencia y de la probabilidad conjunta.']);
+  }
 
   titulo('Tornado por eliminación de riesgos');
   if (sim.eliminacion.length === 0) fila(['El cronograma no tiene riesgos activos.']);

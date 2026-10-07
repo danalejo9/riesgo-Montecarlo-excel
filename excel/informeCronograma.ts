@@ -8,8 +8,8 @@
 
 import type { DatosGantt } from './gantt.ts';
 import {
-  comparacionPrePost, confianzaConjunta, indicesActividades, resumirCosto, resumirTiempo,
-  type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type SimulacionCronograma,
+  comparacionPrePost, confianzaConjunta, indicesActividades, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type ResumenHitoContractual, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
 import { textoFecha } from '../engine/modelo/fechas.ts';
@@ -48,6 +48,8 @@ export interface DatosInformeCronograma {
   riesgos: { id: string; nombre: string; ocurrencia: number; reduccionP80: number; reduccionP80Costo: number | null }[];
   criticas: { id: string; nombre: string; criticidad: number; ssi: number }[];
   rutas: { proporcion: number; actividades: string[] }[];
+  /** W1: hitos contractuales (opcional: los informes guardados antes no lo traen). */
+  contractuales?: ResumenHitoContractual[];
   avisos: string[];
   /** V6 (07/10): el cronograma para dibujar el Gantt con las fechas de fin posibles. */
   gantt?: DatosGantt;
@@ -106,6 +108,7 @@ export function datosInformeCronograma(sim: SimulacionCronograma, modelo: Modelo
     riesgos: sim.eliminacion.slice(0, 10).map((e) => ({ id: e.id, nombre: e.nombre, ocurrencia: e.ocurrencia, reduccionP80: e.reduccionP80, reduccionP80Costo: e.reduccionP80Costo })),
     criticas: indicesActividades(sim).filter((x) => !sim.riesgoInsertado[sim.red.indice.get(x.id) ?? -1]).slice(0, 10).map((x) => ({ id: x.id, nombre: x.nombre, criticidad: x.criticidad, ssi: x.ssi })),
     rutas: sim.rutas,
+    ...(sim.contractuales.length ? { contractuales: resumirHitosContractuales(sim) } : {}),
     avisos: sim.avisos,
   };
 }

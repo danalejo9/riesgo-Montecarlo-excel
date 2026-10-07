@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, resumirCosto, simularCronograma, SimulacionCancelada,
+  chequearCalidad, comparacionPrePost, confianzaConjunta, cronogramaAjustado, indicesActividades, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
   type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { csvIteraciones, codificarInformeCronograma, datosInformeCronograma } from '../excel/informeCronograma.ts';
@@ -402,6 +402,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
             <TablaPercentiles resumenes={[fin, ...hitos]} />
           </section>
 
+          {estado.modelo && <HitosContractuales sim={sim} modelo={estado.modelo} />}
           {estado.modelo && <SeccionesQ2 sim={sim} modelo={estado.modelo} />}
 
           <section>
@@ -667,6 +668,37 @@ function descargar(nombre: string, texto: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** W1: por hito contractual, la probabilidad de cumplir su fecha y la multa esperada. */
+function HitosContractuales({ sim, modelo }: { sim: SimulacionCronograma; modelo: ModeloCronograma }) {
+  const filas = resumirHitosContractuales(sim);
+  if (filas.length === 0) return null;
+  const mon = modelo.configuracion.moneda ? ` ${modelo.configuracion.moneda}` : '';
+  const conMulta = filas.some((f) => f.multaMedia !== null);
+  return (
+    <section>
+      <h2>Hitos contractuales</h2>
+      <Ayuda tema="hitosContrato" />
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th>Hito</th><th>Fecha del contrato</th><th>Cumple</th><th>Fin P80</th>{conMulta && <th>Multa esperada</th>}</tr></thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.id}>
+                <td>{f.id} · {f.nombre}</td>
+                <td>{FECHA.valor(f.fecha)}</td>
+                <td><strong>{pct(f.probabilidadCumplir)}</strong></td>
+                <td>{FECHA.valor(f.p80)}{f.retrasoP80 > 0 ? ` (+${miles(f.retrasoP80)} d)` : ''}</td>
+                {conMulta && <td>{f.multaMedia === null ? '—' : `${dineroCorto(f.multaMedia)}${mon}`}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {conMulta && <p className="tenue">Las multas se suman al costo de cada iteración: ya están dentro de la contingencia y del JCL.</p>}
+    </section>
+  );
 }
 
 /** Costo, JCL y pre/post mitigación (Q2). */
