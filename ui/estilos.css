@@ -590,6 +590,11 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .matriz-registro td { color: #1a1a1a; font-size: 11px; }
 .matriz-registro caption { text-align: left; font-size: 12px; padding: 4px 0; }
 .texto-error { color: var(--baja); font-weight: 600; }
+/* V5: tendencia del seguimiento. */
+.linea-p80 { fill: none; stroke: var(--baja); stroke-width: 2; border-top-color: var(--baja); }
+.linea-p50 { fill: none; stroke: var(--serie-1); stroke-width: 2; border-top-color: var(--serie-1); }
+.linea-cronograma { fill: none; stroke: var(--tenue); stroke-width: 1.5; stroke-dasharray: 4 3; border-top-color: var(--tenue); }
+.punto-p80 { fill: var(--baja); }
 /* W4: sesgo de convergencia. */
 .convergencia .barra-valor { background: var(--serie-1); }
 .convergencia li.producto .barra-valor { background: var(--tenue); }

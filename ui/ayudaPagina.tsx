@@ -39,6 +39,7 @@ const TITULOS: Record<TemaAyuda, string> = {
   escenarios: 'Cronograma: escenarios «¿qué pasa si?»',
   convergencia: 'Cronograma: sesgo de convergencia',
   registroCronograma: 'Cronograma: registro de riesgos',
+  seguimiento: 'Cronograma: seguimiento en el tiempo',
   comparar: 'Comparar salidas',
 };
 

@@ -34,6 +34,7 @@ export const HOJAS_CRONOGRAMA = {
   clima: 'Clima',
   escenarios: 'Escenarios',
   rangosTipo: 'Rangos_Tipo',
+  seguimiento: 'Seguimiento',
 } as const;
 export const HOJA_RESULTADOS = 'Resultados_Cronograma';
 
@@ -98,6 +99,10 @@ export const COLUMNAS = {
   climaAfecta: ['Afecta a'],
   escenarios: ['Escenario', 'Cambio', 'Sobre (ID)', 'Valor', 'Nota'],
   rangosTipo: ['Tipo', 'Palabras clave (grupo o nombre)', 'Menos', 'Más', 'Nota'],
+  seguimiento: [
+    'Fecha de referencia', 'Fin del cronograma', 'P50', 'P80', 'P90', 'Prob. de cumplir el cronograma', 'Prob. de cumplir la meta', 'Reserva al P80 (días lab.)',
+    'Costo P50', 'Costo P80', 'JCL', 'Escenario', 'Iteraciones', 'Fecha de corte', 'Guardada el', 'Nota',
+  ],
 } as const;
 
 /** G3: hasta tres líneas base. */
@@ -1263,6 +1268,17 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
       ['Mampostería en paralelo', 'Predecesoras', 'H', 'F CC', 'Empezar la fachada a la vez que el desencofrado'],
     ]),
     hojaRangosTipo(),
+    {
+      nombre: HOJAS_CRONOGRAMA.seguimiento,
+      valores: [[...COLUMNAS.seguimiento]],
+      formatos: {},
+      anchos: [16, 16, 12, 12, 12, 16, 16, 16, 15, 15, 8, 18, 11, 14, 17, 40],
+      listas: {},
+      notas: {
+        0: 'Una fila por instantánea: «Guardar en el seguimiento» en los resultados del cronograma. Con la misma fecha de corte, la nueva reemplaza a la anterior.',
+        15: 'Su comentario (qué cambió ese mes): se conserva al guardar.',
+      },
+    },
     {
       nombre: HOJAS_CRONOGRAMA.ramas,
       valores: [[...COLUMNAS.ramas]],

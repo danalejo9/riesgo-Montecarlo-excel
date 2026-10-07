@@ -5,20 +5,9 @@ import { hojasNuevasCronograma, leerCronograma, HOJAS_CRONOGRAMA as H, type Matr
 import { leerRangosTipo, rellenarRangos } from '../../excel/rangosCronograma.ts';
 import { serieDeFecha } from '../../engine/modelo/fechas.ts';
 import { modelo } from '../helpers/cronogramas.ts';
+import { aplicarCambios as aplicar } from '../helpers/aplicarCambios.ts';
 
 const libro = () => Object.fromEntries(hojasNuevasCronograma(serieDeFecha(2027, 1, 4)).map((h) => [h.nombre, h.valores.map((f) => [...f])])) as Record<string, unknown[][]>;
-
-/** Aplica los cambios «rango» a la matriz, como lo haría Excel. */
-function aplicar(l: Record<string, unknown[][]>, cambios: { hoja: string; op: string; fila?: number; col?: number; valores?: unknown[][] }[]): void {
-  for (const c of cambios) {
-    if (c.op !== 'rango') continue;
-    const m = (l[c.hoja] ??= []);
-    (c.valores ?? []).forEach((f, i) => {
-      const fila = (m[(c.fila ?? 0) + i] ??= []);
-      f.forEach((v, j) => { fila[(c.col ?? 0) + j] = v; });
-    });
-  }
-}
 
 describe('biblioteca de rangos', () => {
   it('reconoce el tipo por el grupo o por el nombre', () => {

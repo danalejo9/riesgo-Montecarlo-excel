@@ -20,6 +20,7 @@ import { HOJAS_CRONOGRAMA, leerCronograma, type ErrorHoja } from '../excel/crono
 import { hojaResultados, resumenesDe } from '../excel/cronogramaResultados.ts';
 import { HOJA_RESULTADOS_ESCENARIOS, hojaResultadosEscenarios, leerEscenarios } from '../excel/escenariosCronograma.ts';
 import { rellenarRangos } from '../excel/rangosCronograma.ts';
+import { guardarEnSeguimiento, instantaneasDe, leerSeguimiento, tendencia, type Instantanea } from '../excel/seguimientoCronograma.ts';
 import {
   aplicarCambiosEnLibro, crearLibroCronograma, escribirResultadosCronograma, hojasCronogramaExistentes, importarAlLibro, irACelda, leerHojasCronograma, VERSION_COMPLEMENTO,
 } from '../excel/cronogramaLibro.ts';
@@ -103,6 +104,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
   const control = useRef<AbortController | null>(null);
   /** V10: el registro de la última lectura (para la hoja de resultados, sin esperar al estado). */
   const registroLeido = useRef<RiesgoRegistro[]>([]);
+  /** V5: las instantáneas guardadas en la hoja Seguimiento. */
+  const [seguimiento, setSeguimiento] = useState<Instantanea[]>([]);
   /** W7: la última comparación de escenarios. */
   const [escenarios, setEscenarios] = useState<ComparacionEscenarios | null>(null);
   /** G1: la vista compacta del Gantt (también antes de simular). */
@@ -134,7 +137,9 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
 
   /** Lee y valida las hojas; con errores, los enseña y devuelve null. */
   const leer = useCallback(async (): Promise<ModeloCronograma | null> => {
-    const lectura = leerCronograma(await leerHojasCronograma());
+    const hojas = await leerHojasCronograma();
+    setSeguimiento(leerSeguimiento(hojas[HOJAS_CRONOGRAMA.seguimiento]));
+    const lectura = leerCronograma(hojas);
     if (!lectura.modelo) {
       setEstado({ ...VACIO, errores: lectura.errores, avisos: lectura.avisos });
       setDatosGantt(null);
@@ -279,6 +284,26 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
       control.current = null;
     }
   }, [alFallar, alSimulado]);
+
+  /** V5: guarda la simulación de ahora como una instantánea en la hoja Seguimiento. */
+  const guardarSeguimiento = useCallback(async () => {
+    const { sim: s, modelo: m } = estado;
+    if (!s || !m) return;
+    setOcupado('Guardando en el seguimiento…');
+    try {
+      const hojas = await leerHojasCronograma();
+      const g = guardarEnSeguimiento(hojas[HOJAS_CRONOGRAMA.seguimiento], instantaneasDe(s, m, serieAhora()));
+      await aplicarCambiosEnLibro(g.cambios);
+      setSeguimiento(g.lista);
+      setAviso(g.reemplazadas
+        ? `Instantánea guardada en la hoja Seguimiento: reemplaza a la del mismo corte (${FECHA.valor(m.red.fechaCorte as number)}).`
+        : `Instantánea guardada en la hoja Seguimiento${m.red.fechaCorte !== undefined ? ` con el corte del ${FECHA.valor(m.red.fechaCorte)}` : ' con la fecha de hoy (sin fecha de corte en Config)'}.`);
+    } catch (e) {
+      alFallar(e);
+    } finally {
+      setOcupado(null);
+    }
+  }, [estado, alFallar]);
 
   /** V6: añade a Incertidumbre un rango de partida para cada tarea que no tiene ninguno. */
   const rellenar = useCallback(async () => {
@@ -570,6 +595,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
 
           <GanttAjustado sim={sim} />
 
+          {seguimiento.length > 0 && <Seguimiento lista={seguimiento} moneda={estado.modelo?.configuracion.moneda ?? ''} />}
+
           {(sim.avisos.length > 0 || sim.correlacionLograda.length > 0) && (
             <details>
               <summary>Avisos de la simulación y correlación lograda</summary>
@@ -591,6 +618,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>
             <button type="button" className="secundario" onClick={() => descargar('iteraciones-cronograma.csv', csvIteraciones(sim))}>Iteraciones en CSV</button>
+            <button type="button" className="secundario" onClick={() => void guardarSeguimiento()} disabled={ocupado !== null}
+              title="Guarda estas cifras (P50, P80, probabilidad, costo) con la fecha de corte en la hoja Seguimiento, para ver la tendencia mes a mes">Guardar en el seguimiento</button>
             <button type="button" className="secundario" onClick={() => window.dispatchEvent(new Event(ABRIR_GANTT))}
               title="El Gantt con la criticidad, el rango P10–P90 de cada actividad y las fechas de fin posibles debajo">Ver Gantt</button>
           </div>
@@ -938,6 +967,46 @@ function SesgoConvergencia({ convergencias }: { convergencias: readonly Converge
           </table>
         </div>
       )}
+    </section>
+  );
+}
+
+/** V5: la tendencia del fin del cronograma, el P50 y el P80 en cada instantánea, y en palabras. */
+function Seguimiento({ lista, moneda }: { lista: readonly Instantanea[]; moneda: string }) {
+  const antes = lista.filter((x) => x.escenario === 'antes');
+  const frases = tendencia(lista, moneda);
+  const W = 320, H = 170, m = { i: 62, d: 8, a: 10, b: 22 };
+  const xs = antes.map((x) => x.referencia);
+  const ys = antes.flatMap((x) => [x.finCronograma, x.p50, x.p80].filter(Number.isFinite));
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const ax = (x: number) => m.i + ((x - x0) / (x1 - x0 || 1)) * (W - m.i - m.d);
+  const ay = (y: number) => H - m.b - ((y - y0) / (y1 - y0 || 1)) * (H - m.a - m.b);
+  const linea = (k: 'finCronograma' | 'p50' | 'p80') => antes.filter((x) => Number.isFinite(x[k])).map((x) => `${ax(x.referencia)},${ay(x[k])}`).join(' ');
+  return (
+    <section>
+      <h2>Seguimiento en el tiempo</h2>
+      <Ayuda tema="seguimiento" />
+      {antes.length >= 2 ? (
+        <figure className="grafico">
+          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tendencia del fin del cronograma, el P50 y el P80">
+            <polyline className="linea-cronograma" points={linea('finCronograma')} />
+            <polyline className="linea-p50" points={linea('p50')} />
+            <polyline className="linea-p80" points={linea('p80')} />
+            {antes.map((x) => <circle key={`${x.referencia}-${x.guardada}`} className="punto-p80" cx={ax(x.referencia)} cy={ay(x.p80)} r={2.5} />)}
+            <text className="eje" x={m.i - 4} y={ay(y1) + 8} textAnchor="end">{FECHA.valor(y1)}</text>
+            <text className="eje" x={m.i - 4} y={ay(y0)} textAnchor="end">{FECHA.valor(y0)}</text>
+            <text className="eje" x={m.i} y={H - 6}>{FECHA.valor(x0)}</text>
+            <text className="eje" x={W - m.d} y={H - 6} textAnchor="end">{FECHA.valor(x1)}</text>
+          </svg>
+          <figcaption className="leyenda-curvas tenue">
+            <span><span className="muestra-linea linea-p80" />P80</span>
+            <span><span className="muestra-linea linea-p50" />P50</span>
+            <span><span className="muestra-linea linea-cronograma" />fin del cronograma</span>
+            · en el eje horizontal, la fecha de corte
+          </figcaption>
+        </figure>
+      ) : <p className="tenue">Hay una instantánea guardada: con la del próximo corte se verá la tendencia.</p>}
+      {frases.length > 0 && <ul>{frases.map((f) => <li key={f}>{f}</li>)}</ul>}
     </section>
   );
 }
