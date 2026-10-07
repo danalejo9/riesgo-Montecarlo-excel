@@ -50,6 +50,8 @@ export const AYUDA = {
     'Se simulan los dos escenarios con los mismos números aleatorios: antes de mitigar (probabilidades e impactos actuales) y después (probabilidad post, la parte del impacto que queda, más lo que cuesta mitigar). La diferencia es solo la de la mitigación. Si el costo post sale mayor, la mitigación cuesta más de lo que ahorra en costo, aunque gane tiempo.',
   clima:
     'Los días que el clima hace perder cada mes (hoja Clima) se sortean mes a mes en cada iteración: una actividad expuesta avanza más despacio en los meses malos, así que la misma actividad sufre más en temporada de lluvias que en la seca. Para medir cuánto pesa, se vuelve a simular sin el clima con los mismos números aleatorios.',
+  registroCronograma:
+    'Todos los riesgos de la hoja Riesgos, también los cerrados, con su dueño, su estado y su próxima revisión (en rojo si ya pasó). La probabilidad va de 1 (≤ 10 %) a 5 (> 70 %). El impacto, si el equipo no lo fija en «Impacto cualitativo», es lo que el riesgo aporta al P80 del plazo o del costo según la simulación (de 1, ≤ 0,5 %, a 5, > 10 %). El puntaje es probabilidad × impacto: 15 o más, zona roja; 8 a 14, naranja; 4 a 7, amarilla. Las oportunidades van en su propia matriz, en azules.',
   convergencia:
     'Donde se juntan varias rutas, la actividad solo empieza a tiempo si llegan todas. Aunque cada ruta llegue a tiempo casi siempre, la probabilidad de que lleguen todas a la vez es menor: es el sesgo de convergencia, y es la razón principal de que la fecha del cronograma casi nunca se cumpla. La barra gris es lo que daría si las rutas fueran independientes; la roja, lo que pasó en la simulación (con las correlaciones y los riesgos comunes).',
   escenarios:

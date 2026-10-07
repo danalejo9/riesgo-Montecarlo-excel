@@ -8,7 +8,7 @@
 
 import type { DatosGantt } from './gantt.ts';
 import {
-  actividadesDeRamas, convergenciasDe, narrativaCronograma, type ConvergenciaSimulada, comparacionPrePost, confianzaConjunta, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  actividadesDeRamas, convergenciasDe, evaluarRegistro, narrativaCronograma, type ConvergenciaSimulada, type FilaRegistro, type RiesgoRegistro, comparacionPrePost, confianzaConjunta, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
   type ChequeoCalidad, type CriterioCalidad, type FilaPrePost, type ModeloCronograma, type NivelReserva, type Reserva, type ResumenHitoContractual, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { codificarJson, decodificarJson } from './codificacion.ts';
@@ -52,6 +52,8 @@ export interface DatosInformeCronograma {
   contractuales?: ResumenHitoContractual[];
   /** El resultado en palabras y el sesgo de convergencia (W4), opcionales en los informes de antes. */
   enPalabras?: string[];
+  /** V10: el registro de riesgos (opcional). */
+  registro?: FilaRegistro[];
   convergencias?: ConvergenciaSimulada[];
   /** W2: la reserva de contingencia al percentil de la contingencia (o P80) y su reparto. */
   reserva?: Reserva;
@@ -69,7 +71,9 @@ function reducir(curva: [number, number][], max = 200): [number, number][] {
   return r;
 }
 
-export function datosInformeCronograma(sim: SimulacionCronograma, modelo: ModeloCronograma, calidad: ChequeoCalidad, version: string, ahora = new Date(), gantt?: DatosGantt): DatosInformeCronograma {
+export function datosInformeCronograma(
+  sim: SimulacionCronograma, modelo: ModeloCronograma, calidad: ChequeoCalidad, version: string, ahora = new Date(), gantt?: DatosGantt, registro?: readonly RiesgoRegistro[],
+): DatosInformeCronograma {
   const cfg = modelo.configuracion;
   const fin = resumirTiempo(sim.fin, sim.deterministico.fin, cfg.fechaMeta);
   const post = sim.post ? resumirTiempo(sim.post.fin, sim.deterministico.fin, cfg.fechaMeta) : null;
@@ -116,6 +120,7 @@ export function datosInformeCronograma(sim: SimulacionCronograma, modelo: Modelo
     rutas: sim.rutas,
     ...(sim.contractuales.length ? { contractuales: resumirHitosContractuales(sim) } : {}),
     enPalabras: narrativaCronograma(sim, modelo),
+    ...(registro && registro.length ? { registro: evaluarRegistro(registro, modelo, sim, ahora.getTime() / 86_400_000 + 25569).filas } : {}),
     convergencias: convergenciasDe(sim, actividadesDeRamas(modelo)).filter((c) => c.sesgo >= 0.01).slice(0, 3),
     reserva: reservaContingencia(sim, (NIVELES_RESERVA as readonly number[]).includes(cfg.percentilContingencia ?? 0.8) ? (cfg.percentilContingencia ?? 0.8) as NivelReserva : 0.8),
     avisos: sim.avisos,

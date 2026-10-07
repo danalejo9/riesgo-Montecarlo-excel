@@ -38,6 +38,7 @@ const TITULOS: Record<TemaAyuda, string> = {
   clima: 'Cronograma: clima probabilístico',
   escenarios: 'Cronograma: escenarios «¿qué pasa si?»',
   convergencia: 'Cronograma: sesgo de convergencia',
+  registroCronograma: 'Cronograma: registro de riesgos',
   comparar: 'Comparar salidas',
 };
 

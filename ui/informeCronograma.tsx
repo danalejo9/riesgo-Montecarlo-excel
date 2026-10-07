@@ -193,6 +193,25 @@ function Informe() {
         )}
       </section>
 
+      {d.registro && d.registro.length > 0 && (
+        <section>
+          <h2>Registro de riesgos</h2>
+          <table className="comparacion tabla-informe">
+            <thead><tr><th>Riesgo</th><th>Dueño</th><th>Estado</th><th>Próxima revisión</th><th>P × I</th><th>Zona</th></tr></thead>
+            <tbody>
+              {d.registro.map((f) => (
+                <tr key={f.id}>
+                  <th scope="row">{f.id} · {f.nombre}{f.clase === 'oportunidad' ? ' (oportunidad)' : ''}</th>
+                  <td>{f.dueno ?? '—'}</td><td>{f.estado}</td>
+                  <td>{f.proximaRevision !== undefined ? FECHA.valor(f.proximaRevision) : '—'}{f.vencida ? ' (vencida)' : ''}</td>
+                  <td>{f.nivelP} × {f.nivelI} = {f.puntaje}</td><td>{f.zona}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {d.convergencias && d.convergencias.length > 0 && (
         <section>
           <h2>Sesgo de convergencia</h2>

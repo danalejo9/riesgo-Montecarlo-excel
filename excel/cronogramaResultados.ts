@@ -8,7 +8,7 @@
  */
 
 import {
-  actividadesDeRamas, convergenciasDe, narrativaCronograma, comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
+  actividadesDeRamas, convergenciasDe, evaluarRegistro, narrativaCronograma, type RiesgoRegistro, comparacionPrePost, confianzaConjunta, convergenciaP80, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, resumirTiempo,
   type ChequeoCalidad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
 import { FORMATO_FECHA, type Celda } from './cronogramaHojas.ts';
@@ -40,6 +40,8 @@ export interface DatosResultados {
   /** Número de serie de la fecha y hora de la corrida. */
   ahora: number;
   version: string;
+  /** V10: todos los riesgos de la hoja, para el registro. */
+  registro?: readonly RiesgoRegistro[];
 }
 
 export function resumenesDe(sim: SimulacionCronograma, modelo: ModeloCronograma): { fin: ResumenTiempo; hitos: ResumenTiempo[] } {
@@ -223,6 +225,19 @@ export function hojaResultados(d: DatosResultados): HojaResultados {
     }
     const mit = modelo.riesgos.reduce((a, r) => a + (r.costoMitigacion ?? 0), 0);
     if (mit > 0) fila(['Costo de la mitigación (incluido en el post)', mit], [null, MONEDA]);
+  }
+
+  // V10: registro de riesgos.
+  if (d.registro && d.registro.length) {
+    const reg = evaluarRegistro(d.registro, modelo, sim, d.ahora);
+    titulo('Registro de riesgos');
+    if (reg.vencidas) fila([`${reg.vencidas === 1 ? 'Un riesgo tiene' : `${reg.vencidas} riesgos tienen`} la revisión vencida.`]);
+    fila(['Riesgo', 'Dueño', 'Estado', 'Próxima revisión', 'Probabilidad', 'Nivel P', 'Nivel I', 'P × I', 'Zona'], [], true);
+    for (const f of reg.filas) {
+      const i = fila([`${f.id} · ${f.nombre}${f.clase === 'oportunidad' ? ' (oportunidad)' : ''}`, f.dueno ?? null, f.estado, f.proximaRevision ?? null, f.probabilidad, f.nivelP, f.nivelI, f.puntaje,
+        `${f.zona}${f.vencida ? ' · revisión vencida' : ''}`], [null, null, null, FORMATO_FECHA, PCT, '0', '0', '0']);
+      if (!f.cerrado && f.clase === 'amenaza' && f.zona !== 'verde') semaforos.push([i, 8, f.zona === 'roja' ? 'rojo' : 'amarillo']);
+    }
   }
 
   // W4: sesgo de convergencia.

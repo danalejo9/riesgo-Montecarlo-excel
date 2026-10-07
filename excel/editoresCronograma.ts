@@ -67,6 +67,9 @@ export interface RiesgoEditable {
   impactoPost: number | null;
   costoMitigacion: number | null;
   modo: string;
+  /** V10: se conservan al guardar desde el editor (número de serie y nivel 1–5). */
+  proximaRevision?: number | null;
+  impactoCualitativo?: number | null;
   impactos: ImpactoEditable[];
 }
 
@@ -149,7 +152,10 @@ export function leerEditores(hojas: Hojas): DatosEditores {
     dueno: texto(f[ir('Dueño')]), categoria: texto(f[ir('Categoría')]), probabilidad: proporcion(f[ir('Probabilidad')]),
     estado: texto(f[ir('Estado')]) || 'Activo', probabilidadPost: proporcion(f[ir('Probabilidad post')]),
     impactoPost: proporcion(f[ir('% del impacto post')]), costoMitigacion: numero(f[ir('Costo de mitigación')]),
-    modo: texto(f[ir('Modo')]) || 'Extiende actividades', impactos: [],
+    modo: texto(f[ir('Modo')]) || 'Extiende actividades',
+    proximaRevision: fechaDeCelda(f[ir('Próxima revisión')]),
+    impactoCualitativo: numero(f[ir('Impacto cualitativo')]),
+    impactos: [],
   }));
   const mi = hojas[H.impactos];
   const ci = columnas(mi, COLUMNAS.impactos);
@@ -250,8 +256,8 @@ export function cambiosDe(hojas: Hojas, pedido: PedidoGuardar): CambioHoja[] {
     return [
       bloque(H.riesgos, hojas[H.riesgos], 0, COLUMNAS.riesgos, riesgos.map((r) => [
         r.id.trim(), vacioANull(r.descripcion), vacioANull(r.causa), vacioANull(r.consecuencia), vacioANull(r.dueno), vacioANull(r.categoria),
-        r.probabilidad, r.estado, r.probabilidadPost, r.impactoPost, r.costoMitigacion, r.modo,
-      ]), { 6: '0%', 8: '0%', 9: '0%', 10: '#,##0' }),
+        r.probabilidad, r.estado, r.probabilidadPost, r.impactoPost, r.costoMitigacion, r.modo, r.proximaRevision ?? null, r.impactoCualitativo ?? null,
+      ]), { 6: '0%', 8: '0%', 9: '0%', 10: '#,##0', 12: 'dd/mm/yyyy' }),
       bloque(H.impactos, hojas[H.impactos], 0, COLUMNAS.impactos, riesgos.flatMap((r) => r.impactos.map((i) => [
         r.id.trim(), i.actividad.trim(), i.distribucion, i.min, i.mp, i.max, i.costoMin, i.costoMp, i.costoMax,
       ])), { 6: '#,##0', 7: '#,##0', 8: '#,##0' }),

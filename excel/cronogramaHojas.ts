@@ -14,7 +14,7 @@ import {
   type ActividadRed, type ConfiguracionCronograma, type DefinicionCalendario, type DistribucionDuracion,
   type IncertidumbreActividad, type ModeloCronograma, type Predecesora, type RiesgoCronograma, type TipoRelacion,
   type TipoRestriccion, CONFIGURACION_POR_DEFECTO,
-  type CorrelacionPar, type GrupoCorrelacion, type HitoContractual, type InfoActividad, type PartidaCosto, type Ramificacion,
+  type CorrelacionPar, type GrupoCorrelacion, type HitoContractual, type RiesgoRegistro, type InfoActividad, type PartidaCosto, type Ramificacion,
 } from '../engine/cronograma/index.ts';
 import { fechaDeSerie, serieDeFecha } from '../engine/modelo/fechas.ts';
 
@@ -58,6 +58,8 @@ export interface LecturaCronograma {
   vinculosResumen?: [string, string][];
   /** G3: las líneas base guardadas, por id (posición 0 = LB1). */
   lineasBase?: Record<string, (LineaBase | null)[]>;
+  /** V10: todos los riesgos de la hoja (también los cerrados), para el registro. */
+  registro?: RiesgoRegistro[];
 }
 
 export interface LineaBase {
@@ -83,7 +85,7 @@ export const COLUMNAS = {
   actividades: ['ID', 'Nombre', 'WBS', 'Tipo', 'Duración (días)', 'Calendario', 'Restricción', 'Fecha de la restricción', 'Excluir de la simulación', 'Grupo', 'Fecha límite', 'Comienzo real', 'Fin real', '% completado', 'Duración restante'],
   relaciones: ['Predecesora', 'Sucesora', 'Tipo', 'Desfase (días)', 'Unidad del desfase'],
   incertidumbre: ['Actividad o grupo', 'Distribución', 'Mínimo o P10', 'Más probable', 'Máximo o P90', 'Unidad', 'Lambda (PERT)'],
-  riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado', 'Probabilidad post', '% del impacto post', 'Costo de mitigación', 'Modo'],
+  riesgos: ['ID', 'Descripción', 'Causa', 'Consecuencia', 'Dueño', 'Categoría', 'Probabilidad', 'Estado', 'Probabilidad post', '% del impacto post', 'Costo de mitigación', 'Modo', 'Próxima revisión', 'Impacto cualitativo'],
   impactos: ['Riesgo', 'Actividad', 'Distribución', 'Mínimo (días)', 'Más probable (días)', 'Máximo (días)', 'Costo mínimo', 'Costo más probable', 'Costo máximo'],
   costos: ['ID', 'Partida', 'Tipo', 'Actividad', 'Valor (monto o tarifa diaria)', 'Unidades', 'Distribución', 'Mínimo', 'Más probable', 'Máximo', 'Escalamiento anual'],
   correlacionPares: ['Elemento A', 'Elemento B', 'Coeficiente'],
@@ -115,7 +117,8 @@ export const LISTAS = {
   distribucionImpacto: ['Triangular', 'PERT', 'Uniforme', 'Fija'],
   unidad: ['Días', '% de la base'],
   siNo: ['Sí', 'No'],
-  estadoRiesgo: ['Activo', 'Cerrado'],
+  estadoRiesgo: ['Activo', 'En seguimiento', 'Cerrado'],
+  impactoCualitativo: ['1', '2', '3', '4', '5'],
   muestreo: ['Hipercubo latino', 'Monte Carlo'],
   redondeo: ['Al día', 'Con decimales'],
   duras: ['Respetar', 'Ignorar'],
@@ -566,11 +569,28 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
   const riesgos: (RiesgoCronograma & { impactos: RiesgoCronograma['impactos'][number][] })[] = [];
   const cerrados = new Set<string>();
   const idsRiesgo = new Set<string>();
+  const registro: RiesgoRegistro[] = [];
   for (const { fila, valores } of tk.filas) {
     const id = texto(valor(tk, valores, 'ID'));
     if (!id) { error(H.riesgos, fila, letra(tk, 'ID'), 'Falta el ID del riesgo'); continue; }
     if (idsRiesgo.has(normalizar(id))) { error(H.riesgos, fila, letra(tk, 'ID'), `El riesgo «${id}» está repetido`); continue; }
     idsRiesgo.add(normalizar(id));
+    // V10: el registro (también los cerrados).
+    const revTxt = valor(tk, valores, 'Próxima revisión');
+    const rev = vacia(revTxt) ? null : fechaDeCelda(revTxt);
+    if (!vacia(revTxt) && rev === null) error(H.riesgos, fila, letra(tk, 'Próxima revisión'), 'La próxima revisión no es una fecha válida');
+    const icTxt = valor(tk, valores, 'Impacto cualitativo');
+    const ic = vacia(icTxt) ? null : numero(icTxt);
+    if (!vacia(icTxt) && (ic === null || !Number.isInteger(ic) || ic < 1 || ic > 5)) error(H.riesgos, fila, letra(tk, 'Impacto cualitativo'), 'El impacto cualitativo es un nivel de 1 a 5');
+    const pReg = proporcion(valor(tk, valores, 'Probabilidad'));
+    registro.push({
+      id, nombre: texto(valor(tk, valores, 'Descripción')) || id, estado: texto(valor(tk, valores, 'Estado')) || 'Activo',
+      probabilidad: pReg !== null && pReg >= 0 && pReg <= 1 ? pReg : null,
+      ...(texto(valor(tk, valores, 'Dueño')) ? { dueno: texto(valor(tk, valores, 'Dueño')) } : {}),
+      ...(texto(valor(tk, valores, 'Categoría')) ? { categoria: texto(valor(tk, valores, 'Categoría')) } : {}),
+      ...(rev !== null ? { proximaRevision: rev } : {}),
+      ...(ic !== null && Number.isInteger(ic) && ic >= 1 && ic <= 5 ? { impactoCualitativo: ic } : {}),
+    });
     if (normalizar(valor(tk, valores, 'Estado')).startsWith('cerrado')) { cerrados.add(normalizar(id)); continue; }
     const p = proporcion(valor(tk, valores, 'Probabilidad'));
     if (p === null || p < 0 || p > 1) {
@@ -869,11 +889,12 @@ export function leerCronograma(hojas: Readonly<Record<string, MatrizHoja | undef
     if (lineas.some(Boolean)) lineasBase[porId.get(normalizar(id))?.id ?? id] = lineas;
   }
 
-  if (errores.length) return { modelo: null, errores, avisos, orden, vinculosResumen, lineasBase };
+  if (errores.length) return { modelo: null, errores, avisos, orden, vinculosResumen, lineasBase, registro };
   return {
     orden,
     vinculosResumen,
     lineasBase,
+    registro,
     modelo: {
       red: { inicio, calendarios, calendarioProyecto, actividades, ...(fechaCorte !== undefined ? { fechaCorte } : {}), logicaProgreso },
       incertidumbre,
@@ -974,10 +995,10 @@ const RELACIONES_EJEMPLO: [string, string, string, number, string?][] = [
 
 /** ID, descripción, causa, consecuencia, dueño, categoría, probabilidad, estado, probabilidad post, % impacto post, costo de mitigación, modo. */
 const RIESGOS_EJEMPLO: Celda[][] = [
-  ['R1', 'Lluvias fuertes durante la estructura', 'Temporada de lluvias', 'Paradas en vaciado y mampostería', 'Residente de obra', 'Clima', 0.35, 'Activo', 0.35, 0.5, 60_000_000, 'Extiende actividades'],
-  ['R2', 'Licencia devuelta para correcciones', 'Observaciones de la curaduría', 'Nueva radicación', 'Director de diseño', 'Permisos', 0.25, 'Activo', 0.1, null, 15_000_000, 'Extiende actividades'],
-  ['R3', 'Suelo más blando de lo previsto', 'Estudio de suelos con pocas perforaciones', 'Rediseño de la cimentación', 'Ingeniero estructural', 'Técnico', 0.1, 'Activo', null, null, null, 'Extiende actividades'],
-  ['R4', 'Cubierta prefabricada disponible (oportunidad)', 'Proveedor con existencias', 'Montaje más rápido', 'Compras', 'Oportunidad', 0.5, 'Activo', null, null, null, 'Extiende actividades'],
+  ['R1', 'Lluvias fuertes durante la estructura', 'Temporada de lluvias', 'Paradas en vaciado y mampostería', 'Residente de obra', 'Clima', 0.35, 'Activo', 0.35, 0.5, 60_000_000, 'Extiende actividades', 30, null],
+  ['R2', 'Licencia devuelta para correcciones', 'Observaciones de la curaduría', 'Nueva radicación', 'Director de diseño', 'Permisos', 0.25, 'En seguimiento', 0.1, null, 15_000_000, 'Extiende actividades', 14, null],
+  ['R3', 'Suelo más blando de lo previsto', 'Estudio de suelos con pocas perforaciones', 'Rediseño de la cimentación', 'Ingeniero estructural', 'Técnico', 0.1, 'Activo', null, null, null, 'Extiende actividades', 45, null],
+  ['R4', 'Cubierta prefabricada disponible (oportunidad)', 'Proveedor con existencias', 'Montaje más rápido', 'Compras', 'Oportunidad', 0.5, 'Activo', null, null, null, 'Extiende actividades', 60, null],
 ];
 
 /** Riesgo, actividad, distribución, días (mín, más probable, máx), costo (mín, más probable, máx). */
@@ -1123,16 +1144,19 @@ export function hojasNuevasCronograma(inicio: number): HojaNueva[] {
     },
     {
       nombre: HOJAS_CRONOGRAMA.riesgos,
-      valores: [[...COLUMNAS.riesgos], ...RIESGOS_EJEMPLO.map((r) => [...r])],
-      formatos: { 6: '0%', 8: '0%', 9: '0%', 10: '#,##0' },
-      anchos: [6, 40, 30, 30, 20, 14, 12, 10, 14, 14, 16, 20],
-      listas: { 7: L.estadoRiesgo, 11: L.modoRiesgo },
+      // La próxima revisión, en días desde el inicio del proyecto.
+      valores: [[...COLUMNAS.riesgos], ...RIESGOS_EJEMPLO.map((r) => r.map((x, j) => (j === 12 && typeof x === 'number' ? inicio + x : x)))],
+      formatos: { 6: '0%', 8: '0%', 9: '0%', 10: '#,##0', 12: FORMATO_FECHA, 13: '0' },
+      anchos: [6, 40, 30, 30, 20, 14, 12, 14, 14, 14, 16, 20, 14, 14],
+      listas: { 7: L.estadoRiesgo, 11: L.modoRiesgo, 13: L.impactoCualitativo },
       notas: {
         6: 'De ocurrir en el proyecto (0 % a 100 %).',
         8: 'Escenario post mitigación: la probabilidad después de mitigar (vacía: la misma).',
         9: 'Escenario post: qué parte del impacto queda (50 %: la mitad; vacío: todo).',
         10: 'Lo que cuesta mitigar: se suma al costo del escenario post.',
         11: '«Actividad insertada»: el riesgo entra en la red como una actividad nueva tras la afectada, en vez de alargarla.',
+        12: 'Cuándo se vuelve a revisar el riesgo. Si la fecha pasa y no está cerrado, el registro lo marca como vencido.',
+        13: 'Opcional: el nivel de impacto de 1 (muy bajo) a 5 (muy alto) que da el equipo. Vacío: sale de la simulación (lo que el riesgo aporta al P80).',
       },
     },
     {

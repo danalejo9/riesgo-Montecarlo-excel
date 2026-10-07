@@ -13,3 +13,4 @@ export * from './reserva.ts';
 export * from './clima.ts';
 export * from './escenarios.ts';
 export * from './narrativa.ts';
+export * from './registro.ts';

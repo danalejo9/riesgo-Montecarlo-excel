@@ -586,6 +586,10 @@ textarea { width: 100%; font: inherit; box-sizing: border-box; }
 .tornado-eliminacion .barra-valor { display: block; height: 100%; background: var(--baja); }
 .tornado-eliminacion .barra-valor.negativa { background: var(--oportunidad); }
 .tornado-eliminacion .cifra { text-align: right; font-variant-numeric: tabular-nums; }
+/* V10: registro de riesgos del cronograma (las zonas son colores claros: texto oscuro). */
+.matriz-registro td { color: #1a1a1a; font-size: 11px; }
+.matriz-registro caption { text-align: left; font-size: 12px; padding: 4px 0; }
+.texto-error { color: var(--baja); font-weight: 600; }
 /* W4: sesgo de convergencia. */
 .convergencia .barra-valor { background: var(--serie-1); }
 .convergencia li.producto .barra-valor { background: var(--tenue); }

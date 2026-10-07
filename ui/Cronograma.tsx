@@ -9,7 +9,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from 'react-dom';
 import {
   chequearCalidad, comparacionPrePost, compararEscenarios, narrativaEscenarios, type ComparacionEscenarios,
-  actividadesDeRamas, convergenciasDe, narrativaCronograma, type ConvergenciaSimulada, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
+  actividadesDeRamas, convergenciasDe, narrativaCronograma, type ConvergenciaSimulada,
+  colorDe, COLUMNAS_CONSOLIDADA, evaluarRegistro, type Clase, type Registro, type RiesgoRegistro, confianzaConjunta, cronogramaAjustado, indicesActividades, NIVELES_RESERVA, reservaContingencia, resumirCosto, resumirHitosContractuales, simularCronograma, SimulacionCancelada,
   type NivelReserva,
   type ChequeoCalidad, type DistribucionDuracion, type IndiceActividad, type ModeloCronograma, type ResumenTiempo, type SimulacionCronograma,
 } from '../engine/cronograma/index.ts';
@@ -47,9 +48,11 @@ interface Estado {
   fin: ResumenTiempo | null;
   hitos: ResumenTiempo[];
   indices: IndiceActividad[];
+  /** V10: todos los riesgos de la hoja (también los cerrados). */
+  registro: RiesgoRegistro[];
 }
 
-const VACIO: Estado = { errores: [], avisos: [], calidad: null, sim: null, modelo: null, fin: null, hitos: [], indices: [] };
+const VACIO: Estado = { errores: [], avisos: [], calidad: null, sim: null, modelo: null, fin: null, hitos: [], indices: [], registro: [] };
 const FECHA = formatoDe(true);
 
 function pct(x: number): string {
@@ -97,6 +100,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
   const [avance, setAvance] = useState<AvanceSimulacion | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const control = useRef<AbortController | null>(null);
+  /** V10: el registro de la última lectura (para la hoja de resultados, sin esperar al estado). */
+  const registroLeido = useRef<RiesgoRegistro[]>([]);
   /** W7: la última comparación de escenarios. */
   const [escenarios, setEscenarios] = useState<ComparacionEscenarios | null>(null);
   /** G1: la vista compacta del Gantt (también antes de simular). */
@@ -135,7 +140,8 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
       return null;
     }
     setDatosGantt(datosGanttDe(lectura, controlGantt.qrsa, controlGantt.distribucionFin));
-    setEstado((e) => ({ ...e, errores: [], avisos: lectura.avisos }));
+    registroLeido.current = lectura.registro ?? [];
+    setEstado((e) => ({ ...e, errores: [], avisos: lectura.avisos, registro: lectura.registro ?? [] }));
     return lectura.modelo;
   }, []);
 
@@ -223,7 +229,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
       setDatosGantt((d) => (d ? { ...d, qrsa: controlGantt.qrsa, ...(controlGantt.distribucionFin ? { distribucionFin: controlGantt.distribucionFin } : {}) } : d));
       window.dispatchEvent(new Event(REFRESCAR_GANTT));
       setOcupado('Escribiendo la hoja de resultados…');
-      await escribirResultadosCronograma(hojaResultados({ sim, modelo, calidad, ahora: serieAhora(), version: VERSION_COMPLEMENTO }));
+      await escribirResultadosCronograma(hojaResultados({ sim, modelo, calidad, ahora: serieAhora(), version: VERSION_COMPLEMENTO, registro: registroLeido.current }));
     } catch (e) {
       if (e instanceof SimulacionCancelada) setAviso('Simulación cancelada.');
       else alFallar(e);
@@ -521,6 +527,10 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
               </table>
             </div>
           </section>
+          {estado.modelo && estado.registro.length > 0 && (
+            <RegistroDeRiesgos registro={evaluarRegistro(estado.registro, estado.modelo, sim, serieAhora())} />
+          )}
+
           {estado.modelo && <SesgoConvergencia convergencias={convergenciasDe(sim, actividadesDeRamas(estado.modelo))} />}
 
           {sim.rutas.length > 0 && (
@@ -550,7 +560,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
           <div className="botonera">
             <button type="button" onClick={() => {
               if (!estado.modelo || !calidad) return;
-              void codificarInformeCronograma(datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined))
+              void codificarInformeCronograma(datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined, estado.registro))
                 .then((codigo) => abrirEnNavegador(`${new URL('/informeCronograma.html', window.location.href).href}#d=${codigo}`))
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>
@@ -791,6 +801,79 @@ function descargar(nombre: string, texto: string): void {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+const P_TEXTO = ['Muy baja (≤ 10 %)', 'Baja (≤ 30 %)', 'Media (≤ 50 %)', 'Alta (≤ 70 %)', 'Muy alta (> 70 %)'];
+const I_TEXTO = ['Muy bajo', 'Bajo', 'Medio', 'Alto', 'Muy alto'];
+
+/** V10: una matriz 5 × 5 con zonas de color: amenazas, oportunidades o la doble del PMBOK. */
+function MatrizRegistro({ titulo, columnas, celda }: { titulo: string; columnas: readonly { clase: Clase; i: number }[]; celda: (p: number, c: { clase: Clase; i: number }) => string[] }) {
+  return (
+    <div className="tabla-desplazable">
+      <table className="matriz-riesgos matriz-registro" aria-label={titulo}>
+        <caption className="tenue">{titulo}</caption>
+        <tbody>
+          {[5, 4, 3, 2, 1].map((p) => (
+            <tr key={p}>
+              <th scope="row">{P_TEXTO[p - 1]}</th>
+              {columnas.map((c, k) => {
+                const ids = celda(p, c);
+                return <td key={k} style={{ background: colorDe(c.clase, p * c.i) }} title={`${c.clase === 'amenaza' ? 'Amenaza' : 'Oportunidad'} · probabilidad ${P_TEXTO[p - 1]?.toLowerCase()} · impacto ${I_TEXTO[c.i - 1]?.toLowerCase()}${ids.length ? `: ${ids.join(', ')}` : ''}`}>{ids.join(' ')}</td>;
+              })}
+            </tr>
+          ))}
+          <tr className="ejes">
+            <th scope="row" className="tenue">Probabilidad ↑ · Impacto →</th>
+            {columnas.map((c, k) => <th key={k} scope="col">{c.clase === 'oportunidad' && columnas.length > 5 ? `O${c.i}` : columnas.length > 5 ? `A${c.i}` : I_TEXTO[c.i - 1]}</th>)}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** V10: el registro completo: matrices de amenazas, oportunidades y consolidada, y la lista con dueño, estado y revisión. */
+function RegistroDeRiesgos({ registro }: { registro: Registro }) {
+  const [vista, setVista] = useState<'separadas' | 'consolidada'>('separadas');
+  const cinco = [1, 2, 3, 4, 5];
+  const hayOportunidades = registro.filas.some((f) => f.clase === 'oportunidad' && !f.cerrado);
+  return (
+    <section>
+      <h2>Registro de riesgos</h2>
+      <Ayuda tema="registroCronograma" />
+      {registro.vencidas > 0 && <p className="aviso-error">{registro.vencidas === 1 ? 'Un riesgo tiene' : `${registro.vencidas} riesgos tienen`} la revisión vencida.</p>}
+      <div className="botonera" role="group" aria-label="Vista de la matriz">
+        <button type="button" className={vista === 'separadas' ? '' : 'secundario'} aria-pressed={vista === 'separadas'} onClick={() => setVista('separadas')}>Amenazas y oportunidades</button>
+        <button type="button" className={vista === 'consolidada' ? '' : 'secundario'} aria-pressed={vista === 'consolidada'} onClick={() => setVista('consolidada')}>Consolidada</button>
+      </div>
+      {vista === 'separadas' ? (
+        <>
+          <MatrizRegistro titulo="Amenazas" columnas={cinco.map((i) => ({ clase: 'amenaza', i }))} celda={(p, c) => registro.matriz[p - 1]?.[c.i - 1] ?? []} />
+          {hayOportunidades && <MatrizRegistro titulo="Oportunidades" columnas={cinco.map((i) => ({ clase: 'oportunidad', i }))} celda={(p, c) => registro.matrizOportunidades[p - 1]?.[c.i - 1] ?? []} />}
+        </>
+      ) : (
+        <MatrizRegistro titulo="Amenazas a la izquierda, oportunidades a la derecha: lo que más pesa, en el centro" columnas={COLUMNAS_CONSOLIDADA}
+          celda={(p, c) => (c.clase === 'amenaza' ? registro.matriz : registro.matrizOportunidades)[p - 1]?.[c.i - 1] ?? []} />
+      )}
+      <div className="tabla-desplazable">
+        <table className="tabla-resumen sin-clic">
+          <thead><tr><th>Riesgo</th><th>Dueño</th><th>Estado</th><th>Revisión</th><th>P × I</th><th>Zona</th></tr></thead>
+          <tbody>
+            {registro.filas.map((f) => (
+              <tr key={f.id} className={f.cerrado ? 'tenue' : ''}>
+                <td>{f.id} · {f.nombre}{f.clase === 'oportunidad' ? ' (oportunidad)' : ''}</td>
+                <td>{f.dueno ?? '—'}</td>
+                <td>{f.estado}</td>
+                <td className={f.vencida ? 'texto-error' : ''}>{f.proximaRevision !== undefined ? FECHA.valor(f.proximaRevision) : '—'}{f.vencida ? ' (vencida)' : ''}</td>
+                <td title={`Impacto: ${f.origenImpacto}`}>{f.nivelP} × {f.nivelI} = {f.puntaje}</td>
+                <td><span className="etiqueta-sev" style={{ background: colorDe(f.clase, f.puntaje), color: '#1a1a1a' }}>{f.zona}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }
 
 /** W4: la convergencia que más pesa, en barras, y las siguientes en una tabla. */
