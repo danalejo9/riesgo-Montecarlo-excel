@@ -23,7 +23,7 @@
 > En **PowerShell**, una línea cada vez:
 >
 > ```
-> cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
+> cd "$HOME\Documents\Proyectos Claude\riesgo-montecarlo-v2"
 > git status
 > ```
 >
@@ -46,6 +46,22 @@
 > que decir **«Guía: ronda completa tras unir las ramas…»** (o algo
 > posterior). Si `git checkout main` se queja de archivos que cambiarían,
 > vuelve a `git status` y guárdalos con el `git stash` de arriba.
+>
+> **Si después falta algún archivo** (por ejemplo, `ejemplos\` no tiene
+> `demo-proyecto-aurora.xlsx`), deja la carpeta exactamente igual que
+> `main` en GitHub. Esto rehace todos los archivos del proyecto (tus
+> archivos propios que no son del proyecto no se tocan):
+>
+> ```
+> git stash push -m "respaldo antes de igualar a main"
+> git fetch origin
+> git checkout -B main origin/main
+> git reset --hard origin/main
+> npm install
+> ```
+>
+> `git status` debe decir «Your branch is up to date with 'origin/main'» y
+> «nothing to commit, working tree clean».
 >
 > **No borres ninguna rama**: las antiguas siguen en GitHub como respaldo.
 > Desde hoy se trabaja solo en `main`.
@@ -475,7 +491,7 @@ Excel** y el complemento cargado (`npm start` en la carpeta del proyecto):
 **en la carpeta del proyecto**:
 
 ```
-cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
+cd "$HOME\Documents\Proyectos Claude\riesgo-montecarlo-v2"
 npm run scan -- "RUTA\DEL\LIBRO.xlsx"
 ```
 
@@ -504,7 +520,7 @@ calculados o `INDIRECTO`) y así desarrollo solo lo que tus libros usan.
 **N33. LAMBDA: Peng-Robinson** (F1 del plan, nuevo). Necesita **Excel 365**
 (LAMBDA no existe en Excel 2019 ni antes). Abre, desde la carpeta del
 proyecto, `tests\fixtures\fidelidad-lambda.xlsx`
-(ruta completa: `C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2\tests\fixtures\fidelidad-lambda.xlsx`).
+(en la carpeta del proyecto: `tests\fixtures\fidelidad-lambda.xlsx`).
 Si Excel pregunta por habilitar la edición, sí.
 - **Fórmulas → Administrador de nombres**: 11 nombres. `R_GAS` (una
   constante), `TC_CO2`, `PC_CO2`, `W_CO2` (celdas) y siete LAMBDA:
