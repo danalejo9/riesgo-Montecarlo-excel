@@ -1,165 +1,208 @@
 # Guía de pruebas en Excel
 
-> **Ronda del 29/09 — qué hacer, paso a paso** (actualizado tras tus
-> resultados de N1–N6).
+> ## Ronda completa del 08/10, tras unir las ramas: empieza aquí
 >
-> **Paso 1. Actualizar.** En PowerShell, una línea cada vez:
+> El 07/10 se unieron todas las ramas en **`main`**. Fue un cambio grande,
+> así que esta ronda **repite todas las pruebas**, también las que ya
+> habían pasado. Todo lo que necesitas está en tu carpeta del proyecto
+> después del paso 1:
+>
+> | Qué | Dónde (en tu carpeta del proyecto) |
+> |---|---|
+> | Esta guía, con cada prueba paso a paso | `docs\GUIA_PRUEBAS_EXCEL.md` |
+> | El libro para anotar los resultados (una fila por prueba, con los pasos y lo esperado) | `docs\pruebas\registro-pruebas.xlsx` |
+> | El libro de demostración (modelo de costos) | `ejemplos\demo-proyecto-aurora.xlsx` |
+> | Los cronogramas para importar (MS Project y P6) | `tests\fixtures\qrsa\` |
+> | Los libros de fidelidad (LET, matrices, LAMBDA) | `tests\fixtures\fidelidad-tanda7.xlsx`, `fidelidad-tanda8.xlsx`, `fidelidad-lambda.xlsx` |
+>
+> El libro de cronograma **no es un archivo del proyecto**: lo crea el
+> complemento con un botón (paso 3).
+>
+> ### Paso 1. Pasar tu carpeta a `main` (una vez)
+>
+> En **PowerShell**, una línea cada vez:
 >
 > ```
 > cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
-> git checkout -- ejemplos/demo-proyecto-aurora.xlsx
-> git pull origin claude/nifty-thompson-xfnqm2
-> npm install
-> npm run stop
-> npm start
+> git status
 > ```
 >
-> La segunda línea descarta tu copia del libro de demostración (el pull se
-> negaba por ella). Si el pull se queja de otro `.xlsx`, haz lo mismo con
-> ese archivo: `git checkout -- RUTA` y repite el pull. Sale bien cuando
-> termina en `Fast-forward`.
+> - Si `git status` dice **«nothing to commit, working tree clean»**, sigue.
+> - Si lista archivos en rojo como `modified: ejemplos/demo-proyecto-aurora.xlsx`
+>   o `modified: tests/fixtures/…xlsx`, son tus copias de prueba de antes:
+>   guárdalas aparte con `git stash push -m "antes de la ronda 08-10"` (no
+>   se pierden; `git stash list` las enseña).
 >
-> **Paso 2. Tu copia del libro, ya rellena.** No hay que reconstruir nada a
-> mano:
-> 1. Copia el libro al escritorio (así el original queda intacto y el próximo
->    pull no se queja):
->    `Copy-Item ejemplos\demo-proyecto-aurora.xlsx "$HOME\Desktop\aurora-prueba.xlsx"`
-> 2. Abre `aurora-prueba.xlsx` del escritorio y abre el panel (Riesgo → Modelo).
-> 3. Pestaña **Diagnóstico** → sección **«Hojas de prueba»** → botón
->    **«Rellenar las hojas de prueba»**. Escribe de una vez las 28 fórmulas de
->    las celdas amarillas de «Pruebas» (secciones 1 a 12) y «Zonas» (C12).
->    Debe decir «Escritas 28 fórmulas».
-> 4. Guarda (Ctrl+G). Desde aquí, **cada prueba que diga «escribe …» ya lo
->    tiene escrito**: sáltate ese paso y comprueba lo que dice «Esperado».
+> Después:
 >
-> Dos cosas normales en este libro relleno: en Resultados siempre aparece
-> también la salida **«Coste total»** (la declara `RIESGO.SALIDA` en C49), y
-> la sección 12 (decisiones) solo se simula tres veces si marcas C64 como
-> salida.
+> ```
+> git fetch origin
+> git checkout main
+> git pull origin main
+> npm install
+> ```
 >
-> **Paso 3. Las pruebas, en este orden.**
-> - **Ya hechas** (tu documento): N1, N2, N3 y N6.
-> - **Repetir N4**: el error `ItemNotFound` al pasar al modo compatible
->   está arreglado (el resaltado intentaba pintar celdas de una hoja que ya
->   no existía). Debe ir sin errores.
-> - **Seguir con N5 y de N7 a N42** (sección N, justo después de la 0).
->   N34 a N36 son la cinta nueva y el explorador: el manifiesto cambió, así
->   que ahí hay que cerrar Excel y repetir `npm run stop` y `npm start`.
->   N30 y N31 son con tus propios libros; N33 con el libro de LAMBDA.
-> - Pendientes de antes: **W6** y **W7** (Excel para la Web).
-> - **Nuevo, aparte y sin Excel**: el bloque **Q** (cronogramas de
->   referencia en ProjectLibre, para el motor de cronograma). Cuando puedas.
-> - **Nuevo**: **V3 y V4** (comparar en el explorador y el asistente de
->   juicio experto), justo antes del bloque A.
-> - **Nuevo, en Excel**: **Q5 a Q26**, el análisis de riesgo de cronograma
->   y costo (grupo Cronograma de la cinta y pestaña Cronograma). El
->   manifiesto cambió: cierra Excel y repite `npm run stop` y `npm start`.
-> - **Nuevo, en Excel**: **GT1 a GT18**, el diagrama de Gantt (botón
->   **Gantt** del grupo Cronograma). El manifiesto cambió otra vez (0.9.0.0):
->   cierra Excel y repite `npm run stop` y `npm start`.
-> - **Nuevo (07/10)**: **GT38 a GT40**, resultados del cronograma más claros
->   (fechas, meta y P80 en las curvas, cifras grandes, amenazas y
->   oportunidades, matriz de riesgos) y el Gantt dentro del informe ejecutivo.
-> - **Nuevo (06/10, editores)**: **GT34 a GT37**, los editores en ventana
->   de calendarios, riesgos y ramas (pestaña Cronograma → «Editar en una
->   ventana»).
-> - **Nuevo (06/10, tras tu ronda Q)**: **Q9 a Q26 reescritas** con la hoja,
->   la celda o la sección exacta de cada paso (repite **Q14, Q18, Q20 y Q21**,
->   que no se podían seguir) y **GT31 a GT33** (el Gantt carga a la primera,
->   fechas de fin bajo el Gantt, Configuración y Resultados unificados).
->   Antes de Q9, lee el recuadro **«Dónde está cada cosa»** al principio de
->   Q9.
-> - **Nuevo (06/10)**: **R1 a R4** (correlaciones imposibles, P80,
->   percentiles configurables y modo compatible) y **GT19 a GT30** (el Gantt
->   con seguimiento, líneas base, rutas de holgura, riesgo, imprimir y
->   exportar). Usa un libro de cronograma nuevo: tiene hojas y columnas
->   nuevas.
+> Comprueba que estás en la versión buena: `git log -1 --format=%s` tiene
+> que decir **«Guía: ronda completa tras unir las ramas…»** (o algo
+> posterior). Si `git checkout main` se queja de archivos que cambiarían,
+> vuelve a `git status` y guárdalos con el `git stash` de arriba.
 >
-> Lo demás de esta guía (bloques A–K, T, J, W, I) ya pasó en rondas
-> anteriores: es referencia, no hace falta repetirlo.
+> **No borres ninguna rama**: las antiguas siguen en GitHub como respaldo.
+> Desde hoy se trabaja solo en `main`.
 >
-> Anota **OK** o **Falla + qué ves** por código en tu Word de resultados y
-> pásamelo con las capturas.
+> ### Paso 2. Arranque limpio (una vez; el manifiesto y las funciones cambiaron)
+>
+> 1. Cierra Excel del todo y, por si queda alguno oculto:
+>    `taskkill /IM EXCEL.EXE /F` (si dice que no hay ninguno, bien).
+> 2. `npm run stop`
+> 3. Borra la caché de complementos de Office:
+>    `Remove-Item "$env:LOCALAPPDATA\Microsoft\Office\16.0\Wef\*" -Recurse -Force`
+> 4. `npm run revisar`: tiene que decir **OK** en las dos líneas (si no,
+>    mira la sección 0, «Si Excel se cierra solo…»).
+> 5. `npm start`. Se abre Excel con la pestaña **Riesgo**. Deja esa ventana
+>    de PowerShell abierta mientras pruebas.
+>
+> Cada vez que cierres Excel, antes de volver a abrirlo: `npm run stop` y
+> `npm start` (instalado de verdad no hará falta).
+>
+> ### Paso 3. Preparar los libros (una vez)
+>
+> Trabaja siempre sobre **copias en el escritorio**, nunca sobre los
+> archivos de la carpeta del proyecto (así el próximo `git pull` no se
+> queja). En PowerShell, desde la carpeta del proyecto:
+>
+> ```
+> Copy-Item ejemplos\demo-proyecto-aurora.xlsx "$HOME\Desktop\aurora-base.xlsx"
+> Copy-Item docs\pruebas\registro-pruebas.xlsx "$HOME\Desktop\registro-pruebas.xlsx"
+> ```
+>
+> **a) `aurora-base.xlsx`** (el modelo de costos de demostración).
+> 1. Ábrelo desde el escritorio. Riesgo → **Modelo** abre el panel.
+> 2. Pestaña **Diagnóstico** → sección «Hojas de prueba» → **«Rellenar las
+>    hojas de prueba»**. Debe decir «Escritas 28 fórmulas» (las celdas
+>    amarillas de las hojas «Pruebas» y «Zonas»).
+> 3. Guarda (Ctrl+G) y ciérralo. Este libro **no se toca más**: para cada
+>    bloque haz una copia (abajo).
+>
+> **b) `cronograma-base.xlsx`** (el ejemplo de cronograma).
+> 1. En Excel: Archivo → Nuevo → **Libro en blanco**.
+> 2. Riesgo → Modelo abre el panel → pestaña **Cronograma**. Deja el
+>    desplegable en «Obra (edificio de 14 actividades)» y pulsa **Crear
+>    libro de cronograma**: aparecen 16 hojas.
+> 3. Escribe estas tres fechas, tal cual (sin ellas, ninguna cifra de la
+>    guía coincide):
+>    - **Config!B2** (Fecha de inicio): `04/01/2027`
+>    - **Config!B9** (Fecha meta): `31/01/2028`
+>    - **Hitos_Contrato!B2** (fecha contractual de L): `31/01/2028`
+> 4. Archivo → Guardar como → escritorio → `cronograma-base.xlsx` (tipo
+>    «Libro de Excel (*.xlsx)»). Ciérralo. Tampoco se toca más.
+>
+> **Una copia por bloque.** Antes de cada bloque, en PowerShell:
+>
+> ```
+> Copy-Item "$HOME\Desktop\aurora-base.xlsx" "$HOME\Desktop\aurora-BLOQUE.xlsx"
+> Copy-Item "$HOME\Desktop\cronograma-base.xlsx" "$HOME\Desktop\cronograma-BLOQUE.xlsx"
+> ```
+>
+> (cambia BLOQUE por el código: `aurora-A.xlsx`, `cronograma-GT1.xlsx`…). Si
+> en medio de un bloque algo deja el libro distinto y las cifras ya no
+> cuadran, haz otra copia y sigue desde la prueba siguiente.
+>
+> ### Paso 4. Las pruebas, en este orden
+>
+> **Dos tipos de bloque del modelo de costos.** El bloque **A** marca en
+> `aurora-A.xlsx` las entradas y salidas del modelo, y los bloques B, C, D,
+> E, K, N, V y R **siguen sobre ese mismo libro** porque usan ese modelo.
+> Los bloques F, G, H, T y J empiezan con «quita todo del panel»: van cada
+> uno en **su propia copia** para no borrar el modelo de A.
+>
+> | # | Bloque (sección de esta guía) | Libro | Tiempo aprox. |
+> |---|---|---|---|
+> | 1 | **P0** (sección 0) | cualquiera | 2 min |
+> | 2 | **A**. Lo básico, en la hoja «Modelo» | `aurora-A.xlsx` (copia de `aurora-base`) | 40 min |
+> | 3 | **B**. Configuración | `aurora-A.xlsx` (sigue) | 15 min |
+> | 4 | **C**. Proyecto, informe PDF y hoja volcada | `aurora-A.xlsx` (sigue) | 30 min |
+> | 5 | **D**. Escenarios · **E**. Ajustar a datos | `aurora-A.xlsx` (sigue) | 30 min |
+> | 6 | **K**. Mismos números al repetir | `aurora-A.xlsx` (sigue) | 10 min |
+> | 7 | **N**. Etapa 2: runtime compartido, cinta, explorador… (N1–N42) | `aurora-A.xlsx` (sigue); N30–N31 con tus libros; N33 con una copia de `fidelidad-lambda.xlsx` | 90 min |
+> | 8 | **V3 y V4**. Comparar en el explorador y asistente | `aurora-A.xlsx` (sigue) | 15 min |
+> | 9 | **R1–R4**. Correlaciones, P80, percentiles, compatible | `aurora-A.xlsx` (sigue) | 20 min |
+> | 10 | **F**. Funciones RIESGO · **G**. LET y matrices (hoja «Pruebas») | `aurora-F.xlsx` (copia nueva de `aurora-base`) | 45 min |
+> | 11 | **H**. Modo compatible · **T**. Variables de texto (hoja «Zonas») | `aurora-H.xlsx` (copia nueva) | 40 min |
+> | 12 | **J**. Compartir el libro | `aurora-J.xlsx` (copia nueva) | 15 min |
+> | 13 | **Q5–Q26**. Análisis de riesgo del cronograma | `cronograma-Q.xlsx` (Q5 y Q6 ya los hiciste en el paso 3b: compruébalos igual) | 60 min |
+> | 14 | **GT1–GT18**. Gantt | `cronograma-GT1.xlsx` | 45 min |
+> | 15 | **GT19–GT30**. Gantt: avance, líneas base, exportar | `cronograma-GT19.xlsx` | 45 min |
+> | 16 | **GT31–GT40**. Arreglos, editores en ventana, resultados más claros | `cronograma-GT31.xlsx` | 40 min |
+> | 17 | **GT41–GT55**. Lo que se trajo al unir las ramas | `cronograma-GT41.xlsx` (y un libro en blanco para GT41) | 60 min |
+> | 18 | **I**. Libros de fidelidad | copias de `tests\fixtures\fidelidad-*.xlsx` | 15 min |
+> | 19 | **W**. Excel para la Web (opcional) | copia de `aurora-base` subida a OneDrive | 30 min |
+> | 20 | **Q1–Q4**. ProjectLibre (opcional, sin Excel) | `tests\fixtures\qrsa\*.xml` | 30 min |
+>
+> Se puede repartir en varios días (guarda `aurora-A.xlsx` al terminar cada
+> día y sigue con él). Si un
+> bloque falla entero, anótalo y sigue con el siguiente.
+>
+> ### Paso 5. Anotar los resultados
+>
+> Abre `registro-pruebas.xlsx` del escritorio. Tiene una hoja
+> **«Pruebas»** con una fila por prueba (código, bloque, libro, pasos y lo
+> esperado, copiados de esta guía) y una columna **Resultado** con lista:
+> **OK**, **Falla**, **No aplica** o **Pendiente**. Si es «Falla», escribe
+> en **Qué ves** lo que sale y, si puedes, guarda una captura con el código
+> en el nombre (`GT21.png`). La hoja **«Resumen»** cuenta cuántas van de
+> cada tipo por bloque. Al terminar (o al final de cada día) mándame el
+> registro y las capturas.
+>
+> Las cifras exactas (fechas, %, costos) salen del mismo motor y están
+> comprobadas por una prueba automática
+> (`tests/unit/guiaCifrasCronograma.test.ts` para el cronograma y
+> `tests/unit/hojaPruebasDemo.test.ts` para el libro de demostración). Las
+> que dicen «en torno a» son aproximadas.
 
-*Versión del 28/09, reescrita desde cero; bloque N ampliado el 29/09.* Recorre **todo** el complemento
-de principio a fin, incluido lo nuevo desde tu última ronda:
-
-- **Etapa 1b**: hoja volcada legible, entradas muestreadas y pantalla congelada.
-- **Bloque T**: variables de texto y salidas de sí/no.
-- **Antes de la etapa 2**:
-  - Vista previa de la distribución.
-  - Medidas de riesgo.
-  - Tornado y araña en la hoja volcada.
-  - «Qué tiene que pasar».
-  - Funciones DISCRETA, TRUNCAR, LOGNORMAL2 y EMPIRICA.
-  - Ajuste explicado.
-  - **B7**: funciones RIESGO con celdas como argumentos
-    (`=RIESGO.NORMAL(C32;C33)`), dentro de una operación y con parámetros que
-    dependen de otra celda aleatoria.
-  - **B6**: traer resultados a la hoja con `RIESGO.MEDIA`, `RIESGO.PERCENTIL`,
-    `RIESGO.PROB`, `RIESGO.DESV`, `RIESGO.MIN` y `RIESGO.MAX`.
-
-Las guías anteriores quedan sustituidas por esta.
-
-Se usa el libro **`ejemplos/demo-proyecto-aurora.xlsx`**, que tiene cuatro
-hojas: **Instrucciones**, **Modelo**, **Pruebas** y **Zonas**. Las celdas en
-amarillo claro de «Pruebas» y «Zonas» vienen vacías: se rellenan todas con el
-botón **Diagnóstico → «Rellenar las hojas de prueba»** (paso 2 de arriba), o
-a mano, escribiendo lo que diga cada prueba.
-
-Cada prueba tiene un código (A1, A2…). Por cada código dime:
-
-- **OK**, o
-- **Falla** + qué ves (una captura ayuda mucho).
-
-Se puede repartir en varios días. Si un bloque falla entero, sigue con el
-siguiente: casi todos son independientes. Las cifras «en torno a» son
-aproximadas: con otra semilla o con otras distribuciones cambian un poco.
 
 ---
 
 ## 0. Preparación
 
-En **PowerShell**, una línea cada vez:
+Los pasos 1 a 3 del recuadro de arriba son la preparación completa:
+actualizar a `main`, arranque limpio y preparar `aurora-base.xlsx` y
+`cronograma-base.xlsx`. Aquí, lo que conviene saber mientras pruebas.
 
-```
-cd "C:\Users\danal\Documents\Proyectos Claude\riesgo-montecarlo-v2"
-git checkout claude/nifty-thompson-xfnqm2
-git pull origin claude/nifty-thompson-xfnqm2
-npm install
-npm run stop
-npm start
-```
+**El libro de demostración** (`aurora-base.xlsx`, copia de
+`ejemplos\demo-proyecto-aurora.xlsx`) tiene cuatro hojas: **Instrucciones**,
+**Modelo**, **Pruebas** y **Zonas**. Las celdas en amarillo claro de
+«Pruebas» y «Zonas» se rellenan con **Diagnóstico → «Rellenar las hojas de
+prueba»** (paso 3a). Desde ahí, **cada prueba que diga «escribe …» ya lo
+tiene escrito**: sáltate ese paso y comprueba lo que dice «Esperado». Dos
+cosas normales en este libro relleno: en Resultados aparece también la
+salida **«Coste total»** (la declara `RIESGO.SALIDA` en C49), y la sección
+12 de «Pruebas» (decisiones) solo se simula tres veces si marcas C64 como
+salida.
 
-- Si `git pull` se queja de los archivos `tests/fixtures/fidelidad-tanda7.xlsx`,
-  `fidelidad-tanda8.xlsx` o `fidelidad-lambda.xlsx` (porque los guardaste en
-  Excel), descarta tu copia y vuelve a hacer el pull:
+**Si el `git pull` se queja** de un `.xlsx` (porque lo abriste y guardaste
+en la carpeta del proyecto): `git stash push -m "copias"` y repite el
+pull. Para la próxima vez, trabaja siempre sobre copias en el escritorio.
 
-  ```
-  git checkout -- tests/fixtures/fidelidad-tanda7.xlsx tests/fixtures/fidelidad-tanda8.xlsx tests/fixtures/fidelidad-lambda.xlsx
-  git pull origin claude/nifty-thompson-xfnqm2
-  ```
+**Cuándo reiniciar el complemento.** Al cerrar Excel, el complemento de
+desarrollo se desregistra: antes de abrirlo otra vez, `npm run stop` y
+`npm start`. Si al escribir `=RIESGO.` Excel no propone las funciones (por
+ejemplo `RIESGO.CRONOGRAMA`, la más nueva), haz el arranque limpio del paso
+2.
 
-- `npm run stop` y `npm start` recargan el complemento. Sin ellos no aparecen
-  los botones nuevos ni las funciones RIESGO nuevas. Deja esa ventana abierta
-  mientras pruebas.
-- Al cerrar Excel, el complemento de desarrollo se desregistra: vuelve a
-  ejecutar `npm start` antes de abrirlo otra vez. Instalado de verdad no hará
-  falta.
-- Abre **el libro recién descargado**
-  (`ejemplos\demo-proyecto-aurora.xlsx`), no una copia vieja: ha cambiado
-  (hoja «Zonas» y, en «Pruebas», secciones 6 a 12; la 9 a la 12 son del
-  29/09). Si guardaste cambios en tu copia y `git pull` se queja, descártala:
-  `git checkout -- ejemplos/demo-proyecto-aurora.xlsx` y repite el pull.
-  Mejor: trabaja sobre una copia (`Copy-Item ejemplos\demo-proyecto-aurora.xlsx
-  "$HOME\Desktop\aurora-prueba.xlsx"`) y deja el original intacto.
-- Las funciones de Excel del complemento han cambiado (hay seis nuevas). Si
-  al escribir `=RIESGO.MEDIA` Excel no la propone, cierra Excel, repite
-  `npm run stop` y `npm start` y vuelve a abrir el libro.
+**Dos avisos para todos los bloques del modelo de costos** (la interfaz
+cambió después de escribir algunas pruebas):
+- **«Cómo se calculó»** es una sección **plegada al final de Resultados**:
+  cuando una prueba diga «Cómo se calculó dice…», ábrela con ▸. Lo mismo
+  con «Estadísticos y percentiles» y «Según las entradas de texto».
+- En **⚙**, si el libro tiene hoja Config (un libro de cronograma), arriba
+  aparece «Simulación del cronograma». Las pruebas del modelo de costos se
+  refieren siempre a la sección **«Simulación»** (iteraciones, motor,
+  núcleos), que va debajo.
 
-> **06/10: corregido el cierre de Excel al cargar el complemento** (el menú
-> del clic derecho estaba mal colocado en el manifiesto; ahora es 0.9.1.0).
-> Tras el `git pull`, haz el arranque limpio de abajo una vez.
+**Qué anotar.** En `registro-pruebas.xlsx`, por cada código: **OK**, o
+**Falla** y qué ves (una captura ayuda mucho). Las cifras «en torno a» son
+aproximadas.
 
 ### Si Excel se cierra solo, no aparece la pestaña Riesgo o el panel dice «The service is unavailable»
 
@@ -194,17 +237,17 @@ Resultados, Configuración y Diagnóstico. Al pulsar Modelo se abre el panel
 
 ---
 
-## N. Etapa 2 (ronda siguiente: empieza por aquí)
+## N. Etapa 2: runtime compartido, cinta, explorador y funciones
 
 *Añadido el 29/09, tras tu ronda completa.* La etapa 2 cambia el
 **manifiesto** (versión 0.5): el panel, los botones de la cinta y las
 funciones RIESGO pasan a vivir en un solo proceso («runtime compartido»).
-Solo hace falta probar este bloque; lo demás ya pasó.
+En la ronda del 08/10 se repite entero, con una copia de `aurora-base.xlsx`.
 
-**Antes de empezar** (imprescindible, porque el manifiesto cambió):
+**Antes de empezar** (si ya hiciste los pasos 1 y 2 de arriba, sáltate 1 y 2):
 1. Cierra Excel del todo.
-2. En PowerShell: `git pull origin claude/nifty-thompson-xfnqm2`, luego
-   `npm install`, `npm run stop` y `npm start`.
+2. En PowerShell: `git pull origin main`, luego `npm install`,
+   `npm run stop` y `npm start`.
 3. Si la pestaña Riesgo no aparece o se comporta como antes, borra la caché
    de complementos de Office: cierra Excel, borra el contenido de
    `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` y repite `npm start`.
@@ -232,7 +275,9 @@ cierra Excel, ejecuta `npm start` y abre el libro **sin abrir el panel**.
 la pantalla».
 - Esperado: bastante más rápido que en tu ronda del 29/09 y con mucho menos
   parpadeo (ahora escribe 20 iteraciones por cada viaje a Excel). Apunta el
-  tiempo y las iteraciones por segundo que dice «Cómo se calculó».
+  tiempo que dice «Cómo se calculó» (al final de Resultados, ábrela con ▸)
+  y el «Ritmo medido» (pestaña Modelo, sección «Con Excel en el bucle»,
+  botón «Medir el ritmo»).
 
 **N6. Modo del libro: valores fijos** (B2, nuevo). En la cinta hay un grupo
 **«Modo del libro»** con **Valores fijos** (desactivado: es el modo actual) y
@@ -255,8 +300,8 @@ la pantalla».
   fijos** al terminar.
 
 **N8. La cinta actúa sin abrir el panel** (B3, nuevo). Cierra el panel. En
-la cinta hay un grupo **«Acciones»**: Marcar entrada, Marcar salida,
-Simular y Quitar resaltado. En la hoja «Modelo», con un modelo vacío (quita
+la cinta hay un grupo **«Celdas»** (Marcar entrada, Marcar salida y
+Quitar resaltado) y, en el grupo **«Simulación»**, el botón **Simular**. En la hoja «Modelo», con un modelo vacío (quita
 todo antes desde el panel y ciérralo):
 - Selecciona **C5** y pulsa **Marcar entrada**: C5 se pinta de amarillo y el
   panel **no** se abre. Igual con C6.
@@ -299,7 +344,7 @@ demo con la salida de beneficio y mira el histograma de Resultados:
 **N11. Resultados más fáciles de leer** (U2, nuevo; responde a T6). Tras
 simular la demo:
 - Arriba: una línea «Rápido · 10.000 iteraciones · …», los avisos (si hay) y
-  los dos botones. Bajo el nombre de la salida, **cuatro cifras grandes**
+  los botones Volcar a una hoja, Informe PDF e Iteraciones a una hoja. Bajo el nombre de la salida, **cuatro cifras grandes**
   (media, p5, p95, desviación), la lectura y el histograma.
 - Debajo, secciones con ▸ que se abren con un clic; *Qué la mueve más* viene
   abierta. Abre *Estadísticos y percentiles*, cierra el panel y vuelve a
@@ -375,12 +420,13 @@ cada gráfico. Dime si falta en algún sitio o si algo no se entiende.
   entrada, el camino de celdas hasta cada salida (p. ej. C5 → … → C32).
 
 **N27. Asistente y plantillas** (U1 del plan, nuevo). En un libro nuevo
-(sin modelo), abre el panel: «Tu primer modelo» explica los cuatro pasos y
-ofrece tres plantillas. Pulsa **Proyecto de inversión**: aparece una hoja
+(sin modelo), abre el panel: la sección «**Cómo empezar**» explica los cuatro pasos;
+dentro, despliega «**Ejemplos listos para simular**» (cinco ejemplos).
+Pulsa **Proyecto de inversión**: aparece una hoja
 «Inversión» con las funciones RIESGO ya puestas. Pulsa **Simular** sin
 marcar nada: sale el **VAN** (media en torno a **30.000 €**, con mucha
 dispersión). Prueba también **Presupuesto de obra** (coste total en torno a
-**323.000 €**, con «Registro de riesgos») y **Cartera** (valor al cabo de un
+**323.000 €**, con «Registro de riesgos») y **Cartera de inversiones** (valor al cabo de un
 año en torno a **105.500 €**; cambia la correlación de B9 a 0 y el p5
 mejora). Y **Serie de precios** (H5): cinco salidas «Precio · Año 1…5»
 (medias en torno a 103 → 116, cada vez más dispersas) y el tipo a 5 años
@@ -389,7 +435,7 @@ en torno al **4,2 %**; en «Comparar salidas», el abanico se abre con los años
 **N28. Buscar objetivo** (H4 del plan, nuevo). Simula la demo con el VAN y
 pon el umbral «por debajo de 0». Abre **«Buscar objetivo»**: celda C5 (el
 precio; «Leer de la selección»), desde 105 hasta 140, probabilidad 10 %, y
-**Buscar**. Tarda unas diez simulaciones y dice qué precio deja P(VAN < 0)
+**Buscar**. Tarda unas quince simulaciones y dice qué precio deja P(VAN < 0)
 en el 10 %, con la lista de lo probado. Un rango que no contiene esa
 probabilidad lo dice. La celda se fija solo durante la búsqueda: el libro no
 cambia. Solo con el motor rápido.
@@ -495,9 +541,11 @@ Excel, `npm run stop`, `npm start`; si la pestaña Riesgo sigue como antes,
 borra la caché (`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`) y repite.
 - Esperado, de izquierda a derecha: **Panel** (Modelo, Resultados,
   Configuración) · **Celdas** (Marcar entrada, Marcar salida, Quitar
-  resaltado) · **Simulación** (Iteraciones ▾, Simular) · **Modo del libro** ·
-  **Análisis** (Ver distribución, Ajustar a datos, Escenarios) · **Informes**
-  (Volcar a una hoja, Informe PDF) · **Ayuda** (Ayuda, Ejemplos ▾,
+  resaltado) · **Simulación** (Iteraciones ▾, Simular, Detener) · **Modo del
+  libro** · **Análisis** (Ver distribución, Entradas y salidas, Ajustar a
+  datos, Escenarios) · **Cronograma** (Crear libro de cronograma, Revisar
+  calidad, Simular cronograma, Gantt) · **Informes** (Volcar a una hoja,
+  Informe PDF) · **Ayuda** (Ayuda, Ejemplos ▾ con cinco ejemplos,
   Diagnóstico).
 - **Iteraciones ▾**: elige **5.000** y simula: «Cómo se calculó» dice 5.000.
   Vuelve a abrir el menú: **5.000 aparece desactivado** (si no se desactiva,
@@ -635,9 +683,9 @@ programa de cronogramas de verdad. Como no tienes MS Project, uso
 ProjectLibre, que es gratuito y lee el mismo formato XML.
 
 **Preparación**
-1. En PowerShell, en la carpeta del proyecto:
-   `git pull origin claude/nifty-thompson-xfnqm2`. Los archivos quedan en
-   `tests\fixtures\qrsa\`.
+1. Los archivos ya están en tu carpeta del proyecto (paso 1 de arriba), en
+   `tests\fixtures\qrsa\`: `R1-simple.xml`, `R2-relaciones.xml`,
+   `R3-calendario.xml` y sus `*-esperado.csv`.
 2. Descarga e instala ProjectLibre desde su página oficial
    (projectlibre.com). El instalador de Windows ya trae lo que necesita para
    funcionar.
@@ -680,17 +728,21 @@ mío o una convención del programa.
 *Añadido el 05/10; actualizado con Q2 y Q3 el mismo día.* Antes: cierra
 Excel, `git pull`, `npm install`, `npm run stop` y `npm start`. Si el grupo
 Cronograma no aparece, borra la caché de
-`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` y repite `npm start`. Usa un
-**libro nuevo en blanco**.
+`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` y repite `npm start`. **Q5 y Q6**
+se hacen en un **libro nuevo en blanco** (es lo mismo que el paso 3b de
+arriba: si ya lo hiciste, comprueba lo que dicen). **Desde Q9**, usa
+`cronograma-Q.xlsx`, la copia de `cronograma-base.xlsx`.
 
 **Q5. La cinta.** En la pestaña Riesgo hay un grupo **Cronograma** con tres
 botones: Crear libro de cronograma, Revisar calidad y Simular cronograma.
 En el panel hay una pestaña nueva, **Cronograma**.
 
-**Q6. Crear el libro.** Pulsa **Crear libro de cronograma**. Esperado:
-**diez** hojas nuevas (Config, Calendario, Actividades, Relaciones,
-Incertidumbre, Riesgos, Impactos, Costos, Correlaciones, Ramas) con
-encabezados azules y un ejemplo de obra de 14 actividades agrupadas en 4 resúmenes (filas «Resumen», que no entran en el cálculo). Comprueba:
+**Q6. Crear el libro.** Deja el desplegable de ejemplos en «Obra (edificio
+de 14 actividades)» y pulsa **Crear libro de cronograma**. Esperado:
+**dieciséis** hojas nuevas, en este orden: Config, Calendario, Actividades,
+Relaciones, Incertidumbre, Riesgos, Impactos, Costos, Correlaciones,
+Lineas_Base, Hitos_Contrato, Clima, Escenarios, Rangos_Tipo, Seguimiento y
+Ramas, con encabezados azules y un ejemplo de obra de 14 actividades agrupadas en 4 resúmenes (filas «Resumen», que no entran en el cálculo). Comprueba:
 - en Actividades, las columnas Tipo, Calendario y Restricción tienen lista
   desplegable; al elegir una celda de «Duración (días)» sale un mensaje de
   ayuda;
@@ -702,9 +754,16 @@ encabezados azules y un ejemplo de obra de 14 actividades agrupadas en 4 resúme
   y dos grupos;
 - pulsar el botón otra vez en ese libro dice que ya tiene todas las hojas.
 
-**Q7. Para comparar con mis números**: en Config pon la **Fecha de inicio**
-04/01/2027 y la **Fecha meta** 31/01/2028 (si no, las fechas dependen del
-lunes en que creaste el libro). Deja el **Costo meta** en 5.600.000.000.
+**Q7. Para comparar con mis números** (imprescindible: si no, todas las
+fechas dependen del lunes en que creaste el libro). Escribe estas tres
+fechas, tal cual, y guarda el libro (Ctrl+G):
+- **Config!B2** (Fecha de inicio): `04/01/2027`.
+- **Config!B9** (Fecha meta): `31/01/2028`.
+- **Hitos_Contrato!B2** (fecha contractual de L, Entrega): `31/01/2028`.
+
+Deja el **Costo meta** (Config!B12) en 5.600.000.000. Guarda una copia de
+este libro como `cronograma-base.xlsx`: varias pruebas piden empezar de un
+libro sin cambios, y así no tienes que repetir estos pasos.
 
 **Q8. Revisar calidad.** Esperado: 1 en rojo («Duraciones mayores de 44
 días laborables»: B y E) y 1 en amarillo («Desfases positivos»: 2 de 16
@@ -722,13 +781,17 @@ incertidumbre» también: Instalaciones (G) toma el rango de la fila «WBS 3».
   Simular cronograma, Ver Gantt, Importar), la calidad y el Gantt compacto.
 - **Pestaña Resultados** del panel: desde el 06/10, al terminar de simular
   el cronograma el panel **salta solo a Resultados**, que empieza con el
-  título **«Resultados del cronograma»** y debajo, en este orden, las
-  secciones: Fin del proyecto · Costo del proyecto · Fecha y costo a la vez
-  · Antes y después de mitigar · Riesgos: tornado por eliminación ·
-  Actividades más críticas · Rutas críticas más frecuentes · Cronograma
-  ajustado · **Avisos de la simulación y correlación lograda** (cerrada:
-  pulsa el ▸ para abrirla) · botones Informe ejecutivo (PDF) e Iteraciones
-  en CSV.
+  título **«Resultados del cronograma»**, tres cifras grandes y debajo, en
+  este orden, las secciones: En pocas palabras · Fin del proyecto · Hitos
+  contractuales · Costo del proyecto · Costo y plazo a la vez (JCL) · Antes
+  y después de mitigar · Riesgos: tornado por eliminación · Clima (solo si
+  la hoja Clima tiene datos) · Reserva de contingencia · Riesgos:
+  probabilidad e impacto · Actividades más críticas · Registro de riesgos ·
+  Sesgo de convergencia (solo si lo hay) · Rutas críticas más frecuentes ·
+  Cronograma ajustado por riesgo · Seguimiento en el tiempo (solo si
+  guardaste algún corte) · **Avisos de la simulación y correlación
+  lograda** (cerrada: pulsa el ▸ para abrirla) · botones Informe ejecutivo
+  (PDF), Iteraciones en CSV, Guardar en el seguimiento y Ver Gantt.
 - **Iteraciones, semilla y muestreo del cronograma**: en **⚙ → Simulación
   del cronograma** (o en Config!B4, B5 y B6: es lo mismo). La sección
   «Simulación» de más abajo en ⚙ es la del modelo de celdas RIESGO, no la
@@ -750,9 +813,11 @@ iteraciones). Al terminar, el panel pasa a **Resultados**. Esperado
 | Fin del proyecto | Probabilidad de cumplir la meta (31/01/2028) | 65,3 % |
 | Fin del proyecto | P50 · P80 | 18/01/2028 · 16/02/2028 |
 | Fin del proyecto | Media y desviación | 257 días ± 24,8 |
-| Costo del proyecto | Costo base · P80 · contingencia | 5.034.578.244 · 5.598.359.651 · 563.781.406 COP |
-| Costo del proyecto | Probabilidad de cumplir el costo meta | 80,1 % |
-| Fecha y costo a la vez | JCL | 58,6 % |
+| Hitos contractuales | L · Entrega: cumple · Fin P80 · multa esperada | 63,9 % · 17/02/2028 (+17 d) · 35.268.800 COP |
+| Costo del proyecto | Costo base · P80 · contingencia | 5.034.578.244 · 5.656.960.508 · 622.382.263 COP |
+| Costo del proyecto | Probabilidad de cumplir el costo meta | 74,7 % |
+| Costo y plazo a la vez (JCL) | JCL | 58,6 % |
+| Reserva de contingencia (P80) | Días | 60 días laborables |
 | Riesgos: tornado | Barras (baja el P80) | R1 8 d, R2 6 d, R3 3 d, R4 0 d |
 | Riesgos: tornado | Texto debajo | «Sin ningún riesgo, el P80 sería 260,2 días…» |
 | Fin del proyecto, tabla de percentiles | P80 de «Obra gris terminada» | 20/12/2027 |
@@ -765,10 +830,13 @@ segundos dice la última línea de Resultados.
 **Q10. La hoja de resultados.** En Excel, abre la hoja
 **Resultados_Cronograma** (se crea o se rehace en cada simulación). Arriba,
 «Supuestos de la corrida»: Versión del complemento **0.9.0**, Iteraciones
-5.000, Semilla 12345, Muestreo Hipercubo latino. Debajo: advertencias con
-su color, fin e hito con P10 a P90, costo, JCL, pre/post, rutas,
-correlación pedida y lograda, cronograma ajustado P50/P80, tornado con
-columnas de costo, índices por actividad y convergencia. A la derecha,
+5.000, Semilla 12345, Muestreo Hipercubo latino. Debajo, en este orden: En palabras, Advertencias de calidad
+del cronograma (con su color), el fin y el hito M con P10 a P90, Hitos
+contractuales, Tornado por eliminación de riesgos (con columnas de costo),
+Costo del proyecto (COP), Confianza conjunta costo–plazo (JCL), Reserva de
+contingencia y de dónde sale, Pre y post mitigación, Registro de riesgos,
+Rutas críticas más frecuentes, Correlación pedida y lograda, Cronograma
+ajustado por riesgo, Índices por actividad y Convergencia del P80. A la derecha,
 **tres gráficos** (curva S del fin, curva S del costo y dispersión
 costo–fecha).
 
@@ -804,9 +872,10 @@ siguiente, o las cifras no coincidirán.
 **Q15. Antes y después de mitigar.** Simula (pestaña Cronograma → Simular
 cronograma) y en **Resultados → Antes y después de mitigar** comprueba: el
 P80 del fin pasa de 16/02/2028 a 04/02/2028 (gana 12 días de calendario, 8
-laborables) y la probabilidad de cumplir la meta de 65,3 % a 76,1 %; el
-costo P80 **sube** un poco (5,6 a 5,62 mil millones) porque las
-mitigaciones cuestan más de lo que ahorran. Dos curvas S: la continua es
+laborables) y la probabilidad de cumplir la meta de 65,3 % a 76,1 %. En el costo, la
+**media sube** (5,43 a 5,45 mil millones: las mitigaciones cuestan 75
+millones) pero el **P80 baja un poco** (5,657 a 5,653 mil millones), porque
+terminar antes ahorra multas del contrato en las iteraciones malas. Dos curvas S: la continua es
 «Esta simulación» y la punteada «Post mitigación».
 
 **Q16. Costo por tiempo.** En la hoja **Costos**, fila 2 (ADM,
@@ -815,8 +884,7 @@ en **Resultados → Costo del proyecto**: Costo base **5.252.578.244 COP**
 (218 millones más: 1.000.000 × 218 días). Ahora cambia también **H2, I2 y
 J2** (mínimo, más probable y máximo) sumándoles 1.000.000 a cada uno y
 simula otra vez: el costo base no cambia, pero el **P80** y la
-**probabilidad de cumplir el costo meta** sí (bajan del 80,1 % a un 43 %
-aprox.). Devuelve E2, H2, I2 y J2 a lo que tenían.
+**probabilidad de cumplir el costo meta** sí (baja del 74,7 % al **41,7 %**). Devuelve E2, H2, I2 y J2 a lo que tenían.
 
 **Q17. Correlación imposible.** En la hoja **Correlaciones**, debajo del
 par ADM–INT, escribe tres filas en las columnas A, B y C:
@@ -1076,7 +1144,8 @@ contradictorias): se usa la combinación posible más cercana — «A»–«B» 
 sale arriba en Resultados. Deja las correlaciones como estaban.
 
 **R2. El P80 en «¿Bastan las iteraciones?».** Simula con 1.000
-iteraciones. El recuadro de precisión de cada salida dice ahora «la media
+iteraciones. El recuadro de precisión de cada salida (dentro de «Estadísticos y
+percentiles», ábrela con ▸) dice ahora «la media
 se conoce con ±… y el P80 con ±…»; si no bastan, las iteraciones que pide
 cuentan también el P80. Con **Simular hasta alcanzar la precisión**
 (Configuración), las tandas siguen hasta que la media y el P80 cumplen.
@@ -1287,7 +1356,8 @@ pasa a **Resultados**.
 **GT38. Las cifras, las curvas y el tornado.** Arriba, debajo de «5.000
 iteraciones · semilla 12345 · hipercubo latino», tres recuadros:
 **16/02/2028** (P80 del fin), **65,3 %** (de cumplir la meta 31/01/2028) y
-**564 M** (contingencia de costo). En «Fin del proyecto»:
+**622 M** (contingencia de costo; desde la consolidación incluye las
+multas del contrato). En «Fin del proyecto»:
 - la curva S tiene una línea **morada «Meta 31/01/2028»** y una punteada
   **«P80»**, con sus nombres sin pisarse;
 - el histograma de debajo va **en fechas** (de 04/10/2027 a 16/06/2028),
@@ -1314,20 +1384,30 @@ guardar como PDF» lo deja en A4.
 
 *Añadido el 07/10.* Las ramas del repositorio se unieron en una sola. Lo que
 tenía la otra versión del cronograma y faltaba aquí se rehízo sobre este
-motor. Usa un libro de cronograma **nuevo** (pestaña Cronograma → Crear
-libro de cronograma, ejemplo «Obra»), porque trae hojas nuevas: Hitos_Contrato,
-Clima, Escenarios, Rangos_Tipo y Seguimiento. Para que las cifras coincidan,
-en Config pon el inicio en **04/01/2027** y deja 5.000 iteraciones y la
-semilla 12345.
+motor. Usa una copia **sin cambios** de `cronograma-base.xlsx` (el libro
+del ejemplo «Obra» con las tres fechas de Q7: Config!B2 04/01/2027,
+Config!B9 y Hitos_Contrato!B2 31/01/2028), con 5.000 iteraciones y la
+semilla 12345. Trae las hojas nuevas Hitos_Contrato, Clima, Escenarios,
+Rangos_Tipo y Seguimiento. Cada prueba dice cómo dejar el libro como
+estaba.
 
 **GT41. Primer uso y ejemplos por sector.** En un libro sin hojas de
 cronograma, la pestaña Cronograma muestra «Primeros pasos» (cinco pasos).
 Junto a «Crear libro de cronograma» hay un desplegable de ejemplos: Obra
 (edificio de 14 actividades) y los cuatro sectores (vivienda, vía, edificio
 y software). Crea
-uno de sector (por ejemplo «Vía») en un libro aparte: Revisar calidad no
-debe dar nada en rojo y Simular cronograma debe funcionar, con su hito
-contractual y su meta ya puestos.
+uno de sector en un **libro nuevo en blanco** (Archivo → Nuevo → Libro en
+blanco): elige «Vía» en el desplegable y pulsa **Crear libro de
+cronograma**. Esperado: las mismas 16 hojas, con 14 actividades de una vía
+(desmonte, movimiento de tierras, obras de drenaje, subbase, carpeta
+asfáltica…). **Revisar calidad**: ningún criterio en rojo; dos en amarillo
+(«Desfases positivos» y «Correlación entre duraciones o costos»). **Simular
+cronograma** termina sin errores; Resultados trae «Hitos contractuales»
+con el hito de entrega de la vía y la fecha meta ya puesta. Guarda este
+libro como `cronograma-via.xlsx` (lo usa GT45). Los otros ejemplos también
+se crean y simulan; «Edificio público» trae a propósito un rojo («Holgura
+total mayor de 44 días laborables»), para que veas cómo se ve un
+cronograma con un problema.
 
 **GT42. Hitos contractuales y multas.** En la hoja Hitos_Contrato del ejemplo
 de la obra, L (Entrega) tiene fecha 31/01/2028, multa de 4.000.000 por día y
@@ -1353,8 +1433,10 @@ pocas palabras» trae frases como estas, con las fechas del libro:
 **GT45. Sesgo de convergencia.** Si en alguna actividad se juntan rutas que
 retrasan el fin, la sección «Sesgo de convergencia» la lista con la
 probabilidad de que cada ruta llegue a tiempo y la de que lleguen todas. En
-el ejemplo de la obra el sesgo es pequeño: puede no aparecer. En el de «Vía»
-aparece en «Desmonte y limpieza».
+el ejemplo de la obra el sesgo es menor del 1 %: la sección **no aparece**
+(es lo correcto). Abre `cronograma-via.xlsx` (de GT41) y simula: aparece,
+y la primera fila es «Desmonte y limpieza». En «En pocas palabras» hay una
+frase «En «Desmonte y limpieza» se juntan 2 rutas…».
 
 **GT46. Registro de riesgos.** La hoja Riesgos tiene dos columnas nuevas,
 «Próxima revisión» e «Impacto cualitativo», y el estado «En seguimiento»
@@ -1362,11 +1444,15 @@ aparece en «Desmonte y limpieza».
 y después de mitigar y la tabla con dueño, estado, zona y próxima revisión.
 Cambia el estado de R3 a «Cerrado» y simula: R3 sale de la simulación.
 
-**GT47. Clima.** En la hoja Clima, pon 2 / 4 / 8 días perdidos (mínimo, más
-probable, máximo) en Mayo, Junio y Julio. En la columna F («Afecta a»)
-escribe **E** (la estructura). Simula: aparece la sección «Clima» con «El
-clima suma N días al P80», y el tornado dice «…incertidumbre de las
-duraciones y el clima». Si dejas F vacía, el clima no cambia nada.
+**GT47. Clima.** En la hoja **Clima**, filas de **Mayo, Junio y Julio**
+(filas 6, 7 y 8), escribe 2, 4 y 8 en las columnas B, C y D (días perdidos
+mínimo, más probable y máximo). En **Clima!F2** («Afecta a») escribe **E**
+(la estructura, que va del 22/05 al 23/07/2027). Simula. Esperado: una
+sección nueva **«Clima»** que dice «El clima suma **2 días** al P80 (**4,64**
+a la media): sin él, el P80 sería 278 días. Afecta a 1 actividades». Bajo
+el tornado, el texto termina en «…incertidumbre de las duraciones y el
+clima». Borra F2 y simula: la sección Clima desaparece. Vuelve a poner
+los meses en 0.
 
 **GT48. Escenarios.** La hoja Escenarios trae cinco escenarios de ejemplo.
 Pulsa **Comparar escenarios**. Se crea la hoja Resultados_Escenarios y el
@@ -1409,14 +1495,39 @@ riesgos», pon un logo y abre el Informe ejecutivo del cronograma: la portada
 lleva el logo y la sección quitada no sale. Lo mismo vale para el informe
 del modelo de costos.
 
-**GT54. RIESGO.CRONOGRAMA.** En el mismo libro que el cronograma, en una
-celda del modelo de costos, escribe `=RIESGO.CRONOGRAMA("L"; "retraso")`. Si
-quieres los días de todo el proyecto, usa `=RIESGO.CRONOGRAMA("Proyecto";
-"dias")`. Usa la celda en un costo, por ejemplo indirectos = días × tarifa, y
-simula el modelo de costos. Cada iteración toma la misma iteración del
-cronograma, y la media de los días debe coincidir con la del cronograma.
-Medidas: fecha, dias, retraso, multa, costo. Con un hito que no existe, la
-celda dice por qué.
+**GT54. RIESGO.CRONOGRAMA: el plazo dentro del modelo de costos.** En
+`cronograma-GT41.xlsx`, con todo como en `cronograma-base`:
+1. Pestaña **Cronograma** del panel → **Simular cronograma** (así el panel
+   publica el plan que leen las fórmulas).
+2. En Excel, añade una hoja con el **+** de abajo y llámala `Costos_Modelo`.
+3. Escribe:
+
+   | Celda | Escribe | Esperado en la celda |
+   |---|---|---|
+   | A1 | `Días del proyecto` | |
+   | B1 | `=RIESGO.CRONOGRAMA("Proyecto";"dias")` | **218** (días laborables del plan, sin riesgos) |
+   | A2 | `Retraso de la entrega` | |
+   | B2 | `=RIESGO.CRONOGRAMA("L";"retraso")` | **0** (en el plan, L llega a tiempo) |
+   | A3 | `Tarifa diaria de indirectos` | |
+   | B3 | `2500000` | |
+   | A4 | `Indirectos` | |
+   | B4 | `=B1*B3` | **545.000.000** |
+
+   Excel debe proponer `RIESGO.CRONOGRAMA` al escribir `=RIESGO.CR`; si
+   no, haz el arranque limpio del paso 2.
+4. Selecciona **B4**, y en el panel, pestaña **Modelo**, márcala como
+   **salida**. Pulsa **Simular** (el del modelo).
+5. Esperado: simula sin errores. En **Resultados**, la salida «Indirectos»
+   tiene una media **en torno a 642 millones** (entre 635 y 650: unos 257
+   días de media, como el cronograma, por 2.500.000).
+6. Un hito que no existe: en **B5** escribe
+   `=RIESGO.CRONOGRAMA("ZZ";"fecha")`. Esperado: `#N/A`; al pulsar el rombo de aviso
+   de la celda, dice «No hay ninguna actividad con el ID o el nombre
+   «ZZ»». Pulsa
+   **Simular** (modelo): no simula y explica lo mismo. Borra B5.
+7. Una medida que no corresponde: en **B5** escribe
+   `=RIESGO.CRONOGRAMA("E";"multa")`. Esperado: `#N/A` con «E no
+   tiene fecha contractual en la hoja «Hitos_Contrato»». Borra B5.
 
 **GT55. Validación publicada.** `npm run validacion:cronograma` (consola)
 recalcula 13 casos publicados (GAO y referencias) y escribe
@@ -1507,8 +1618,8 @@ entradas.
   esperado encima.
 - Tabla «Muestreado / Esperado», con medias casi iguales.
 
-**A15. Precisión.** Debajo de las estadísticas del VAN: «✓ Iteraciones
-suficientes…» (o, si no bastan, cuántas harían falta).
+**A15. Precisión.** Abre «**Estadísticos y percentiles**» del VAN (con ▸):
+al final, «✓ Iteraciones suficientes…» (o, si no bastan, cuántas harían falta).
 
 **A16. TIR sin valor.** En la TIR, un aviso con unas pocas iteraciones que
 «no dieron un número». Es correcto: en los escenarios muy malos la TIR no
@@ -1534,7 +1645,8 @@ simula con 10.000 iteraciones y luego con 250.000 («Otra cantidad»).
 - Marca «Simular hasta alcanzar la precisión».
 - Tope: **1 M**.
 
-Esperado: «Simulado hasta ±0,5 % de precisión: 10.000 → … iteraciones». Al
+Esperado, en «Cómo se calculó» (sección plegada al final de Resultados:
+ábrela con ▸): «Precisión buscada ±0,5 %: 10.000 → … iteraciones». Al
 acabar, desmarca la casilla y vuelve a 10.000 iteraciones.
 
 **B4. Botones de la cinta con el panel abierto.** Con el panel abierto,
@@ -1552,7 +1664,9 @@ pulsa en la cinta Resultados, Configuración, Diagnóstico y Modelo.
 **C2. Informe PDF.** Simula y pulsa **Informe PDF**; se abre el navegador.
 Pulsa «Imprimir o guardar como PDF».
 - Esperado:
-  - Empieza con tu título y tu descripción.
+  - Empieza con una **portada** con tu título y tu descripción. (Si en ⚙ →
+    «Plantilla del informe PDF» escribiste otro Título, sale ese: déjalo
+    vacío para esta prueba.)
   - Cada salida tiene su párrafo en palabras.
   - Las barras del tornado salen.
 - **Mándame el PDF.**
@@ -1681,9 +1795,12 @@ en «Ajustar a datos»:
 
 ## F. Funciones RIESGO (hoja «Pruebas»)
 
-Todo este bloque va en la pestaña **Pruebas** (abajo a la izquierda). Antes,
-**quita todas las entradas y salidas del panel** con la ✕. En «Pruebas», C5 y
-C6 están vacías y C7 ya multiplica C5 × C6.
+Todo este bloque va en la pestaña **Pruebas** (abajo a la izquierda), en
+`aurora-F.xlsx`. Antes, **quita todas las entradas y salidas del panel** con
+la ✕. Como `aurora-base` ya tiene rellenas las hojas de prueba, las celdas
+que cada prueba manda escribir **ya tienen la fórmula**: no la escribas,
+comprueba lo «Esperado». (En un libro sin rellenar, C5 y C6 están vacías y
+C7 ya multiplica C5 × C6.)
 
 **F1.** En **C5** escribe `=RIESGO.NORMAL(1000;150)`.
 - Esperado: al escribir `=RIES` Excel propone las funciones. La celda vale
@@ -1776,14 +1893,14 @@ simular.
   **3.200**.
 - Vuelve a poner C33 en `150`.
 
-**F15. Solo con el motor rápido.** En ⚙, motor **Compatible**, y simula.
-- Esperado: no simula; dice «Hay funciones RIESGO que solo puede simular el
-  motor rápido»:
-  - Pruebas!C35 tiene una función RIESGO dentro de una operación.
-  - Pruebas!C36 tiene una función RIESGO con parámetros que cambian en cada
-    iteración.
-  - En Configuración está elegido el motor compatible: pon «Automático» o
-    «Rápido».
+**F15. C35 y C36 con el motor compatible.** En ⚙, sección «Simulación»,
+motor **Compatible**, y simula.
+- Esperado (cambió en la etapa 2, ver N9): **simula**, también C35 (una
+  función RIESGO dentro de una operación) y C36 (una función RIESGO con
+  parámetros que cambian en cada iteración). El aviso «Hay funciones RIESGO
+  que el modo compatible no puede simular» solo sale con **dos** funciones
+  RIESGO en la misma fórmula o con RIESGO.TRUNCAR con parámetros que
+  cambian.
 - Vuelve el motor a **Automático**.
 
 **Resultados en la hoja (B6, sección 8 de «Pruebas», filas 40–43).** Traen a
@@ -1825,10 +1942,8 @@ la hoja lo que dio la última simulación de C37.
 **F19. Cerrar y reabrir.** Guarda, cierra Excel, ejecuta `npm start` y vuelve
 a abrir el libro.
 - Esperado: C40–C43 siguen con sus números, y al abrir el panel siguen igual.
-- **Límite conocido de esta versión** (hasta la etapa 2): los resultados de
-  estas funciones se guardan en el equipo, no en el libro. En otro equipo
-  darán #N/D hasta abrir el panel (que los publica de nuevo desde los
-  resultados guardados en el libro) o simular.
+- Desde la etapa 2 los resultados se leen del libro (ver N3): también en
+  otro equipo salen los números sin simular.
 
 **Salida y correlación con funciones (sección 9 de «Pruebas», filas
 46–49).** Escribe:
@@ -1948,7 +2063,8 @@ triangular que proponen. Marca como salidas C8 (ingresos), C9 (gama) y C10
 - Esperado: sigue siendo **motor rápido**.
 - **Ingresos:** media en torno a **99.000 €** y p5–p95 en torno a 85.000 –
   115.000.
-- **Según Zona de venta:** una tabla con la media de los ingresos en cada
+- Abre la sección «**Según las entradas de texto**» (plegada): **Según
+  Zona de venta**, una tabla con la media de los ingresos en cada
   zona (Norte la más alta, Este la más baja).
 
 **T3. Salida de texto (la gama).** En la salida C9:
@@ -1966,8 +2082,9 @@ triangular que proponen. Marca como salidas C8 (ingresos), C9 (gama) y C10
 **T5. Con la función.** En **C12** escribe
 `=RIESGO.CATEGORIA(E5:E7;F5:F7)`.
 - Fuera de la simulación vale **Sur** (la más probable).
-- Añade C13 como salida y simula: la tabla de C13 **«Según Zona con
-  función»** se parece a la de T2.
+- Añade C13 como salida y simula: en «Según las entradas de
+  texto» (ábrela con ▸), la tabla de C13 **«Según Zona con función»** se
+  parece a la de T2.
 
 **T6. En la hoja volcada y en los escenarios.**
 - **Volcar a una hoja**: la gama sale con la tabla «Valor / Iteraciones /
@@ -2068,7 +2185,7 @@ en **el iPad**, o donde no esté el complemento.
 
 ## K. Mismos números al repetir
 
-**K1.** En «Modelo», con el modelo del bloque A, simula con 10.000
+**K1.** En `aurora-A.xlsx`, hoja «Modelo», con el modelo del bloque A, simula con 10.000
 iteraciones y **apunta la media del VAN**.
 
 **K2.** Quita la entrada C5 con la ✕ y vuelve a añadirla con **la misma
@@ -2126,11 +2243,12 @@ sáltalo.
 
 ## I. Libros de fidelidad
 
-Ábrelos en Excel, deja que calculen, guárdalos y mándamelos:
+Cópialos antes al escritorio (`Copy-Item tests\fixtures\fidelidad-tanda7.xlsx
+"$HOME\Desktop\"`, y lo mismo con los otros dos). Ábrelos en Excel desde el
+escritorio, deja que calculen, guárdalos y mándamelos:
 
 - **I1.** `tests\fixtures\fidelidad-tanda7.xlsx` (LET, 14 casos).
 - **I2.** `tests\fixtures\fidelidad-tanda8.xlsx` (matrices, 27 casos).
 - **I3.** `tests\fixtures\fidelidad-lambda.xlsx` (LAMBDA, 23 casos; es N33).
 
-Después haz el `git checkout -- …` de la preparación para que no te den
-conflicto en el próximo pull.
+Como son copias, la carpeta del proyecto queda limpia para el próximo pull.

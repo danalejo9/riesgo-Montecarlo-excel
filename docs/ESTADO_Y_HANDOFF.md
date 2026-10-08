@@ -1475,6 +1475,24 @@ Vienen de sus instrucciones maestras y siguen vigentes:
     punta, sin errores de página. Guía GT41–GT55. **Siguiente**: la ronda
     del usuario (GT1–GT55, Q14, Q18, Q20, Q21, R1–R4).
 
+86. [x] **Ronda completa de pruebas preparada (2026-10-08)**. El usuario
+    pidió repetir todas las pruebas tras el merge, con una guía muy
+    detallada y los archivos localizados. También pidió **no borrar
+    ninguna rama**: siguen todas en GitHub.
+    - La guía empieza con los pasos 1 a 5: pasar a `main`, arranque limpio,
+      `aurora-base.xlsx` y `cronograma-base.xlsx` con una copia por
+      bloque, el orden de 19 bloques y cómo anotar.
+    - Las cifras del cronograma se recalcularon. Cambiaron el costo P80
+      (por las multas), las hojas (16) y la Fecha meta e Hitos_Contrato!B2,
+      que hay que escribir. Quedaron fijadas en
+      `guiaCifrasCronograma.test.ts`.
+    - Hay registro en Excel, generado desde la guía con
+      `docs/pruebas/generar-registro.py`.
+    - Se corrigió la coma del aviso de iteraciones automáticas y el nombre
+      de la hoja Hitos_Contrato en los mensajes.
+
+    **Siguiente**: el usuario recorre la ronda y manda el registro.
+
 **Siguiente acción al retomar**, en orden de valor:
 
 1. ~~Ronda completa de la guía~~ ✅ 29/09 (punto 39).

@@ -63,7 +63,7 @@ export function valorDelPlan(plan: PlanCronogramaPublicado | null, hito: string,
   const v = plan.valores[`${id}|${m}`];
   if (v === undefined) {
     return m === 'costo' ? 'El costo es del proyecto entero y solo si el cronograma tiene costos'
-      : m === 'retraso' || m === 'multa' ? `«${hito}» no tiene fecha contractual en la hoja «Hitos»`
+      : m === 'retraso' || m === 'multa' ? `«${hito}» no tiene fecha contractual en la hoja «Hitos_Contrato»`
       : `«${hito}» no tiene ${m}`;
   }
   return v;

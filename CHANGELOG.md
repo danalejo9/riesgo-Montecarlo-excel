@@ -5,6 +5,30 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Ronda completa de pruebas tras unir las ramas (2026-10-08)
+
+**Añadido**
+- `docs/pruebas/registro-pruebas.xlsx`: el libro para anotar la ronda. Tiene
+  una fila por prueba (218), con el bloque, el libro que hay que abrir, los
+  pasos y lo esperado copiados de la guía. El resultado se elige de una
+  lista y la hoja Resumen cuenta por bloque. Se genera desde la guía con
+  `python3 docs/pruebas/generar-registro.py`.
+- `tests/unit/guiaCifrasCronograma.test.ts`: fija las cifras que la guía da
+  como esperadas para el ejemplo de cronograma (Q6–Q21, GT36–GT48).
+
+**Cambiado**
+- La guía de pruebas empieza con la preparación de la ronda completa
+  sobre `main`: actualizar, arranque limpio, preparar los libros y el orden
+  de los bloques. Corregidas las cifras que movieron las multas del
+  contrato (costo P80, contingencia, probabilidad del costo meta), las 16
+  hojas del libro y el orden de las secciones de Resultados.
+
+**Corregido**
+- El aviso de iteraciones automáticas escribía «0.36 %»; ahora escribe
+  «0,36 %».
+- Los mensajes de `RIESGO.CRONOGRAMA` y de la simulación nombraban la hoja
+  «Hitos»; ahora nombran la hoja que existe, «Hitos_Contrato».
+
 ### Consolidación de ramas: lo que faltaba de la otra versión del cronograma (2026-10-07)
 
 Las ramas `main`, `develop`, `claude/market-analysis-…`,

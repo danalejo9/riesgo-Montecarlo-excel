@@ -361,7 +361,7 @@ function preparar(modelo: ModeloCronograma, red: RedCompilada, n: number): Prepa
   // Hitos contractuales (W1).
   const contractuales = (modelo.hitosContractuales ?? []).map((h) => {
     const a = red.indice.get(h.actividad);
-    if (a === undefined) throw new ErrorModeloCronograma('Hitos', h.actividad, `la actividad «${h.actividad}» no existe`);
+    if (a === undefined) throw new ErrorModeloCronograma('Hitos_Contrato', h.actividad, `la actividad «${h.actividad}» no existe`);
     return { h, a };
   });
 
@@ -729,7 +729,7 @@ export async function simularCronograma(modelo: ModeloCronograma, opciones: Opci
     if (!cfg.iteracionesAutomaticas) break;
     const conv = convergenciaP80(principal.finDias);
     if (conv.convergio) {
-      avisos.push(`Iteraciones automáticas: el P80 se estabilizó con ${n.toLocaleString('es-CO')} iteraciones (cambió ${(100 * (conv.ultimoCambio ?? 0)).toFixed(2)} % en el último bloque).`);
+      avisos.push(`Iteraciones automáticas: el P80 se estabilizó con ${n.toLocaleString('es-CO')} iteraciones (cambió ${(100 * (conv.ultimoCambio ?? 0)).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} % en el último bloque).`);
       break;
     }
     if (n === tandas[tandas.length - 1]) avisos.push(`Iteraciones automáticas: con ${n.toLocaleString('es-CO')} iteraciones el P80 aún cambia ${(100 * (conv.ultimoCambio ?? 0)).toFixed(2)} % por bloque; se queda ahí.`);
