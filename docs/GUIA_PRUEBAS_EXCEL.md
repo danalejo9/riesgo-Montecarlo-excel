@@ -18,6 +18,10 @@
 > El libro de cronograma **no es un archivo del proyecto**: lo crea el
 > complemento con un botón (paso 3).
 >
+> **¿Es la primera vez que pruebas, o lo haces en Mac o en Excel para la
+> Web?** Instala primero con `docs\INSTALAR_PARA_PROBAR.md` y sigue desde el
+> paso 3.
+>
 > ### Paso 1. Pasar tu carpeta a `main` (una vez)
 >
 > En **PowerShell**, una línea cada vez:
