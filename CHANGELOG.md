@@ -24,6 +24,9 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
   hojas del libro y el orden de las secciones de Resultados.
 
 **Corregido**
+- «Rellenar las hojas de prueba» fallaba entero («Error code: 0xC109004B»,
+  `Range.formulas`) en un Excel que no acepta una de las fórmulas (FILTER).
+  Ahora escribe una a una y dice cuáles no pudo escribir y por qué.
 - El aviso de iteraciones automáticas escribía «0.36 %»; ahora escribe
   «0,36 %».
 - Los mensajes de `RIESGO.CRONOGRAMA` y de la simulación nombraban la hoja

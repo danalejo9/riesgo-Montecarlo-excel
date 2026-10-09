@@ -76,6 +76,9 @@ export function Diagnostico({ entorno, alFallar }: { entorno: EntornoOffice | nu
         r.escritas > 0 ? `Escritas ${r.escritas} fórmulas.` : 'No había nada que escribir.',
         r.respetadas.length > 0 ? `Ya tenían algo y no se tocaron: ${r.respetadas.join(', ')}.` : '',
         r.faltan.length > 0 ? `Este libro no tiene la hoja ${r.faltan.join(' ni la hoja ')}: abre el libro de demostración.` : '',
+        r.rechazadas.length > 0
+          ? `No se pudieron escribir ${r.rechazadas.length}: ${r.rechazadas.map((x) => `${x.celda} (${x.formula}): ${x.motivo}`).join('; ')}. Anótalo en el registro de pruebas: las pruebas que usan esas celdas no aplican en este Excel.`
+          : '',
       ].filter(Boolean).join(' '));
     } catch (e) {
       alFallar(e);

@@ -100,7 +100,10 @@
 > 1. Ábrelo desde el escritorio. Riesgo → **Modelo** abre el panel.
 > 2. Pestaña **Diagnóstico** → sección «Hojas de prueba» → **«Rellenar las
 >    hojas de prueba»**. Debe decir «Escritas 28 fórmulas» (las celdas
->    amarillas de las hojas «Pruebas» y «Zonas»).
+>    amarillas de las hojas «Pruebas» y «Zonas»). Si además dice «No se
+>    pudieron escribir…», ese Excel no tiene alguna función (por ejemplo
+>    FILTRAR, de las matrices dinámicas): sigue igual y anota en el registro
+>    las celdas que nombra; las pruebas que las usan quedan «No aplica».
 > 3. Guarda (Ctrl+G) y ciérralo. Este libro **no se toca más**: para cada
 >    bloque haz una copia (abajo).
 >
