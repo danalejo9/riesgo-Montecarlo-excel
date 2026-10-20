@@ -34,6 +34,7 @@ import { datosGanttDe, distribucionFinDe, qrsaDeSimulacion, type DatosGantt } fr
 import { GanttCompacto } from './gantt/GanttCompacto.tsx';
 import { abrirVentanaCronograma, ABRIR_GANTT, controlGantt, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA } from './gantt/controlPanel.ts';
 import { abrirEnNavegador, CurvaAcumulada, Histograma, MatrizRiesgosTabla, type LineaReferencia } from './Resultados.tsx';
+import { urlDePagina } from '../excel/ventana.ts';
 import type { FilaRiesgo } from '../excel/registroRiesgos.ts';
 import { histogramaDeMuestra } from '../engine/stats/muestra.ts';
 import { formatoDe, miles, numero, porcentaje } from './formato.ts';
@@ -651,7 +652,7 @@ export function Cronograma({ visible, pedido, contenedorResultados, alSimulado, 
               if (!estado.modelo || !calidad) return;
               const datos = datosInformeCronograma(sim, estado.modelo, calidad, VERSION_COMPLEMENTO, new Date(), datosGantt ?? undefined, estado.registro);
               void plantillaDelLibro().then((plantilla) => codificarInformeCronograma({ ...datos, plantilla }))
-                .then((codigo) => abrirEnNavegador(`${new URL('/informeCronograma.html', window.location.href).href}#d=${codigo}`))
+                .then((codigo) => abrirEnNavegador(`${urlDePagina('informeCronograma.html')}#d=${codigo}`))
                 .catch(alFallar);
             }}>Informe ejecutivo (PDF)</button>
             <button type="button" className="secundario" onClick={() => descargar('iteraciones-cronograma.csv', csvIteraciones(sim))}>Iteraciones en CSV</button>

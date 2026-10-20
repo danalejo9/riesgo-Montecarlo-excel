@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Instalar Riesgo Monte Carlo</title>
+  <link rel="icon" href="favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --niebla: #EEF0EC; --asfalto: #1E2124; --gris-texto: #55585A;
+      --concreto: #B9B7B0; --musgo: #4F5E3A; --blanco: #FFFFFF;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--niebla); color: var(--asfalto);
+      font: 400 16px/1.5 'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 64px 16px 96px; }
+    h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 8px; }
+    h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 48px 0 8px; }
+    p, li { max-width: 60ch; }
+    .meta { color: var(--gris-texto); font-size: 14px; margin: 0 0 32px; }
+    ol { padding-left: 24px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    .acciones { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+    a.boton {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+      border-radius: 6px; font-weight: 500; text-decoration: none;
+      transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    a.principal { background: var(--musgo); color: var(--blanco); }
+    a.principal:hover { background: #3F4B2E; }
+    a.secundario { color: var(--musgo); box-shadow: inset 0 0 0 1px var(--concreto); }
+    a.secundario:hover { background: var(--blanco); }
+    a:focus-visible { outline: 2px solid var(--musgo); outline-offset: 2px; }
+    a { color: var(--musgo); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    pre {
+      background: var(--blanco); border-radius: 6px; padding: 12px 16px;
+      overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    }
+    .nota { color: var(--gris-texto); font-size: 14px; }
+    @media (prefers-reduced-motion: reduce) { a.boton { transition: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Riesgo Monte Carlo</h1>
+  <p class="meta">Complemento para Excel · versión {{VERSION}} · necesita Excel de Microsoft 365</p>
+
+  <p>El complemento corre desde esta página: no hay que instalar programas ni
+  dejar nada encendido. Lo que se instala en Excel es un archivo pequeño, el
+  manifiesto, que le dice dónde encontrarlo. Los cálculos se hacen en tu
+  equipo; los datos del libro no salen de él.</p>
+
+  <h2>Windows</h2>
+  <ol>
+    <li>Cierra Excel.</li>
+    <li>Descarga el instalador y ábrelo con doble clic.</li>
+    <li>Si Windows dice «Windows protegió tu PC»: <strong>Más información → Ejecutar de todas formas</strong>.</li>
+    <li>Sigue lo que dice la ventana y abre Excel: aparece la pestaña <strong>Riesgo</strong>.</li>
+  </ol>
+  <div class="acciones">
+    <a class="boton principal" href="instalar-windows.cmd" download>Descargar instalador para Windows</a>
+    <a class="boton secundario" href="desinstalar-windows.cmd" download>Desinstalar</a>
+  </div>
+
+  <h2>Mac</h2>
+  <ol>
+    <li>Cierra Excel (Cmd + Q).</li>
+    <li>Abre Terminal (Cmd + Espacio, escribe <code>Terminal</code>, Enter), pega esta línea y pulsa Enter:</li>
+  </ol>
+  <pre>mkdir -p ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef &amp;&amp; curl -fsSL <span class="url"></span>manifest.xml -o ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/riesgo-montecarlo.xml</pre>
+  <ol start="3">
+    <li>Abre Excel y un libro. Si no ves la pestaña <strong>Riesgo</strong>: <strong>Insertar → Complementos → Mis complementos</strong> y elige <strong>Riesgo Monte Carlo</strong>.</li>
+  </ol>
+  <p class="nota">Para quitarlo: <code>rm ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/riesgo-montecarlo.xml</code></p>
+
+  <h2>Excel en la Web</h2>
+  <ol>
+    <li>Descarga el manifiesto.</li>
+    <li>Abre un libro en Excel para la Web: <strong>Inicio → Complementos → Más complementos</strong> → <strong>Mis complementos</strong> → <strong>Cargar mi complemento</strong>.</li>
+    <li><strong>Examinar</strong> → elige <code>manifest.xml</code> → <strong>Cargar</strong>.</li>
+  </ol>
+  <div class="acciones">
+    <a class="boton principal" href="manifest.xml" download="manifest.xml">Descargar manifest.xml</a>
+  </div>
+  <p class="nota">Si no aparece «Cargar mi complemento», tu organización lo tiene
+  bloqueado; prueba con una cuenta Microsoft personal. Al abrir otro libro, otro
+  día, puede que haya que cargarlo de nuevo.</p>
+
+  <h2>Actualizaciones</h2>
+  <p>Llegan solas: la próxima vez que abras Excel ya tienes la versión nueva.
+  Solo si cambian los botones de la cinta hay que instalar otra vez, y se avisará.
+  Si algo se ve viejo, en Windows vuelve a ejecutar el instalador.</p>
+</main>
+<script>
+  // La dirección del manifiesto en el comando de Mac es la de esta misma página.
+  const base = new URL('.', location.href).href;
+  document.querySelectorAll('.url').forEach((e) => { e.textContent = base; });
+</script>
+</body>
+</html>

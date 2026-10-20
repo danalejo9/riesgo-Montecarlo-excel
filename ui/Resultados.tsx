@@ -44,6 +44,7 @@ import { volcarResultados } from '../excel/volcarResultados.ts';
 import { claseSugerida, contingencia, type ClaseSalida, type NivelContingencia } from '../excel/contingencia.ts';
 import { matrizDeRiesgos, NIVELES_IMPACTO, NIVELES_PROBABILIDAD, NOMBRE_SEVERIDAD, severidad } from '../excel/matrizRiesgos.ts';
 import { exportarIteraciones } from '../excel/exportarIteraciones.ts';
+import { urlDePagina } from '../excel/ventana.ts';
 
 import type { PuntoCDF } from '../engine/stats/index.ts';
 import { motivosLegibles, type SimulacionCompletada } from '../excel/ejecutarSimulacion.ts';
@@ -124,7 +125,7 @@ export function Resultados({
     setFalloVolcado(null);
     try {
       const codigo = await codificarInforme({ ...datosDelInforme(modelo, resultado, { referencia: referencia ?? null }), plantilla: await plantillaDelLibro() });
-      const url = `${new URL('/informe.html', window.location.href).href}#d=${codigo}`;
+      const url = `${urlDePagina('informe.html')}#d=${codigo}`;
       abrirEnNavegador(url);
     } catch (e) {
       setFalloVolcado(`No se pudo preparar el informe: ${e instanceof Error ? e.message : String(e)}`);

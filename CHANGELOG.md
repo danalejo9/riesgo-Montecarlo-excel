@@ -5,6 +5,24 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Publicación en GitHub Pages para los colegas (2026-10-20)
+
+**Añadido**
+- `.github/workflows/publicar.yml`: cada cambio en `main` compila el
+  complemento y lo publica en
+  <https://danalejo9.github.io/riesgo-Montecarlo-excel/>. Ya no hace falta
+  Node ni `npm start` para usarlo.
+- `scripts/publicar-manifiesto.mjs`: el manifiesto de producción, con Id
+  propio para no chocar con el de desarrollo, y la página de descarga con
+  las instrucciones para Windows, Mac y la Web.
+- `instalar-windows.cmd` y `desinstalar-windows.cmd`: instalación con doble
+  clic en Windows, sin permisos de administrador.
+
+**Cambiado**
+- Las páginas que abre el panel (informes, Gantt impreso, ventanas) se
+  buscan junto al complemento y no en la raíz del servidor
+  (`urlDePagina`), porque en GitHub Pages vive en una subcarpeta.
+
 ### Ronda completa de pruebas tras unir las ramas (2026-10-08)
 
 **Añadido**

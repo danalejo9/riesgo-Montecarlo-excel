@@ -14,6 +14,15 @@ import { juntarTrozos } from './trozos.ts';
 
 export { enviarEnTrozos, juntarTrozos, TAMANO_TROZO } from './trozos.ts';
 
+/**
+ * La URL de otra página del complemento. Va contra `BASE_URL` y no contra la
+ * raíz del servidor: publicado en GitHub Pages, el complemento vive en una
+ * subcarpeta (`/riesgo-Montecarlo-excel/`), y en desarrollo, en `/`.
+ */
+export function urlDePagina(pagina: string): string {
+  return new URL(`${import.meta.env.BASE_URL}${pagina}`, window.location.origin).href;
+}
+
 export interface Ventana {
   /** Manda datos a la ventana. `false` si esta versión de Excel no puede. */
   enviar(datos: unknown): boolean;
@@ -39,7 +48,7 @@ export async function abrirVentana(
   opciones: { alto: number; ancho: number; alRecibir?: (m: string) => void; alCerrar?: () => void },
 ): Promise<Ventana> {
   abierta?.ventana.cerrar();
-  const url = `${new URL(`/${pagina}`, window.location.href).href}#d=${codigo}`;
+  const url = `${urlDePagina(pagina)}#d=${codigo}`;
   const office = (globalThis as unknown as { Office?: { context?: { ui?: { displayDialogAsync?: unknown } }; EventType?: Record<string, unknown> } }).Office;
   const mostrar = office?.context?.ui?.displayDialogAsync as
     | ((u: string, o: object, cb: (r: { status: string; value: DialogoOffice; error?: { message: string } }) => void) => void)

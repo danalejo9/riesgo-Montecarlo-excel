@@ -75,8 +75,16 @@ function funcionesRiesgo(): Plugin {
   };
 }
 
+/**
+ * Dónde queda publicado el complemento. En desarrollo, en la raíz
+ * (`https://localhost:9090/`); en GitHub Pages, en la subcarpeta del
+ * repositorio, que el workflow `publicar.yml` pasa en `RIESGO_BASE`.
+ */
+const base = process.env.RIESGO_BASE ?? '/';
+
 export default defineConfig({
   root: 'ui',
+  base,
   publicDir: resolve(__dirname, 'public'),
   plugins: [react(), funcionesRiesgo()],
   build: {

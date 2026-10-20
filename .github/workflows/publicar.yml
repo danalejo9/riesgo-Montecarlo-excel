@@ -1,0 +1,60 @@
+name: Publicar en GitHub Pages
+
+# Cada vez que cambia `main`, compila el complemento y lo publica en
+# https://danalejo9.github.io/riesgo-Montecarlo-excel/ con su manifiesto de
+# producción y la página de descarga para quien lo instala.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    env:
+      URL_PUBLICADA: https://danalejo9.github.io/riesgo-Montecarlo-excel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Compilar
+        run: npm run build
+        env:
+          RIESGO_BASE: /riesgo-Montecarlo-excel/
+
+      - name: Manifiesto de producción y página de descarga
+        run: |
+          node scripts/publicar-manifiesto.mjs "$URL_PUBLICADA"
+          # El banco de pruebas es para desarrollar sin Excel: no se publica.
+          rm -rf dist/banco
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: despliegue
+        uses: actions/deploy-pages@v4

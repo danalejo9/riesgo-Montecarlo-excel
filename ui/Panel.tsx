@@ -34,7 +34,7 @@ import { huellaModelo, restaurarResultados, serializarResultados } from '../exce
 import { aLocaleDelModelo, leerRegionalDeExcel } from '../excel/regional.ts';
 import { aplicarResaltado, quitarResaltado, recordarCeldasRiesgo } from '../excel/resaltado.ts';
 import { manejarDesdeLaCinta, mostrarPanel } from './acciones.ts';
-import { abrirVentana, enviarEnTrozos, ventanaAbierta, type Ventana } from '../excel/ventana.ts';
+import { abrirVentana, enviarEnTrozos, urlDePagina, ventanaAbierta, type Ventana } from '../excel/ventana.ts';
 import { ABRIR_GANTT, controlGantt, PESTANAS_CRONOGRAMA, REFRESCAR_GANTT, SIMULAR_CRONOGRAMA, type PestanaVentana } from './gantt/controlPanel.ts';
 import type { PedidoGuardar } from '../excel/editoresCronograma.ts';
 import type { RespuestaGantt } from './gantt/controlGantt.ts';
@@ -331,7 +331,7 @@ export function Panel() {
           r = await controlGantt.leer();
           if (r.gantt) {
             const codigo = await codificarJson({ datos: r.gantt, titulo: 'Cronograma', ...pedido.opciones });
-            abrirEnNavegador(`${new URL('/ganttImpreso.html', window.location.href).href}#d=${codigo}`);
+            abrirEnNavegador(`${urlDePagina('ganttImpreso.html')}#d=${codigo}`);
             r = { ...r, estadoGantt: { ...r.estadoGantt, mensaje: 'Se abrió el Gantt para imprimir en el navegador.' } };
           }
         } else if (pedido.accion === 'gantt-qrsa') {
@@ -584,7 +584,7 @@ export function Panel() {
           return mostrarPanel();
         }
         const codigo = await codificarInforme({ ...datosDelInforme(m, r, { referencia: escenarioActivo(esc) }), plantilla: await plantillaDelLibro() });
-        abrirEnNavegador(`${new URL('/informe.html', window.location.href).href}#d=${codigo}`);
+        abrirEnNavegador(`${urlDePagina('informe.html')}#d=${codigo}`);
       }),
       // Q1: el grupo Cronograma de la cinta lleva a su pestaña y hace la acción.
       ...(['crear', 'calidad', 'simular'] as const).map((accion) => manejarDesdeLaCinta(`cronograma:${accion}`, async () => {
