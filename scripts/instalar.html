@@ -41,13 +41,15 @@
       overflow-x: auto; white-space: pre-wrap; word-break: break-all;
     }
     .nota { color: var(--gris-texto); font-size: 14px; }
+    footer { margin-top: 64px; color: var(--gris-texto); font-size: 13px; }
     @media (prefers-reduced-motion: reduce) { a.boton { transition: none; } }
   </style>
 </head>
 <body>
 <main>
   <h1>Riesgo Monte Carlo</h1>
-  <p class="meta">Complemento para Excel · versión {{VERSION}} · necesita Excel de Microsoft 365</p>
+  <p class="meta">Complemento para Excel · versión {{VERSION}} · necesita Excel de Microsoft 365<br />
+  Desarrollado por <strong>Daniel Jaimes</strong></p>
 
   <p>El complemento corre desde esta página: no hay que instalar programas ni
   dejar nada encendido. Lo que se instala en Excel es un archivo pequeño, el
@@ -90,10 +92,18 @@
   bloqueado; prueba con una cuenta Microsoft personal. Al abrir otro libro, otro
   día, puede que haya que cargarlo de nuevo.</p>
 
+  <h2>Condiciones de uso</h2>
+  <p>Esta es una versión de prueba, de uso privado, compartida solo con las
+  personas invitadas a probarla. Te agradecemos no compartir este enlace, el
+  instalador ni el manifiesto mientras terminan las pruebas.</p>
+  <p>Como versión de prueba, puede tener errores: revisa los resultados antes
+  de usarlos en una decisión y cuéntanos lo que encuentres.</p>
+
   <h2>Actualizaciones</h2>
   <p>Llegan solas: la próxima vez que abras Excel ya tienes la versión nueva.
   Solo si cambian los botones de la cinta hay que instalar otra vez, y se avisará.
   Si algo se ve viejo, en Windows vuelve a ejecutar el instalador.</p>
+  <footer>© 2026 Daniel Jaimes · Riesgo Monte Carlo</footer>
 </main>
 <script>
   // La dirección del manifiesto en el comando de Mac es la de esta misma página.
