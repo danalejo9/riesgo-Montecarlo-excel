@@ -1,7 +1,7 @@
 /**
  * Prepara `dist/` para publicarlo en GitHub Pages: escribe el manifiesto de
  * producción (`dist/manifest.xml`), la página de descarga (`dist/index.html`)
- * y los instaladores de Windows. Uso, después de `npm run build`:
+ * y los scripts de Windows (instalar, desinstalar y diagnosticar). Uso, después de `npm run build`:
  *
  *     node scripts/publicar-manifiesto.mjs https://danalejo9.github.io/riesgo-Montecarlo-excel
  *
@@ -50,10 +50,11 @@ const pagina = readFileSync(join(raiz, 'scripts/instalar.html'), 'utf8').replace
 writeFileSync(join(raiz, 'dist/index.html'), pagina);
 
 // Los .cmd, con saltos de línea de Windows: con LF solos, cmd.exe se salta líneas.
-for (const cmd of ['instalar-windows.cmd', 'desinstalar-windows.cmd']) {
+for (const cmd of ['instalar-windows.cmd', 'desinstalar-windows.cmd', 'diagnosticar-windows.cmd']) {
   const texto = readFileSync(join(raiz, 'scripts', cmd), 'utf8')
     .replaceAll('{{URL}}', url)
     .replaceAll('{{VERSION}}', version)
+    .replaceAll('{{ID}}', ID_PUBLICADO)
     .replace(/\r?\n/g, '\r\n');
   writeFileSync(join(raiz, 'dist', cmd), texto);
 }

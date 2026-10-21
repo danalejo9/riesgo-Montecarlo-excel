@@ -5,6 +5,26 @@ Versionado semántico. Las etapas (E0, E1, …) son las de `docs/FASE3_ROADMAP.m
 
 ## [No publicado]
 
+### Instalador de Windows que comprueba lo que hace (2026-10-21)
+
+La pestaña Riesgo no aparecía tras ejecutar el instalador y el instalador no
+daba ninguna pista. Ahora:
+
+**Cambiado**
+- `instalar-windows.cmd` espera a que Excel esté cerrado de verdad (también
+  el proceso sin ventanas), comprueba que lo descargado es el manifiesto del
+  complemento y que el registro quedó escrito, y avisa si no hay Office de
+  Microsoft 365 o si la organización tiene reglas para los complementos.
+- El valor del registro se llama como el Id del complemento, igual que el de
+  `office-addin-debugging`; el instalador y el desinstalador quitan el
+  nombre anterior (`RiesgoMonteCarlo`).
+
+**Añadido**
+- `diagnosticar-windows.cmd`: reúne en un .txt la versión de Office, los
+  complementos registrados, el manifiesto instalado, si la página publicada
+  se descarga y las políticas de la organización. No cambia nada. Enlazado
+  desde la página de descarga.
+
 ### Publicación en GitHub Pages para los colegas (2026-10-20)
 
 **Añadido**
